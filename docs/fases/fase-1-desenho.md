@@ -33,7 +33,7 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 
 ## 2. Regras de acesso (no banco)
 
-- `app.usuario_atual()` — `SECURITY DEFINER`, devolve o perfil do `auth.uid()` e **recusa** (retorna nulo) quem: não tem perfil, está inativo, tem `senha_pendente`, ou é ADM/MOTORISTA sem `aal2` no JWT. Toda política RLS e toda RPC passa por ela.
+- `app.pode_acessar()` (e `app.pode_fazer(acao)` para a matriz) — `SECURITY DEFINER`, devolve o perfil do `auth.uid()` e **recusa** (retorna nulo) quem: não tem perfil, está inativo, tem `senha_pendente`, ou é ADM/MOTORISTA sem `aal2` no JWT. Toda política RLS e toda RPC passa por ela.
 - `app.pode(acao text, alvo uuid default null) → boolean` — única fonte de "quem pode o quê": lê papel + matriz. Exemplos: `EDITAR_PARAMETROS` = ADM ou (MOTORISTA e `MOTORISTA_EDITA_PARAMETROS`); `GERIR_USUARIOS` = ADM.
 - RPCs `api.*` devolvem `jsonb {ok, codigo, ...}`; negação e excesso de limite são auditados e a transação é confirmada (Adendo A2). Integridade (unique/check) continua com `RAISE`.
 - Views `api.*` são `security_invoker` sobre tabelas com RLS:
@@ -89,7 +89,7 @@ Guardas de rota no front só para experiência; a proteção real é o banco.
 - guarda de privilégios da fase 0 continua verde com as novas tabelas
 - auditoria: UPDATE/DELETE/TRUNCATE recusados até para `postgres` via trigger (exceto migração explícita futura documentada)
 - parâmetros: publicar cria versão nova; anterior intacta; faixas inválidas recusadas; `vigente_desde` no passado recusado
-- `usuario_atual()` nulo para: sem perfil, inativo, `senha_pendente`, ADM/motorista em aal1
+- `pode_acessar()` nulo para: sem perfil, inativo, `senha_pendente`, ADM/motorista em aal1
 - trigger de convite: usuário sem convite não ganha perfil
 
 **Integração (supabase-js contra o Supabase do CI)**

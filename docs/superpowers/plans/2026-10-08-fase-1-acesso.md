@@ -22,6 +22,8 @@
 - RPCs `api.*` de negócio: `SECURITY DEFINER`, `search_path = ''`, retornam `jsonb`. Negação/limite → `return interno.negar(...)` (audita e confirma). `RAISE` só para violação de integridade.
 - RPCs chamadas **só** pelas Edge Functions com a chave de serviço: prefixo `api.sistema_*`, `EXECUTE` só para `service_role`.
 - Mensagens ao usuário genéricas; o front traduz `codigo` (mapa em `src/lib/erros.ts`).
+- Em políticas, sempre `(select app.pode_fazer(...))` e `(select (app.pode_acessar()).usuario_id) is not null` — nunca testar a linha composta inteira com IS [NOT] NULL.
+- Convites: Edge Functions usam o e-mail normalizado gravado em convites.
 - Nunca imprimir/ler valores de segredos.
 
 ---
@@ -92,10 +94,10 @@ create table app.perfis (
 create table app.convites (
   id uuid primary key default gen_random_uuid(),
   email text not null check (email = lower(trim(email)) and email like '%@%'),
-  nome text not null,
+  nome text not null check (length(trim(nome)) between 2 and 120),
   papel app.papel not null,
   empresa_id uuid references app.empresas (id),
-  criado_por uuid references auth.users (id),
+  criado_por uuid references auth.users (id) on delete set null,
   criado_em timestamptz not null default now(),
   usado_em timestamptz,
   check ((papel = 'CLIENTE') = (empresa_id is not null))
@@ -105,7 +107,7 @@ create unique index convites_um_pendente_por_email on app.convites (email) where
 create table app.permissoes_delegadas (
   chave text primary key check (chave in ('MOTORISTA_LANCA_RECARGA', 'MOTORISTA_EDITA_PARAMETROS', 'CLIENTE_ATUA_EM_PEDIDO_DE_OUTRO')),
   ativo boolean not null default false,
-  alterado_por uuid references auth.users (id),
+  alterado_por uuid references auth.users (id) on delete set null,
   alterado_em timestamptz
 );
 insert into app.permissoes_delegadas (chave) values
@@ -200,7 +202,8 @@ begin
     (select auth.uid()),
     (select papel from app.perfis where usuario_id = (select auth.uid())),
     p_acao, p_alvo, p_resultado, p_codigo, p_detalhe,
-    split_part(cabecalhos ->> 'x-forwarded-for', ',', 1),
+    -- ip é informativo: cabeçalhos podem ser forjados pelo cliente.
+    left(coalesce(cabecalhos ->> 'cf-connecting-ip', trim(split_part(cabecalhos ->> 'x-forwarded-for', ',', 1))), 64),
     left(cabecalhos ->> 'user-agent', 200)
   );
 end $$;
@@ -216,9 +219,17 @@ end $$;
 create function interno.checar_limite(p_acao text, p_max int, p_janela interval)
 returns boolean language plpgsql security definer set search_path = '' as $$
 declare
-  inicio timestamptz := to_timestamp(floor(extract(epoch from now()) / extract(epoch from p_janela)) * extract(epoch from p_janela));
+  inicio timestamptz;
   atual int;
 begin
+  if (select auth.uid()) is null or p_janela <= interval '0' then
+    return false;
+  end if;
+  if p_janela >= interval '1 day' then
+    inicio := date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo';
+  else
+    inicio := to_timestamp(floor(extract(epoch from now()) / extract(epoch from p_janela)) * extract(epoch from p_janela));
+  end if;
   insert into interno.limites (usuario_id, acao, janela_inicio, contagem)
   values ((select auth.uid()), p_acao, inicio, 1)
   on conflict (usuario_id, acao, janela_inicio) do update set contagem = interno.limites.contagem + 1
@@ -239,7 +250,7 @@ begin
   order by criado_em desc limit 1;
   if found then
     insert into app.perfis (usuario_id, nome, papel, empresa_id, senha_pendente)
-    values (new.id, c.nome, c.papel, c.empresa_id, true);
+    values (new.id, trim(c.nome), c.papel, c.empresa_id, true);
     update app.convites set usado_em = now() where id = c.id;
   end if;
   return new;
@@ -270,13 +281,13 @@ create policy empresas_ler on app.empresas for select to authenticated using (
 );
 create policy perfis_ler on app.perfis for select to authenticated using (
   usuario_id = (select auth.uid())
-  or app.pode_fazer('GERIR_USUARIOS')
+  or (select app.pode_fazer('GERIR_USUARIOS'))
 );
 create policy permissoes_ler on app.permissoes_delegadas for select to authenticated using (
-  (select app.pode_acessar()) is not null
+  (select (app.pode_acessar()).usuario_id) is not null
 );
 create policy auditoria_ler on app.auditoria for select to authenticated using (
-  app.pode_fazer('VER_AUDITORIA')
+  (select app.pode_fazer('VER_AUDITORIA'))
 );
 ```
 
