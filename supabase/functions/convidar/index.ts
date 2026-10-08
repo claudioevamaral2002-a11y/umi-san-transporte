@@ -1,3 +1,4 @@
+import { registrarLinkCurto } from '../_compartilhado/links.ts'
 import { logErro } from '../_compartilhado/log.ts'
 import { criarServidor, registrar } from '../_compartilhado/servidor.ts'
 
@@ -32,13 +33,14 @@ Deno.serve(
       email: emailConvite,
       options: { redirectTo: `${ctx.origem}/definir-senha` },
     })
-    const link = gerado.data?.properties?.action_link
-    if (gerado.error || !link) {
-      logErro(ctx.funcao, 'gerar-link', gerado.error ?? undefined)
+    // Link curto (/c/<código>): só o toque em "Continuar" gasta o token (pré-visualizações não).
+    const curto = await registrarLinkCurto(ctx.servico, gerado, 'invite', ctx.origem)
+    if (!curto.ok) {
+      logErro(ctx.funcao, `link-${curto.etapa}`, gerado.error ?? undefined)
       await registrar(ctx, ctx.usuarioId, 'CONVIDAR_LINK', alvo, 'ERRO', 'ERRO_AUTH')
       return { ok: false, codigo: 'ERRO_INESPERADO' }
     }
     await registrar(ctx, ctx.usuarioId, 'CONVIDAR_LINK', alvo, 'OK')
-    return { ok: true, link }
+    return { ok: true, link: curto.link }
   }),
 )

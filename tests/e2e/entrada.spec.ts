@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { comSessaoFalsa, json, responderFuncoes, URL_SUPABASE } from './apoio/sessaoFalsa.ts'
+import { comSessaoFalsa, json, responderFuncoes, simularResgateDeLink, URL_SUPABASE } from './apoio/sessaoFalsa.ts'
 
 test.describe('guardas', () => {
   test('anônimo em rota protegida vai para /entrar', async ({ page }) => {
@@ -52,6 +52,69 @@ test.describe('/entrar', () => {
     // O CAPTCHA foi reiniciado: novo token antes de liberar outra tentativa.
     await senha.fill('Café-Forte-12')
     await expect(entrar).toBeEnabled({ timeout: 20_000 })
+  })
+})
+
+test.describe('/c/<código> (link curto de acesso)', () => {
+  const LINK = '/c/K7M2QX9PRT'
+  const ORIGEM_APP = 'http://127.0.0.1:8788'
+
+  test('abrir sem tocar não chama nada (pré-visualização é inofensiva) e nada vaza para terceiros', async ({ page }) => {
+    const pedidos = await simularResgateDeLink(page, 'sessao')
+    const resposta = await page.goto(LINK)
+    // Referrer-Policy: para outras origens só vai a origem (nunca o caminho com o código).
+    expect(resposta?.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin')
+    await expect(page.getByRole('heading', { name: 'Crie sua senha' })).toBeVisible()
+    await expect(page.getByText('Toque em Continuar para validar seu link de acesso.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continuar' })).toBeEnabled()
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Continuar' })).toBeVisible()
+    await page.waitForTimeout(500)
+
+    expect(pedidos.filter((p) => p.url.includes('/functions/v1/') || p.url.includes('/auth/v1/verify'))).toEqual([])
+    expect(pedidos.filter((p) => !p.url.startsWith(ORIGEM_APP))).toEqual([])
+    await expect(page.locator('script[src*="challenges.cloudflare.com"]')).toHaveCount(0)
+  })
+
+  test('Continuar resgata uma vez, abre a sessão e leva ao formulário de senha (código some da URL)', async ({ page }) => {
+    const pedidos = await simularResgateDeLink(page, 'sessao')
+    await page.goto('/c/k7m2-qx9prt')
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await expect(page).toHaveURL(/\/definir-senha$/)
+    await expect(page.getByLabel('Nova senha')).toBeVisible()
+    await expect(page.getByText('Primeiro acesso')).toBeVisible()
+    const resgates = pedidos.filter((p) => p.url.endsWith('/functions/v1/resgatar-link') && p.metodo === 'POST')
+    expect(resgates).toHaveLength(1)
+    expect(pedidos.some((p) => p.url.includes('/auth/v1/verify'))).toBe(false)
+    // voltar não reabre a tela do link (replace no histórico)
+    expect(await page.evaluate(() => location.href)).not.toContain('K7M2')
+  })
+
+  test('link usado ou expirado: mensagem clara, sem botão de tentar de novo', async ({ page }) => {
+    const pedidos = await simularResgateDeLink(page, { ok: false, codigo: 'EXPIRADO' })
+    await page.goto(LINK)
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await expect(page.getByRole('alert')).toContainText('Este link expirou ou já foi usado. Peça um novo ao administrador.')
+    await expect(page.getByRole('button', { name: 'Continuar' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Ir para a entrada' })).toBeVisible()
+    expect(pedidos.filter((p) => p.url.endsWith('/functions/v1/resgatar-link') && p.metodo === 'POST')).toHaveLength(1)
+  })
+
+  test('código malformado: aviso direto, sem chamar o servidor', async ({ page }) => {
+    const pedidos = await simularResgateDeLink(page, 'sessao')
+    await page.goto('/c/nao-e-codigo')
+    await expect(page.getByRole('alert')).toContainText('Este link expirou ou já foi usado.')
+    await expect(page.getByRole('button', { name: 'Continuar' })).toHaveCount(0)
+    expect(pedidos.filter((p) => p.url.includes('/functions/v1/'))).toEqual([])
+  })
+
+  test('falha de rede: pode tentar de novo', async ({ page }) => {
+    await simularResgateDeLink(page, 'sessao')
+    await page.route(`${URL_SUPABASE}/functions/v1/resgatar-link`, (route) => route.abort('failed'))
+    await page.goto(LINK)
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await expect(page.getByRole('alert')).toContainText('Algo deu errado')
+    await expect(page.getByRole('button', { name: 'Continuar' })).toBeEnabled()
   })
 })
 

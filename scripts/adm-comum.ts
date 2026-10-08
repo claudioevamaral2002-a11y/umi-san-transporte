@@ -44,7 +44,8 @@ export function montarResumoLink(opcoes: { titulo: string; email: string; link: 
     '',
     `**[Abrir link para criar a senha](${link})**`,
     '',
-    'O link é válido por 24 h e de uso único. Não compartilhe este resumo.',
+    'O link é válido por 24 h e de uso único. Abrir a página não gasta o link: ele só é usado ao tocar em **Continuar**.',
+    'Não compartilhe este resumo.',
     'Se o link expirar, execute o workflow novamente.',
     '',
   ].join('\n')

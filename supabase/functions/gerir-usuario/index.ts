@@ -1,3 +1,4 @@
+import { registrarLinkCurto } from '../_compartilhado/links.ts'
 import { logErro } from '../_compartilhado/log.ts'
 import { criarServidor, registrar, type Contexto } from '../_compartilhado/servidor.ts'
 
@@ -24,14 +25,15 @@ async function gerarLink(ctx: Contexto, usuario: string): Promise<Retorno> {
     email: permissao.email,
     options: { redirectTo: `${ctx.origem}/definir-senha` },
   })
-  const link = gerado.data?.properties?.action_link
-  if (gerado.error || !link) {
-    logErro(ctx.funcao, 'gerar-link', gerado.error ?? undefined)
+  // Link curto (/c/<código>): só o toque em "Continuar" gasta o token (pré-visualizações não).
+  const curto = await registrarLinkCurto(ctx.servico, gerado, 'recovery', ctx.origem)
+  if (!curto.ok) {
+    logErro(ctx.funcao, `link-${curto.etapa}`, gerado.error ?? undefined)
     await registrar(ctx, ctx.usuarioId, 'GERAR_LINK', alvo, 'ERRO', 'ERRO_AUTH')
     return { ok: false, codigo: 'ERRO_INESPERADO' }
   }
   await registrar(ctx, ctx.usuarioId, 'GERAR_LINK', alvo, 'OK')
-  return { ok: true, link }
+  return { ok: true, link: curto.link }
 }
 
 async function definirAtivo(ctx: Contexto, usuario: string, ativo: boolean, motivo: unknown): Promise<Retorno> {

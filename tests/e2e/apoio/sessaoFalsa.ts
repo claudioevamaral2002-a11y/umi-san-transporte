@@ -17,9 +17,9 @@ export interface PerfilFalso {
 
 const b64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url')
 
-function jwt(aal: 'aal1' | 'aal2'): string {
+function jwt(aal: 'aal1' | 'aal2', metodo = 'password'): string {
   const agora = Math.floor(Date.now() / 1000)
-  const corpo = { sub: USUARIO, role: 'authenticated', aal, amr: [{ method: 'password', timestamp: agora }], exp: agora + 3600 }
+  const corpo = { sub: USUARIO, role: 'authenticated', aal, amr: [{ method: metodo, timestamp: agora }], exp: agora + 3600 }
   return `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url(corpo)}.assinatura-falsa`
 }
 
@@ -118,4 +118,40 @@ const respostasFuncoes = new WeakMap<Page, Array<Record<string, unknown>>>()
 /** Próximas respostas das Edge Functions (na ordem); depois disso, `{ ok: true }`. */
 export function responderFuncoes(page: Page, ...respostas: Array<Record<string, unknown>>) {
   respostasFuncoes.set(page, respostas)
+}
+
+/**
+ * Link curto sem sessão prévia: responde ao resgate (POST resgatar-link) e ao que o app pede depois do
+ * setSession. Devolve todas as requisições feitas pela página (para provar que abrir não chama nada).
+ */
+export async function simularResgateDeLink(
+  page: Page,
+  resposta: Record<string, unknown> | 'sessao',
+  perfil: PerfilFalso = { papel: 'CLIENTE', senha_pendente: true },
+) {
+  const pedidos: Array<{ url: string; metodo: string }> = []
+  page.on('request', (r) => pedidos.push({ url: r.url(), metodo: r.method() }))
+  await page.route(`${URL_SUPABASE}/functions/v1/resgatar-link`, (route) =>
+    json(
+      route,
+      resposta === 'sessao' ? { ok: true, access_token: jwt('aal1', 'otp'), refresh_token: 'refresh-falso' } : resposta,
+    ),
+  )
+  await page.route(`${URL_SUPABASE}/auth/v1/user`, (route) => json(route, usuario(false)))
+  await page.route(`${URL_SUPABASE}/auth/v1/logout**`, (route) => route.fulfill({ status: 204 }))
+  await page.route(`${URL_SUPABASE}/rest/v1/rpc/meu_perfil`, (route) =>
+    json(route, [
+      {
+        nome: perfil.nome ?? 'Carla Dias',
+        papel: perfil.papel ?? 'CLIENTE',
+        empresa_id: null,
+        empresa_nome: null,
+        empresa_logo_caminho: null,
+        ativo: perfil.ativo ?? true,
+        senha_pendente: perfil.senha_pendente ?? true,
+        tem_2fa: false,
+      },
+    ]),
+  )
+  return pedidos
 }

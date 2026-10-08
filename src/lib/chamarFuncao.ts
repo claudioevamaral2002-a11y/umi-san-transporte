@@ -13,15 +13,34 @@ export interface OpcoesChamador {
  * Sempre devolve `{ok, codigo}`; rede/resposta estranha vira `ERRO_INESPERADO`.
  */
 export function criarChamador({ url, chavePublica, obterToken, buscar = (...a) => fetch(...a) }: OpcoesChamador) {
+  return criar({ url, chavePublica, obterToken, buscar, exigeToken: true })
+}
+
+/** Mesma chamada, sem sessão (só `apikey`): usada pelo resgate do link de acesso. */
+export function criarChamadorPublico({
+  url,
+  chavePublica,
+  buscar = (...a) => fetch(...a),
+}: Omit<OpcoesChamador, 'obterToken'>) {
+  return criar({ url, chavePublica, obterToken: async () => null, buscar, exigeToken: false })
+}
+
+function criar({
+  url,
+  chavePublica,
+  obterToken,
+  buscar,
+  exigeToken,
+}: Required<OpcoesChamador> & { exigeToken: boolean }) {
   const base = url.replace(/\/+$/, '')
   return async function chamar(nome: string, corpo: Record<string, unknown>): Promise<RespostaFuncao> {
     try {
-      const token = await obterToken()
-      if (!token) return { ok: false, codigo: 'NAO_AUTENTICADO' }
+      const token = exigeToken ? await obterToken() : null
+      if (exigeToken && !token) return { ok: false, codigo: 'NAO_AUTENTICADO' }
       const resposta = await buscar(`${base}/functions/v1/${encodeURIComponent(nome)}`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           apikey: chavePublica,
           'Content-Type': 'application/json',
         },

@@ -4,7 +4,7 @@ import { comSessaoFalsa, responderFuncoes } from './apoio/sessaoFalsa.ts'
 
 const ADM = { papel: 'ADM' as const, tem_2fa: true }
 const AAL2 = { aal: 'aal2' as const }
-const LINK = 'https://projeto.supabase.co/auth/v1/verify?token=abc&type=invite&redirect_to=https://app/definir-senha'
+const LINK = 'http://127.0.0.1:8788/c/K7M2QX9PRT'
 
 test.describe('administração', () => {
   test('ADM abre cada tela pelo menu', async ({ page }) => {

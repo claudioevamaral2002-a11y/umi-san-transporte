@@ -46,7 +46,7 @@ test.describe('fluxos reais', () => {
     await gerado.getByRole('button', { name: 'Copiar' }).click()
     await expect(gerado.getByText('Link copiado.')).toBeVisible()
     const link = await page.evaluate(() => navigator.clipboard.readText())
-    expect(link).toContain('/auth/v1/verify')
+    expect(link).toMatch(new RegExp(`^${ORIGEM_APP}/c/[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{10}$`))
     expect(link).toBe(await gerado.getByRole('textbox').inputValue())
 
     const { contexto, pagina } = await novoContexto(browser)
@@ -117,6 +117,31 @@ test.describe('fluxos reais', () => {
     // Cliente também não entra na administração.
     await page.goto('/adm/usuarios')
     await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+  })
+
+  test('link curto: prévia não gasta; depois de usado, a segunda abertura avisa que expirou', async ({ page, browser }) => {
+    const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Reuso' })
+    const resposta = await fetch(`${URL_SUPABASE}/functions/v1/convidar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adm.token}`, apikey: CHAVE_PUBLICA, 'Content-Type': 'application/json', Origin: ORIGEM_APP },
+      body: JSON.stringify({ email: emailUnico('reuso'), nome: 'Rita Reuso', papel: 'MOTORISTA' }),
+    })
+    const convite = (await resposta.json()) as { ok: boolean; link?: string }
+    expect(convite.ok).toBe(true)
+
+    // Várias "prévias" (GET do documento) antes do toque: nada é gasto.
+    for (let i = 0; i < 3; i++) expect((await page.request.get(convite.link!)).status()).toBe(200)
+    await definirSenhaPeloLink(page, convite.link!, senhaForte())
+
+    const { contexto, pagina } = await novoContexto(browser)
+    try {
+      await pagina.goto(convite.link!)
+      await pagina.getByRole('button', { name: 'Continuar' }).click()
+      await expect(pagina.getByRole('alert')).toContainText('Este link expirou ou já foi usado. Peça um novo ao administrador.')
+      await expect(pagina.getByRole('button', { name: 'Continuar' })).toHaveCount(0)
+    } finally {
+      await contexto.close()
+    }
   })
 
   test('motorista que força /adm/usuarios vê "Sem permissão" e o banco recusa a lista', async ({ page, request }) => {

@@ -6,9 +6,15 @@ describe('WhatsApp', () => {
 
   it('mensagem com primeiro nome, aviso de validade e o link', () => {
     expect(mensagemDoLink('  Bruno  Lima ', link)).toBe(
-      `Olá, Bruno! Seu acesso à IVO Transportes está pronto. Abra o link para criar sua senha (válido por 24 h, uso único): ${link}`,
+      `Olá, Bruno! Seu acesso à IVO Transportes está pronto. Abra o link e toque em Continuar para criar sua senha (válido por 24 h, uso único): ${link}`,
     )
     expect(mensagemDoLink('', link, 'recuperacao')).toMatch(/^Olá! Aqui está o link para criar uma nova senha/)
+  })
+
+  it('link curto do app (/c/<código>) vai inteiro na mensagem', () => {
+    const curto = 'https://umi-san-transporte.pages.dev/c/K7M2QX9PRT'
+    expect(mensagemDoLink('Ana', curto)).toContain(`uso único): ${curto}`)
+    expect(linkSeguro(curto)).toBe(curto)
   })
 
   it('URL wa.me sem destinatário, texto todo codificado', () => {

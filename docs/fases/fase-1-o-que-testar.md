@@ -8,12 +8,12 @@ Marque cada item. Se algo falhar, pare e anote a tela e a mensagem (sem links ne
 2. **Site no ar.** Abra https://umi-san-transporte.pages.dev: aparece a tela de login com o CAPTCHA.
 3. **Criar o primeiro ADM.** Rode o workflow [criar-primeiro-adm](https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions/workflows/criar-primeiro-adm.yml) com seu e-mail e nome ([RUNBOOK, item 1](../RUNBOOK.md#1-primeiro-acesso-do-adm-a-primeira-pessoa-administradora)). Confirme que o link está **só** no resumo, não nos logs.
 4. **Rodar de novo.** Com o ADM já criado e senha ainda pendente, rodar outra vez gera novo link (recuperação). Depois de definir a senha, rodar de novo é recusado.
-5. **Definir a senha.** Abra o link do resumo, crie uma senha forte. Teste também uma senha fraca (ex.: `12345678`) e uma senha vazada conhecida: o app deve recusar.
-6. **Reusar o link.** Abrir o mesmo link outra vez não deve funcionar.
+5. **Definir a senha.** Abra o link do resumo (formato curto `…/c/XXXXXXXXXX`): aparece **Crie sua senha** com o botão **Continuar**. Toque em **Continuar** e crie uma senha forte. Teste também uma senha fraca (ex.: `12345678`) e uma senha vazada conhecida: o app deve recusar.
+6. **Reusar o link.** Abrir o mesmo link outra vez e tocar em **Continuar** mostra "Este link expirou ou já foi usado. Peça um novo ao administrador."
 7. **Cadastrar o 2FA.** Leia o QR code no autenticador e confirme com o código de 6 dígitos.
 8. **Sair e entrar.** Faça logout; entre com e-mail, senha, CAPTCHA e código 2FA. Teste uma senha errada: a mensagem é genérica ("E-mail ou senha incorretos").
 9. **Resetar o 2FA do ADM.** Rode [resetar-2fa-adm](https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions/workflows/resetar-2fa-adm.yml) com seu e-mail ([RUNBOOK, item 2](../RUNBOOK.md#2-o-adm-perdeu-o-2fa-celular-perdidotrocado)); entre de novo e recadastre o 2FA.
-10. **Convidar um motorista.** Usuários, Convidar, perfil Motorista. Copie o link, abra em janela anônima, defina a senha e cadastre o 2FA.
+10. **Convidar um motorista.** Usuários, Convidar, perfil Motorista. Use **Enviar no WhatsApp** e mande o link para você mesmo: espere a pré-visualização do WhatsApp aparecer e passe o mouse/abra a pré-visualização no navegador sem tocar em nada. Depois abra o link no celular, toque em **Continuar**, defina a senha e cadastre o 2FA. **A pré-visualização não pode ter gasto o link.**
 11. **Convidar um cliente da Umi San.** Confira que a empresa Umi San já aparece em Empresas (ela já vem cadastrada); depois convide um cliente vinculado a ela. O cliente define a senha (sem 2FA obrigatório) e vê apenas o que é da empresa dele.
 12. **Logo da empresa.** Envie o logo da Umi San (a empresa já existe); confirme que aparece para o cliente. Teste um arquivo inválido (não imagem ou grande demais): recusado.
 13. **Publicar a tabela de parâmetros.** Em Parâmetros, edite, publique e confira que a nova versão vale para os perfis permitidos.

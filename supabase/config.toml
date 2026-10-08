@@ -409,6 +409,10 @@ verify_jwt = false
 [functions.gerir-usuario]
 verify_jwt = false
 
+# Resgate do link curto (/c/<código>): sem sessão ainda; protegido por POST + CORS + limite por IP.
+[functions.resgatar-link]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

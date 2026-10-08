@@ -20,6 +20,7 @@ export const MENSAGENS = {
   SENHA_LONGA: 'Senha longa demais. Use uma senha mais curta.',
   SENHA_VAZADA: 'Essa senha já apareceu em vazamentos. Escolha outra.',
   VERIFICACAO_INDISPONIVEL: 'Não conseguimos verificar a senha agora. Tente de novo em alguns minutos.',
+  EXPIRADO: 'Este link expirou ou já foi usado. Peça um novo ao administrador.',
   REAUTENTICACAO_NECESSARIA: 'O link expirou para criar a senha. Peça um novo link ao administrador.',
 
   // Gestão de usuários
