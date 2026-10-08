@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
@@ -17,9 +17,11 @@ function alternarContraste() {
 
 export function Vitrine() {
   const [carregando, setCarregando] = useState(false)
+  const temporizador = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   function simular(ms: number) {
+    clearTimeout(temporizador.current)
     setCarregando(true)
-    setTimeout(() => setCarregando(false), ms)
+    temporizador.current = setTimeout(() => setCarregando(false), ms)
   }
 
   return (

@@ -4,9 +4,10 @@ const RODAS = [49, 118, 182] as const
 
 export function CarregandoPickup({ ativo, rotulo = 'Carregando…' }: { ativo: boolean; rotulo?: string }) {
   const visivel = useAtrasoVisivel(ativo)
-  if (!visivel) return null
   return (
-    <div role="status" aria-live="polite" data-testid="carregando-pickup" className="flex flex-col items-center gap-3 py-8">
+    <div role="status" aria-live="polite">
+      {visivel && (
+    <div data-testid="carregando-pickup" className="flex flex-col items-center gap-3 py-8">
       <svg viewBox="0 0 240 90" width="240" height="90" aria-hidden="true" className="text-texto">
         <g className="pickup-balanco motion-reduce:animate-none">
           <rect x="18" y="38" width="62" height="26" rx="4" fill="currentColor" />
@@ -28,6 +29,8 @@ export function CarregandoPickup({ ativo, rotulo = 'Carregando…' }: { ativo: b
         />
       </svg>
       <span className="font-medium text-texto-suave">{rotulo}</span>
+    </div>
+      )}
     </div>
   )
 }

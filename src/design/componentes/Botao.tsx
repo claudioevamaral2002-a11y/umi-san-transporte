@@ -5,11 +5,12 @@ type Variante = 'principal' | 'secundario' | 'perigo'
 const ESTILOS: Record<Variante, string> = {
   principal: 'bg-acao text-acao-texto',
   secundario: 'bg-superficie text-texto border border-borda',
-  perigo: 'bg-[var(--status-cancelada)] text-white',
+  perigo: 'bg-[var(--status-cancelada)] text-[var(--cor-perigo-texto)]',
 }
 
 export function Botao({
   variante = 'secundario',
+  type = 'button',
   className = '',
   onClick,
   ...resto
@@ -17,6 +18,7 @@ export function Botao({
   return (
     <button
       {...resto}
+      type={type}
       onClick={(evento) => {
         if (variante === 'principal') navigator.vibrate?.(10)
         onClick?.(evento)
