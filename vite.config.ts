@@ -33,8 +33,35 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
+        // Deploy novo vale já: o SW novo ativa e assume as abas abertas, e os precaches antigos somem.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'],
+        // Sem NavigationRoute do precache: um shell velho nunca atende links de acesso
+        // (#access_token… não chega ao SW). Toda navegação tenta a rede primeiro.
+        navigateFallback: undefined,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }: { request: Request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'navegacao',
+              networkTimeoutSeconds: 3,
+              plugins: [
+                {
+                  // Um único shell (SPA): todas as rotas compartilham a chave /index.html.
+                  cacheKeyWillBeUsed: async () => '/index.html',
+                  // Offline (ou rede lenta sem cache): cai no index.html do precache.
+                  handlerDidError: async () => {
+                    const resposta = await caches.match('/index.html', { ignoreSearch: true })
+                    return resposta ?? Response.error()
+                  },
+                },
+              ],
+            },
+          },
+        ],
       },
     }),
   ],

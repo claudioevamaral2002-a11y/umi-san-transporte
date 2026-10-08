@@ -12,3 +12,15 @@
 
 /sw.js
   Cache-Control: no-cache
+
+/registerSW.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
