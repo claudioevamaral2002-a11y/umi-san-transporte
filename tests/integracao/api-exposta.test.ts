@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { CHAVE_PUBLICA, URL_SUPABASE, criarUsuario } from './ajuda.ts'
+import { CHAVE_PUBLICA, URL_SUPABASE, clientePublico, criarUsuario } from './ajuda.ts'
 
 describe('superfície da API (especificação 1.1 e segurança item 10)', () => {
   let token = ''
@@ -21,6 +22,15 @@ describe('superfície da API (especificação 1.1 e segurança item 10)', () => 
     })
     expect(r.status).toBe(200)
     expect(await r.json()).toBe('pong')
+  })
+
+  it('cadastro público está fechado (Adendo A3)', async () => {
+    const { data, error } = await clientePublico().auth.signUp({
+      email: `novo-${randomUUID()}@teste.local`,
+      password: `Senha-${randomUUID()}`,
+    })
+    expect(error).not.toBeNull()
+    expect(data.user).toBeNull()
   })
 
   it('sem header Authorization a RPC é recusada (CSRF não se aplica)', async () => {
