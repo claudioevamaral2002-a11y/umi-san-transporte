@@ -38,11 +38,24 @@ jobs:
           cache: npm
       - run: npm ci
       # Banco antes do front: o front novo nunca chama RPC que ainda não existe.
-      - name: Migrations no Supabase
+      - name: Configuração do Auth, migrations e Edge Functions no Supabase
+        env:
+          REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_AUTH_CAPTCHA_SECRET: ${{ secrets.TURNSTILE_SECRET_KEY }}
         run: |
-          npx supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
+          set -euo pipefail
+          npx supabase link --project-ref "$REF"
+          npx supabase config push --project-ref "$REF" --yes
           npx supabase db push --yes
+          npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev --project-ref "$REF"
+          if [ -n "$(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name '_*' 2>/dev/null)" ]; then
+            npx supabase functions deploy --project-ref "$REF"
+          else
+            echo "Nenhuma Edge Function para publicar"
+          fi
       - run: npm run build
+        env:
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
       - name: Nenhum segredo no bundle
         run: node scripts/varrer-segredos.ts dist
       - name: Publicar no Cloudflare Pages

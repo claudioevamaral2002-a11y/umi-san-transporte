@@ -8,3 +8,6 @@ supabase/.branches/
 test-results/
 playwright-report/
 .wrangler/
+
+# Segredos locais das Edge Functions (gerado no CI)
+supabase/functions/.env

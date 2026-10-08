@@ -29,7 +29,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:unit
+      - name: Segredos locais (testes públicos da Cloudflare, sempre aprovam)
+        run: |
+          mkdir -p supabase/functions
+          echo "APP_ORIGENS=http://127.0.0.1:8788" > supabase/functions/.env
       - name: Supabase local
+        env:
+          SUPABASE_AUTH_CAPTCHA_SECRET: 1x0000000000000000000000000000000AA
         run: npx supabase start -x studio,imgproxy,vector,logflare
       - name: pgTAP
         run: npx supabase test db

@@ -21,6 +21,8 @@ const linhas = [
   `SUPABASE_DB_URL=${status.DB_URL}`,
   `VITE_SUPABASE_URL=${status.API_URL}`,
   `VITE_SUPABASE_PUBLISHABLE_KEY=${chavePublica}`,
+  // Chave de site de teste oficial da Cloudflare (sempre passa).
+  `VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA`,
 ]
 const conteudo = linhas.join('\n') + '\n'
 writeFileSync('.env.test', conteudo)

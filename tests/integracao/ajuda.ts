@@ -11,6 +11,9 @@ function lerEnv(nome: string): string {
 export const URL_SUPABASE = lerEnv('SUPABASE_URL')
 export const CHAVE_PUBLICA = lerEnv('SUPABASE_ANON_KEY')
 
+/** Token aceito pelo segredo de teste público da Cloudflare (CI/local). */
+export const TOKEN_CAPTCHA_TESTE = 'XXXX.DUMMY.TOKEN.XXXX'
+
 const semSessao = { auth: { persistSession: false, autoRefreshToken: false } }
 
 export function clientePublico() {
@@ -34,7 +37,11 @@ export async function criarUsuario(): Promise<UsuarioTeste> {
   if (criado.error || !criado.data.user) throw criado.error ?? new Error('createUser não retornou usuário')
 
   const cliente = clientePublico()
-  const login = await cliente.auth.signInWithPassword({ email, password: senha })
+  const login = await cliente.auth.signInWithPassword({
+    email,
+    password: senha,
+    options: { captchaToken: TOKEN_CAPTCHA_TESTE },
+  })
   if (login.error || !login.data.session) throw login.error ?? new Error('login sem sessão')
   return { id: criado.data.user.id, token: login.data.session.access_token, cliente }
 }

@@ -215,10 +215,10 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# [auth.captcha]
-# enabled = true
-# provider = "hcaptcha"
-# secret = ""
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -417,3 +417,12 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Produção como código: `supabase config push --project-ref <ref>` aplica estas
+# diferenças quando o project_id coincide com o projeto de destino.
+[remotes.producao]
+project_id = "eoczqrpvhfeulfhjblaw"
+
+[remotes.producao.auth]
+site_url = "https://umi-san-transporte.pages.dev"
+additional_redirect_urls = ["https://umi-san-transporte.pages.dev/definir-senha"]
