@@ -393,6 +393,16 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# O gateway não valida o JWT: o preflight CORS não leva Authorization e cada função valida o token (auth.getUser).
+[functions.definir-senha]
+verify_jwt = false
+
+[functions.convidar]
+verify_jwt = false
+
+[functions.gerir-usuario]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
