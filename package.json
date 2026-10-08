@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "db:test": "supabase test db",
-    "test:integracao": "vitest run --config vitest.integracao.config.ts"
+    "test:integracao": "vitest run --config vitest.integracao.config.ts",
+    "test:unit": "vitest run"
   },
   "repository": {
     "type": "git",

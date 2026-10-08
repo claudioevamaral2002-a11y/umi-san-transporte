@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixtures falsas do teste do varredor de segredos"
+paths = ['''scripts/varrer-segredos\.test\.ts''']
