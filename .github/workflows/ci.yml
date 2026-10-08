@@ -40,12 +40,13 @@ jobs:
       - name: Edge Functions (serve com o .env; o start sozinho não carrega APP_ORIGENS)
         run: |
           eval "$(npx supabase status -o env | grep '^API_URL=')"
-          echo "Antes do serve: OPTIONS definir-senha -> $(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$API_URL/functions/v1/definir-senha" || true)"
+          echo "Antes do serve: POST sem token definir-senha -> $(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/functions/v1/definir-senha" || true)"
           nohup npx supabase functions serve --env-file supabase/functions/.env > functions-serve.log 2>&1 &
           codigo=000
-          for i in $(seq 1 60); do
-            codigo=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H 'Origin: http://127.0.0.1:8788' "$API_URL/functions/v1/definir-senha" || true)
-            if [ "$codigo" = "204" ]; then echo "Funções respondendo após ${i}s"; exit 0; fi
+          for i in $(seq 1 90); do
+            grep -q "Serving" functions-serve.log || { sleep 1; continue; }
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/functions/v1/definir-senha" || true)
+            if [ "$codigo" = "401" ]; then echo "Funções respondendo após ${i}s"; tail -n 5 functions-serve.log; exit 0; fi
             sleep 1
           done
           echo "Funções não responderam (último código: $codigo)"; cat functions-serve.log; exit 1

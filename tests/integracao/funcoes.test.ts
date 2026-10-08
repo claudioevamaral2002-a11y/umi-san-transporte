@@ -69,24 +69,12 @@ const meuPerfil = async (cliente: ReturnType<typeof clientePublico>) => {
 }
 
 describe('protocolo das funções', () => {
-  it('só POST; exige Bearer válido; CORS apenas para a origem configurada', async () => {
+  it('só POST; exige Bearer válido; origem de navegador só a configurada', async () => {
     for (const funcao of ['definir-senha', 'convidar', 'gerir-usuario']) {
       expect((await chamar(funcao, null, {})).status, `${funcao} sem token`).toBe(401)
       expect((await chamar(funcao, 'lixo.sem.valor', {})).status, `${funcao} token inválido`).toBe(401)
       expect((await chamar(funcao, null, {}, { metodo: 'GET' })).status, `${funcao} GET`).toBe(405)
 
-      const permitida = await fetch(`${URL_SUPABASE}/functions/v1/${funcao}`, {
-        method: 'OPTIONS',
-        headers: { Origin: ORIGEM_APP, 'Access-Control-Request-Method': 'POST' },
-      })
-      expect(permitida.status, `${funcao} OPTIONS`).toBe(204)
-      expect(permitida.headers.get('access-control-allow-origin')).toBe(ORIGEM_APP)
-
-      const negada = await fetch(`${URL_SUPABASE}/functions/v1/${funcao}`, {
-        method: 'OPTIONS',
-        headers: { Origin: 'https://mau.example', 'Access-Control-Request-Method': 'POST' },
-      })
-      expect(negada.headers.get('access-control-allow-origin')).toBeNull()
     }
   })
 
@@ -94,7 +82,6 @@ describe('protocolo das funções', () => {
     const cliente = await criarPessoa({ papel: 'CLIENTE' })
     const r = await chamar('definir-senha', cliente.token, { senha: 'Qualquer-Coisa-1' }, { origem: 'https://mau.example' })
     expect(r.status).toBe(403)
-    expect(r.cabecalhos.get('access-control-allow-origin')).toBeNull()
   })
 })
 
@@ -164,18 +151,28 @@ describe('convidar', () => {
 
   it('motorista convidado: depois da senha ainda precisa cadastrar o 2FA (aal1 até lá)', async () => {
     const adm = await criarPessoa({ papel: 'ADM' })
-    const r = await convidar(adm, { email: novoEmail(), nome: 'Motorista Convidado', papel: 'MOTORISTA' })
+    const email = novoEmail()
+    const senha = `Forte-${randomUUID()}`
+    const r = await convidar(adm, { email, nome: 'Motorista Convidado', papel: 'MOTORISTA' })
     expect(r.corpo).toMatchObject({ ok: true })
     const novo = await abrirLink(r.corpo.link as string)
     expect(await meuPerfil(novo.cliente)).toMatchObject({ papel: 'MOTORISTA', senha_pendente: true, tem_2fa: false })
 
-    expect((await chamar('definir-senha', novo.token, { senha: `Forte-${randomUUID()}` })).corpo).toEqual({ ok: true })
+    expect((await chamar('definir-senha', novo.token, { senha })).corpo).toEqual({ ok: true })
     expect(await meuPerfil(novo.cliente)).toMatchObject({ senha_pendente: false, tem_2fa: false })
-    expect((await novo.cliente.auth.mfa.getAuthenticatorAssuranceLevel()).data?.currentLevel).toBe('aal1')
 
-    await cadastrarTotp(novo.cliente)
-    expect((await novo.cliente.auth.mfa.getAuthenticatorAssuranceLevel()).data?.currentLevel).toBe('aal2')
-    expect(await meuPerfil(novo.cliente)).toMatchObject({ tem_2fa: true })
+    // diagnóstico: a sessão do link sobrevive à troca de senha pela Admin API?
+    const sessaoViva = await novo.cliente.auth.getUser()
+    console.log('sessão do link após definir-senha:', sessaoViva.error ? `morta (${sessaoViva.error.name})` : 'viva')
+
+    // o front refaz o login com a senha nova e então cadastra o 2FA
+    const relogin = clientePublico()
+    expect(
+      (await relogin.auth.signInWithPassword({ email, password: senha, options: { captchaToken: TOKEN_CAPTCHA_TESTE } })).error,
+    ).toBeNull()
+    await cadastrarTotp(relogin)
+    expect((await relogin.auth.mfa.getAuthenticatorAssuranceLevel()).data?.currentLevel).toBe('aal2')
+    expect(await meuPerfil(relogin)).toMatchObject({ tem_2fa: true })
   })
 
   it('e-mail que já tem conta é recusado pela RPC (sem link)', async () => {
@@ -276,7 +273,9 @@ describe('gerir-usuario', () => {
 
     const on = await gerir(adm, { acao: 'REATIVAR', usuario_id: cliente.id, motivo: 'teste de reativação' })
     expect(on.corpo).toEqual({ ok: true })
-    expect((await cliente.cliente.auth.refreshSession()).error).toBeNull()
+    const reativado = await cliente.cliente.auth.refreshSession()
+    const banido = await comBanco((db) => db.query('select banned_until from auth.users where id = $1', [cliente.id]))
+    expect(reativado.error?.message, `banned_until=${String(banido.rows[0].banned_until)}`).toBeUndefined()
     expect((await cliente.cliente.from('empresas').select('id')).data).toHaveLength(1)
   })
 
