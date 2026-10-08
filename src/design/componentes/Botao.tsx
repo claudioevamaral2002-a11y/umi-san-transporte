@@ -23,7 +23,7 @@ export function Botao({
         if (variante === 'principal') navigator.vibrate?.(10)
         onClick?.(evento)
       }}
-      className={`min-h-12 rounded-cartao px-5 font-semibold transition-transform duration-75 active:scale-[0.97] active:brightness-95 disabled:opacity-50 ${ESTILOS[variante]} ${className}`}
+      className={`min-h-12 rounded-cartao px-5 ivo-botao transition-transform duration-75 active:scale-[0.97] active:brightness-95 disabled:opacity-50 ${ESTILOS[variante]} ${className}`}
     />
   )
 }

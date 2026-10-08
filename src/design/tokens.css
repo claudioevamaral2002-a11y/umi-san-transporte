@@ -1,28 +1,32 @@
-/* Tokens da identidade marítima (especificação 12.1). Laranja só em ação principal e alerta. */
+/* Tokens da identidade IVO Transportes (especificação, Adendo A7). Laranja só em ação principal e alerta;
+   #FF6A00 nunca é cor de texto sobre fundo claro (usar --cor-alerta-texto). */
 :root {
-  --cor-marinho: #0b2545;
-  --cor-papel: #f7f5f0;
-  --cor-laranja: #ff6b1a;
+  --cor-marinho: #0a2540;
+  --cor-marinho-2: #1e4b7a;
+  --cor-cinza-azulado: #96a6bb;
+  --cor-papel: #f6f4ee;
+  --cor-laranja: #ff6a00;
 
   --cor-fundo: var(--cor-papel);
   --cor-superficie: #ffffff;
-  --cor-texto: #0b2545;
-  --cor-texto-suave: #4a5a70;
-  --cor-borda: #dad6cc;
+  --cor-texto: #0a2540;
+  --cor-texto-suave: #4b5b70;
+  --cor-borda: #e1e6ed;
   --cor-acao: var(--cor-laranja);
-  --cor-acao-texto: #0b2545; /* marinho sobre laranja: contraste ≥ 4,5:1 */
+  --cor-acao-texto: #0a2540; /* marinho sobre laranja: 5,41:1 */
   --cor-perigo-texto: #ffffff;
+  --cor-alerta-texto: #c2410c; /* laranja legível como texto */
 
-  --status-solicitada: #656c78;
+  --status-solicitada: #5b6b80;
   --status-aguardando: #b45309;
-  --status-agendada: #1d4ed8;
+  --status-agendada: #1e4b7a;
   --status-andamento: #c2410c;
   --status-concluida: #15803d;
   --status-cancelada: #b91c1c;
 
   --raio: 14px;
   --raio-pequeno: 8px;
-  --sombra: 0 1px 2px rgb(11 37 69 / 0.08), 0 4px 16px rgb(11 37 69 / 0.06);
+  --sombra: 0 1px 2px rgb(10 37 64 / 0.08), 0 4px 16px rgb(10 37 64 / 0.06);
   --duracao: 240ms;
   --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
   color-scheme: light;
@@ -30,15 +34,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
-    --cor-fundo: #06172b;
-    --cor-superficie: #0b2545;
-    --cor-texto: #f7f5f0;
-    --cor-texto-suave: #a9b6c8;
-    --cor-perigo-texto: #0b2545;
-    --cor-borda: #1e3a5f;
-    --status-solicitada: #9ca3af;
-    --status-aguardando: #f59e0b;
-    --status-agendada: #60a5fa;
+    --cor-fundo: #061a30;
+    --cor-superficie: #0a2540;
+    --cor-texto: #f6f4ee;
+    --cor-texto-suave: #a9b8cc;
+    --cor-perigo-texto: #0a2540;
+    --cor-alerta-texto: #ff8a4c;
+    --cor-borda: #1e4b7a;
+    --status-solicitada: #9fb0c4;
+    --status-aguardando: #fbbf24;
+    --status-agendada: #7fb2e8;
     --status-andamento: #ff8a4c;
     --status-concluida: #4ade80;
     --status-cancelada: #f87171;
@@ -55,6 +60,7 @@
   --cor-borda: #000000;
   --cor-acao-texto: #000000;
   --cor-perigo-texto: #ffffff;
+  --cor-alerta-texto: #9a3412;
   --status-solicitada: #374151;
   --status-aguardando: #78350f;
   --status-agendada: #1e3a8a;

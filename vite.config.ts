@@ -13,18 +13,22 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Registro por arquivo externo (registerSW.js): nenhum script inline.
       injectRegister: 'script',
-      pwaAssets: { config: true },
       manifest: {
-        name: 'Umi San Transporte',
-        short_name: 'Umi San',
+        name: 'IVO Transportes',
+        short_name: 'IVO',
         description: 'Agendamento, orçamento e execução de transportes.',
         lang: 'pt-BR',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0B2545',
-        theme_color: '#0B2545',
+        background_color: '#0A2540',
+        theme_color: '#0A2540',
+        icons: [
+          { src: '/ivo-icon-escuro-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/ivo-icon-escuro-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/ivo-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
         navigateFallback: '/index.html',
