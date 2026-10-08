@@ -24,7 +24,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Dependências sem vulnerabilidade alta/crítica (SECURITY item 13)
+      - name: Dependências sem vulnerabilidade alta/crítica (especificação 9, item 13)
         run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
@@ -36,7 +36,7 @@ jobs:
       - run: node scripts/env-local.ts
       - run: npm run test:integracao
       - run: npm run build:test
-      - name: Nenhum segredo no bundle (SECURITY item 1)
+      - name: Nenhum segredo no bundle (especificação 9, item 1)
         run: node scripts/varrer-segredos.ts dist
       - run: node scripts/orcamento-bundle.ts
       - run: npx playwright install --with-deps chromium
@@ -50,6 +50,9 @@ jobs:
 
   segredos-repositorio:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,3 +60,4 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
