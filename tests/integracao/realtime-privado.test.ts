@@ -22,24 +22,28 @@ describe('Realtime Broadcast privado (especificação 1.2)', () => {
       return r.rows[0]!.id
     })
     const topico = `prova:${id}`
-    await a.cliente.realtime.setAuth(a.token)
-    await b.cliente.realtime.setAuth(b.token)
+    try {
+      await a.cliente.realtime.setAuth(a.token)
+      await b.cliente.realtime.setAuth(b.token)
 
-    const recebidos: unknown[] = []
-    const canalA = a.cliente
-      .channel(topico, { config: { private: true } })
-      .on('broadcast', { event: 'status' }, (mensagem) => recebidos.push(mensagem.payload))
-    expect(await statusAssinatura(canalA)).toBe('SUBSCRIBED')
+      const recebidos: unknown[] = []
+      const canalA = a.cliente
+        .channel(topico, { config: { private: true } })
+        .on('broadcast', { event: 'status' }, (mensagem) => recebidos.push(mensagem.payload))
+      expect(await statusAssinatura(canalA)).toBe('SUBSCRIBED')
 
-    const canalB = b.cliente.channel(topico, { config: { private: true } })
-    expect(await statusAssinatura(canalB)).not.toBe('SUBSCRIBED')
+      // Sanidade: o token de B é válido, então a recusa abaixo vem da política, não de credencial ruim.
+      expect((await b.cliente.rpc('ping')).data).toBe('pong')
+      const canalB = b.cliente.channel(topico, { config: { private: true } })
+      expect(await statusAssinatura(canalB)).toBe('CHANNEL_ERROR')
 
-    await comBanco((db) => db.query("update app.prova_canal set status = 'ORCADA' where id = $1", [id]))
+      await comBanco((db) => db.query("update app.prova_canal set status = 'ORCADA' where id = $1", [id]))
 
-    await expect.poll(() => recebidos.length, { timeout: 8_000 }).toBe(1)
-    expect(recebidos[0]).toMatchObject({ id, status: 'ORCADA' })
-
-    await a.cliente.removeAllChannels()
-    await b.cliente.removeAllChannels()
+      await expect.poll(() => recebidos.length, { timeout: 8_000 }).toBe(1)
+      expect(recebidos[0]).toMatchObject({ id, status: 'ORCADA' })
+    } finally {
+      await a.cliente.removeAllChannels()
+      await b.cliente.removeAllChannels()
+    }
   })
 })
