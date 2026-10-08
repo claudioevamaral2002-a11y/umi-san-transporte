@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme inline {
+  --color-fundo: var(--cor-fundo);
+  --color-superficie: var(--cor-superficie);
+  --color-texto: var(--cor-texto);
+  --color-texto-suave: var(--cor-texto-suave);
+  --color-borda: var(--cor-borda);
+  --color-acao: var(--cor-acao);
+  --color-acao-texto: var(--cor-acao-texto);
+  --color-marinho: var(--cor-marinho);
+  --color-papel: var(--cor-papel);
+  --font-sans: "Manrope Variable", system-ui, sans-serif;
+  --radius-cartao: var(--raio);
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--cor-fundo);
+    color: var(--cor-texto);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  button, a { touch-action: manipulation; }
+}
+
+/* Em @layer components para que utilitários (motion-reduce:animate-none) prevaleçam. */
+@layer components {
+  .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 600ms linear infinite; }
+  .pickup-balanco { animation: pickup-balancar 450ms ease-in-out infinite; }
+  .pickup-estrada { animation: estrada-andar 400ms linear infinite; }
+}
+
+@keyframes pickup-girar { to { transform: rotate(360deg); } }
+@keyframes pickup-balancar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes estrada-andar { to { stroke-dashoffset: 30; } }
+
+/* Transição de tela (View Transitions). Sem preferência de movimento reduzido apenas. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) { animation: var(--duracao) var(--curva) both tela-sair; }
+  ::view-transition-new(root) { animation: var(--duracao) var(--curva) both tela-entrar; }
+}
+@keyframes tela-sair { to { transform: translateX(-30%); opacity: 0; } }
+@keyframes tela-entrar { from { transform: translateX(30%); opacity: 0; } }

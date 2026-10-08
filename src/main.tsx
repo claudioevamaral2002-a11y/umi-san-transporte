@@ -1,3 +1,5 @@
+import '@fontsource-variable/manrope'
+import './design/estilos.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
