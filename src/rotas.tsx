@@ -10,8 +10,6 @@ const vitrine: RouteObject[] =
     ? [{ path: 'vitrine', lazy: async () => ({ Component: (await import('./telas/Vitrine.tsx')).Vitrine }) }]
     : []
 
-const emBreve = async () => ({ Component: (await import('./telas/EmBreve.tsx')).EmBreve })
-
 export const roteador = createBrowserRouter([
   {
     path: '/',
@@ -67,10 +65,16 @@ export const roteador = createBrowserRouter([
                 path: 'adm',
                 element: <GuardaPapel papeis={['ADM']} />,
                 children: [
-                  { path: 'usuarios', lazy: emBreve },
-                  { path: 'empresas', lazy: emBreve },
-                  { path: 'permissoes', lazy: emBreve },
-                  { path: 'auditoria', lazy: emBreve },
+                  { path: 'usuarios', lazy: async () => ({ Component: (await import('./telas/adm/Usuarios.tsx')).Usuarios }) },
+                  { path: 'empresas', lazy: async () => ({ Component: (await import('./telas/adm/Empresas.tsx')).Empresas }) },
+                  {
+                    path: 'permissoes',
+                    lazy: async () => ({ Component: (await import('./telas/adm/Permissoes.tsx')).Permissoes }),
+                  },
+                  {
+                    path: 'auditoria',
+                    lazy: async () => ({ Component: (await import('./telas/adm/Auditoria.tsx')).Auditoria }),
+                  },
                 ],
               },
             ],
