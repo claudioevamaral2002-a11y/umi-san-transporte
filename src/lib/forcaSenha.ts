@@ -1,5 +1,5 @@
 // Espelha as regras do servidor (supabase/functions/_compartilhado/senha.ts) só para guiar a pessoa;
-// quem decide é a Edge Function (inclusive a checagem de vazamento).
+// letras e dígitos contam só como ASCII (como no Auth); quem decide é a Edge Function (inclusive a checagem de vazamento).
 export const SENHA_MINIMO = 10
 export const SENHA_MAXIMO_BYTES = 72
 
@@ -26,9 +26,9 @@ export function avaliarSenha(bruta: string): AvaliacaoSenha {
   const senha = normalizarSenha(bruta)
   const regras: Regra[] = [
     { id: 'tamanho', rotulo: `Pelo menos ${SENHA_MINIMO} caracteres`, ok: [...senha].length >= SENHA_MINIMO },
-    { id: 'maiuscula', rotulo: 'Uma letra maiúscula', ok: /\p{Lu}/u.test(senha) },
-    { id: 'minuscula', rotulo: 'Uma letra minúscula', ok: /\p{Ll}/u.test(senha) },
-    { id: 'numero', rotulo: 'Um número', ok: /\p{Nd}/u.test(senha) },
+    { id: 'maiuscula', rotulo: 'Uma letra maiúscula', ok: /[A-Z]/.test(senha) },
+    { id: 'minuscula', rotulo: 'Uma letra minúscula', ok: /[a-z]/.test(senha) },
+    { id: 'numero', rotulo: 'Um número', ok: /[0-9]/.test(senha) },
   ]
   const longaDemais = new TextEncoder().encode(senha).length > SENHA_MAXIMO_BYTES
   const nivel = regras.filter((r) => r.ok).length

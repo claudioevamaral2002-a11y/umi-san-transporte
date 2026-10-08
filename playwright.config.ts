@@ -5,6 +5,9 @@ const URL_BASE = 'http://127.0.0.1:8788'
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
+  // Local (Windows): menos workers e folga na primeira rota lazy; no CI nada muda.
+  workers: process.env.CI ? undefined : 2,
+  expect: { timeout: process.env.CI ? 5_000 : 15_000 },
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',

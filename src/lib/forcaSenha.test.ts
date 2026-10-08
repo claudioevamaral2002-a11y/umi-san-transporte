@@ -13,6 +13,8 @@ describe('avaliarSenha (mesmas regras do servidor)', () => {
     ['Aa1' + 'x'.repeat(70), false],
     ['Aa1' + 'é'.repeat(35), false],
     ['', false],
+    ['Ágilidade2026x', false],
+    ['ágilidade2026X', true],
   ])('%s -> %s', (senha, valida) => {
     expect(avaliarSenha(senha).valida).toBe(valida)
   })

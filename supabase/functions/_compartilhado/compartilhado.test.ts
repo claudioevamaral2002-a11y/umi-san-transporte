@@ -17,6 +17,8 @@ describe('validarForcaSenha', () => {
     ['Aa1' + 'x'.repeat(69), null],
     ['Aa1' + 'é'.repeat(35), 'SENHA_LONGA'],
     ['', 'SENHA_FRACA'],
+    ['Ágilidade2026x', 'SENHA_FRACA'],
+    ['ágilidade2026X', null],
   ])('%s -> %s', (senha, esperado) => {
     expect(validarForcaSenha(senha)).toBe(esperado)
   })

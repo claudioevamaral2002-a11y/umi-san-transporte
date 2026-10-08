@@ -59,7 +59,7 @@ jobs:
           npx supabase db push --yes
           npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev --project-ref "$REF"
           if [ -n "$(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name '_*' 2>/dev/null)" ]; then
-            npx supabase functions deploy --project-ref "$REF"
+            npx supabase functions deploy --project-ref "$REF" --import-map supabase/functions/deno.json
           else
             echo "Nenhuma Edge Function para publicar"
           fi
@@ -80,6 +80,8 @@ jobs:
         run: |
           set -euo pipefail
           sleep 20
+          # Sem barra final: a CSP lista a origem, não o caminho.
+          URL_SB="${VITE_SUPABASE_URL%/}"
           headers=$(curl -sfI https://umi-san-transporte.pages.dev)
-          echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${VITE_SUPABASE_URL}"
+          echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${URL_SB}"
           echo "$headers" | grep -i "strict-transport-security"

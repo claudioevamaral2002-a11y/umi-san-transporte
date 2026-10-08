@@ -520,5 +520,10 @@ O teste mensal restaura o backup no Supabase local (CLI) dentro do próprio GitH
 - Estilo: fundo claro (Off White) com topo e destaques em Azul Profundo; modo escuro automático; alto contraste para o motorista.
 - Conta e domínio: e-mails transacionais aguardam domínio próprio; até lá, convites e redefinição de senha por link gerado pelo ADM.
 
+### A8. Segundo fator mais simples para quem tem pouca familiaridade com tecnologia
+- Fase 1: 2FA por app autenticador (TOTP), configurado uma vez — de preferência pelo ADM junto com o motorista. A sessão se renova sozinha; o código só é pedido em novo login.
+- Fase futura: **SMS como fator alternativo** (Supabase MFA por telefone + provedor Twilio), com preenchimento automático do código (`autocomplete="one-time-code"`; WebOTP no Android). A pessoa escolhe autenticador ou SMS. Exige conta Twilio (custo por SMS) e telefone cadastrado.
+- WhatsApp descartado como canal de código: não preenche automaticamente em app web e exige WhatsApp Business verificado.
+
 ### A6. Projetos Supabase
 Um único projeto remoto (produção, sa-east-1). CI e desenvolvimento usam o Supabase local. A segunda vaga do plano Free fica livre para restauração de emergência.

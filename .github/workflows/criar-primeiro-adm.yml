@@ -43,7 +43,7 @@ jobs:
           : "${REF:?vars.SUPABASE_PROJECT_REF ausente no ambiente producao}"
           : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN ausente}"
           # A saída bruta nunca é impressa: vai direto para o node, que devolve só a chave.
-          KEY=$(npx supabase projects api-keys --project-ref "$REF" -o json | node -e '
+          KEY=$(npx supabase projects api-keys --reveal --project-ref "$REF" -o json | node -e '
             let s = ""
             process.stdin.on("data", (d) => (s += d))
             process.stdin.on("end", () => {

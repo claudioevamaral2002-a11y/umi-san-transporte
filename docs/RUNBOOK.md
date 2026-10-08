@@ -8,7 +8,7 @@ Guia passo a passo para o dono do sistema. Não precisa saber programar. Em todo
 - Painel Supabase: https://supabase.com/dashboard
 - Painel Cloudflare: https://dash.cloudflare.com
 
-> Regra de ouro: nunca cole links de acesso, senhas ou chaves em conversas, e-mails ou prints. Os links gerados valem por 24 horas e só funcionam uma vez.
+> Regra de ouro: nunca cole links de acesso, senhas ou chaves em conversas, e-mails ou prints. Os links gerados valem por 24 horas (`otp_expiry` no `config.toml`) e só funcionam uma vez.
 
 ---
 
@@ -20,9 +20,10 @@ Só funciona enquanto ainda não existe nenhum ADM.
 2. Clique em **Run workflow** (botão à direita). Preencha **e-mail** e **nome** do administrador e clique no botão verde **Run workflow**.
 3. Aguarde ~1 minuto. Clique na execução que apareceu (a mais recente) e espere o círculo ficar verde.
 4. Na página da execução, role até o **resumo** (seção "Convite do primeiro ADM"). Lá está o botão **Abrir link para criar a senha**. O link não aparece nos logs, só no resumo.
-5. Clique no link. Abre o aplicativo na tela **Definir senha**. Crie uma senha com pelo menos 10 caracteres, com maiúscula, minúscula e número.
-6. Em seguida o app pede o **2FA**: abra um aplicativo autenticador no celular (Google Authenticator, Microsoft Authenticator, Authy...), leia o QR code e digite o código de 6 dígitos.
-7. Pronto. A partir daí o login é e-mail + senha + código do autenticador.
+5. Clique no link. Abre o aplicativo na tela **Crie sua senha**. Escolha uma senha com pelo menos 10 caracteres, com maiúscula, minúscula e número (letras sem acento: A-Z e a-z) e clique em **Criar senha**.
+6. O app volta para a tela **Entrar** com o aviso "Senha criada. Entre com a nova senha." Entre com **e-mail e senha** (o CAPTCHA é automático).
+7. Em seguida aparece a tela do **2FA**: abra um aplicativo autenticador no celular (Google Authenticator, Microsoft Authenticator, Authy...), leia o QR code e digite o código de 6 dígitos.
+8. Pronto. A partir daí o login é e-mail + senha + código do autenticador.
 
 ### O link expirou ou foi usado errado
 Rode o mesmo workflow de novo (passos 1 a 4) com o mesmo e-mail. Se a senha ainda não foi criada, ele gera um novo link de recuperação. Se o ADM já criou a senha, o workflow recusa (use a tela de login ou o item 4).
@@ -47,16 +48,16 @@ Se o ADM também esqueceu a senha, veja o item 3 (outro ADM gera o link) ou, sen
 
 1. Entre no aplicativo como ADM: https://umi-san-transporte.pages.dev
 2. Menu **Usuários**.
-3. Na linha da pessoa, clique em **Gerar link de senha** (ou **Convidar**, para quem ainda não tem conta).
+3. Para quem ainda não tem conta: botão **Convidar** (no topo da tela), preencha o formulário e clique em **Gerar link de convite**. Para quem já tem conta: na linha da pessoa, clique em **Gerenciar**, depois em **Gerar novo link** e em **Gerar link**.
 4. Use **Copiar** ou **Enviar no WhatsApp**. O link vale 24 horas e só funciona uma vez. Sem domínio próprio, o app não envia e-mail: você entrega o link.
-5. Para motorista que perdeu o 2FA: na mesma linha, **Resetar 2FA**.
+5. Para motorista que perdeu o 2FA: na linha da pessoa, **Gerenciar**, depois **Resetar 2FA** (aparece só para quem tem 2FA cadastrado).
 
 ---
 
 ## 4. Desativar um usuário
 
-1. Aplicativo, menu **Usuários**, linha da pessoa, **Desativar**.
-2. O bloqueio é imediato. Para voltar atrás, **Reativar** e gere um novo link de senha (a sessão antiga não volta, a pessoa precisa entrar de novo).
+1. Aplicativo, menu **Usuários**, linha da pessoa, **Gerenciar**, depois **Desativar**.
+2. O bloqueio é imediato. Para voltar atrás, **Gerenciar**, **Reativar** e gere um novo link de senha (a sessão antiga não volta, a pessoa precisa entrar de novo).
 3. Não é possível desativar o último ADM ativo.
 
 ---
@@ -67,12 +68,14 @@ Local: GitHub, Settings, Environments, **producao** (https://github.com/claudioe
 
 | Nome | Tipo | Onde | Para que serve |
 | --- | --- | --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | segredo | repositório | CLI do Supabase: deploy, e obter a chave de serviço nos workflows manuais |
+| `SUPABASE_ACCESS_TOKEN` | segredo | ambiente `producao` (hoje pode estar no repositório; ver abaixo) | CLI do Supabase: deploy, e obter a chave de serviço nos workflows manuais |
 | `SUPABASE_DB_PASSWORD` | segredo | ambiente `producao` | senha do banco, usada em `db push` |
 | `CLOUDFLARE_API_TOKEN` | segredo | ambiente `producao` | publicar no Cloudflare Pages |
 | `TURNSTILE_SECRET_KEY` | segredo | ambiente `producao` | segredo do CAPTCHA (vai para o Auth via `config push`) |
 | `SUPABASE_PROJECT_REF` | variável | ambiente `producao` | identificador do projeto Supabase |
 | `CLOUDFLARE_ACCOUNT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY` | variáveis | ambiente `producao` | públicas (vão no front) |
+
+**Mover para o ambiente `producao`:** `SUPABASE_ACCESS_TOKEN` e `SUPABASE_DB_PASSWORD` devem ficar só no ambiente `producao` (assim só os workflows que usam esse ambiente os enxergam). O dono faz assim: em Settings, Environments, **producao**, seção *Environment secrets*, **Add environment secret**, cole o valor com o mesmo nome; depois, em Settings, Secrets and variables, Actions, apague o segredo de mesmo nome do nível do repositório. Rode o workflow Deploy de novo para confirmar.
 
 A chave de serviço do Supabase (`service_role`) **não** fica salva no GitHub: os workflows manuais a buscam na hora com o `SUPABASE_ACCESS_TOKEN`, escondem o valor nos logs e a descartam ao fim da execução.
 

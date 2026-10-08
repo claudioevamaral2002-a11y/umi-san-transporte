@@ -7,7 +7,7 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 
 ## 0. Pré-requisitos desta fase
 1. **Identidade IVO no app** (Adendo A7): nome "IVO Transportes", ícone/splash do kit (`docs/marca/`), paleta e escala tipográfica oficiais, logo SVG no topo. A vitrine `/vitrine` sai do ar ao fim da fase (fica só em desenvolvimento).
-2. **Configuração do Auth em produção como código**: `supabase/config.toml` ganha `[remotes.producao]` com as diferenças de produção (site_url do Pages, redirect, segredo do CAPTCHA via env). O deploy passa a rodar `supabase config push` antes das migrations. **Atenção:** o `config push` envia o `config.toml` INTEIRO (não só os overrides de `[remotes.producao]`). Em produção ele altera: captcha Turnstile ligado e obrigatório, JWT 15 min, cadastro público fechado, MFA TOTP, `email_sent` 30/h, site_url e redirects do Pages, S3 protocol e vector buckets desligados, schema `api` exposto; `[db.pooler]` e `[db.network_restrictions]` ficam fora (comentados). O captcha passa a ser exigido assim que o `config push` roda, então o PR para `main` deve incluir o front com Turnstile no mesmo merge. O deploy confere project_id x `SUPABASE_PROJECT_REF`, a presença do segredo e mostra `config diff` no log. Com isso o projeto remoto fica igual ao testado: só o schema `api` exposto, JWT 15 min, cadastro fechado, MFA TOTP.
+2. **Configuração do Auth em produção como código**: `supabase/config.toml` ganha `[remotes.producao]` com as diferenças de produção (site_url do Pages, redirect, segredo do CAPTCHA via env). O deploy passa a rodar `supabase config push` antes das migrations. **Atenção:** o `config push` envia o `config.toml` INTEIRO (não só os overrides de `[remotes.producao]`). Em produção ele altera: captcha Turnstile ligado e obrigatório, JWT 15 min, cadastro público fechado, MFA TOTP, `email_sent` 30/h (sem efeito enquanto não houver SMTP próprio: os links são gerados pelo ADM e não passam pelo envio de e-mail), site_url e redirects do Pages, S3 protocol e vector buckets desligados, schema `api` exposto; `[db.pooler]` e `[db.network_restrictions]` ficam fora (comentados). O captcha passa a ser exigido assim que o `config push` roda, então o PR para `main` deve incluir o front com Turnstile no mesmo merge. O deploy confere project_id x `SUPABASE_PROJECT_REF`, a presença do segredo e mostra `config diff` no log. Com isso o projeto remoto fica igual ao testado: só o schema `api` exposto, JWT 15 min, cadastro fechado, MFA TOTP.
 3. **Turnstile**: widget criado pelo usuário no painel Cloudflare (hostnames `umi-san-transporte.pages.dev` e `127.0.0.1`). Chave do site = variável pública; chave secreta = segredo do ambiente `producao`. Local/CI usam as chaves de teste oficiais da Cloudflare (sempre passam).
 4. **Edge Functions no deploy**: `supabase functions deploy` no `deploy.yml`.
 
@@ -34,15 +34,15 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 ## 2. Regras de acesso (no banco)
 
 - `app.pode_acessar()` (e `app.pode_fazer(acao)` para a matriz) — `SECURITY DEFINER`, devolve o perfil do `auth.uid()` e **recusa** (retorna nulo) quem: não tem perfil, está inativo, tem `senha_pendente`, ou é ADM/MOTORISTA sem `aal2` no JWT. Toda política RLS e toda RPC passa por ela.
-- `app.pode(acao text, alvo uuid default null) → boolean` — única fonte de "quem pode o quê": lê papel + matriz. Exemplos: `EDITAR_PARAMETROS` = ADM ou (MOTORISTA e `MOTORISTA_EDITA_PARAMETROS`); `GERIR_USUARIOS` = ADM.
+- `app.pode_fazer(acao text) → boolean` — única fonte de "quem pode o quê": lê papel + matriz. Exemplos: `EDITAR_PARAMETROS` = ADM ou (MOTORISTA e `MOTORISTA_EDITA_PARAMETROS`); `GERIR_USUARIOS` = ADM.
 - RPCs `api.*` devolvem `jsonb {ok, codigo, ...}`; negação e excesso de limite são auditados e a transação é confirmada (Adendo A2). Integridade (unique/check) continua com `RAISE`.
 - Views `api.*` são `security_invoker` sobre tabelas com RLS:
-  - `api.meu_perfil` — o próprio perfil + nome/logo da empresa.
-  - `api.usuarios` — ADM vê todos; demais não veem nada.
+  - `api.meu_perfil()` (função) — o próprio perfil + nome/logo da empresa.
+  - `api.listar_usuarios()` (função) — ADM vê todos; demais não veem nada.
   - `api.empresas` — ADM vê todas; cliente vê a própria; motorista vê todas (nome/logo).
   - `api.permissoes` — todos leem (transparência, especificação 2); só ADM altera.
   - `api.parametros_vigentes` e `api.parametros_historico` — todos leem.
-  - `api.auditoria` — só ADM.
+  - `api.listar_auditoria()` (função) — só ADM.
 - Logo do cliente: bucket privado `logos` (PNG/WebP, ≤ 500 KB, limite do bucket); escrita só ADM; leitura por usuários da própria empresa e pela equipe (ADM/motorista), por URL assinada curta.
 
 ## 3. Entrada no app
@@ -64,7 +64,7 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 **Situações especiais:**
 - Desativar usuário: `perfis.ativo = false` (efeito imediato no banco) + bloqueio na Admin API (impede renovar sessão).
 - Esqueceu a senha: ADM gera novo link (tipo recuperação) na tela Usuários.
-- Perdeu o 2FA: ADM remove o fator (Edge Function `resetar-2fa`, auditado). Se o ADM perder o próprio: workflow manual no GitHub `resetar-2fa-adm` (só o dono do repositório dispara), documentado no RUNBOOK.
+- Perdeu o 2FA: ADM remove o fator (Edge Function `gerir-usuario`, ação `RESETAR_2FA`, auditado). Se o ADM perder o próprio: workflow manual no GitHub `resetar-2fa-adm` (só o dono do repositório dispara), documentado no RUNBOOK.
 - **Primeiro ADM:** workflow manual `criar-primeiro-adm` (entrada: e-mail e nome) — só funciona se ainda não existir ADM; o link sai no resumo da execução (visível só a quem tem acesso ao repositório).
 
 ## 4. Telas (identidade IVO)
@@ -75,7 +75,7 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 | `/definir-senha` | via link | nova senha com medidor de força e checagem de vazamento |
 | `/seguranca/2fa` | ADM, motorista | cadastro do autenticador (mockup aprovado) |
 | `/` | todos | início provisório por perfil: saudação, pendências (vazio por enquanto), atalhos; cliente com logo da empresa no canto superior direito |
-| `/parametros` | todos | "Tabela de preços e regras": vigente + histórico; editar só para quem `pode('EDITAR_PARAMETROS')` (formulário publica nova versão com data de vigência) |
+| `/parametros` | todos | "Tabela de preços e regras": vigente + histórico; editar só para quem `pode_fazer('EDITAR_PARAMETROS')` (formulário publica nova versão com data de vigência) |
 | `/adm/usuarios` | ADM | lista, convidar, gerar link, desativar/reativar, trocar perfil, resetar 2FA |
 | `/adm/empresas` | ADM | nome e logo das empresas clientes |
 | `/adm/permissoes` | ADM | as 3 chaves da matriz, com confirmação e motivo |
@@ -97,7 +97,7 @@ Guardas de rota no front só para experiência; a proteção real é o banco.
 - motorista não publica parâmetros sem delegação; publica quando ADM liga `MOTORISTA_EDITA_PARAMETROS`; desligar volta a bloquear
 - motorista nunca altera a matriz nem usuários
 - ninguém edita/apaga auditoria (inclusive ADM)
-- cliente A não vê perfil de cliente B; vê a própria empresa; não lê `api.usuarios` nem `api.auditoria`
+- cliente A não vê perfil de cliente B; vê a própria empresa; não chama `api.listar_usuarios()` nem `api.listar_auditoria()`
 - ADM/motorista sem aal2 recusados; com TOTP verificado, liberados
 - usuário desativado recusado na chamada seguinte
 - senha trocada por fora (`auth.updateUser`) → próxima chamada `api.*` recusada (Adendo A3)
@@ -117,6 +117,7 @@ Saldo (fase 2); pedidos, agenda/calendário e Realtime real de pedidos (fase 3 �
 
 ## 7. Riscos e decisões registradas
 - **Sem domínio**: links copiados pelo ADM substituem e-mail; "confirmação de e-mail" vira confirmação de posse do link. Bloqueante antes de clientes reais em produção.
+- **Link de recuperação = acesso à conta**: se um CLIENTE recarregar a página depois de abrir um link de recuperação, ele fica logado sem ter definido a senha. Aceito: o link é a credencial (24 h, uso único, entregue pelo ADM).
 - **`config push`** pode sobrescrever ajustes feitos no painel — por isso nenhuma configuração de Auth é feita no painel daqui em diante (especificação 11).
 - **Primeiro ADM** via workflow: o link aparece no resumo do GitHub Actions (repositório privado, só o dono vê); uso único, 24 h.
 - **Risco residual — chave de serviço**: quem detém a `service_role` (Edge Functions, segredos do GitHub) pode assumir qualquer conta pela Admin API. Mitigação: segredos só no environment `producao` e auditoria das operações de sistema (`detalhe.origem = sistema`).

@@ -12,6 +12,7 @@ export function validarForcaSenha(senha: unknown): 'SENHA_FRACA' | 'SENHA_LONGA'
   if (typeof senha !== 'string') return 'SENHA_FRACA'
   if (new TextEncoder().encode(senha).length > SENHA_MAXIMO_BYTES) return 'SENHA_LONGA'
   if ([...senha].length < SENHA_MINIMO) return 'SENHA_FRACA'
-  if (!/\p{Lu}/u.test(senha) || !/\p{Ll}/u.test(senha) || !/\p{Nd}/u.test(senha)) return 'SENHA_FRACA'
+  // Classes ASCII, iguais às do Auth (`lower_upper_letters_digits`); outros caracteres continuam permitidos.
+  if (!/[A-Z]/.test(senha) || !/[a-z]/.test(senha) || !/[0-9]/.test(senha)) return 'SENHA_FRACA'
   return null
 }

@@ -32,6 +32,10 @@ Deno.serve(
     const gravada = await ctx.servico.auth.admin.updateUserById(ctx.usuarioId, { password: senha })
     if (gravada.error) {
       logErro(ctx.funcao, 'gravar', gravada.error)
+      if (gravada.error.code === 'weak_password') {
+        await registrar(ctx, ctx.usuarioId, 'DEFINIR_SENHA', alvo, 'NEGADO', 'SENHA_FRACA')
+        return { ok: false, codigo: 'SENHA_FRACA' }
+      }
       await registrar(ctx, ctx.usuarioId, 'DEFINIR_SENHA', alvo, 'ERRO', 'ERRO_AUTH')
       return { ok: false, codigo: 'ERRO_INESPERADO' }
     }

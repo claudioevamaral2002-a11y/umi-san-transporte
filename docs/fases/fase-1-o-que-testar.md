@@ -14,8 +14,8 @@ Marque cada item. Se algo falhar, pare e anote a tela e a mensagem (sem links ne
 8. **Sair e entrar.** Faça logout; entre com e-mail, senha, CAPTCHA e código 2FA. Teste uma senha errada: a mensagem é genérica ("E-mail ou senha incorretos").
 9. **Resetar o 2FA do ADM.** Rode [resetar-2fa-adm](https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions/workflows/resetar-2fa-adm.yml) com seu e-mail ([RUNBOOK, item 2](../RUNBOOK.md#2-o-adm-perdeu-o-2fa-celular-perdidotrocado)); entre de novo e recadastre o 2FA.
 10. **Convidar um motorista.** Usuários, Convidar, perfil Motorista. Copie o link, abra em janela anônima, defina a senha e cadastre o 2FA.
-11. **Convidar um cliente da Umi San.** Crie a empresa Umi San, convide um cliente vinculado a ela. O cliente define a senha (sem 2FA obrigatório) e vê apenas o que é da empresa dele.
-12. **Logo da empresa.** Envie o logo da Umi San; confirme que aparece para o cliente. Teste um arquivo inválido (não imagem ou grande demais): recusado.
+11. **Convidar um cliente da Umi San.** Confira que a empresa Umi San já aparece em Empresas (ela já vem cadastrada); depois convide um cliente vinculado a ela. O cliente define a senha (sem 2FA obrigatório) e vê apenas o que é da empresa dele.
+12. **Logo da empresa.** Envie o logo da Umi San (a empresa já existe); confirme que aparece para o cliente. Teste um arquivo inválido (não imagem ou grande demais): recusado.
 13. **Publicar a tabela de parâmetros.** Em Parâmetros, edite, publique e confira que a nova versão vale para os perfis permitidos.
 14. **Testar delegação.** Dê a um motorista a permissão delegada correspondente; confirme que ele passa a poder a ação e que, ao retirar, perde. Cliente nunca ganha acesso de motorista/ADM.
 15. **Desativar e reativar.** Desative o motorista de teste: ele perde acesso na hora. Reative e gere novo link de senha ([RUNBOOK, itens 3 e 4](../RUNBOOK.md#3-gerar-link-de-senha-para-motorista-ou-cliente)).
