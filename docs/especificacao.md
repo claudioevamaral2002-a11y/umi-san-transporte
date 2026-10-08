@@ -510,5 +510,15 @@ Toda view em `api` é criada com `security_invoker = true`, para aplicar o RLS d
 ### A5. Teste de restauração em Postgres efêmero
 O teste mensal restaura o backup no Supabase local (CLI) dentro do próprio GitHub Actions, sem criar projeto Supabase temporário (limite de projetos do Free; criação por API exige token de gerenciamento). Fotos vêm do R2. Mesmas conferências da seção 10.
 
+### A7. Marca: IVO Transportes (substitui a seção 12.1 onde conflitar)
+- O app é da **IVO Transportes** (prestador). **Umi San** é a empresa cliente (aparece só como empresa do cliente: saldo, extrato, pedidos).
+- Paleta oficial: Azul Profundo `#0A2540`, Off White `#F6F4EE`, Laranja Sinal `#FF6A00` (só ação principal e alerta). Apoio: `#1E4B7A`, `#96A6BB`, `#E1E6ED`, verde `#16A34A`, âmbar `#F59E0B`, vermelho `#EF4444` (usar variações mais escuras quando forem texto, para contraste AA).
+- Tipografia em duas camadas: o logotipo "IVO" é lettering exclusivo e "TRANSPORTES" é lettering derivado da Inter Medium, ambos já convertidos em curvas nos SVGs do kit (nenhuma fonte carregada para eles). Aplicativo e documentos: Manrope em 6 pesos (300–800): títulos fortes, textos leves, números tabulares em valores.
+- Logo do cliente: cada empresa cliente pode ter seu logo (PNG/WebP ≤ 500 KB, enviado pelo ADM), exibido no canto superior direito das telas do cliente; sem logo, mostra o nome da empresa.
+- Agenda em calendário (complementa a seção 5): visão do mês com marcadores por dia (seu pedido, aguardando você, ocupado, dia cheio) em todos os tamanhos de tela; toque no dia abre a linha do tempo do dia com blocos ocupados e janelas livres; toque numa janela livre inicia um pedido com data/hora preenchidas. Cliente continua vendo só "ocupado" nos pedidos de outros.
+- Símbolo: "V" com ondas + triângulo laranja; é o ícone do app e da splash. Arquivos oficiais em `docs/marca/`.
+- Estilo: fundo claro (Off White) com topo e destaques em Azul Profundo; modo escuro automático; alto contraste para o motorista.
+- Conta e domínio: e-mails transacionais aguardam domínio próprio; até lá, convites e redefinição de senha por link gerado pelo ADM.
+
 ### A6. Projetos Supabase
 Um único projeto remoto (produção, sa-east-1). CI e desenvolvimento usam o Supabase local. A segunda vaga do plano Free fica livre para restauração de emergência.
