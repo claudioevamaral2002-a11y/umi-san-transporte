@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('headers de segurança presentes (SECURITY item 19)', async ({ request }) => {
+test('headers de segurança presentes (especificação 9, item 19)', async ({ request }) => {
   const h = (await request.get('/')).headers()
   expect(h['content-security-policy']).toContain("script-src 'self' https://challenges.cloudflare.com")
   expect(h['content-security-policy']).toContain("frame-ancestors 'none'")
@@ -8,10 +8,12 @@ test('headers de segurança presentes (SECURITY item 19)', async ({ request }) =
   expect(h['strict-transport-security']).toContain('max-age=63072000')
   expect(h['x-content-type-options']).toBe('nosniff')
   expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin')
+  expect(h['x-frame-options']).toBe('DENY')
+  expect(h['cross-origin-opener-policy']).toBe('same-origin')
   expect(h['permissions-policy']).toContain('geolocation=()')
 })
 
-test('CSP bloqueia script inline injetado (SECURITY item 18)', async ({ page }) => {
+test('CSP bloqueia script inline injetado (especificação 9, item 18)', async ({ page }) => {
   await page.goto('/')
   const resultado = await page.evaluate(
     () =>

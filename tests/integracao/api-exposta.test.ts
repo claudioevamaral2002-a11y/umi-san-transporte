@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { CHAVE_PUBLICA, URL_SUPABASE, clientePublico, criarUsuario } from './ajuda.ts'
 
-describe('superfície da API (especificação 1.1 e segurança item 10)', () => {
+describe('superfície da API (especificação 1.1 e especificação 9, item 10)', () => {
   let token = ''
   beforeAll(async () => {
     token = (await criarUsuario()).token
@@ -53,12 +53,12 @@ describe('superfície da API (especificação 1.1 e segurança item 10)', () => 
     ['POST', ''],
     ['PATCH', '?id=not.is.null'],
     ['DELETE', '?id=not.is.null'],
-  ])('escrita direta %s em app.prova_canal é recusada', async (metodo, filtro) => {
+  ])('escrita direta %s via API em app é bloqueada (schema não exposto)', async (metodo, filtro) => {
     const r = await fetch(`${URL_SUPABASE}/rest/v1/prova_canal${filtro}`, {
       method: metodo,
       headers: autenticado({ 'Content-Type': 'application/json', 'Content-Profile': 'app' }),
       body: metodo === 'DELETE' ? undefined : JSON.stringify({ status: 'X' }),
     })
-    expect(r.ok).toBe(false)
+    expect(r.status).toBe(406)
   })
 })

@@ -12,7 +12,7 @@ export default defineConfig({
   projects: [{ name: 'celular', use: { ...devices['Pixel 7'] } }],
   // wrangler pages dev aplica o _headers igual ao Cloudflare Pages.
   webServer: {
-    command: 'npx wrangler pages dev dist --port 8788 --ip 127.0.0.1',
+    command: 'npx wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-01',
     url: URL_BASE,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

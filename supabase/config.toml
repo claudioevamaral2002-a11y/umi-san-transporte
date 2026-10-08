@@ -66,8 +66,9 @@ enabled = true
 schema_paths = []
 
 [db.seed]
+# Sem seed.sql: os testes criam usuários pela Admin API.
 # If enabled, seeds the database after migrations during a db reset.
-enabled = true
+enabled = false
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
@@ -164,7 +165,7 @@ site_url = "http://127.0.0.1:8788"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["http://127.0.0.1:5173"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
-# JWT curto (SECURITY item 14).
+# JWT curto (especificação 9, item 14).
 jwt_expiry = 900
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
