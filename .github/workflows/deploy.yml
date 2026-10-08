@@ -44,7 +44,17 @@ jobs:
           SUPABASE_AUTH_CAPTCHA_SECRET: ${{ secrets.TURNSTILE_SECRET_KEY }}
         run: |
           set -euo pipefail
+          # Guarda (a): o project_id de [remotes.producao] tem de ser o projeto de destino.
+          PID=$(awk '/^\[remotes\.producao\]/{f=1;next} /^\[/{f=0} f && /^project_id/{gsub(/[" ]/,"",$0); sub(/^project_id=/,"",$0); print; exit}' supabase/config.toml)
+          if [ -z "$PID" ] || [ "$PID" != "$REF" ]; then
+            echo "project_id de [remotes.producao] difere de vars.SUPABASE_PROJECT_REF; abortando" >&2
+            exit 1
+          fi
+          # Guarda (b): sem o segredo o captcha ficaria sem chave e travaria o login.
+          : "${SUPABASE_AUTH_CAPTCHA_SECRET:?TURNSTILE_SECRET_KEY ausente no ambiente producao}"
           npx supabase link --project-ref "$REF"
+          # O push envia o config.toml INTEIRO; o diff deixa registrado no log o que muda.
+          npx supabase config diff --project-ref "$REF" || echo "config diff indisponível ou falhou (não bloqueia)"
           npx supabase config push --project-ref "$REF" --yes
           npx supabase db push --yes
           npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev --project-ref "$REF"
@@ -53,7 +63,11 @@ jobs:
           else
             echo "Nenhuma Edge Function para publicar"
           fi
-      - run: npm run build
+      - name: Build
+        run: |
+          test -n "$VITE_TURNSTILE_SITE_KEY" || { echo "VITE_TURNSTILE_SITE_KEY ausente" >&2; exit 1; }
+          test -n "$VITE_SUPABASE_URL" || { echo "VITE_SUPABASE_URL ausente" >&2; exit 1; }
+          npm run build
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
       - name: Nenhum segredo no bundle
