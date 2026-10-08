@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // Vitrine do design system só em dev e na build de teste do e2e; a de produção nunca a inclui.
+  define: { 'import.meta.env.VITE_VITRINE': JSON.stringify(mode === 'test' || mode === 'development' ? '1' : '') },
   // Sem polyfill inline e sem assets em data: — a CSP só permite 'self'.
   build: { modulePreload: { polyfill: false }, assetsInlineLimit: 0 },
   plugins: [
@@ -36,4 +38,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

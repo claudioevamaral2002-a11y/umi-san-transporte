@@ -29,6 +29,9 @@
     overscroll-behavior-y: none;
   }
   button, a { touch-action: manipulation; }
+  /* Foco sempre visível (teclado e leitores de tela). Sobre o azul do topo, contorno claro. */
+  :focus-visible { outline: 3px solid var(--cor-foco); outline-offset: 2px; }
+  .sobre-marinho { --cor-foco: var(--cor-papel); }
 }
 
 /* Escala tipográfica IVO (docs/marca/TIPOGRAFIA.md). Valores financeiros: tabular-nums. */

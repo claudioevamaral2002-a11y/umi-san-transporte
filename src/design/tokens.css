@@ -16,6 +16,7 @@
   --cor-acao-texto: #0a2540; /* marinho sobre laranja: 5,41:1 */
   --cor-perigo-texto: #ffffff;
   --cor-alerta-texto: #c2410c; /* laranja legível como texto */
+  --cor-foco: #1e4b7a;
 
   --status-solicitada: #5b6b80;
   --status-aguardando: #b45309;
@@ -40,6 +41,7 @@
     --cor-texto-suave: #a9b8cc;
     --cor-perigo-texto: #0a2540;
     --cor-alerta-texto: #ff8a4c;
+    --cor-foco: #ff8a4c;
     --cor-borda: #1e4b7a;
     --status-solicitada: #9fb0c4;
     --status-aguardando: #fbbf24;
@@ -61,6 +63,7 @@
   --cor-acao-texto: #000000;
   --cor-perigo-texto: #ffffff;
   --cor-alerta-texto: #9a3412;
+  --cor-foco: #000000;
   --status-solicitada: #374151;
   --status-aguardando: #78350f;
   --status-agendada: #1e3a8a;
