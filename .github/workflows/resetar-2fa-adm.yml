@@ -1,0 +1,52 @@
+name: Resetar 2FA do ADM
+
+# Manual, só pelo dono do repositório. Remove o 2FA (TOTP) de um ADM ativo; fica na auditoria.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: E-mail do administrador que perdeu o 2FA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-producao
+  cancel-in-progress: false
+
+jobs:
+  resetar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: producao
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      ENTRADA_EMAIL: ${{ inputs.email }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Remover os fatores TOTP
+        run: |
+          set -euo pipefail
+          : "${REF:?vars.SUPABASE_PROJECT_REF ausente no ambiente producao}"
+          : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN ausente}"
+          KEY=$(npx supabase projects api-keys --reveal --project-ref "$REF" -o json | node -e '
+            let s = ""
+            process.stdin.on("data", (d) => (s += d))
+            process.stdin.on("end", () => {
+              const lista = JSON.parse(s.slice(s.indexOf("[")))
+              const k = lista.find((x) => x.name === "service_role") ?? lista.find((x) => x.type === "secret")
+              if (!k || !k.api_key) process.exit(1)
+              process.stdout.write(k.api_key)
+            })')
+          echo "::add-mask::$KEY"
+          export SUPABASE_SERVICE_KEY="$KEY"
+          export SUPABASE_URL="https://${REF}.supabase.co"
+          node scripts/resetar-2fa-adm.ts "$ENTRADA_EMAIL"

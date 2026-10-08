@@ -43,17 +43,19 @@ major_version = 17
 # OrioleDB version to use as the Postgres storage engine. Leave empty to use the default engine.
 orioledb_version = ""
 
-[db.pooler]
-enabled = false
-# Port to use for the local connection pooler.
-port = 54329
-# Specifies when a server connection can be reused by other clients.
-# Configure one of the supported pooler modes: `transaction`, `session`.
-pool_mode = "transaction"
-# How many server connections to allow per user/database pair.
-default_pool_size = 20
-# Maximum number of client connections allowed.
-max_client_conn = 100
+# Gerenciado por projeto no painel Supabase; NÃO enviar via `config push` às cegas
+# (o push envia o config.toml inteiro). Mantido comentado de propósito.
+# [db.pooler]
+# enabled = false
+# # Port to use for the local connection pooler.
+# port = 54329
+# # Specifies when a server connection can be reused by other clients.
+# # Configure one of the supported pooler modes: `transaction`, `session`.
+# pool_mode = "transaction"
+# # How many server connections to allow per user/database pair.
+# default_pool_size = 20
+# # Maximum number of client connections allowed.
+# max_client_conn = 100
 
 # [db.vault]
 # secret_key = "env(SECRET_VALUE)"
@@ -73,15 +75,17 @@ enabled = false
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
 
-[db.network_restrictions]
-# Enable management of network restrictions.
-enabled = false
-# List of IPv4 CIDR blocks allowed to connect to the database.
-# Defaults to allow all IPv4 connections. Set empty array to block all IPs.
-allowed_cidrs = ["0.0.0.0/0"]
-# List of IPv6 CIDR blocks allowed to connect to the database.
-# Defaults to allow all IPv6 connections. Set empty array to block all IPs.
-allowed_cidrs_v6 = ["::/0"]
+# Gerenciado por projeto no painel Supabase; NÃO enviar via `config push` às cegas
+# (o push envia o config.toml inteiro). Mantido comentado de propósito.
+# [db.network_restrictions]
+# # Enable management of network restrictions.
+# enabled = false
+# # List of IPv4 CIDR blocks allowed to connect to the database.
+# # Defaults to allow all IPv4 connections. Set empty array to block all IPs.
+# allowed_cidrs = ["0.0.0.0/0"]
+# # List of IPv6 CIDR blocks allowed to connect to the database.
+# # Defaults to allow all IPv6 connections. Set empty array to block all IPs.
+# allowed_cidrs_v6 = ["::/0"]
 
 # Uncomment to reject non-secure connections to the database.
 # [db.ssl_enforcement]
@@ -120,6 +124,12 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
+# Logo da empresa cliente: privado (acesso por URL assinada + política por empresa).
+[storage.buckets.logos]
+public = false
+file_size_limit = "500KiB"
+allowed_mime_types = ["image/png", "image/webp"]
+
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
 # public = false
@@ -129,7 +139,7 @@ file_size_limit = "50MiB"
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
-enabled = true
+enabled = false
 
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]
@@ -148,7 +158,7 @@ max_catalogs = 2
 
 # Store vector embeddings in S3 for large and durable datasets
 [storage.vector]
-enabled = true
+enabled = false
 max_buckets = 10
 max_indexes = 5
 
@@ -163,7 +173,7 @@ site_url = "http://127.0.0.1:8788"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://127.0.0.1:5173"]
+additional_redirect_urls = ["http://127.0.0.1:5173", "http://127.0.0.1:5173/definir-senha", "http://127.0.0.1:8788/definir-senha"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 # JWT curto (especificação 9, item 14).
 jwt_expiry = 900
@@ -200,7 +210,8 @@ password_requirements = "lower_upper_letters_digits"
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# Sem SMTP próprio o app não envia e-mail; convites e recuperação são links gerados pelo ADM.
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -215,10 +226,10 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# [auth.captcha]
-# enabled = true
-# provider = "hcaptcha"
-# secret = ""
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -228,6 +239,7 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
+# Sem SMTP, e-mails não são enviados: convite e recuperação usam links gerados pelo ADM (Adendo A7 / desenho §3).
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = true
@@ -236,7 +248,7 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+otp_expiry = 86400
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -387,6 +399,16 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# O gateway não valida o JWT: o preflight CORS não leva Authorization e cada função valida o token (auth.getUser).
+[functions.definir-senha]
+verify_jwt = false
+
+[functions.convidar]
+verify_jwt = false
+
+[functions.gerir-usuario]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
@@ -417,3 +439,12 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Produção como código: `supabase config push --project-ref <ref>` aplica estas
+# diferenças quando o project_id coincide com o projeto de destino.
+[remotes.producao]
+project_id = "eoczqrpvhfeulfhjblaw"
+
+[remotes.producao.auth]
+site_url = "https://umi-san-transporte.pages.dev"
+additional_redirect_urls = ["https://umi-san-transporte.pages.dev/definir-senha"]

@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // Vitrine do design system só em dev e na build de teste do e2e; a de produção nunca a inclui.
+  define: { 'import.meta.env.VITE_VITRINE': JSON.stringify(mode === 'test' || mode === 'development' ? '1' : '') },
   // Sem polyfill inline e sem assets em data: — a CSP só permite 'self'.
   build: { modulePreload: { polyfill: false }, assetsInlineLimit: 0 },
   plugins: [
@@ -13,18 +15,22 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Registro por arquivo externo (registerSW.js): nenhum script inline.
       injectRegister: 'script',
-      pwaAssets: { config: true },
       manifest: {
-        name: 'Umi San Transporte',
-        short_name: 'Umi San',
+        name: 'IVO Transportes',
+        short_name: 'IVO',
         description: 'Agendamento, orçamento e execução de transportes.',
         lang: 'pt-BR',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0B2545',
-        theme_color: '#0B2545',
+        background_color: '#0A2540',
+        theme_color: '#0A2540',
+        icons: [
+          { src: '/ivo-icon-escuro-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/ivo-icon-escuro-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/ivo-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
         navigateFallback: '/index.html',
@@ -32,4 +38,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

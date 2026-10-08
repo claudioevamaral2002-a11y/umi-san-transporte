@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
 
 test('headers de segurança presentes (especificação 9, item 19)', async ({ request }) => {
-  const h = (await request.get('/')).headers()
+  const h = (await request.get('/entrar')).headers()
   expect(h['content-security-policy']).toContain("script-src 'self' https://challenges.cloudflare.com")
+  expect(h['content-security-policy']).toContain('frame-src https://challenges.cloudflare.com')
   expect(h['content-security-policy']).toContain("frame-ancestors 'none'")
   expect(h['content-security-policy']).not.toMatch(/unsafe-(inline|eval)/)
   expect(h['strict-transport-security']).toContain('max-age=63072000')
@@ -14,7 +15,7 @@ test('headers de segurança presentes (especificação 9, item 19)', async ({ re
 })
 
 test('CSP bloqueia script inline injetado (especificação 9, item 18)', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/entrar')
   const resultado = await page.evaluate(
     () =>
       new Promise<{ executou: boolean; diretiva: string }>((resolve) => {
@@ -36,13 +37,31 @@ test('CSP bloqueia script inline injetado (especificação 9, item 18)', async (
   expect(resultado.diretiva).toMatch(/^script-src/)
 })
 
-test('nenhuma violação de CSP ao navegar', async ({ page }) => {
+test('nenhuma violação de CSP com o Turnstile carregado (entrada e navegação)', async ({ page }) => {
   const violacoes: string[] = []
   page.on('console', (m) => {
     if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) violacoes.push(m.text())
   })
+  // Também pelo evento do navegador (pega violações que não chegam ao console).
+  await page.exposeFunction('__violacaoCsp', (v: string) => violacoes.push(v))
+  await page.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (e) => {
+      ;(window as unknown as { __violacaoCsp: (v: string) => void }).__violacaoCsp(
+        `${e.violatedDirective} ${e.blockedURI}`,
+      )
+    })
+  })
+
   await page.goto('/')
-  await page.getByRole('link', { name: 'Ver design system' }).click()
+  await expect(page).toHaveURL(/\/entrar$/)
+  // Script e iframe do Turnstile carregados e token emitido (chave de teste sempre aprova).
+  await expect(page.locator('script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]')).toHaveCount(1)
+  await page.getByLabel('E-mail').fill('pessoa@exemplo.com.br')
+  await page.getByLabel('Senha', { exact: true }).fill('qualquer-coisa')
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeEnabled({ timeout: 20_000 })
+  expect(await page.evaluate(() => typeof (window as { turnstile?: unknown }).turnstile)).toBe('object')
+
+  await page.goto('/vitrine')
   await expect(page.getByRole('heading', { name: 'Design system' })).toBeVisible()
   expect(violacoes).toEqual([])
 })

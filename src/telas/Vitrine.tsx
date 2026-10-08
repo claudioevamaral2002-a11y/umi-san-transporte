@@ -26,30 +26,30 @@ export function Vitrine() {
 
   return (
     <main className="mx-auto max-w-md space-y-4 p-4">
-      <h1 className="text-2xl font-bold">Design system</h1>
+      <h1 className="ivo-h1">Design system</h1>
 
       <Cartao className="space-y-2">
-        <h2 className="font-semibold">Status</h2>
+        <h2 className="ivo-h3">Status</h2>
         <div className="flex flex-wrap gap-2">
           {STATUS.map((s) => <StatusBadge key={s} status={s} />)}
         </div>
       </Cartao>
 
       <Cartao className="space-y-1">
-        <h2 className="font-semibold">Valores</h2>
-        <p className="text-2xl font-bold"><Dinheiro centavos={123456} /></p>
+        <h2 className="ivo-h3">Valores</h2>
+        <p className="ivo-valor"><Dinheiro centavos={123456} /></p>
         <p><Dinheiro centavos={-5000} className="text-[var(--status-cancelada)]" /></p>
       </Cartao>
 
       <Cartao className="space-y-3">
-        <h2 className="font-semibold">Botões</h2>
+        <h2 className="ivo-h3">Botões</h2>
         <Botao variante="principal" className="w-full">Ação principal</Botao>
         <Botao className="w-full" onClick={alternarContraste}>Alternar alto contraste</Botao>
         <Botao variante="perigo" className="w-full">Cancelar</Botao>
       </Cartao>
 
       <Cartao className="space-y-3">
-        <h2 className="font-semibold">Carregamento</h2>
+        <h2 className="ivo-h3">Carregamento</h2>
         <div className="flex gap-2">
           <Botao onClick={() => simular(200)}>Simular 200 ms</Botao>
           <Botao onClick={() => simular(1500)}>Simular 1500 ms</Botao>

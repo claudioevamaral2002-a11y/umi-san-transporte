@@ -29,8 +29,27 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:unit
+      - name: Segredos locais (testes públicos da Cloudflare, sempre aprovam)
+        run: |
+          mkdir -p supabase/functions
+          echo "APP_ORIGENS=http://127.0.0.1:8788" > supabase/functions/.env
       - name: Supabase local
+        env:
+          SUPABASE_AUTH_CAPTCHA_SECRET: 1x0000000000000000000000000000000AA
         run: npx supabase start -x studio,imgproxy,vector,logflare
+      - name: Edge Functions (serve com o .env; o start sozinho não carrega APP_ORIGENS)
+        run: |
+          eval "$(npx supabase status -o env | grep '^API_URL=')"
+          echo "Antes do serve: POST sem token definir-senha -> $(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/functions/v1/definir-senha" || true)"
+          nohup npx supabase functions serve --env-file supabase/functions/.env > functions-serve.log 2>&1 &
+          codigo=000
+          for i in $(seq 1 90); do
+            grep -q "Serving" functions-serve.log || { sleep 1; continue; }
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/functions/v1/definir-senha" || true)
+            if [ "$codigo" = "401" ]; then echo "Funções respondendo após ${i}s"; tail -n 5 functions-serve.log; exit 0; fi
+            sleep 1
+          done
+          echo "Funções não responderam (último código: $codigo)"; cat functions-serve.log; exit 1
       - name: pgTAP
         run: npx supabase test db
       - run: node scripts/env-local.ts
@@ -40,7 +59,10 @@ jobs:
         run: node scripts/varrer-segredos.ts dist
       - run: node scripts/orcamento-bundle.ts
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - name: E2E (mocks + fluxos reais contra o Supabase local)
+        env:
+          E2E_BACKEND_REAL: '1'
+        run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
