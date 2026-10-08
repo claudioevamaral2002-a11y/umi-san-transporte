@@ -35,3 +35,7 @@ jobs:
         run: npx supabase test db
       - run: node scripts/env-local.ts
       - run: npm run test:integracao
+      - run: npm run build:test
+      - name: Nenhum segredo no bundle (SECURITY item 1)
+        run: node scripts/varrer-segredos.ts dist
+      - run: node scripts/orcamento-bundle.ts
