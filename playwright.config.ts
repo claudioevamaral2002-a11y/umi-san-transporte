@@ -9,7 +9,13 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: URL_BASE, trace: 'retain-on-failure' },
-  projects: [{ name: 'celular', use: { ...devices['Pixel 7'] } }],
+  projects: [
+    { name: 'celular', testIgnore: /[\\/]real[\\/]/, use: { ...devices['Pixel 7'] } },
+    // Fluxos contra o Supabase real (CI): exigem E2E_BACKEND_REAL=1 e o .env.test; sem Docker local, ficam de fora.
+    ...(process.env.E2E_BACKEND_REAL === '1'
+      ? [{ name: 'real', testMatch: /[\\/]real[\\/].*\.spec\.ts$/, fullyParallel: false, use: { ...devices['Pixel 7'] } }]
+      : []),
+  ],
   // wrangler pages dev aplica o _headers igual ao Cloudflare Pages.
   webServer: {
     command: 'npx wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-01',

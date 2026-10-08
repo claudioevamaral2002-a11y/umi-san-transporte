@@ -339,8 +339,8 @@ select is_empty($$
 $$, 'sistema_*: EXECUTE só para service_role');
 select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'api'
-             and p.proname in ('sistema_confirmar_senha', 'sistema_convite_primeiro_adm', 'sistema_registrar', 'sistema_link_primeiro_adm')), 4,
-  'existem as 4 funções sistema_* esperadas');
+             and p.proname in ('sistema_confirmar_senha', 'sistema_convite_primeiro_adm', 'sistema_registrar', 'sistema_link_primeiro_adm', 'sistema_papel_por_email')), 5,
+  'existem as 5 funções sistema_* esperadas');
 select is_empty($$
   select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo', 'definir_permissao',
