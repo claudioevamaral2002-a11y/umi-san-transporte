@@ -59,7 +59,10 @@ export const roteador = createBrowserRouter([
             lazy: async () => ({ Component: (await import('./telas/MolduraAutenticada.tsx')).MolduraAutenticada }),
             children: [
               { index: true, lazy: async () => ({ Component: (await import('./telas/Inicio.tsx')).Inicio }) },
-              { path: 'parametros', lazy: emBreve },
+              {
+                path: 'parametros',
+                lazy: async () => ({ Component: (await import('./telas/Parametros.tsx')).Parametros }),
+              },
               {
                 path: 'adm',
                 element: <GuardaPapel papeis={['ADM']} />,

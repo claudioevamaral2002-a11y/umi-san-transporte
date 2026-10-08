@@ -19,6 +19,16 @@ const CAMINHOS = {
   menu: 'M4 7h16 M4 12h16 M4 17h16',
   escudo: 'M12 3l7.5 3v5.5c0 4.6-3.2 8.4-7.5 9.5-4.3-1.1-7.5-4.9-7.5-9.5V6z M9 12l2 2 4-4',
   fechar: 'M6 6l12 12 M18 6L6 18',
+  mais: 'M12 5v14 M5 12h14',
+  lixeira: 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6',
+  busca: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z M15.5 15.5L20 20',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+  conversa: 'M4 19.5l1.4-4A8 8 0 1 1 8.6 18.6z M9 10.5h6 M9 13.5h4',
+  imagem: 'M4 5h16v14H4z M4 16l5-5 4 4 2.5-2.5L20 17 M15.5 9.5h.01',
+  relogio: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2',
+  alerta: 'M12 4l9 16H3z M12 10v4 M12 17h.01',
+  lapis: 'M4 20h4L19 9l-4-4L4 16z M13.5 6.5l4 4',
+  setaBaixo: 'M6 9l6 6 6-6',
 } as const
 
 export type NomeIcone = keyof typeof CAMINHOS
