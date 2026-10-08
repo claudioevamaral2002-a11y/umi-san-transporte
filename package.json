@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "db:test": "supabase test db",
     "test:integracao": "vitest run --config vitest.integracao.config.ts",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "build": "vite build && node scripts/gerar-headers.ts production",
+    "build:test": "vite build --mode test && node scripts/gerar-headers.ts test"
   },
   "repository": {
     "type": "git",
