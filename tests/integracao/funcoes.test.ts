@@ -161,11 +161,8 @@ describe('convidar', () => {
     expect((await chamar('definir-senha', novo.token, { senha })).corpo).toEqual({ ok: true })
     expect(await meuPerfil(novo.cliente)).toMatchObject({ senha_pendente: false, tem_2fa: false })
 
-    // diagnóstico: a sessão do link sobrevive à troca de senha pela Admin API?
-    const sessaoViva = await novo.cliente.auth.getUser()
-    console.log('sessão do link após definir-senha:', sessaoViva.error ? `morta (${sessaoViva.error.name})` : 'viva')
-
-    // o front refaz o login com a senha nova e então cadastra o 2FA
+    // a troca de senha pela Admin API encerra a sessão do link: o front refaz o login com a senha nova e então cadastra o 2FA
+    expect((await novo.cliente.auth.getUser()).error).not.toBeNull()
     const relogin = clientePublico()
     expect(
       (await relogin.auth.signInWithPassword({ email, password: senha, options: { captchaToken: TOKEN_CAPTCHA_TESTE } })).error,
@@ -273,10 +270,17 @@ describe('gerir-usuario', () => {
 
     const on = await gerir(adm, { acao: 'REATIVAR', usuario_id: cliente.id, motivo: 'teste de reativação' })
     expect(on.corpo).toEqual({ ok: true })
-    const reativado = await cliente.cliente.auth.refreshSession()
-    const banido = await comBanco((db) => db.query('select banned_until from auth.users where id = $1', [cliente.id]))
-    expect(reativado.error?.message, `banned_until=${String(banido.rows[0].banned_until)}`).toBeUndefined()
-    expect((await cliente.cliente.from('empresas').select('id')).data).toHaveLength(1)
+    // a sessão antiga não é ressuscitada (o Auth a invalida no banimento); o acesso volta com um novo login
+    const banido = await comBanco((db) => db.query('select banned_until from auth.users where id = ', [cliente.id]))
+    expect(banido.rows[0].banned_until).toBeNull()
+    const volta = clientePublico()
+    const login = await volta.auth.signInWithPassword({
+      email: cliente.email,
+      password: cliente.senha,
+      options: { captchaToken: TOKEN_CAPTCHA_TESTE },
+    })
+    expect(login.error).toBeNull()
+    expect((await volta.from('empresas').select('id')).data).toHaveLength(1)
   })
 
   it('RESETAR_2FA remove os fatores do motorista; recusa ADM; próximo acesso volta a aal1 sem fator', async () => {
