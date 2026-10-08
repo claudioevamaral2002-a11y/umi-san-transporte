@@ -17,7 +17,7 @@ export default tseslint.config(
         'error',
         {
           selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-          message: 'Proibido: risco de XSS (SECURITY.md item 18).',
+          message: 'Proibido: risco de XSS (especificação 9, item 18).',
         },
       ],
     },

@@ -1,4 +1,4 @@
-// Substitui __CSP__ em dist/_headers pela CSP do projeto Supabase alvo (SECURITY itens 18 e 19).
+// Substitui __CSP__ em dist/_headers pela CSP do projeto Supabase alvo (especificação 9, itens 18 e 19).
 // Uso: node scripts/gerar-headers.ts [modo=production]
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'

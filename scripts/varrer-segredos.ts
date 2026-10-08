@@ -1,4 +1,4 @@
-// Falha o CI se o bundle publicado contiver segredo (SECURITY item 1).
+// Falha o CI se o bundle publicado contiver segredo (especificação 9, item 1).
 // Uso: node scripts/varrer-segredos.ts [pasta=dist]
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'

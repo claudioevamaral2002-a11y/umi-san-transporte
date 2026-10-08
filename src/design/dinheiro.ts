@@ -1,4 +1,4 @@
-// O front só formata; nunca calcula valores financeiros (especificação 6 e SECURITY item 3).
+// O front só formata; nunca calcula valores financeiros (especificação 6 e especificação 9, item 3).
 const FORMATO = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export function formatarCentavos(centavos: number): string {
