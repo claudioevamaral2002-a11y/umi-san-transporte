@@ -37,6 +37,18 @@ jobs:
         env:
           SUPABASE_AUTH_CAPTCHA_SECRET: 1x0000000000000000000000000000000AA
         run: npx supabase start -x studio,imgproxy,vector,logflare
+      - name: Edge Functions (serve com o .env; o start sozinho não carrega APP_ORIGENS)
+        run: |
+          eval "$(npx supabase status -o env | grep '^API_URL=')"
+          echo "Antes do serve: OPTIONS definir-senha -> $(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$API_URL/functions/v1/definir-senha" || true)"
+          nohup npx supabase functions serve --env-file supabase/functions/.env > functions-serve.log 2>&1 &
+          codigo=000
+          for i in $(seq 1 60); do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H 'Origin: http://127.0.0.1:8788' "$API_URL/functions/v1/definir-senha" || true)
+            if [ "$codigo" = "204" ]; then echo "Funções respondendo após ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "Funções não responderam (último código: $codigo)"; cat functions-serve.log; exit 1
       - name: pgTAP
         run: npx supabase test db
       - run: node scripts/env-local.ts
