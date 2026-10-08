@@ -15,10 +15,10 @@ umi-san-transporte/
 │  ├─ design/
 │  │  ├─ tokens.css              # cores, espaçamento, raio, sombra, motion (CSS variables)
 │  │  ├─ fontes/                 # Manrope self-hosted (woff2) — sem Google Fonts, CSP só 'self'
-│  │  └─ componentes/            # Botao, Cartao, StatusBadge, Dinheiro, Folha (bottom sheet), Skeleton, CarregandoPickup, Tela (transição)
+│  │  └─ componentes/            # Botao, Cartao, StatusBadge, Dinheiro, Skeleton, CarregandoPickup
 │  └─ telas/
-│     ├─ Vitrine.tsx             # catálogo do design system (só em dev/preview)
-│     └─ ProvaRealtime.tsx       # prova do Broadcast privado (removida na fase 3)
+│     ├─ Inicio.tsx              # placeholder da tela inicial
+│     └─ Vitrine.tsx             # catálogo do design system (usado pelo e2e)
 ├─ public/
 │  ├─ _headers                   # CSP, HSTS, frame-ancestors, nosniff, Referrer-Policy, Permissions-Policy
 │  └─ icones/                    # pickup com reboque, marinho + laranja (192, 512, maskable, apple-touch)
@@ -45,8 +45,11 @@ Pacote único (sem monorepo). Versões exatas no `package.json` (`save-exact=tru
 
 ## Banco (migration 0001)
 - Cria os schemas `api`, `app`, `interno`.
-- `REVOKE ALL` em `app` e `interno` de `anon`, `authenticated` e `public`; `ALTER DEFAULT PRIVILEGES` para que tabelas e funções futuras nesses schemas já nasçam sem acesso.
-- `api`: `USAGE` para `authenticated` (não para `anon`); `ALTER DEFAULT PRIVILEGES` revoga `EXECUTE` de `public` em funções novas — cada RPC recebe GRANT explícito.
+- `anon` não recebe nada em nenhum dos três.
+- `interno`: nenhum privilégio para `anon`/`authenticated`.
+- `app`: `authenticated` recebe `USAGE` no schema, mas **nunca** INSERT/UPDATE/DELETE/TRUNCATE. SELECT em tabela só quando uma view `security_invoker` de `api` precisar (sempre filtrado por RLS) — o schema não é exposto, então a tabela nunca é lida direto pela API. Funções de autorização usadas em políticas (`app.pode_*`, `SECURITY DEFINER`, `search_path` fixo) recebem EXECUTE para `authenticated`; nenhuma outra função de `app`.
+- `api`: `USAGE` para `authenticated` (não para `anon`). `ALTER DEFAULT PRIVILEGES` revoga `EXECUTE` de `public` em funções novas — cada RPC recebe GRANT explícito.
+- `api.ping()` (retorna `'pong'`, só `authenticated`): serve de evidência do item 10 (sem Authorization → recusado) e, na fase 5, de keep-alive.
 - `config.toml`: só `api` exposto pelo PostgREST (`public` deixa de ser exposto).
 - A regra A4 (views `security_invoker`) é verificada por teste pgTAP no catálogo, não por função.
 
@@ -54,12 +57,13 @@ Pacote único (sem monorepo). Versões exatas no `package.json` (`save-exact=tru
 Tabela mínima `app.prova_canal(id, dono uuid)` e política RLS em `realtime.messages` que só autoriza `SELECT` (assinar) no tópico `prova:<id>` quando `dono = auth.uid()`. Trigger publica `{id, status, em}` via `realtime.send` com `private = true`. Na fase 1, a política passa a usar a função real de permissão de pedido e a tabela de prova é removida.
 
 ## Front
-- Vite + React + React Router (data router, rotas com lazy) + Tailwind (tokens via CSS variables) + Motion.
+- Vite + React + React Router (data router, rotas com lazy) + Tailwind (tokens via CSS variables). Motion entra na fase em que surge a primeira interação que precisa dele (deslizar para confirmar, recibo); nesta fase as transições são View Transitions + CSS.
+- A prova do Realtime é feita por teste de integração (não há tela de login ainda).
 - `vite-plugin-pwa` (Workbox): precache do app shell, `manifest` com `display: standalone`, cores marinho/off-white, ícones e splash.
 - Tokens: tema claro, escuro automático (`prefers-color-scheme`) e alto contraste (`[data-contraste="alto"]`, alternável pelo motorista). Laranja só em ação principal e alerta.
 - `font-variant-numeric: tabular-nums` no componente `Dinheiro` (recebe centavos, formata `Intl.NumberFormat('pt-BR', {currency: 'BRL'})`; nunca faz conta).
 - `CarregandoPickup`: SVG inline animado com CSS (rodas girando, faixa tracejada, balanço), < 10 KB. Sem Lottie: evita dependência e mantém a CSP simples. Aparece só se o carregamento passar de 400 ms; com `prefers-reduced-motion`, vira indicador estático com texto.
-- Transições de tela: View Transitions API onde suportado, fallback Motion (deslize push/pop); ambos desligados com `prefers-reduced-motion`.
+- Transições de tela: View Transitions API (`<Link viewTransition>` do React Router) com deslize push/pop em CSS; onde não houver suporte, a troca é instantânea; desligadas com `prefers-reduced-motion`.
 - Estado pressionado imediato nos botões (`:active` + `touch-action: manipulation`), vibração curta via `navigator.vibrate` onde existir.
 
 ## CSP inicial (`public/_headers`)
@@ -79,8 +83,10 @@ frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'
 
 ## Testes da fase
 **pgTAP**
-- os três schemas existem; `app` e `interno` sem nenhum privilégio para `anon`/`authenticated`
-- nenhuma função de `interno` tem EXECUTE para `anon`/`authenticated`
+- os três schemas existem; `anon` sem USAGE em nenhum; `interno` sem USAGE para `authenticated`
+- nenhuma tabela de `app` com INSERT/UPDATE/DELETE/TRUNCATE para `anon`/`authenticated`
+- nenhuma função de `interno` tem EXECUTE para `anon`/`authenticated`; em `app`, só `pode_*` `SECURITY DEFINER`
+- toda função `SECURITY DEFINER` dos três schemas tem `search_path` fixo
 - toda view de `api` tem `security_invoker = true` (passa vazio agora; protege as fases seguintes)
 - toda tabela de `app` tem RLS habilitado
 
@@ -95,7 +101,9 @@ frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'
 - headers de segurança presentes com os valores esperados
 - script inline injetado é bloqueado pela CSP (evento `securitypolicyviolation`)
 - `CarregandoPickup` não aparece abaixo de 400 ms e aparece acima; com reduced motion, sem animação
-- Lighthouse PWA/performance (orçamento: shell < 150 KB gzip)
+- valores monetários com números tabulares; nenhuma violação de CSP ao navegar
+
+**Orçamento de bundle** (script no CI): JS + CSS da carga inicial < 150 KB gzip.
 
 **Gates do CI (todos bloqueiam deploy)**
 - os três conjuntos acima
