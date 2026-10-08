@@ -32,3 +32,5 @@ jobs:
         run: npx supabase start -x studio,imgproxy,vector,logflare
       - name: pgTAP
         run: npx supabase test db
+      - run: node scripts/env-local.ts
+      - run: npm run test:integracao
