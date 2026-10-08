@@ -8,8 +8,8 @@ test('manifest instalável', async ({ request }) => {
   expect(icones.some((i) => i.purpose === 'maskable')).toBe(true)
 })
 
-test('service worker controla a página e o app abre offline', async ({ page, context }) => {
-  await page.goto('/')
+test('service worker controla a página e o app abre offline (tela de entrada)', async ({ page, context }) => {
+  await page.goto('/entrar')
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready
   })
@@ -17,5 +17,6 @@ test('service worker controla a página e o app abre offline', async ({ page, co
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
   await context.setOffline(true)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'IVO Transportes' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
+  await expect(page.getByLabel('E-mail')).toBeVisible()
 })
