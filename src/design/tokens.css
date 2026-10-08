@@ -1,0 +1,65 @@
+/* Tokens da identidade marítima (especificação 12.1). Laranja só em ação principal e alerta. */
+:root {
+  --cor-marinho: #0b2545;
+  --cor-papel: #f7f5f0;
+  --cor-laranja: #ff6b1a;
+
+  --cor-fundo: var(--cor-papel);
+  --cor-superficie: #ffffff;
+  --cor-texto: #0b2545;
+  --cor-texto-suave: #4a5a70;
+  --cor-borda: #dad6cc;
+  --cor-acao: var(--cor-laranja);
+  --cor-acao-texto: #0b2545; /* marinho sobre laranja: contraste ≥ 4,5:1 */
+  --cor-perigo-texto: #ffffff;
+
+  --status-solicitada: #656c78;
+  --status-aguardando: #b45309;
+  --status-agendada: #1d4ed8;
+  --status-andamento: #c2410c;
+  --status-concluida: #15803d;
+  --status-cancelada: #b91c1c;
+
+  --raio: 14px;
+  --raio-pequeno: 8px;
+  --sombra: 0 1px 2px rgb(11 37 69 / 0.08), 0 4px 16px rgb(11 37 69 / 0.06);
+  --duracao: 240ms;
+  --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --cor-fundo: #06172b;
+    --cor-superficie: #0b2545;
+    --cor-texto: #f7f5f0;
+    --cor-texto-suave: #a9b6c8;
+    --cor-perigo-texto: #0b2545;
+    --cor-borda: #1e3a5f;
+    --status-solicitada: #9ca3af;
+    --status-aguardando: #f59e0b;
+    --status-agendada: #60a5fa;
+    --status-andamento: #ff8a4c;
+    --status-concluida: #4ade80;
+    --status-cancelada: #f87171;
+    color-scheme: dark;
+  }
+}
+
+/* Alto contraste para uso no sol (motorista). Vence o modo escuro. */
+:root[data-contraste="alto"] {
+  --cor-fundo: #ffffff;
+  --cor-superficie: #ffffff;
+  --cor-texto: #000000;
+  --cor-texto-suave: #1f2937;
+  --cor-borda: #000000;
+  --cor-acao-texto: #000000;
+  --cor-perigo-texto: #ffffff;
+  --status-solicitada: #374151;
+  --status-aguardando: #78350f;
+  --status-agendada: #1e3a8a;
+  --status-andamento: #9a3412;
+  --status-concluida: #14532d;
+  --status-cancelada: #7f1d1d;
+  color-scheme: light;
+}

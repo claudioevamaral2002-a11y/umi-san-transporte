@@ -131,3 +131,17 @@ Perfis, auth/2FA/HIBP, Turnstile, qualquer tabela de negócio (fase 1 em diante)
 
 ## Critério de pronto
 CI verde na `main` com todos os gates; app publicado no `*.pages.dev`, instalável no celular; vitrine do design system navegável; prova do Realtime mostrando A recebe / B recusado.
+
+
+## Desvios na execução
+
+- Sem Docker local: testes de banco (pgTAP e integração) rodam apenas no CI.
+- `src/lib/supabase.ts` e `App.tsx` adiados: nada chama o Supabase na fase 0.
+- Fontes via `@fontsource` (não `design/fontes`).
+- Ícones gerados por `@vite-pwa/assets-generator` a partir de `public/icone.svg` (não `public/icones/`).
+- Scripts em `.ts` executados pelo Node 24.
+- Migrations com nomes por timestamp.
+- Sem `seed.sql` (`[db.seed] enabled = false`); os testes criam usuários pela Admin API.
+- `[auth.email] enable_signup = true`: `false` desativa o provedor de e-mail por completo; o cadastro fica fechado por `[auth] enable_signup = false`.
+- O Supabase remoto segue com a configuração padrão de Auth/API até o `config push` da fase 1. Pré-requisito rígido da fase 1: `config push` antes de qualquer objeto em `public` ou qualquer chamada do front.
+- Override do `sharp` em 0.35.5 (CVE no `sharp` aninhado do wrangler).

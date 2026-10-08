@@ -1,0 +1,66 @@
+{
+  "name": "umi-san-transporte",
+  "version": "0.0.0",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "db:test": "supabase test db",
+    "test:integracao": "vitest run --config vitest.integracao.config.ts",
+    "test:unit": "vitest run",
+    "build": "vite build && node scripts/gerar-headers.ts production",
+    "build:test": "vite build --mode test && node scripts/gerar-headers.ts test",
+    "preview": "wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-01",
+    "test:e2e": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claudioevamaral2002-a11y/umi-san-transporte.git"
+  },
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/claudioevamaral2002-a11y/umi-san-transporte/issues"
+  },
+  "homepage": "https://github.com/claudioevamaral2002-a11y/umi-san-transporte#readme",
+  "engines": {
+    "node": ">=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@fontsource-variable/manrope": "5.3.0",
+    "@supabase/supabase-js": "2.117.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "26.6.4",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vite-pwa/assets-generator": "2.0.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "pg": "8.23.1",
+    "supabase": "2.120.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
+    "vite": "8.3.4",
+    "vite-plugin-pwa": "2.0.0",
+    "vitest": "5.0.3",
+    "workbox-window": "7.4.1",
+    "wrangler": "4.148.0"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
+  }
+}

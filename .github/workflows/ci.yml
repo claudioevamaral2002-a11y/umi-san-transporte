@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Dependências sem vulnerabilidade alta/crítica (especificação 9, item 13)
+        run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - name: Supabase local
+        run: npx supabase start -x studio,imgproxy,vector,logflare
+      - name: pgTAP
+        run: npx supabase test db
+      - run: node scripts/env-local.ts
+      - run: npm run test:integracao
+      - run: npm run build:test
+      - name: Nenhum segredo no bundle (especificação 9, item 1)
+        run: node scripts/varrer-segredos.ts dist
+      - run: node scripts/orcamento-bundle.ts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  segredos-repositorio:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
