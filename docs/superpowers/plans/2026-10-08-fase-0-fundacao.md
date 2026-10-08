@@ -10,6 +10,13 @@
 
 **Referências:** `docs/especificacao.md` (1, 9, 12, Adendo A) e `docs/fases/fase-0-desenho.md`.
 
+**Ajuste de execução (decisão do usuário, 2026-10-08): sem Docker na máquina local.**
+- Nada de `supabase start` local. Tudo que precisa de banco (pgTAP, integração) roda **só no GitHub Actions**.
+- Por isso o CI nasce na Task 2 (logo após o `config.toml`), só com os passos que já existem; cada tarefa seguinte acrescenta o seu passo ao `ci.yml`. A Task 15 apenas completa o que faltar (gitleaks, Dependabot).
+- Verificação das tarefas de banco: `git push origin fase-0` + `gh run watch --exit-status`. O "ver falhar" do TDD também é feito no CI (push do teste antes da migration) quando o custo valer; senão, teste e migration vão juntos e o relatório registra isso.
+- Local roda só: lint, typecheck, Vitest de unidade, build e Playwright (com `.env.test` de valores falsos `http://127.0.0.1:54321` — o front da fase 0 não chama o Supabase).
+- `gh` está em `C:\Program Files\GitHub CLI\gh.exe` (fora do PATH do shell do agente).
+
 **Convenções**
 - Pasta do projeto: `C:\dev\umi-san-transporte` (todos os comandos rodam nela).
 - Scripts utilitários em TypeScript executados direto pelo Node 24 (`node scripts/x.ts`, type stripping nativo): só sintaxe apagável (sem `enum`, sem parameter properties), imports com extensão `.ts`.
