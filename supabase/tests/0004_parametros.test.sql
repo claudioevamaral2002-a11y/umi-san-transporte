@@ -1,7 +1,7 @@
 -- Parâmetros versionados (fase 1): publicação, validação de faixas, imutabilidade, vigência e acesso.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(66);
+select plan(67);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id) values
@@ -63,6 +63,9 @@ select ok(
             and publicado_por = '00000000-0000-0000-0000-0000000000a1'
             and jsonb_array_length(faixas_cancelamento) = 3),
   'versão gravada com os valores, as faixas e o autor');
+select is(
+  (select publicado_por_nome from app.parametros_versoes order by versao limit 1), 'Admin Teste',
+  'publicado_por_nome gravado a partir do perfil de quem publicou');
 select ok(
   exists (select 1 from app.auditoria
           where acao = 'PUBLICAR_PARAMETROS' and resultado = 'OK'
@@ -205,12 +208,12 @@ select ok(has_function_privilege('authenticated', 'api.publicar_parametros(jsonb
   'publicar_parametros: EXECUTE só para authenticated');
 select throws_ok($$ select interno.faixas_validas('[]') $$, '42501', null, 'authenticated não executa interno.faixas_validas');
 select columns_are('api', 'parametros_vigentes', array[
-  'versao', 'vigente_desde', 'publicado_em', 'km_sem_reboque_cent', 'km_com_reboque_cent', 'taxa_fixa_reboque_cent',
+  'versao', 'vigente_desde', 'publicado_em', 'publicado_por_nome', 'km_sem_reboque_cent', 'km_com_reboque_cent', 'taxa_fixa_reboque_cent',
   'retorno_trecho_unico_bp', 'hora_espera_cent', 'hospedagem_diaria_cent', 'diaria_motorista_cent',
   'faixas_cancelamento', 'prazo_orcar_horas', 'validade_orcamento_horas', 'limiar_urgente_horas',
   'limite_saldo_negativo_cent', 'alerta_saldo_baixo_cent', 'retencao_fotos_dias'], 'parametros_vigentes: colunas explícitas');
 select columns_are('api', 'parametros_historico', array[
-  'versao', 'vigente_desde', 'publicado_em', 'km_sem_reboque_cent', 'km_com_reboque_cent', 'taxa_fixa_reboque_cent',
+  'versao', 'vigente_desde', 'publicado_em', 'publicado_por_nome', 'km_sem_reboque_cent', 'km_com_reboque_cent', 'taxa_fixa_reboque_cent',
   'retorno_trecho_unico_bp', 'hora_espera_cent', 'hospedagem_diaria_cent', 'diaria_motorista_cent',
   'faixas_cancelamento', 'prazo_orcar_horas', 'validade_orcamento_horas', 'limiar_urgente_horas',
   'limite_saldo_negativo_cent', 'alerta_saldo_baixo_cent', 'retencao_fotos_dias'], 'parametros_historico: colunas explícitas');
