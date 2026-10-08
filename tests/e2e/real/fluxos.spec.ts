@@ -188,7 +188,7 @@ test.describe('fluxos reais', () => {
     const aviso = page.getByRole('status').filter({ hasText: /Versão \d+ publicada/ })
     await expect(aviso).toBeVisible({ timeout: 30_000 })
     const versao = /Versão (\d+) publicada/.exec(await aviso.innerText())![1]!
-    const linha = page.getByRole('listitem').filter({ hasText: new RegExp(`Versão ${versao}\\b`) })
+    const linha = page.getByRole('listitem').filter({ hasText: new RegExp(`Versão ${versao}(?!\\d)`) })
     await expect(linha).toContainText('Agendada')
     await expect(page.getByText(new RegExp(`A versão ${versao} entra em vigor em`))).toBeVisible()
   })
