@@ -405,7 +405,7 @@ describe('senha trocada por fora (Adendo A3)', () => {
     const adm = await criarPessoa({ papel: 'ADM' })
     expect(await rpc(adm, 'salvar_empresa', { p_id: null, p_nome: nomeEmpresa() })).toMatchObject({ ok: true })
 
-    const troca = await adm.cliente.auth.updateUser({ password: 'NovaSenha-123x' })
+    const troca = await adm.cliente.auth.updateUser({ password: `Nova-${randomUUID()}` })
     expect(troca.error).toBeNull()
 
     const depois = await rpc(adm, 'salvar_empresa', { p_id: null, p_nome: nomeEmpresa() })
@@ -421,7 +421,7 @@ describe('senha trocada por fora (Adendo A3)', () => {
   it('cliente que troca a senha por fora perde o acesso aos dados', async () => {
     const cliente = await criarPessoa({ papel: 'CLIENTE' })
     expect((await cliente.cliente.from('empresas').select('id')).data).toHaveLength(1)
-    expect((await cliente.cliente.auth.updateUser({ password: 'NovaSenha-123x' })).error).toBeNull()
+    expect((await cliente.cliente.auth.updateUser({ password: `Nova-${randomUUID()}` })).error).toBeNull()
     expect((await cliente.cliente.from('empresas').select('id')).data).toEqual([])
   })
 })
