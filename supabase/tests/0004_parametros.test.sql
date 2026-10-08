@@ -121,20 +121,44 @@ select is((select count(*)::int from app.parametros_versoes), 3, 'recusas por ca
 
 select ok(
   exists (select 1 from app.auditoria where codigo = 'CAMPOS_INVALIDOS' and resultado = 'NEGADO'
-          and detalhe -> 'desconhecidos' ? 'extra'),
+          and detalhe = '{"desconhecidos":["extra"],"ausentes":[],"invalidos":[]}'::jsonb),
   'auditoria lista o campo desconhecido no detalhe');
 select ok(
   exists (select 1 from app.auditoria where codigo = 'CAMPOS_INVALIDOS' and resultado = 'NEGADO'
-          and detalhe -> 'ausentes' ? 'prazo_orcar_horas'),
+          and detalhe = '{"desconhecidos":[],"ausentes":["prazo_orcar_horas"],"invalidos":[]}'::jsonb),
   'auditoria lista o campo ausente no detalhe');
 select ok(
   exists (select 1 from app.auditoria where codigo = 'CAMPOS_INVALIDOS' and resultado = 'NEGADO'
-          and detalhe -> 'invalidos' ? 'faixas_cancelamento'),
+          and detalhe = '{"desconhecidos":[],"ausentes":[],"invalidos":["faixas_cancelamento"]}'::jsonb),
   'auditoria lista as faixas inválidas no detalhe');
 select ok(
   exists (select 1 from app.auditoria where codigo = 'CAMPOS_INVALIDOS' and resultado = 'NEGADO'
-          and detalhe -> 'invalidos' ? 'hora_espera_cent'),
+          and detalhe = '{"desconhecidos":[],"ausentes":[],"invalidos":["hora_espera_cent"]}'::jsonb),
   'auditoria lista o valor inválido no detalhe');
+
+-- Robustez de tipos e limites.
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"hora_espera_cent": null}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: null JSON');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"hora_espera_cent": true}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: booleano');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"hora_espera_cent": 1.0}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: 1.0');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"hora_espera_cent": 99999999999999999999}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: 20 dígitos');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"hora_espera_cent": 1e400}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: 1e400');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"prazo_orcar_horas": 2147483648}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: prazo 2147483648');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || '{"retorno_trecho_unico_bp": 99999}', now() + interval '1 hour') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'valor recusado: bp 99999');
+select is((select count(*)::int from app.parametros_versoes), 3, 'valores recusados não criam versão');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb || (select jsonb_object_agg(repeat('x', 100) || g, 1) from generate_series(1, 25) g),
+  now() + interval '1 hour') ->> 'codigo', 'CAMPOS_INVALIDOS', '25 campos desconhecidos longos: recusado');
+select ok(
+  exists (select 1 from app.auditoria where codigo = 'CAMPOS_INVALIDOS'
+          and jsonb_array_length(detalhe -> 'desconhecidos') = 20
+          and (select max(length(e)) from jsonb_array_elements_text(detalhe -> 'desconhecidos') e) = 60),
+  'detalhe da auditoria limita a 20 chaves de até 60 caracteres');
 
 -- Vigência no passado: negada e auditada (tolerância de 1 minuto).
 select is(api.publicar_parametros(current_setting('t.base')::jsonb, now() - interval '2 minutes') ->> 'codigo',
@@ -142,6 +166,13 @@ select is(api.publicar_parametros(current_setting('t.base')::jsonb, now() - inte
 select ok(
   exists (select 1 from app.auditoria where acao = 'PUBLICAR_PARAMETROS' and resultado = 'NEGADO' and codigo = 'VIGENCIA_NO_PASSADO'),
   'vigência no passado auditada');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb, now() + interval '2 years') ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'vigência a mais de 1 ano recusada');
+select is(api.publicar_parametros(current_setting('t.base')::jsonb, 'infinity'::timestamptz) ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'vigência infinita recusada');
+select ok(
+  exists (select 1 from app.auditoria where codigo = 'CAMPOS_INVALIDOS' and detalhe = '{"invalidos":["vigente_desde"]}'::jsonb),
+  'vigência fora do limite auditada com o campo no detalhe');
 select is(api.publicar_parametros(current_setting('t.base')::jsonb, null) ->> 'codigo',
   'CAMPOS_INVALIDOS', 'vigência nula recusada');
 select is((select count(*)::int from app.parametros_versoes), 3, 'vigência recusada não cria versão');
@@ -167,21 +198,21 @@ reset role;
 insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
   retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
   prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
-  alerta_saldo_baixo_cent, retencao_fotos_dias)
-select now() - interval '2 days', 111, 1, 1, 0, 1, 1, 1, faixas_cancelamento, 1, 1, 1, 0, 0, 1
+  alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+select now() - interval '2 days', 111, 1, 1, 0, 1, 1, 1, faixas_cancelamento, 1, 1, 1, 0, 0, 1, 'Teste'
 from app.parametros_versoes limit 1;
 insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
   retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
   prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
-  alerta_saldo_baixo_cent, retencao_fotos_dias)
-select now() + interval '1 day', 999, 1, 1, 0, 1, 1, 1, faixas_cancelamento, 1, 1, 1, 0, 0, 1
+  alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+select now() + interval '1 day', 999, 1, 1, 0, 1, 1, 1, faixas_cancelamento, 1, 1, 1, 0, 0, 1, 'Teste'
 from app.parametros_versoes limit 1;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
 select is((select km_sem_reboque_cent from api.parametros_vigentes), 400::bigint,
   'vigente ignora a futura e a de vigência mais antiga (mesmo com versão maior)');
 select is((select count(*)::int from api.parametros_vigentes), 1, 'parametros_vigentes tem 1 linha');
-select is((select array_agg(versao) from api.parametros_historico),
+select is(array(select versao from api.parametros_historico),
   array(select versao from app.parametros_versoes order by vigente_desde desc, versao desc),
   'histórico em ordem decrescente de vigência');
 select is((select count(*)::int from api.parametros_historico), 7, 'histórico traz todas as versões');
@@ -239,30 +270,58 @@ select throws_ok($$
   insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
     retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
     prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
-    alerta_saldo_baixo_cent, retencao_fotos_dias)
-  values (now(), 1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 6, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1) $$,
+    alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+  values (now(), 1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 6, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1, 'Teste') $$,
   '23514', null, 'CHECK da tabela recusa faixas inválidas (função no CHECK)');
 select throws_ok($$
   insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
     retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
     prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
-    alerta_saldo_baixo_cent, retencao_fotos_dias)
-  values (now(), -1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1) $$,
+    alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+  values (now(), -1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1, 'Teste') $$,
   '23514', null, 'CHECK da tabela recusa centavos negativos');
 select throws_ok($$
   insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
     retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
     prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
-    alerta_saldo_baixo_cent, retencao_fotos_dias)
-  values (now(), 1, 1, 1, 10001, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1) $$,
+    alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+  values (now(), 1, 1, 1, 10001, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1, 'Teste') $$,
   '23514', null, 'CHECK da tabela recusa retorno_trecho_unico_bp > 10000');
 select throws_ok($$
   insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
     retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
     prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
-    alerta_saldo_baixo_cent, retencao_fotos_dias)
-  values (now(), 1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 0, 1, 1, 0, 0, 1) $$,
+    alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+  values (now(), 1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 0, 1, 1, 0, 0, 1, 'Teste') $$,
   '23514', null, 'CHECK da tabela recusa prazo 0');
+
+-- faixas_validas direto.
+select is(interno.faixas_validas('{}'::jsonb), false, 'faixas_validas: não é array');
+select is(interno.faixas_validas('[1]'::jsonb), false, 'faixas_validas: elemento não objeto');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":"24","multa_bp":0},{"antecedencia_min_horas":0,"multa_bp":0}]'::jsonb), false, 'faixas_validas: antecedência como texto');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":24.0,"multa_bp":0},{"antecedencia_min_horas":0,"multa_bp":0}]'::jsonb), false, 'faixas_validas: antecedência 24.0');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":0,"multa_bp":0,"x":1}]'::jsonb), false, 'faixas_validas: chave extra');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":0}]'::jsonb), false, 'faixas_validas: chave ausente');
+select is(interno.faixas_validas((select jsonb_agg(jsonb_build_object('antecedencia_min_horas', 21 - g, 'multa_bp', 0)) from generate_series(1, 21) g)), false, 'faixas_validas: 21 elementos');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":1000000,"multa_bp":0},{"antecedencia_min_horas":0,"multa_bp":0}]'::jsonb), false, 'faixas_validas: número de 7 dígitos');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":24,"multa_bp":0},{"antecedencia_min_horas":24,"multa_bp":0},{"antecedencia_min_horas":0,"multa_bp":0}]'::jsonb), false, 'faixas_validas: antecedências iguais');
+select is(interno.faixas_validas('[{"antecedencia_min_horas":0,"multa_bp":0}]'::jsonb), true, 'faixas_validas: faixa única 0/0');
+select ok(not exists (select 1 from pg_constraint where conrelid = 'app.parametros_versoes'::regclass and contype = 'f'),
+  'parametros_versoes não tem FK (publicado_por é uuid solto)');
+select throws_ok($$
+  insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
+    retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
+    prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
+    alerta_saldo_baixo_cent, retencao_fotos_dias)
+  values (now(), 1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1) $$,
+  '23502', null, 'publicado_por_nome é obrigatório');
+select throws_ok($$
+  insert into app.parametros_versoes (vigente_desde, km_sem_reboque_cent, km_com_reboque_cent, taxa_fixa_reboque_cent,
+    retorno_trecho_unico_bp, hora_espera_cent, hospedagem_diaria_cent, diaria_motorista_cent, faixas_cancelamento,
+    prazo_orcar_horas, validade_orcamento_horas, limiar_urgente_horas, limite_saldo_negativo_cent,
+    alerta_saldo_baixo_cent, retencao_fotos_dias, publicado_por_nome)
+  values (now(), 1, 1, 1, 0, 1, 1, 1, '[{"antecedencia_min_horas": 0, "multa_bp": 0}]', 1, 1, 1, 0, 0, 1, '  ') $$,
+  '23514', null, 'publicado_por_nome em branco recusado');
 
 select * from finish();
 rollback;
