@@ -2,11 +2,16 @@ export const SENHA_MINIMO = 10
 /** O bcrypt do Auth ignora o que passa de 72 bytes. */
 export const SENHA_MAXIMO_BYTES = 72
 
-/** Regras de força (>= 10, maiúscula, minúscula e número). Devolve `SENHA_FRACA` ou `null` se passou. */
-export function validarForcaSenha(senha: unknown): 'SENHA_FRACA' | null {
+/** O front deve normalizar do mesmo jeito (NFC) antes de enviar e ao entrar. */
+export function normalizarSenha(senha: string): string {
+  return senha.normalize('NFC')
+}
+
+/** Regras de força (>= 10, maiúscula, minúscula e número). Devolve o código da recusa ou `null` se passou. */
+export function validarForcaSenha(senha: unknown): 'SENHA_FRACA' | 'SENHA_LONGA' | null {
   if (typeof senha !== 'string') return 'SENHA_FRACA'
+  if (new TextEncoder().encode(senha).length > SENHA_MAXIMO_BYTES) return 'SENHA_LONGA'
   if ([...senha].length < SENHA_MINIMO) return 'SENHA_FRACA'
-  if (new TextEncoder().encode(senha).length > SENHA_MAXIMO_BYTES) return 'SENHA_FRACA'
   if (!/\p{Lu}/u.test(senha) || !/\p{Ll}/u.test(senha) || !/\p{Nd}/u.test(senha)) return 'SENHA_FRACA'
   return null
 }

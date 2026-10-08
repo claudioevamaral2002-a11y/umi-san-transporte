@@ -1,3 +1,4 @@
+import { logErro } from '../_compartilhado/log.ts'
 import { criarServidor, registrar, type Contexto } from '../_compartilhado/servidor.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -25,6 +26,7 @@ async function gerarLink(ctx: Contexto, usuario: string): Promise<Retorno> {
   })
   const link = gerado.data?.properties?.action_link
   if (gerado.error || !link) {
+    logErro(ctx.funcao, 'gerar-link', gerado.error ?? undefined)
     await registrar(ctx, ctx.usuarioId, 'GERAR_LINK', alvo, 'ERRO', 'ERRO_AUTH')
     return { ok: false, codigo: 'ERRO_INESPERADO' }
   }
@@ -47,6 +49,7 @@ async function definirAtivo(ctx: Contexto, usuario: string, ativo: boolean, moti
     ban_duration: ativo ? 'none' : BANIMENTO_PERMANENTE,
   })
   if (atualizado.error) {
+    logErro(ctx.funcao, 'banimento', atualizado.error)
     await registrar(ctx, ctx.usuarioId, acao, alvo, 'ERRO', 'ERRO_AUTH')
     return { ok: false, codigo: 'ERRO_INESPERADO' }
   }
@@ -61,12 +64,14 @@ async function resetar2fa(ctx: Contexto, usuario: string): Promise<Retorno> {
   const alvo = `usuario:${usuario}`
   const lista = await ctx.servico.auth.admin.mfa.listFactors({ userId: usuario })
   if (lista.error) {
+    logErro(ctx.funcao, 'listar-fatores', lista.error)
     await registrar(ctx, ctx.usuarioId, 'RESETAR_2FA', alvo, 'ERRO', 'ERRO_AUTH')
     return { ok: false, codigo: 'ERRO_INESPERADO' }
   }
   for (const fator of lista.data.factors) {
     const apagado = await ctx.servico.auth.admin.mfa.deleteFactor({ id: fator.id, userId: usuario })
     if (apagado.error) {
+      logErro(ctx.funcao, 'apagar-fator', apagado.error)
       await registrar(ctx, ctx.usuarioId, 'RESETAR_2FA', alvo, 'ERRO', 'ERRO_AUTH')
       return { ok: false, codigo: 'ERRO_INESPERADO' }
     }
@@ -76,7 +81,7 @@ async function resetar2fa(ctx: Contexto, usuario: string): Promise<Retorno> {
 }
 
 Deno.serve(
-  criarServidor(async (ctx) => {
+  criarServidor('gerir-usuario', async (ctx) => {
     const { acao, usuario_id: usuario, motivo } = ctx.corpo
     if (typeof usuario !== 'string' || !UUID.test(usuario)) return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
 

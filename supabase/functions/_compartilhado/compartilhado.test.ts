@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { cabecalhosCors, escolherOrigem, origemPermitida, origensPermitidas } from './cors.ts'
 import { senhaVazada, sha1Hex, sufixoPresente, VerificacaoIndisponivel } from './hibp.ts'
 import { criarLimitador, extrairBearer, lerJson } from './respostas.ts'
-import { validarForcaSenha } from './senha.ts'
+import { logErro } from './log.ts'
+import { normalizarSenha, validarForcaSenha } from './senha.ts'
 
 describe('validarForcaSenha', () => {
   it.each([
@@ -12,7 +13,9 @@ describe('validarForcaSenha', () => {
     ['abcdefghij1', 'SENHA_FRACA'],
     ['ABCDEFGHIJ1', 'SENHA_FRACA'],
     ['Abcdefghijk', 'SENHA_FRACA'],
-    ['Aa1' + 'x'.repeat(70), 'SENHA_FRACA'],
+    ['Aa1' + 'x'.repeat(70), 'SENHA_LONGA'],
+    ['Aa1' + 'x'.repeat(69), null],
+    ['Aa1' + 'é'.repeat(35), 'SENHA_LONGA'],
     ['', 'SENHA_FRACA'],
   ])('%s -> %s', (senha, esperado) => {
     expect(validarForcaSenha(senha)).toBe(esperado)
@@ -21,6 +24,12 @@ describe('validarForcaSenha', () => {
   it('recusa o que não é texto', () => {
     expect(validarForcaSenha(123456789012)).toBe('SENHA_FRACA')
     expect(validarForcaSenha(undefined)).toBe('SENHA_FRACA')
+  })
+})
+
+describe('normalização', () => {
+  it('NFC: forma decomposta e composta viram a mesma senha', () => {
+    expect(normalizarSenha('Café-Forte-1')).toBe('Café-Forte-1')
   })
 })
 
@@ -106,6 +115,44 @@ describe('requisição', () => {
     expect(await lerJson(pedido(JSON.stringify({ a: 'x'.repeat(11_000) })))).toBeNull()
   })
 
+  const emPartes = (partes: Uint8Array[], cabecalhos: Record<string, string> = {}) =>
+    new Request('http://x/f', {
+      method: 'POST',
+      headers: cabecalhos,
+      duplex: 'half',
+      body: new ReadableStream({
+        start(controle) {
+          for (const p of partes) controle.enqueue(p)
+          controle.close()
+        },
+      }),
+    } as RequestInit)
+  const bytes = (t: string) => new TextEncoder().encode(t)
+
+  it('corpo em fluxo, sem Content-Length: lê em partes e aborta ao passar do limite', async () => {
+    expect(await lerJson(emPartes([bytes('{"a":'), bytes('1}')]))).toEqual({ a: 1 })
+    const grande = [bytes('{"a":"'), bytes('x'.repeat(6000)), bytes('x'.repeat(6000)), bytes('"}')]
+    expect(await lerJson(emPartes(grande))).toBeNull()
+  })
+
+  it('o limite conta bytes, não caracteres (multibyte)', async () => {
+    const quase = JSON.stringify({ a: 'é'.repeat(4000) }) // ~8 KB em bytes, 4 mil caracteres
+    expect(new TextEncoder().encode(quase).length).toBeLessThan(10_000)
+    expect(await lerJson(emPartes([bytes(quase)]))).not.toBeNull()
+    const passou = JSON.stringify({ a: 'é'.repeat(5100) }) // < 10 mil caracteres, > 10 mil bytes
+    expect(passou.length).toBeLessThan(10_000)
+    expect(await lerJson(emPartes([bytes(passou)]))).toBeNull()
+  })
+
+  it('Content-Length não numérico é recusado', async () => {
+    expect(await lerJson(emPartes([bytes('{}')], { 'content-length': 'abc' }))).toBeNull()
+    expect(await lerJson(emPartes([bytes('{}')], { 'content-length': '-1' }))).toBeNull()
+  })
+
+  it('UTF-8 inválido é recusado', async () => {
+    expect(await lerJson(emPartes([new Uint8Array([0x7b, 0xff, 0x7d])]))).toBeNull()
+  })
+
   it('extrai o Bearer', () => {
     expect(extrairBearer(pedido('{}', { authorization: 'Bearer a.b-c_d' }))).toBe('a.b-c_d')
     expect(extrairBearer(pedido('{}', { authorization: 'Basic abc' }))).toBeNull()
@@ -121,5 +168,25 @@ describe('requisição', () => {
     expect(limite.permitir('b')).toBe(true)
     agora = 1001
     expect(limite.permitir('a')).toBe(true)
+  })
+})
+
+describe('log seguro', () => {
+  it('registra só função, etapa e nome/status/código do erro', () => {
+    const espiao = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    logErro('definir-senha', 'gravar', {
+      name: 'AuthApiError',
+      status: 422,
+      code: 'weak_password',
+      message: 'senha SegredoSuperSecreto123 e link https://x/y?token=abc',
+    })
+    logErro('convidar', 'excecao', new Error('Bearer eyJ.abc.def'))
+    const saida = espiao.mock.calls.map((a) => String(a[0])).join(' ')
+    espiao.mockRestore()
+    expect(saida).toContain('weak_password')
+    expect(saida).toContain('AuthApiError')
+    expect(saida).not.toContain('SegredoSuperSecreto')
+    expect(saida).not.toContain('token=')
+    expect(saida).not.toContain('eyJ')
   })
 })

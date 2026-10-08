@@ -44,6 +44,7 @@ async function chamar(
 const convidar = (quem: Pessoa, corpo: Record<string, unknown>) => chamar('convidar', quem.token, corpo)
 const gerir = (quem: Pessoa, corpo: Record<string, unknown>) => chamar('gerir-usuario', quem.token, corpo)
 const novoEmail = () => `convite-${randomUUID()}@teste.local`
+const SENHA_FORTE = () => 'Forte-' + randomUUID()
 
 /** Abre o link do Auth sem seguir o redirect e devolve a sessão que o fragmento carrega. */
 async function abrirLink(link: string) {
@@ -120,7 +121,15 @@ describe('convidar', () => {
     // enquanto a senha está pendente o banco não entrega dados
     expect((await novo.cliente.from('empresas').select('id')).data).toEqual([])
 
+    // diagnóstico: só os nomes dos métodos de autenticação (amr) que o link emite
+    const amr = (JSON.parse(Buffer.from(novo.token.split('.')[1]!, 'base64url').toString()) as { amr?: Array<{ method: string }> }).amr
+    console.log('amr do link de convite:', JSON.stringify(amr?.map((a) => a.method)))
+
     const fraca = await chamar('definir-senha', novo.token, { senha: 'curta1A' })
+    expect((await chamar('definir-senha', novo.token, { senha: 'Aa1' + 'x'.repeat(80) })).corpo).toMatchObject({
+      ok: false,
+      codigo: 'SENHA_LONGA',
+    })
     expect(fraca.corpo).toMatchObject({ ok: false, codigo: 'SENHA_FRACA' })
     for (const senha of ['tudominusculo123', 'TUDOMAIUSCULO123', 'SemNumeroNenhum']) {
       expect((await chamar('definir-senha', novo.token, { senha })).corpo, senha).toMatchObject({
@@ -205,6 +214,47 @@ describe('convidar', () => {
     expect(linhas.rows[0].resultado).toBe('OK')
     expect(linhas.rows[0].detalhe).toContain('sistema')
     expect(linhas.rows[0].detalhe).not.toContain(r.corpo.link as string)
+  })
+})
+
+describe('definir-senha: porta de reautenticação', () => {
+  it('login recente com senha (sem fator) é aceito', async () => {
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    const r = await chamar('definir-senha', cliente.token, { senha: SENHA_FORTE() })
+    expect(r.corpo).toEqual({ ok: true })
+  })
+
+  it('motorista com 2FA: senha recente em aal1 exige reautenticação; em aal2 é aceito', async () => {
+    const motorista = await criarPessoa({ papel: 'MOTORISTA' })
+    const aal1 = clientePublico()
+    const login = await aal1.auth.signInWithPassword({
+      email: motorista.email,
+      password: motorista.senha,
+      options: { captchaToken: TOKEN_CAPTCHA_TESTE },
+    })
+    expect(login.error).toBeNull()
+    const negado = await chamar('definir-senha', login.data.session!.access_token, { senha: SENHA_FORTE() })
+    expect(negado.corpo).toMatchObject({ ok: false, codigo: 'REAUTENTICACAO_NECESSARIA' })
+
+    const aceito = await chamar('definir-senha', motorista.token, { senha: SENHA_FORTE() })
+    expect(aceito.corpo).toEqual({ ok: true })
+  })
+
+  it('usuário desativado é negado', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    expect(
+      (await gerir(adm, { acao: 'DESATIVAR', usuario_id: cliente.id, motivo: 'teste de porta de senha' })).corpo,
+    ).toEqual({ ok: true })
+    const r = await chamar('definir-senha', cliente.token, { senha: SENHA_FORTE() })
+    expect(r.corpo.ok).toBe(false)
+    expect(['SEM_PERMISSAO', 'NAO_AUTENTICADO']).toContain(r.corpo.codigo)
+    const login = await clientePublico().auth.signInWithPassword({
+      email: cliente.email,
+      password: cliente.senha,
+      options: { captchaToken: TOKEN_CAPTCHA_TESTE },
+    })
+    expect(login.error).not.toBeNull()
   })
 })
 

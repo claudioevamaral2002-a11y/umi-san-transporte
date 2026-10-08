@@ -9,14 +9,35 @@ export function responder(corpo: Corpo, status = 200, extras: Record<string, str
 
 export const LIMITE_CORPO_BYTES = 10_000
 
-/** Lê o corpo como objeto JSON; `null` se vazio, grande demais, inválido ou não-objeto. */
-export async function lerJson(req: Request): Promise<Record<string, unknown> | null> {
-  const declarado = Number(req.headers.get('content-length') ?? '0')
-  if (declarado > LIMITE_CORPO_BYTES) return null
+/**
+ * Lê o corpo como objeto JSON, em fluxo: aborta ao passar de `limite` bytes, com ou sem Content-Length.
+ * `null` se vazio, grande demais, Content-Length não numérico, JSON inválido ou não-objeto.
+ */
+export async function lerJson(req: Request, limite = LIMITE_CORPO_BYTES): Promise<Record<string, unknown> | null> {
+  const declarado = req.headers.get('content-length')
+  if (declarado !== null && (!/^[0-9]{1,15}$/.test(declarado.trim()) || Number(declarado) > limite)) return null
+  if (!req.body) return null
+  const leitor = req.body.getReader()
+  const partes: Uint8Array[] = []
+  let total = 0
   try {
-    const texto = await req.text()
-    if (texto.length > LIMITE_CORPO_BYTES) return null
-    const valor: unknown = JSON.parse(texto)
+    for (;;) {
+      const { done, value } = await leitor.read()
+      if (done) break
+      total += value.byteLength
+      if (total > limite) {
+        await leitor.cancel().catch(() => undefined)
+        return null
+      }
+      partes.push(value)
+    }
+    const bytes = new Uint8Array(total)
+    let posicao = 0
+    for (const parte of partes) {
+      bytes.set(parte, posicao)
+      posicao += parte.byteLength
+    }
+    const valor: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
     return valor !== null && typeof valor === 'object' && !Array.isArray(valor)
       ? (valor as Record<string, unknown>)
       : null

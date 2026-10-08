@@ -1,18 +1,21 @@
 import { cabecalhosCors, escolherOrigem, origemPermitida, origensPermitidas } from './cors.ts'
 import { criarClientes, origensConfiguradas, type Clientes } from './clientes.ts'
+import { logErro } from './log.ts'
 import { criarLimitador, extrairBearer, lerJson, responder, type Corpo } from './respostas.ts'
 
 export interface Contexto extends Clientes {
+  funcao: string
   usuarioId: string
   corpo: Record<string, unknown>
-  /** Origem do pedido (se permitida) ou a primeira configurada. */
+  /** Origem do pedido (se permitida) ou a primeira configurada; `null` sem configuração. */
   origem: string | null
 }
 
+// Limite em memória por instância: só um freio auxiliar (o controle de verdade são os limites no banco).
 const limitador = criarLimitador(20, 60_000)
 
 /** Casca comum: método, CORS, JWT, limite por usuário e corpo JSON. Nunca devolve detalhes internos. */
-export function criarServidor(manipulador: (ctx: Contexto) => Promise<Corpo>) {
+export function criarServidor(funcao: string, manipulador: (ctx: Contexto) => Promise<Corpo>) {
   return async (req: Request): Promise<Response> => {
     const origens = origensPermitidas(origensConfiguradas())
     const origem = req.headers.get('origin')
@@ -40,32 +43,40 @@ export function criarServidor(manipulador: (ctx: Contexto) => Promise<Corpo>) {
 
       const resultado = await manipulador({
         ...clientes,
+        funcao,
         usuarioId: data.user.id,
         corpo,
         origem: escolherOrigem(origem, origens),
       })
       return responder(resultado, 200, cors)
-    } catch {
-      // Sem detalhes (nem stack, nem mensagem): o que falhou pode conter segredo.
+    } catch (e) {
+      // Sem detalhes na resposta nem no log (nada de mensagem/stack: podem conter segredo).
+      logErro(funcao, 'excecao', e)
       return responder({ ok: false, codigo: 'ERRO_INESPERADO' }, 200, cors)
     }
   }
 }
 
-/** Registra operação de sistema na auditoria (allowlist de ações no banco). */
+/** Registra operação de sistema na auditoria (allowlist de ações no banco); falha vira log seguro. */
 export async function registrar(
-  ctx: Pick<Contexto, 'servico'>,
+  ctx: Pick<Contexto, 'servico' | 'funcao'>,
   usuario: string,
   acao: string,
   alvo: string,
   resultado: 'OK' | 'NEGADO' | 'ERRO',
   codigo: string | null = null,
 ): Promise<void> {
-  await ctx.servico.rpc('sistema_registrar', {
-    p_usuario: usuario,
-    p_acao: acao,
-    p_alvo: alvo,
-    p_resultado: resultado,
-    p_codigo: codigo,
-  })
+  try {
+    const { data, error } = await ctx.servico.rpc('sistema_registrar', {
+      p_usuario: usuario,
+      p_acao: acao,
+      p_alvo: alvo,
+      p_resultado: resultado,
+      p_codigo: codigo,
+    })
+    if (error) logErro(ctx.funcao, `registrar:${acao}`, error)
+    else if (!data?.ok) logErro(ctx.funcao, `registrar:${acao}`, { code: data?.codigo })
+  } catch (e) {
+    logErro(ctx.funcao, `registrar:${acao}`, e)
+  }
 }

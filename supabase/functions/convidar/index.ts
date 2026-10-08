@@ -1,7 +1,8 @@
+import { logErro } from '../_compartilhado/log.ts'
 import { criarServidor, registrar } from '../_compartilhado/servidor.ts'
 
 Deno.serve(
-  criarServidor(async (ctx) => {
+  criarServidor('convidar', async (ctx) => {
     const { email, nome, papel, empresa_id: empresa } = ctx.corpo
     if (typeof email !== 'string' || typeof nome !== 'string' || typeof papel !== 'string') {
       return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
@@ -18,7 +19,10 @@ Deno.serve(
       p_papel: papel,
       p_empresa: empresa ?? null,
     })
-    if (error) return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
+    if (error) {
+      logErro(ctx.funcao, 'preparar', error)
+      return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
+    }
     if (!preparo?.ok) return { ok: false, codigo: String(preparo?.codigo ?? 'ERRO_INESPERADO') }
 
     const emailConvite = String(preparo.email)
@@ -30,6 +34,7 @@ Deno.serve(
     })
     const link = gerado.data?.properties?.action_link
     if (gerado.error || !link) {
+      logErro(ctx.funcao, 'gerar-link', gerado.error ?? undefined)
       await registrar(ctx, ctx.usuarioId, 'CONVIDAR_LINK', alvo, 'ERRO', 'ERRO_AUTH')
       return { ok: false, codigo: 'ERRO_INESPERADO' }
     }
