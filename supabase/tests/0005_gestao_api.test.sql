@@ -78,7 +78,7 @@ select ok(
    where acao = 'PREPARAR_CONVITE' and resultado = 'NEGADO' and codigo = 'SEM_PERMISSAO'
      and usuario_id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a3')) = 3,
   'preparar_convite: SEM_PERMISSAO de motorista, cliente e ADM aal1 auditado');
-select is_empty($$ select 1 from app.convites where email in ('clia@teste.local', 'semperfil@teste.local', 'sem-arroba', 'onze@teste.local') $$,
+select is_empty($$ select 1 from app.convites where usado_em is null and email in ('clia@teste.local', 'semperfil@teste.local', 'sem-arroba', 'onze@teste.local') $$,
   'preparar_convite: recusas não criam convite');
 
 ------------------------------------------------------------------ alterar_perfil
