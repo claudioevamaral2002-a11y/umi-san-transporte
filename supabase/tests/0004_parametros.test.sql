@@ -1,7 +1,7 @@
 -- Parâmetros versionados (fase 1): publicação, validação de faixas, imutabilidade, vigência e acesso.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(67);
+select plan(93);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id) values
