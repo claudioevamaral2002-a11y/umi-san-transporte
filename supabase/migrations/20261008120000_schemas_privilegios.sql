@@ -30,3 +30,5 @@ as $$ select 'pong'::text $$;
 
 revoke execute on function api.ping() from public, anon;
 grant execute on function api.ping() to authenticated;
+create function interno.x() returns int language sql as $$ select 1 $$;
+grant execute on function interno.x() to authenticated;
