@@ -26,7 +26,8 @@ select is_empty($$
   cross join (values ('anon'), ('authenticated')) as r(papel)
   cross join (values ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) as p(priv)
   where n.nspname = 'app' and c.relkind in ('r', 'p', 'v', 'm')
-    and has_table_privilege(r.papel, c.oid, p.priv)
+    and (has_table_privilege(r.papel, c.oid, p.priv)
+         or (p.priv in ('INSERT', 'UPDATE') and has_any_column_privilege(r.papel, c.oid, p.priv)))
 $$, 'app: nenhuma escrita direta para anon/authenticated');
 
 select is_empty($$
@@ -62,9 +63,10 @@ $$, 'toda função SECURITY DEFINER tem search_path fixo');
 select is_empty($$
   select c.relname
   from pg_class c join pg_namespace n on n.oid = c.relnamespace
-  where n.nspname = 'api' and c.relkind = 'v'
-    and not coalesce(c.reloptions @> array['security_invoker=true'], false)
-$$, 'toda view de api é security_invoker (Adendo A4)');
+  where n.nspname = 'api'
+    and (c.relkind in ('r', 'p', 'm', 'f')
+         or (c.relkind = 'v' and not coalesce(c.reloptions @> array['security_invoker=true'], false)))
+$$, 'api contém só views security_invoker (Adendo A4)');
 
 select is_empty($$
   select c.relname
