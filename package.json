@@ -12,7 +12,9 @@
     "test:integracao": "vitest run --config vitest.integracao.config.ts",
     "test:unit": "vitest run",
     "build": "vite build && node scripts/gerar-headers.ts production",
-    "build:test": "vite build --mode test && node scripts/gerar-headers.ts test"
+    "build:test": "vite build --mode test && node scripts/gerar-headers.ts test",
+    "preview": "wrangler pages dev dist --port 8788 --ip 127.0.0.1",
+    "test:e2e": "playwright test"
   },
   "repository": {
     "type": "git",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.4",
     "@types/pg": "8.23.1",
@@ -54,6 +57,7 @@
     "vite": "8.3.4",
     "vite-plugin-pwa": "2.0.0",
     "vitest": "5.0.3",
-    "workbox-window": "7.4.1"
+    "workbox-window": "7.4.1",
+    "wrangler": "4.148.0"
   }
 }
