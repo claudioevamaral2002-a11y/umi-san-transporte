@@ -133,11 +133,11 @@ begin
       jsonb_typeof(p -> k) = 'number'
       and (p ->> k) ~ '^[0-9]{1,16}$'
     ) then
-      invalidos := invalidos || k;
+      invalidos := array_append(invalidos, k);
     end if;
   end loop;
   if p ? 'faixas_cancelamento' and not interno.faixas_validas(p -> 'faixas_cancelamento') then
-    invalidos := invalidos || 'faixas_cancelamento';
+    invalidos := array_append(invalidos, 'faixas_cancelamento');
   end if;
 
   -- limites de valor (iguais aos CHECKs da tabela; aqui viram CAMPOS_INVALIDOS em vez de erro)
@@ -148,7 +148,7 @@ begin
          or (k in ('prazo_orcar_horas', 'validade_orcamento_horas', 'limiar_urgente_horas', 'retencao_fotos_dias')
              and (v < 1 or v > 2147483647))
       then
-        invalidos := invalidos || k;
+        invalidos := array_append(invalidos, k);
       end if;
     end if;
   end loop;
