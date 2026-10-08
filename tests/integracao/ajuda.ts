@@ -29,12 +29,15 @@ export interface UsuarioTeste {
 
 export async function criarUsuario(): Promise<UsuarioTeste> {
   const email = `teste-${randomUUID()}@teste.local`
-  const senha = `Senha-${randomUUID()}`
-  const criado = await clienteServico().auth.admin.createUser({ email, password: senha, email_confirm: true })
+  const servico = clienteServico()
+  const criado = await servico.auth.admin.createUser({ email, email_confirm: true })
   if (criado.error || !criado.data.user) throw criado.error ?? new Error('createUser não retornou usuário')
 
+  // O provedor de e-mail/senha está desligado de propósito; abre sessão via link mágico gerado pelo admin.
+  const link = await servico.auth.admin.generateLink({ type: 'magiclink', email })
+  if (link.error) throw link.error
   const cliente = clientePublico()
-  const login = await cliente.auth.signInWithPassword({ email, password: senha })
+  const login = await cliente.auth.verifyOtp({ type: 'magiclink', token_hash: link.data.properties.hashed_token })
   if (login.error || !login.data.session) throw login.error ?? new Error('login sem sessão')
   return { id: criado.data.user.id, token: login.data.session.access_token, cliente }
 }
