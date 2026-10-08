@@ -119,4 +119,5 @@ Saldo (fase 2); pedidos, agenda/calendário e Realtime real de pedidos (fase 3 �
 - **Sem domínio**: links copiados pelo ADM substituem e-mail; "confirmação de e-mail" vira confirmação de posse do link. Bloqueante antes de clientes reais em produção.
 - **`config push`** pode sobrescrever ajustes feitos no painel — por isso nenhuma configuração de Auth é feita no painel daqui em diante (especificação 11).
 - **Primeiro ADM** via workflow: o link aparece no resumo do GitHub Actions (repositório privado, só o dono vê); uso único, 24 h.
+- **Risco residual — chave de serviço**: quem detém a `service_role` (Edge Functions, segredos do GitHub) pode assumir qualquer conta pela Admin API. Mitigação: segredos só no environment `producao` e auditoria das operações de sistema (`detalhe.origem = sistema`).
 - **Merge da fase 1 inteiro de uma vez (backend + front com Turnstile)**: o captcha é exigido no Auth assim que o `config push` roda; front sem o widget ficaria sem login.

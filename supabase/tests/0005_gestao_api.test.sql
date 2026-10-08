@@ -1,7 +1,7 @@
 -- Gestão de acesso (fase 1, Task 5): RPCs de usuários/matriz/empresas, leituras e RPCs de sistema.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(149);
+select plan(170);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'), ('00000000-0000-0000-0000-0000000000e2', 'Empresa B');
 insert into app.convites (email, nome, papel, empresa_id) values
@@ -50,8 +50,12 @@ select is(api.preparar_convite('semperfil@teste.local', 'Fulano Teste', 'MOTORIS
   'preparar_convite: e-mail de usuário do Auth sem perfil');
 select is(api.preparar_convite('cli.novo@teste.local', 'Cliente Novo', 'CLIENTE', '00000000-0000-0000-0000-0000000000e1') ->> 'ok', 'true',
   'preparar_convite: convite de CLIENTE com empresa');
+-- Depende da ordem: este é o 11º convite de A1 no dia (os 10 anteriores contam, inclusive as recusas de validação).
 select is(api.preparar_convite('onze@teste.local', 'Onze Teste', 'MOTORISTA', null) ->> 'codigo', 'LIMITE_EXCEDIDO',
   'preparar_convite: 11º convite do dia negado');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a6","role":"authenticated","aal":"aal2"}', true);
+select is(api.preparar_convite('adm.novo@teste.local', 'Admin Novo', 'ADM', null) ->> 'ok', 'true',
+  'preparar_convite: ADM convida ADM');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
 select is(api.preparar_convite('y1@teste.local', 'Fulano Teste', 'MOTORISTA', null) ->> 'codigo', 'SEM_PERMISSAO',
   'preparar_convite: motorista negado');
@@ -78,8 +82,13 @@ select ok(
    where acao = 'PREPARAR_CONVITE' and resultado = 'NEGADO' and codigo = 'SEM_PERMISSAO'
      and usuario_id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a3')) = 3,
   'preparar_convite: SEM_PERMISSAO de motorista, cliente e ADM aal1 auditado');
-select is_empty($$ select 1 from app.convites where usado_em is null and email in ('clia@teste.local', 'semperfil@teste.local', 'sem-arroba', 'onze@teste.local') $$,
+select is_empty($$ select 1 from app.convites where usado_em is null and email in ('clia@teste.local', 'semperfil@teste.local', 'x1@teste.local', 'x2@teste.local', 'x3@teste.local', 'x4@teste.local', 'onze@teste.local', 'y1@teste.local', 'y2@teste.local', 'y3@teste.local') $$,
   'preparar_convite: recusas não criam convite');
+select ok(exists (select 1 from app.auditoria where acao = 'PREPARAR_CONVITE' and resultado = 'OK' and detalhe ->> 'substituiu' is not null),
+  'preparar_convite: auditoria registra o convite substituído');
+select ok(exists (select 1 from app.auditoria where acao = 'PREPARAR_CONVITE' and resultado = 'NEGADO' and detalhe ->> 'email_dominio' = 'teste.local')
+          and not exists (select 1 from app.auditoria where acao = 'PREPARAR_CONVITE' and resultado = 'NEGADO' and detalhe::text like '%@%'),
+  'preparar_convite: negações guardam só o domínio do e-mail');
 
 ------------------------------------------------------------------ alterar_perfil
 set local role authenticated;
@@ -88,6 +97,10 @@ select is(api.alterar_perfil('00000000-0000-0000-0000-0000000000a4', 'Cliente B'
   'alterar_perfil: CLIENTE vira MOTORISTA (empresa nula)');
 select is(api.alterar_perfil('00000000-0000-0000-0000-0000000000a4', '  Cliente B Novo ', 'CLIENTE', '00000000-0000-0000-0000-0000000000e1') ->> 'ok', 'true',
   'alterar_perfil: volta a CLIENTE com empresa e nome novo');
+select is(api.alterar_perfil('00000000-0000-0000-0000-0000000000a4', 'Cliente B Novo', 'ADM', null) ->> 'ok', 'true',
+  'alterar_perfil: CLIENTE promovido a ADM');
+select is(api.alterar_perfil('00000000-0000-0000-0000-0000000000a4', 'Cliente B Novo', 'CLIENTE', '00000000-0000-0000-0000-0000000000e1') ->> 'ok', 'true',
+  'alterar_perfil: ADM rebaixado por outro ADM (havendo outros ADMs)');
 select is(api.alterar_perfil('00000000-0000-0000-0000-0000000000a1', 'Admin Teste', 'ADM', null) ->> 'ok', 'true',
   'alterar_perfil: ADM edita o próprio nome mantendo o papel');
 select is(api.alterar_perfil('00000000-0000-0000-0000-0000000000a1', 'Admin Teste', 'MOTORISTA', null) ->> 'codigo', 'PROPRIO_PAPEL',
@@ -153,6 +166,9 @@ select is(api.definir_permissao('MOTORISTA_EDITA_PARAMETROS', false, ' ') ->> 'c
 select is(api.definir_permissao('NAO_EXISTE', true, 'Teste de chave') ->> 'codigo', 'CHAVE_INVALIDA', 'definir_permissao: chave inválida');
 select is(api.definir_permissao('MOTORISTA_EDITA_PARAMETROS', null, 'Teste de nulo') ->> 'codigo', 'CAMPOS_INVALIDOS',
   'definir_permissao: ativo nulo');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal1"}', true);
+select is(api.definir_permissao('MOTORISTA_LANCA_RECARGA', true, 'ADM sem aal2') ->> 'codigo', 'SEM_PERMISSAO',
+  'definir_permissao: ADM sem aal2 negado');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
 select is(api.definir_permissao('MOTORISTA_LANCA_RECARGA', true, 'Motorista tentando') ->> 'codigo', 'SEM_PERMISSAO',
   'definir_permissao: motorista negado');
@@ -178,11 +194,13 @@ select ok(set_config('t.emp', api.salvar_empresa(null, '  Empresa C ') ->> 'id',
 select is(api.salvar_empresa(current_setting('t.emp')::uuid, 'Empresa C2') ->> 'ok', 'true', 'salvar_empresa: renomeia');
 select is(api.salvar_empresa('00000000-0000-0000-0000-00000000dead', 'Empresa Z') ->> 'codigo', 'NAO_ENCONTRADO', 'salvar_empresa: id inexistente');
 select is(api.salvar_empresa(null, 'x') ->> 'codigo', 'CAMPOS_INVALIDOS', 'salvar_empresa: nome inválido');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal1"}', true);
+select is(api.salvar_empresa(null, 'Empresa Sem Aal2') ->> 'codigo', 'SEM_PERMISSAO', 'salvar_empresa: ADM sem aal2 negado');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
 select is(api.salvar_empresa(null, 'Empresa Motorista') ->> 'codigo', 'SEM_PERMISSAO', 'salvar_empresa: motorista negado');
 reset role;
 select ok(exists (select 1 from app.empresas where id = current_setting('t.emp')::uuid and nome = 'Empresa C2'), 'salvar_empresa: nome gravado');
-select is_empty($$ select 1 from app.empresas where nome in ('Empresa Z', 'Empresa Motorista', 'x') $$, 'salvar_empresa: recusas não criam empresa');
+select is_empty($$ select 1 from app.empresas where nome in ('Empresa Z', 'Empresa Motorista', 'Empresa Sem Aal2', 'x') $$, 'salvar_empresa: recusas não criam empresa');
 select ok(
   (select count(distinct codigo) from app.auditoria
    where acao = 'SALVAR_EMPRESA' and resultado = 'NEGADO' and codigo in ('NAO_ENCONTRADO', 'CAMPOS_INVALIDOS', 'SEM_PERMISSAO')) = 3
@@ -217,6 +235,11 @@ select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a3',
 select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a3', 'APAGAR_TUDO') ->> 'codigo', 'CAMPOS_INVALIDOS', 'autorizar_operacao_usuario: ação fora da lista');
 select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-00000000dead', 'GERAR_LINK') ->> 'codigo', 'NAO_ENCONTRADO',
   'autorizar_operacao_usuario: usuário inexistente');
+select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a1', 'GERAR_LINK') ->> 'codigo', 'PROPRIO_USUARIO', 'autorizar_operacao_usuario: não opera sobre si mesmo');
+select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a5', 'RESETAR_2FA') ->> 'codigo', 'ALVO_ADM', 'autorizar_operacao_usuario: alvo ADM recusado');
+select is((select count(*)::int from generate_series(1, 14) g where api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a3', 'GERAR_LINK') ->> 'ok' = 'true'), 14,
+  'autorizar_operacao_usuario: até 20 chamadas por dia');
+select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a3', 'GERAR_LINK') ->> 'codigo', 'LIMITE_EXCEDIDO', 'autorizar_operacao_usuario: 21ª chamada negada');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
 select is(api.autorizar_operacao_usuario('00000000-0000-0000-0000-0000000000a3', 'GERAR_LINK') ->> 'codigo', 'SEM_PERMISSAO', 'autorizar_operacao_usuario: motorista negado');
 reset role;
@@ -225,7 +248,7 @@ select ok(exists (select 1 from app.auditoria where acao = 'AUTORIZAR_OPERACAO_U
   'autorizar_operacao_usuario: sucessos auditados com a operação no detalhe');
 select ok(
   (select count(distinct codigo) from app.auditoria
-   where acao = 'AUTORIZAR_OPERACAO_USUARIO' and resultado = 'NEGADO' and codigo in ('CAMPOS_INVALIDOS', 'NAO_ENCONTRADO', 'SEM_PERMISSAO')) = 3,
+   where acao = 'AUTORIZAR_OPERACAO_USUARIO' and resultado = 'NEGADO' and codigo in ('CAMPOS_INVALIDOS', 'NAO_ENCONTRADO', 'SEM_PERMISSAO', 'PROPRIO_USUARIO', 'ALVO_ADM', 'LIMITE_EXCEDIDO')) = 6,
   'autorizar_operacao_usuario: recusas auditadas');
 
 ------------------------------------------------------------------ leituras
@@ -240,8 +263,8 @@ select is((select empresa_nome from api.meu_perfil()), 'Empresa A', 'meu_perfil:
 select is((select count(*)::int from api.meu_perfil()), 1, 'meu_perfil: só o próprio perfil');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a7","role":"authenticated","aal":"aal1"}', true);
 select is((select senha_pendente from api.meu_perfil()), true, 'meu_perfil: devolve o perfil mesmo com senha pendente');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a9","role":"authenticated","aal":"aal2"}', true);
-select is_empty($$ select 1 from api.meu_perfil() $$, 'meu_perfil: vazio sem perfil');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a8","role":"authenticated","aal":"aal2"}', true);
+select is_empty($$ select 1 from api.meu_perfil() $$, 'meu_perfil: vazio para usuário do Auth sem perfil');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
 select is((select count(*)::int from api.listar_usuarios()), 7, 'listar_usuarios: ADM vê todos os perfis');
 select is((select email from api.listar_usuarios() where usuario_id = '00000000-0000-0000-0000-0000000000a3'), 'clia@teste.local', 'listar_usuarios: traz o e-mail');
@@ -315,7 +338,15 @@ select is_empty($$
          or not has_function_privilege('service_role', p.oid, 'EXECUTE'))
 $$, 'sistema_*: EXECUTE só para service_role');
 select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'api' and p.proname like 'sistema\_%'), 3, 'existem exatamente 3 funções sistema_*');
+           where n.nspname = 'api'
+             and p.proname in ('sistema_confirmar_senha', 'sistema_convite_primeiro_adm', 'sistema_registrar', 'sistema_link_primeiro_adm')), 4,
+  'existem as 4 funções sistema_* esperadas');
+select is_empty($$
+  select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo', 'definir_permissao',
+    'salvar_empresa', 'definir_logo_empresa', 'autorizar_operacao_usuario', 'meu_perfil', 'listar_usuarios', 'listar_auditoria')
+    and has_function_privilege('service_role', p.oid, 'EXECUTE')
+$$, 'RPCs de gestão e leituras: service_role não executa');
 select is_empty($$
   select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo', 'definir_permissao',
@@ -332,6 +363,7 @@ select is(api.sistema_confirmar_senha('00000000-0000-0000-0000-0000000000a7') ->
 select is(api.sistema_confirmar_senha('00000000-0000-0000-0000-00000000dead') ->> 'codigo', 'NAO_ENCONTRADO', 'sistema_confirmar_senha: usuário inexistente');
 select is(api.sistema_registrar('00000000-0000-0000-0000-0000000000a2', 'RESETAR_2FA', 'usuario:alvo', 'OK', null) ->> 'ok', 'true', 'sistema_registrar: registra');
 select is(api.sistema_registrar('00000000-0000-0000-0000-0000000000a2', 'x; drop table app.auditoria', null, 'OK', null) ->> 'codigo', 'CAMPOS_INVALIDOS', 'sistema_registrar: ação fora do formato');
+select is(api.sistema_registrar('00000000-0000-0000-0000-0000000000a2', 'ACAO_BOA', null, 'OK', null) ->> 'codigo', 'CAMPOS_INVALIDOS', 'sistema_registrar: ação fora da lista permitida');
 select is(api.sistema_registrar('00000000-0000-0000-0000-0000000000a2', 'ACAO_BOA', null, 'TALVEZ', null) ->> 'codigo', 'CAMPOS_INVALIDOS', 'sistema_registrar: resultado inválido');
 select is(api.sistema_registrar('00000000-0000-0000-0000-0000000000a2', 'ACAO_BOA', null, 'NEGADO', 'codigo ruim') ->> 'codigo', 'CAMPOS_INVALIDOS', 'sistema_registrar: código fora do formato');
 select is(api.sistema_convite_primeiro_adm('primeiro@teste.local', 'Primeiro Adm') ->> 'codigo', 'JA_EXISTE_ADM', 'sistema_convite_primeiro_adm: já existe ADM');
@@ -369,14 +401,39 @@ select is(api.sistema_convite_primeiro_adm('semperfil@teste.local', 'Primeiro Ad
 reset role;
 select ok(exists (select 1 from app.convites where email = 'primeiro@teste.local' and papel = 'ADM' and empresa_id is null and usado_em is null),
   'sistema_convite_primeiro_adm: convite ADM pendente gravado');
+set local role service_role;
+select is(api.sistema_convite_primeiro_adm('segundo@teste.local', 'Segundo Adm') ->> 'ok', 'true', 'sistema_convite_primeiro_adm: segunda execução');
+reset role;
+select ok((select count(*) = 1 and bool_and(email = 'segundo@teste.local') from app.convites where papel = 'ADM' and usado_em is null),
+  'sistema_convite_primeiro_adm: duas execuções deixam um único convite ADM pendente');
 select ok(exists (select 1 from app.auditoria where acao = 'CONVITE_PRIMEIRO_ADM' and resultado = 'OK'), 'sistema_convite_primeiro_adm: sucesso auditado');
+
+------------------------------------------------------------------ sistema_link_primeiro_adm
+set local role service_role;
+select is(api.sistema_link_primeiro_adm('adm3@teste.local') ->> 'codigo', 'NAO_PERMITIDO', 'sistema_link_primeiro_adm: perfil que não é ADM');
+select is(api.sistema_link_primeiro_adm('ninguem@teste.local') ->> 'codigo', 'NAO_PERMITIDO', 'sistema_link_primeiro_adm: e-mail desconhecido');
+reset role;
+update app.perfis set papel = 'ADM', senha_pendente = true where usuario_id = '00000000-0000-0000-0000-0000000000a6';
+set local role service_role;
+select is(api.sistema_link_primeiro_adm(' ADM3@teste.local ') ->> 'email', 'adm3@teste.local', 'sistema_link_primeiro_adm: ADM com senha pendente devolve o e-mail normalizado');
+reset role;
+update app.perfis set senha_pendente = false where usuario_id = '00000000-0000-0000-0000-0000000000a6';
+set local role service_role;
+select is(api.sistema_link_primeiro_adm('adm3@teste.local') ->> 'codigo', 'NAO_PERMITIDO', 'sistema_link_primeiro_adm: ADM que já definiu a senha');
+reset role;
+select ok(exists (select 1 from app.auditoria where acao = 'LINK_PRIMEIRO_ADM' and resultado = 'OK')
+          and exists (select 1 from app.auditoria where acao = 'LINK_PRIMEIRO_ADM' and resultado = 'NEGADO' and codigo = 'NAO_PERMITIDO'),
+  'sistema_link_primeiro_adm: auditado');
+select is_empty($$ select 1 from app.auditoria
+  where acao in ('CONFIRMAR_SENHA', 'CONVITE_PRIMEIRO_ADM', 'SISTEMA_REGISTRAR_INVALIDO', 'RESETAR_2FA', 'LINK_PRIMEIRO_ADM')
+    and detalhe ->> 'origem' is distinct from 'sistema' $$, 'auditoria de sistema: sempre com origem = sistema');
 
 ------------------------------------------------------------------ nomes de ação são constantes
 select is_empty($$
   select distinct acao from app.auditoria
   where acao not in ('PREPARAR_CONVITE', 'ALTERAR_PERFIL', 'DEFINIR_ATIVO', 'DEFINIR_PERMISSAO', 'SALVAR_EMPRESA',
     'DEFINIR_LOGO_EMPRESA', 'AUTORIZAR_OPERACAO_USUARIO', 'CONFIRMAR_SENHA', 'CONVITE_PRIMEIRO_ADM',
-    'SISTEMA_REGISTRAR_INVALIDO', 'RESETAR_2FA', 'TESTE_VOLUME')
+    'SISTEMA_REGISTRAR_INVALIDO', 'RESETAR_2FA', 'LINK_PRIMEIRO_ADM', 'TESTE_VOLUME')
 $$, 'auditoria: só nomes de ação constantes (nada de texto do chamador)');
 
 select * from finish();
