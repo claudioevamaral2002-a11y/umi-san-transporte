@@ -28,5 +28,3 @@ jobs:
         run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
-      - name: Supabase local
-        run: npx supabase start -x studio,imgproxy,vector,logflare
