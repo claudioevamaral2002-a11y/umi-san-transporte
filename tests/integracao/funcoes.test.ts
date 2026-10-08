@@ -271,7 +271,7 @@ describe('gerir-usuario', () => {
     const on = await gerir(adm, { acao: 'REATIVAR', usuario_id: cliente.id, motivo: 'teste de reativação' })
     expect(on.corpo).toEqual({ ok: true })
     // a sessão antiga não é ressuscitada (o Auth a invalida no banimento); o acesso volta com um novo login
-    const banido = await comBanco((db) => db.query('select banned_until from auth.users where id = ', [cliente.id]))
+    const banido = await comBanco((db) => db.query('select banned_until from auth.users where id = $1', [cliente.id]))
     expect(banido.rows[0].banned_until).toBeNull()
     const volta = clientePublico()
     const login = await volta.auth.signInWithPassword({
