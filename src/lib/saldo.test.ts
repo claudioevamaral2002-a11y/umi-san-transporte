@@ -7,7 +7,7 @@ import {
   saldoAposAprovacao,
   saldoAposLancamento,
   semResposta,
-} from './saldo.ts'
+} from './saldoExibicao.ts'
 
 describe('saldo depois da aprovação (só exibição)', () => {
   it('cabe no disponível', () => {
