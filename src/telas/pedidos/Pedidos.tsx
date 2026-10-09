@@ -9,6 +9,7 @@ import { pedidos } from '../../lib/pedidos.ts'
 import { useSessao } from '../../lib/sessao.tsx'
 import { FILTROS, type Filtro } from '../../lib/situacao.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
+import { topicoDoPerfil } from '../../lib/topicos.ts'
 import { CartaoPedido } from './componentes.tsx'
 
 /** Cliente N1/N2 cria pedidos (N3 só vê; o banco confere de novo). */
@@ -53,7 +54,7 @@ export function Pedidos() {
   const { dados, erro, carregando, recarregar } = useConsulta(`pedidos-${filtro}`, () =>
     pedidos.listar(FILTROS[filtro].status),
   )
-  useTempoReal(perfil?.papel === 'CLIENTE' && perfil.empresa_id ? `empresa:${perfil.empresa_id}` : null, recarregar)
+  useTempoReal(topicoDoPerfil(perfil), recarregar)
   const equipe = perfil?.papel !== 'CLIENTE'
 
   return (

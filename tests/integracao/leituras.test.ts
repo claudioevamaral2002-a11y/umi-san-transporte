@@ -142,7 +142,11 @@ describe('leituras sem vazamento entre empresas', () => {
     }
     expect(await podeAbrir(n1)).toBe(true)
     expect(await podeAbrir(n3)).toBe(true)
-    expect(await podeAbrir(clienteA)).toBe(false)
+    // N2 colega: o bloco aparece só como ocupado (sem id, endereço nem pode_abrir).
+    expect(await podeAbrir(clienteA)).toBeUndefined()
+    const doN2 = JSON.stringify(await rpc(clienteA, 'agenda', { p_de: de, p_ate: ate }))
+    expect(doN2).not.toContain(id)
+    expect(doN2).not.toContain('Sigiloso')
     expect(await podeAbrir(colega)).toBe(true)
     expect(await rpc(n3, 'pedido', { p_id: id })).toMatchObject({ ok: true })
 

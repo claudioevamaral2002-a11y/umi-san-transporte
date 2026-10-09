@@ -95,8 +95,12 @@ test.describe('pedido e orçamento (fase 2A)', () => {
       await expect(page.getByText('Revisão pedida. O motorista vai enviar um novo orçamento.')).toBeVisible({ timeout: 20_000 })
       await expect(page.getByTestId('orcamento-recebido')).toHaveCount(0)
 
-      // 4. Motorista reenvia (o pedido voltou a aguardar orçamento).
+      // 4. Motorista reenvia (o pedido voltou a aguardar orçamento): a calculadora vem com o orçamento anterior e o
+      //    motivo do cliente.
       await pm.goto(`/pedidos/${id}/orcar`)
+      await expect(pm.getByTestId('revisao-pedida')).toContainText('Revisão pedida: A distância real é 80 km', { timeout: 20_000 })
+      await expect(pm.getByRole('textbox', { name: 'Quilometragem' })).toHaveValue('100')
+      await expect(pm.getByTestId('total-ao-vivo')).toContainText(/R\$\s375,00/, { timeout: 20_000 })
       await pm.getByRole('textbox', { name: 'Quilometragem' }).fill('80')
       await expect(pm.getByTestId('total-ao-vivo')).toContainText(/R\$\s300,00/, { timeout: 20_000 })
       await pm.getByRole('button', { name: 'Enviar orçamento' }).click()

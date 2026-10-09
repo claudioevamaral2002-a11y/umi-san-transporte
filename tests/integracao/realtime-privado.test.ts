@@ -23,9 +23,10 @@ function horario(dias: number): string {
 let empresaA: string
 let clienteA: Pessoa
 let clienteB: Pessoa
+let motorista: Pessoa
 
 beforeAll(async () => {
-  await motoristaUnico()
+  motorista = await motoristaUnico()
   empresaA = await empresaComContrato()
   clienteA = await criarPessoa({ papel: 'CLIENTE', empresa: empresaA, nivel: 2 })
   clienteB = await criarPessoa({ papel: 'CLIENTE', empresa: await empresaComContrato(), nivel: 1 })
@@ -83,6 +84,59 @@ describe('Realtime Broadcast privado por pedido e por empresa (especificação 1
     } finally {
       await clienteA.cliente.removeAllChannels()
       await clienteB.cliente.removeAllChannels()
+    }
+  })
+
+  it('tópico equipe: motorista e gestor de frota recebem {id, status, em, empresa_id}; cliente é recusado', async () => {
+    const gestor = await criarPessoa({ papel: 'GESTOR_FROTA' })
+    try {
+      await motorista.cliente.realtime.setAuth(motorista.token)
+      await gestor.cliente.realtime.setAuth(gestor.token)
+      await clienteA.cliente.realtime.setAuth(clienteA.token)
+
+      const doMotorista: Array<Record<string, unknown>> = []
+      const doGestor: Array<Record<string, unknown>> = []
+      const canalMotorista = motorista.cliente
+        .channel('equipe', { config: { private: true } })
+        .on('broadcast', { event: 'status' }, (m) => doMotorista.push(m.payload as Record<string, unknown>))
+      expect(await statusAssinatura(canalMotorista)).toBe('SUBSCRIBED')
+      const canalGestor = gestor.cliente
+        .channel('equipe', { config: { private: true } })
+        .on('broadcast', { event: 'status' }, (m) => doGestor.push(m.payload as Record<string, unknown>))
+      expect(await statusAssinatura(canalGestor)).toBe('SUBSCRIBED')
+
+      // Cliente (token válido) não assina o tópico da equipe.
+      expect((await clienteA.cliente.rpc('ping')).data).toBe('pong')
+      expect(await statusAssinatura(clienteA.cliente.channel('equipe', { config: { private: true } }))).toBe('CHANNEL_ERROR')
+
+      const criado = await rpc(clienteA, 'criar_pedido', {
+        p: {
+          inicio: horario(31),
+          duracao_min: 60,
+          origem: 'Porto de Itajaí',
+          destino: 'Base Navegantes',
+          levar: true,
+          trazer: false,
+          carga: 'PESSOAS',
+          pessoas_qtd: 1,
+          modalidade: 'VEICULO_PROPRIO',
+          reboque: 'NAO',
+        },
+      })
+      expect(criado).toMatchObject({ ok: true })
+      const id = criado.id as string
+      expect(await rpc(clienteA, 'cancelar_pedido', { p_atividade: id, p_motivo: null })).toMatchObject({ ok: true })
+
+      const deste = (lista: Array<Record<string, unknown>>) => lista.filter((x) => x.id === id)
+      await expect.poll(() => deste(doMotorista).length, { timeout: 8_000 }).toBe(2)
+      await expect.poll(() => deste(doGestor).length, { timeout: 8_000 }).toBe(2)
+      expect(deste(doMotorista).map((x) => String(x.status)).sort()).toEqual(['CANCELADA', 'SOLICITADA'])
+      expect(deste(doMotorista).find((x) => x.status === 'CANCELADA')).toMatchObject({ id, empresa_id: empresaA })
+      for (const x of deste(doGestor)) expect(Object.keys(x).sort()).toEqual(['em', 'empresa_id', 'id', 'status'])
+    } finally {
+      await motorista.cliente.removeAllChannels()
+      await gestor.cliente.removeAllChannels()
+      await clienteA.cliente.removeAllChannels()
     }
   })
 })

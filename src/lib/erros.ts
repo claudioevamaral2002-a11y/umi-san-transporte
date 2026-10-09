@@ -46,6 +46,7 @@ export const MENSAGENS = {
   STATUS_INVALIDO: 'Este pedido mudou de situação. Atualize a página.',
   PRAZO_VENCIDO: 'O prazo deste pedido venceu.',
   CAMPOS_INCOMPATIVEIS: 'Há campos que não valem para a modalidade escolhida.',
+  VALOR_FORA_DO_LIMITE: 'O valor calculado passou do limite permitido. Confira as quantidades.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS

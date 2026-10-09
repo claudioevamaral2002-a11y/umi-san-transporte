@@ -140,6 +140,49 @@ test.describe('motorista', () => {
     expect(csp).toEqual([])
   })
 
+  test('orçar após revisão: pré-preenchido com o orçamento anterior e o motivo do cliente', async ({ page }) => {
+    const csp = await vigiarCsp(page)
+    await comSessaoFalsa(page, MOTORISTA, AAL2)
+    await simularApi(page)
+    const entrada = {
+      modalidade: 'VEICULO_PROPRIO',
+      km: 100,
+      usa_reboque: false,
+      espera_horas: 0,
+      pedagio_cent: 3580,
+      hospedagem_diarias: 0,
+      outros: [{ descricao: 'Balsa extra', valor_cent: 2000 }],
+    }
+    const chamadas = await simularPedidos(page, {
+      detalhes: [
+        {
+          ...pedidoSolicitadoMotorista(),
+          orcamento_anterior: {
+            versao: 1,
+            modalidade: 'VEICULO_PROPRIO',
+            entrada,
+            linhas: [],
+            total_cent: 41080,
+            motivo_revisao: '<b>A distância real é 80 km</b>',
+          },
+        },
+      ],
+    })
+    await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
+    const revisao = page.getByTestId('revisao-pedida')
+    await expect(revisao.getByRole('status')).toContainText('Revisão pedida: <b>A distância real é 80 km</b>')
+    await expect(revisao).toContainText(/Preenchido com a versão 1 \(R\$\s410,80\)/)
+    await expect(page.getByRole('textbox', { name: 'Quilometragem' })).toHaveValue('100')
+    await expect(page.getByLabel('Pedágio/balsa')).toHaveValue('35,80')
+    await expect(page.getByLabel('Descrição 1')).toHaveValue('Balsa extra')
+    await expect(page.getByTestId('total-ao-vivo')).toContainText(/R\$\s405,80/)
+    expect(chamadas.filter((c) => c.rpc === 'calcular_orcamento').at(-1)!.corpo).toEqual({ p_atividade: ID_PEDIDO, p: entrada })
+    // O motorista ajusta só o km pedido pelo cliente.
+    await page.getByRole('textbox', { name: 'Quilometragem' }).fill('80')
+    await expect(page.getByTestId('total-ao-vivo')).toContainText(/R\$\s335,80/)
+    expect(csp).toEqual([])
+  })
+
   test('orçar: modalidade veículo do cliente troca os campos; recusar exige motivo', async ({ page }) => {
     await comSessaoFalsa(page, MOTORISTA, AAL2)
     await simularApi(page)

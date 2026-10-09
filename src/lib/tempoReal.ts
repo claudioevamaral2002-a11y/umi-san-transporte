@@ -3,7 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from './supabase.ts'
 
 /**
- * Assina um tópico privado (`atividade:<id>` ou `empresa:<id>`) e chama `aoMudar` a cada evento `status`
+ * Assina um tópico privado (`atividade:<id>`, `empresa:<id>` ou `equipe`) e chama `aoMudar` a cada evento `status`
  * ({id, status, em}). A tela relê os dados do servidor: o evento nunca é usado como dado.
  */
 export function useTempoReal(topico: string | null, aoMudar: () => void) {

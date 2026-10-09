@@ -12,6 +12,7 @@ import { pedidos, type ItemPendencia, type Pendencias } from '../lib/pedidos.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { formatarDuracao, formatarQuando, numeroPedido } from '../lib/tempo.ts'
 import { useTempoReal } from '../lib/tempoReal.ts'
+import { topicoDoPerfil } from '../lib/topicos.ts'
 import { formatarDataLonga } from '../lib/valores.ts'
 import { Contagem, Rota } from './pedidos/componentes.tsx'
 import { BotaoNovoPedido, podeCriarPedido } from './pedidos/Pedidos.tsx'
@@ -337,7 +338,7 @@ function gruposDe(perfil: Perfil, p: Pendencias): DefGrupo[] {
 
 function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
   const { dados, erro, carregando, recarregar } = useConsulta(`inicio-pendencias-${perfil.papel}`, pedidos.pendencias)
-  useTempoReal(perfil.papel === 'CLIENTE' && perfil.empresa_id ? `empresa:${perfil.empresa_id}` : null, recarregar)
+  useTempoReal(topicoDoPerfil(perfil), recarregar)
   if (erro && dados === undefined) return null
   if (carregando && dados === undefined) {
     return (

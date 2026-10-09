@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formDaEntrada,
   formInicial,
   kmParaTexto,
   limitar,
@@ -80,5 +81,59 @@ describe('montarEntrada', () => {
   it('form inicial segue a modalidade e o reboque do pedido', () => {
     expect(formInicial('VEICULO_PROPRIO', 'NAO_SEI').usaReboque).toBe(false)
     expect(formInicial('VEICULO_CLIENTE', 'NAO').diarias).toBe(1)
+  })
+})
+
+describe('formDaEntrada (revisão: pré-preenche com o orçamento anterior)', () => {
+  it('volta exatamente à entrada anterior (ida e volta pelo montarEntrada)', () => {
+    const anterior = {
+      modalidade: 'VEICULO_PROPRIO',
+      km: 125.3,
+      usa_reboque: true,
+      espera_horas: 1.5,
+      pedagio_cent: 3580,
+      hospedagem_diarias: 1,
+      outros: [{ descricao: 'Balsa extra', valor_cent: 2000 }],
+    }
+    const f = formDaEntrada(anterior, 'VEICULO_PROPRIO', 'NAO')
+    expect(f).toMatchObject({ kmDecimos: 1253, usaReboque: true, esperaMeias: 3, pedagio: '35,80', hospedagemDiarias: 1 })
+    expect(f.outros).toEqual([{ descricao: 'Balsa extra', valor: '20,00' }])
+    expect(montarEntrada(f)).toEqual({ ok: true, entrada: anterior })
+  })
+
+  it('a modalidade escolhida antes vence a do pedido', () => {
+    const f = formDaEntrada({ modalidade: 'VEICULO_CLIENTE', diarias: 3, pedagio_cent: 0, hospedagem_diarias: 0 }, 'VEICULO_PROPRIO', 'NAO')
+    expect(f).toMatchObject({ modalidade: 'VEICULO_CLIENTE', diarias: 3, pedagio: '' })
+    expect(montarEntrada(f)).toEqual({
+      ok: true,
+      entrada: { modalidade: 'VEICULO_CLIENTE', diarias: 3, pedagio_cent: 0, hospedagem_diarias: 0 },
+    })
+  })
+
+  it('entrada antiga sem modalidade (só km) usa a do pedido', () => {
+    expect(formDaEntrada({ km: 80 }, 'VEICULO_PROPRIO', 'SIM')).toMatchObject({
+      modalidade: 'VEICULO_PROPRIO',
+      kmDecimos: 800,
+      usaReboque: true,
+    })
+  })
+
+  it('valores estranhos caem no padrão, sem quebrar a tela', () => {
+    const padrao = formInicial('VEICULO_PROPRIO', 'NAO')
+    expect(formDaEntrada(null, 'VEICULO_PROPRIO', 'NAO')).toEqual(padrao)
+    expect(formDaEntrada([1, 2], 'VEICULO_PROPRIO', 'NAO')).toEqual(padrao)
+    const f = formDaEntrada(
+      {
+        km: -5,
+        espera_horas: '2',
+        pedagio_cent: 1e12,
+        hospedagem_diarias: 999,
+        outros: [{ descricao: 'Ok item', valor_cent: 0 }, 'x', { descricao: '<b>x</b>', valor_cent: 150 }, 1, 2, 3, 4],
+      },
+      'VEICULO_PROPRIO',
+      'NAO',
+    )
+    expect(f).toMatchObject({ kmDecimos: 0, esperaMeias: 0, pedagio: '', hospedagemDiarias: 0 })
+    expect(f.outros).toEqual([{ descricao: '<b>x</b>', valor: '1,50' }])
   })
 })

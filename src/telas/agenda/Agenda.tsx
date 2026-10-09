@@ -11,6 +11,7 @@ import { pedidos, type Bloco } from '../../lib/pedidos.ts'
 import { useSessao } from '../../lib/sessao.tsx'
 import { faixaHorario, hoje as hojeSp, intervaloDoDia, janelasLivres, mesDe, nomeDoDia, numeroPedido, type Janela } from '../../lib/tempo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
+import { topicoDoPerfil } from '../../lib/topicos.ts'
 import { podeCriarPedido } from '../pedidos/Pedidos.tsx'
 import { Calendario } from './Calendario.tsx'
 
@@ -109,7 +110,7 @@ export function Agenda() {
     calendario.recarregar()
     doDia.recarregar()
   }
-  useTempoReal(perfil?.papel === 'CLIENTE' && perfil.empresa_id ? `empresa:${perfil.empresa_id}` : null, recarregar)
+  useTempoReal(topicoDoPerfil(perfil), recarregar)
 
   const itens: Item[] = doDia.dados
     ? [

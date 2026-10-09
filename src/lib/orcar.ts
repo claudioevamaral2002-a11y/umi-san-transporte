@@ -2,7 +2,7 @@
 // servidor (`api.calcular_orcamento` / `api.enviar_orcamento`, a partir do contrato vigente da empresa).
 // Km em décimos e espera em meias horas: inteiros, sem ponto flutuante acumulado nos passos.
 import type { Modalidade } from './situacao.ts'
-import { reaisParaCentavos } from './valores.ts'
+import { centavosParaTexto, reaisParaCentavos } from './valores.ts'
 
 export const MAX_OUTROS = 5
 
@@ -41,6 +41,47 @@ export function formInicial(modalidade: Modalidade, reboque: 'SIM' | 'NAO' | 'NA
 export const KM_MAX_DECIMOS = 1_000_000
 export const ESPERA_MAX_MEIAS = 480
 export const DIARIAS_MAX = 60
+
+/** Inteiro seguro entre `min` e `max`; senão `null`. */
+function inteiroEntre(v: unknown, min: number, max: number): number | null {
+  return typeof v === 'number' && Number.isSafeInteger(v) && v >= min && v <= max ? v : null
+}
+
+/**
+ * Formulário pré-preenchido com a entrada do orçamento anterior (revisão pedida pelo cliente). A entrada vem do
+ * servidor (`orcamento_anterior.entrada`), mas é lida com cuidado: valor estranho cai no padrão do pedido.
+ */
+export function formDaEntrada(
+  entrada: unknown,
+  modalidadePedido: Modalidade,
+  reboque: 'SIM' | 'NAO' | 'NAO_SEI',
+): FormOrcamento {
+  const base = formInicial(modalidadePedido, reboque)
+  if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) return base
+  const e = entrada as Record<string, unknown>
+  const modalidade: Modalidade =
+    e.modalidade === 'VEICULO_PROPRIO' || e.modalidade === 'VEICULO_CLIENTE' ? e.modalidade : modalidadePedido
+  const f: FormOrcamento = { ...formInicial(modalidade, reboque) }
+  if (modalidade === 'VEICULO_PROPRIO') {
+    f.kmDecimos = inteiroEntre(typeof e.km === 'number' ? Math.round(e.km * 10) : null, 0, KM_MAX_DECIMOS) ?? 0
+    if (typeof e.usa_reboque === 'boolean') f.usaReboque = e.usa_reboque
+    f.esperaMeias =
+      inteiroEntre(typeof e.espera_horas === 'number' ? Math.round(e.espera_horas * 2) : null, 0, ESPERA_MAX_MEIAS) ?? 0
+  } else {
+    f.diarias = inteiroEntre(e.diarias, 0, DIARIAS_MAX) ?? f.diarias
+  }
+  f.hospedagemDiarias = inteiroEntre(e.hospedagem_diarias, 0, DIARIAS_MAX) ?? 0
+  const pedagio = inteiroEntre(e.pedagio_cent, 0, 999_999_999)
+  f.pedagio = pedagio ? centavosParaTexto(pedagio) : ''
+  f.outros = (Array.isArray(e.outros) ? e.outros : []).slice(0, MAX_OUTROS).flatMap((o: unknown) => {
+    if (!o || typeof o !== 'object') return []
+    const { descricao, valor_cent } = o as Record<string, unknown>
+    const valor = inteiroEntre(valor_cent, 1, 999_999_999)
+    return typeof descricao === 'string' && valor !== null ? [{ descricao, valor: centavosParaTexto(valor) }] : []
+  })
+  return f
+}
+
 
 /** 125 → "12,5"; 120 → "12". */
 export function kmParaTexto(decimos: number): string {

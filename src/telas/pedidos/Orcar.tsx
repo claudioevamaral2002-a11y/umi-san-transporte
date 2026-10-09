@@ -19,7 +19,7 @@ import {
   ESPERA_MAX_MEIAS,
   KM_MAX_DECIMOS,
   MAX_OUTROS,
-  formInicial,
+  formDaEntrada,
   kmParaTexto,
   meiasParaTexto,
   montarEntrada,
@@ -77,9 +77,11 @@ function Unitario({ centavos, por }: { centavos: number; por: string }) {
 
 function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar }) {
   const p = r.pedido
+  const anterior = r.orcamento_anterior ?? null
   const navegar = useNavigate()
-  const [f, setF] = useState<FormOrcamento>(() => formInicial(p.modalidade, p.reboque))
-  const [kmTexto, setKmTexto] = useState('0')
+  // Revisão pedida: começa do orçamento anterior (o motorista só ajusta o que o cliente pediu).
+  const [f, setF] = useState<FormOrcamento>(() => formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque))
+  const [kmTexto, setKmTexto] = useState(() => kmParaTexto(f.kmDecimos))
   const [sugerir, setSugerir] = useState(false)
   const [sugerido, setSugerido] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -120,6 +122,16 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
   return (
     <>
       <div className="mx-auto w-full max-w-lg space-y-4 p-4">
+        {anterior && (
+          <div className="space-y-2" data-testid="revisao-pedida">
+            <Mensagem tipo="info">
+              Revisão pedida: {anterior.motivo_revisao ?? 'sem motivo informado'}
+            </Mensagem>
+            <p className="ivo-legenda text-texto-suave tabular-nums">
+              Preenchido com a versão {anterior.versao} (<Dinheiro centavos={anterior.total_cent} />). Ajuste e envie de novo.
+            </p>
+          </div>
+        )}
         <Escolhas
           rotulo="Modalidade"
           tamanho="largo"

@@ -102,10 +102,23 @@ export interface Acoes {
   cancelar: boolean
 }
 
+/** Motorista/ADM, pedido SOLICITADA depois de uma revisão: a última versão enviada e o motivo do cliente. */
+export interface OrcamentoAnterior {
+  versao: number
+  modalidade: Modalidade
+  /** Quantidades enviadas antes (mesmo formato da entrada de `enviar_orcamento`). */
+  entrada: Record<string, unknown>
+  linhas: LinhaOrcamento[]
+  total_cent: number
+  motivo_revisao: string | null
+}
+
 export interface RespostaPedido {
   pedido: DetalhePedido
   historico: PassoHistorico[]
   orcamento: OrcamentoVisto | null
+  /** Ausente/nulo para cliente e gestor de frota, e fora de uma revisão. */
+  orcamento_anterior?: OrcamentoAnterior | null
   acoes: Acoes
 }
 

@@ -113,9 +113,9 @@ select is(jsonb_path_query_array(current_setting('t.ag_a4')::jsonb, '$.blocos[*]
   'N1 abre o próprio pedido da empresa e o do colega (o de outra empresa é só ocupado)');
 select is(jsonb_path_query_array(current_setting('t.ag_a6')::jsonb, '$.blocos[*].pode_abrir'), '[true, true]'::jsonb,
   'N3 abre os pedidos da empresa');
-select is(jsonb_path_query_array(current_setting('t.ag_a5')::jsonb, '$.blocos[*].pode_abrir'), '[true, false]'::jsonb,
-  'N2 abre só o próprio');
-select is(jsonb_path_query_array(current_setting('t.ag_a8')::jsonb, '$.blocos[*].pode_abrir'), '[false, true]'::jsonb,
+select is(jsonb_path_query_array(current_setting('t.ag_a5')::jsonb, '$.blocos[*].pode_abrir'), '[true]'::jsonb,
+  'N2 abre só o próprio (o do colega vem só como ocupado)');
+select is(jsonb_path_query_array(current_setting('t.ag_a8')::jsonb, '$.blocos[*].pode_abrir'), '[true]'::jsonb,
   'o outro N2 também só o próprio');
 
 ------------------------------------------------------------------ dias_do_mes

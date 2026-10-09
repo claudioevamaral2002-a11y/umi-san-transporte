@@ -377,12 +377,13 @@ select ok(current_setting('t.ag_a7')::jsonb -> 'blocos' -> 2 ->> 'atividade_id' 
 select ok(current_setting('t.ag_a7') not like '%Secreta%' and current_setting('t.ag_a7') not like '%Empresa A%'
           and current_setting('t.ag_a7') not like '%' || current_setting('t.q1') || '%',
   'outra empresa: nenhum endereço, empresa ou id alheio');
-select ok(pg_temp.ids(current_setting('t.ag_a5'), '$.blocos[*].pode_abrir') = '[true, false]'::jsonb
+select ok(pg_temp.ids(current_setting('t.ag_a5'), '$.blocos[*].pode_abrir') = '[true]'::jsonb
           and jsonb_array_length(current_setting('t.ag_a5')::jsonb -> 'blocos') = 3
+          and pg_temp.chaves(current_setting('t.ag_a5')::jsonb -> 'blocos' -> 1) = array['fim', 'inicio', 'ocupado']
           and pg_temp.chaves(current_setting('t.ag_a5')::jsonb -> 'blocos' -> 2) = array['fim', 'inicio', 'ocupado'],
-  'N2: blocos da empresa com detalhes (abre só o próprio); o alheio só ocupado');
-select is(pg_temp.ids(current_setting('t.ag_a5'), '$.blocos[*].origem'), '["Origem Secreta A1", "Origem Secreta A2"]'::jsonb,
-  'N2: endereços só da própria empresa');
+  'N2: só o próprio pedido com detalhes; o do colega e o de outra empresa só ocupado (revisão 2A, R1)');
+select is(pg_temp.ids(current_setting('t.ag_a5'), '$.blocos[*].origem'), '["Origem Secreta A1"]'::jsonb,
+  'N2: endereço só do próprio pedido');
 select is(pg_temp.ids(current_setting('t.ag_a1'), '$.blocos[*].empresa_nome'), '["Empresa A", "Empresa A", "Empresa B"]'::jsonb,
   'ADM: todos com empresa');
 select ok(pg_temp.ids(current_setting('t.ag_a2'), '$.blocos[*].numero') = pg_temp.ids(current_setting('t.ag_a1'), '$.blocos[*].numero')
