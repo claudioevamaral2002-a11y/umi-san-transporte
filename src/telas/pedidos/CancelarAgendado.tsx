@@ -49,8 +49,10 @@ function ConteudoCancelar({
   const [erroMotivo, setErroMotivo] = useState<string | null>(null)
   const [estado, setEstado] = useState<{ fase: 'previa' | 'processando' } | { fase: 'erro'; codigo: string }>({ fase: 'previa' })
   const [intencao] = useState(() => new Intencao())
+  // MULTA_ALTERADA: a faixa mudou entre a prévia e a confirmação; a tela passa a mostrar (e enviar) a multa nova
+  const [multaNova, setMultaNova] = useState<Pick<Simulacao, 'multa_cent' | 'faixa'> | null>(null)
 
-  const s = simulacao.dados
+  const s = simulacao.dados && multaNova ? { ...simulacao.dados, ...multaNova } : simulacao.dados
   if (s === undefined) {
     if (simulacao.erro) {
       return (
@@ -73,7 +75,14 @@ function ConteudoCancelar({
     }
     setErroMotivo(null)
     setEstado({ fase: 'processando' })
-    const r = await dinheiro.cancelarAgendado(atividade, m || null, intencao.chave(atividade))
+    // o cliente confirma a multa que está vendo; outra multa = outra intenção (chave nova)
+    const multaEsperada = sim.cobra_multa ? sim.multa_cent : null
+    const r = await dinheiro.cancelarAgendado(
+      atividade,
+      m || null,
+      intencao.chave(`${atividade}|${multaEsperada ?? '-'}`),
+      multaEsperada,
+    )
     if (r.ok) {
       intencao.encerrar()
       aoCancelado({ liberado_cent: Number(r.liberado_cent), multa_cent: Number(r.multa_cent) })
@@ -82,6 +91,9 @@ function ConteudoCancelar({
     if (r.codigo === 'JA_PROCESSADO') {
       aoJaCancelado()
       return
+    }
+    if (r.codigo === 'MULTA_ALTERADA' && typeof r.multa_cent === 'number') {
+      setMultaNova({ multa_cent: r.multa_cent, faixa: (r.faixa as Simulacao['faixa'] | undefined) ?? null })
     }
     if (r.codigo === 'STATUS_INVALIDO') aoMudou()
     setEstado({ fase: 'erro', codigo: r.codigo ?? 'ERRO_INESPERADO' })
@@ -127,6 +139,12 @@ function ConteudoCancelar({
             Não conseguimos confirmar com o servidor. Verifique a internet e toque de novo em “Confirmar cancelamento” — o
             cancelamento não será feito duas vezes.
           </Mensagem>
+        ) : estado.codigo === 'MULTA_ALTERADA' ? (
+          <div data-testid="multa-alterada">
+            <Mensagem tipo="erro">
+              {mensagemDoCodigo(estado.codigo)} Nova multa: {formatarCentavos(s.multa_cent)}.
+            </Mensagem>
+          </div>
         ) : (
           <Mensagem tipo="erro">{mensagemDoCodigo(estado.codigo)}</Mensagem>
         ))}

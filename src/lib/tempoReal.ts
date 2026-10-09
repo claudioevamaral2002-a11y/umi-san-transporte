@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from './supabase.ts'
 
-/** Eventos publicados pelo banco: `status` ({id, status, em}) e `saldo` ({empresa_id, em}). */
+/** Eventos publicados pelo banco: `status` ({id, status, em}) e `saldo` ({empresa_id, em}, só em `saldo:<id>`). */
 export type EventoTempoReal = 'status' | 'saldo'
 
 interface Assinatura {
@@ -12,7 +12,7 @@ interface Assinatura {
 }
 
 // Um canal por tópico, compartilhado: o supabase-js devolve o mesmo canal para o mesmo tópico, então duas partes da
-// tela (ex.: pendências e saldo no Início, ambos em `empresa:<id>`) não podem assinar e remover cada uma o seu.
+// tela (ex.: pendências e lista no Início, ambos em `empresa:<id>`) não podem assinar e remover cada uma o seu.
 const assinaturas = new Map<string, Assinatura>()
 
 function assinar(topico: string): Assinatura {
@@ -45,7 +45,7 @@ function soltar(topico: string, a: Assinatura) {
 }
 
 /**
- * Assina um tópico privado (`atividade:<id>`, `empresa:<id>` ou `equipe`) e chama `aoMudar` a cada `evento`
+ * Assina um tópico privado (`atividade:<id>`, `empresa:<id>`, `saldo:<id>` ou `equipe`) e chama `aoMudar` a cada `evento`
  * (padrão `status`). A tela relê os dados do servidor: o evento nunca é usado como dado.
  */
 export function useTempoReal(topico: string | null, aoMudar: () => void, evento: EventoTempoReal = 'status') {

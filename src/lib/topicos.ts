@@ -8,3 +8,11 @@ export function topicoDoPerfil(perfil: Pick<Perfil, 'papel' | 'empresa_id'> | nu
   if (perfil.papel === 'ADM' || perfil.papel === 'GESTOR_FROTA' || perfil.papel === 'MOTORISTA') return 'equipe'
   return null
 }
+
+/**
+ * Tópico do evento `saldo` da empresa: `saldo:<id>`. Só o ADM e os clientes da empresa assinam (a equipe do prestador
+ * não vê saldo; o banco recusa). Sem empresa: nenhum.
+ */
+export function topicoSaldo(empresa: string | null | undefined): string | null {
+  return empresa ? `saldo:${empresa}` : null
+}

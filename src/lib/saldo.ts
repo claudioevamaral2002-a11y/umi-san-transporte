@@ -133,8 +133,14 @@ export const dinheiro = {
       p_chave: chave,
       p_dispositivo: dispositivo,
     }),
-  cancelarAgendado: (atividade: string, motivo: string | null, chave: string) =>
-    chamar('cancelar_agendado', { p_atividade: atividade, p_motivo: motivo, p_chave: chave }),
+  /** `multaEsperada`: a multa_cent da prévia que o cliente viu (obrigatória para o cliente; null para o prestador). */
+  cancelarAgendado: (atividade: string, motivo: string | null, chave: string, multaEsperada: number | null) =>
+    chamar('cancelar_agendado', {
+      p_atividade: atividade,
+      p_motivo: motivo,
+      p_chave: chave,
+      p_multa_esperada_cent: multaEsperada,
+    }),
   recarga: (empresa: string, valorCent: number, motivo: string, comprovante: string | null, chave: string) =>
     chamar('lancar_recarga', {
       p_empresa: empresa,

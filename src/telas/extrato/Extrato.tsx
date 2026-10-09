@@ -25,6 +25,7 @@ import { TIPOS_LANCAMENTO, dinheiro, type ItemExtrato, type TipoLancamento } fro
 import { useSessao } from '../../lib/sessao.tsx'
 import { hoje, numeroPedido } from '../../lib/tempo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
+import { topicoSaldo } from '../../lib/topicos.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
 import { SaldoDaEmpresa } from '../saldo/CartaoSaldo.tsx'
 
@@ -93,7 +94,7 @@ function DetalhesAdm({ item }: { item: ItemExtrato }) {
 export interface PropsExtrato {
   /** ADM: a empresa; cliente: `null` (o banco usa a própria). */
   empresa: string | null
-  /** Para o tópico de tempo real (`empresa:<id>`). */
+  /** Para o tópico de tempo real (`saldo:<id>`). */
   empresaIdTopico: string | null
   empresaNome: string
   adm?: boolean
@@ -123,7 +124,7 @@ export function ExtratoEmpresa({ empresa, empresaIdTopico, empresaNome, adm = fa
         })
       : [],
   )
-  useTempoReal(empresaIdTopico ? `empresa:${empresaIdTopico}` : null, recarregar, 'saldo')
+  useTempoReal(topicoSaldo(empresaIdTopico), recarregar, 'saldo')
 
   const estornados = useMemo(() => new Set((dados ?? []).map((i) => i.estorna_id).filter((x) => x !== null)), [dados])
   const podeEstornar = (i: ItemExtrato) => adm && aoEstornar && ESTORNAVEIS.includes(i.tipo) && !estornados.has(i.id)

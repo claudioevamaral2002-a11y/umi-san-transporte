@@ -193,9 +193,48 @@ test.describe('cliente: cancelar agendado', () => {
     )
     await expect(page.getByText('Cancelada').first()).toBeVisible()
     const corpo = chamadas.find((c) => c.rpc === 'cancelar_agendado')!.corpo
-    expect(corpo).toMatchObject({ p_atividade: ID_PEDIDO, p_motivo: null })
+    // o cliente confirma a multa que viu na prévia
+    expect(corpo).toMatchObject({ p_atividade: ID_PEDIDO, p_motivo: null, p_multa_esperada_cent: 35500 })
     expect(String(corpo.p_chave)).toMatch(UUID)
     expect(csp).toEqual([])
+  })
+
+  test('a faixa mudou até a confirmação: mostra a multa nova e só cancela depois de confirmar de novo (chave nova)', async ({ page }) => {
+    await comSessaoFalsa(page, CLIENTE_N2)
+    await simularApi(page)
+    await simularPedidos(page, { detalhes: [pedidoAgendadoCliente(), pedidoCanceladoCliente()] })
+    const chamadas = await simularDinheiro(page, {
+      respostas: {
+        cancelar_agendado: [
+          { ok: false, codigo: 'MULTA_ALTERADA', multa_cent: 71000, faixa: { antecedencia_min_horas: 0, multa_bp: 10000 } },
+          {
+            ok: true,
+            atividade_id: ID_PEDIDO,
+            liberado_cent: 71000,
+            multa_cent: 71000,
+            faixa: { antecedencia_min_horas: 0, multa_bp: 10000 },
+            disponivel_cent: 249000,
+          },
+        ],
+      },
+    })
+    await abrirPedido(page)
+    await page.getByRole('button', { name: 'Cancelar agendamento' }).click()
+    const folha = page.getByRole('dialog', { name: 'Cancelar agendamento' })
+    await expect(folha.getByTestId('previa-multa')).toContainText(/multa de R\$\s355,00/)
+    await folha.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+    // nada foi cancelado: a folha continua aberta com a multa nova
+    await expect(folha.getByTestId('multa-alterada')).toContainText(/A multa mudou.*Nova multa: R\$\s710,00\./)
+    await expect(folha.getByTestId('previa-multa')).toContainText(/multa de R\$\s710,00/)
+    await expect(page.getByRole('status').filter({ hasText: 'Agendamento cancelado.' })).toHaveCount(0)
+    await folha.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+    await expect(folha).toBeHidden()
+    await expect(page.getByRole('status').filter({ hasText: 'Agendamento cancelado.' })).toHaveText(
+      /Agendamento cancelado\. Liberado: R\$\s710,00\. Multa: R\$\s710,00\./,
+    )
+    const corpos = chamadas.filter((c) => c.rpc === 'cancelar_agendado').map((c) => c.corpo)
+    expect(corpos.map((c) => c.p_multa_esperada_cent)).toEqual([35500, 71000])
+    expect(corpos[0]!.p_chave).not.toBe(corpos[1]!.p_chave)
   })
 
   test('sem multa pela antecedência', async ({ page }) => {
@@ -250,7 +289,10 @@ test.describe('cliente: cancelar agendado', () => {
     await folha.getByLabel('Motivo').fill('Pneu furado, sem veículo reserva')
     await folha.getByRole('button', { name: 'Confirmar cancelamento' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Agendamento cancelado.' })).toContainText('Sem multa.')
-    expect(chamadas.find((c) => c.rpc === 'cancelar_agendado')?.corpo.p_motivo).toBe('Pneu furado, sem veículo reserva')
+    expect(chamadas.find((c) => c.rpc === 'cancelar_agendado')?.corpo).toMatchObject({
+      p_motivo: 'Pneu furado, sem veículo reserva',
+      p_multa_esperada_cent: null,
+    })
   })
 })
 

@@ -8,14 +8,15 @@ import { formatarCentavos } from '../../design/dinheiro.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import { dinheiro, fracaoReservada, type Saldo } from '../../lib/saldo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
+import { topicoSaldo } from '../../lib/topicos.ts'
 
 /**
- * Saldo da empresa, relido do servidor a cada evento `saldo` do tópico `empresa:<id>` (o evento não é dado).
+ * Saldo da empresa, relido do servidor a cada evento `saldo` do tópico `saldo:<id>` (o evento não é dado).
  * Cliente: `empresa` = a própria (o banco força); ADM: a empresa escolhida.
  */
 export function useSaldo(empresa: string | null, comoAdm = false) {
   const consulta = useConsulta(`saldo-${empresa ?? 'propria'}`, () => dinheiro.saldo(comoAdm ? empresa : null))
-  useTempoReal(empresa ? `empresa:${empresa}` : null, consulta.recarregar, 'saldo')
+  useTempoReal(topicoSaldo(empresa), consulta.recarregar, 'saldo')
   return consulta
 }
 

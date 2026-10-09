@@ -55,6 +55,7 @@ export const MENSAGENS = {
   JA_PROCESSADO: 'Esta operação já foi feita. Atualize a página.',
   CHAVE_REUTILIZADA: 'Algo deu errado. Atualize a página e tente de novo.',
   NAO_ESTORNAVEL: 'Este lançamento não pode ser estornado.',
+  MULTA_ALTERADA: 'A multa mudou: o horário do cancelamento passou para outra faixa. Confira o novo valor e confirme de novo.',
   DIVERGENCIA_SALDO: 'A conferência de saldo encontrou divergência. Veja o painel.',
 } as const satisfies Record<string, string>
 
