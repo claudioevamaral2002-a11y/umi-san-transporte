@@ -51,6 +51,25 @@ async function lancamentos(empresa: string): Promise<{ tipo: string; valor: numb
   })
 }
 
+/** Espera até alguma conexão ficar parada esperando trava numa consulta que contém `trecho` (até 10 s). */
+async function esperarBloqueio(trecho: string): Promise<void> {
+  const limite = Date.now() + 10_000
+  while (Date.now() < limite) {
+    const n = await comBanco(
+      async (db) =>
+        (
+          await db.query<{ n: string }>(
+            `select count(*) as n from pg_stat_activity where wait_event_type = 'Lock' and query ilike $1`,
+            [`%${trecho}%`],
+          )
+        ).rows[0]!.n,
+    )
+    if (Number(n) > 0) return
+    await new Promise((r) => setTimeout(r, 50))
+  }
+  throw new Error(`ninguém ficou esperando trava em ${trecho}`)
+}
+
 let motorista: Pessoa
 let adm: Pessoa
 
@@ -315,34 +334,112 @@ describe('aprovação: concorrência real e crédito', () => {
     ])
   })
 
-  it('aprovação × expiração simultâneas → um resultado único e coerente', async () => {
+  it('aprovação × expiração (forçado): a expiração com a atividade travada vence → aprovação espera e recebe STATUS_INVALIDO', async () => {
     const { empresa, cliente } = await cenario(1000000)
-    let aprovados = 0
-    for (let i = 0; i < 4; i++) {
-      const o = await pedidoOrcado(cliente, slotLonge(), 1000)
-      const [r] = await Promise.all([
-        aprovar(outroCliente(cliente), o),
-        comBanco(async (db) => {
-          // a validade venceu (só enquanto ainda é pré-reserva) e o cron roda ao mesmo tempo
-          await db.query(
-            `update app.agenda_blocos set expira_em = now() - interval '1 second'
-              where atividade_id = $1 and tipo = 'PRE_RESERVA'`,
-            [o.id],
-          )
-          await db.query('select interno.expirar_vencidos()')
-        }),
-      ])
-      const e = await estado(o.id)
-      if (r.ok) {
-        aprovados++
-        expect(e).toMatchObject({ status: 'AGENDADA', tipo: 'RESERVA', ativo: true, reservasAtivas: 1, aprovacoes: 1 })
-      } else {
-        expect(r.codigo).toMatch(/^(ORCAMENTO_VENCIDO|STATUS_INVALIDO)$/)
-        expect(e).toMatchObject({ status: 'EXPIRADA', ativo: false, reservasAtivas: 0, aprovacoes: 0, lancamentos: [] })
-      }
-    }
-    expect(await conta(empresa)).toEqual({ contabil: 1000000, reservado: aprovados * 1000 })
+    const o = await pedidoOrcado(cliente, slotLonge(), 1000)
+    const r = await comBanco(async (db) => {
+      await db.query('begin')
+      // o cron chegou primeiro: trava a atividade, vê o prazo vencido e expira (ainda sem commit)
+      await db.query('select 1 from app.atividades where id = $1 for no key update', [o.id])
+      const aprovacao = aprovar(outroCliente(cliente), o)
+      await esperarBloqueio('aprovar_orcamento')
+      await db.query(
+        `update app.agenda_blocos set expira_em = now() - interval '1 second' where atividade_id = $1 and tipo = 'PRE_RESERVA'`,
+        [o.id],
+      )
+      expect((await db.query<{ x: boolean }>('select interno.expirar_atividade($1) as x', [o.id])).rows[0]!.x).toBe(true)
+      await db.query('select pg_sleep(0.2)')
+      await db.query('commit')
+      return aprovacao
+    })
+    expect(r).toEqual({ ok: false, codigo: 'STATUS_INVALIDO' })
+    expect(await estado(o.id)).toMatchObject({ status: 'EXPIRADA', ativo: false, reservasAtivas: 0, aprovacoes: 0, lancamentos: [] })
+    expect(await conta(empresa)).toEqual({ contabil: 1000000, reservado: 0 })
   })
+
+  it('aprovação × expiração (forçado): a validade vence no meio da aprovação já conferida → aprovação vence, a expiração não desfaz', async () => {
+    const { empresa, cliente } = await cenario(1000000)
+    const o = await pedidoOrcado(cliente, slotLonge(), 1000)
+    const [r, expirou] = await comBanco(async (db) => {
+      await db.query('begin')
+      // segura o bloco da agenda: a aprovação confere a validade (ainda vale) e para ao converter a pré-reserva
+      await db.query('select 1 from app.agenda_blocos where atividade_id = $1 for update', [o.id])
+      const aprovacao = aprovar(outroCliente(cliente), o)
+      await esperarBloqueio('aprovar_orcamento')
+      // agora vence; o cron tenta expirar e fica esperando a atividade (travada pela aprovação)
+      await db.query(`update app.agenda_blocos set expira_em = now() - interval '1 second' where atividade_id = $1`, [o.id])
+      const expiracao = comBanco(
+        async (x) => (await x.query<{ x: boolean }>('select interno.expirar_atividade($1) as x', [o.id])).rows[0]!.x,
+      )
+      await esperarBloqueio('expirar_atividade')
+      await db.query('commit')
+      return Promise.all([aprovacao, expiracao])
+    })
+    expect(r).toMatchObject({ ok: true, reservado_cent: 1000 })
+    expect(expirou).toBe(false)
+    expect(await estado(o.id)).toEqual({
+      status: 'AGENDADA',
+      tipo: 'RESERVA',
+      ativo: true,
+      reservasAtivas: 1,
+      aprovacoes: 1,
+      lancamentos: ['RESERVA:1000'],
+    })
+    expect(await conta(empresa)).toEqual({ contabil: 1000000, reservado: 1000 })
+  })
+
+  it('recargas × aprovações na mesma empresa ao mesmo tempo → saldos exatos e limite respeitado', async () => {
+    const { empresa, cliente } = await cenario(0)
+    const pedidos: Orcado[] = []
+    for (let i = 0; i < 3; i++) pedidos.push(await pedidoOrcado(cliente, slotLonge(), 30000))
+    const resultados = await Promise.all([
+      ...pedidos.map((o) => aprovar(outroCliente(cliente), o)),
+      recarga(empresa, 30000),
+      recarga(empresa, 30000),
+    ])
+    const aprovacoes = resultados.slice(0, 3)
+    expect(codigos(resultados.slice(3))).toEqual(['OK', 'OK'])
+    const aprovados = aprovacoes.filter((r) => r.ok).length
+    expect(aprovados).toBeGreaterThanOrEqual(1)
+    for (const r of aprovacoes.filter((x) => !x.ok)) {
+      expect(r.codigo).toBe('SALDO_INSUFICIENTE')
+      // a recusa viu um disponível real: com este pedido passaria do limite
+      expect((r.disponivel_cent as number) - 30000).toBeLessThan(-50000)
+    }
+    const c = await conta(empresa)
+    expect(c).toEqual({ contabil: 60000, reservado: aprovados * 30000 })
+    expect(c.contabil - c.reservado).toBeGreaterThanOrEqual(-50000)
+    expect((await lancamentos(empresa)).map((l) => l.tipo).sort()).toEqual(
+      ['RECARGA', 'RECARGA', ...Array<string>(aprovados).fill('RESERVA')].sort(),
+    )
+  })
+})
+
+describe('estorno × cancelamento (sem deadlock: atividade → conta em todo lugar)', () => {
+  it('estorno da multa de X em paralelo com repetições do cancelamento de X → sem erro, um estorno, saldo exato', async () => {
+    const { empresa, cliente } = await cenario(100000)
+    for (let i = 0; i < 3; i++) {
+      const o = await pedidoOrcado(cliente, slotPerto(), 2000)
+      expect(await aprovar(cliente, o)).toMatchObject({ ok: true })
+      const args = { p_atividade: o.id, p_motivo: null, p_chave: randomUUID(), p_multa_esperada_cent: 2000 }
+      const original = await rpc(cliente, 'cancelar_agendado', args)
+      expect(original).toMatchObject({ ok: true, multa_cent: 2000 })
+      const multa = await comBanco(
+        async (db) =>
+          (await db.query<{ id: string }>(`select id from app.lancamentos where atividade_id = $1 and tipo = 'MULTA'`, [o.id]))
+            .rows[0]!.id,
+      )
+      // rpc() lança em erro HTTP (deadlock = 500): todas precisam responder
+      const [estorno, ...repeticoes] = await Promise.all([
+        rpc(outroCliente(adm), 'estornar_lancamento', { p_lancamento: Number(multa), p_motivo: 'Multa perdoada', p_chave: randomUUID() }),
+        ...Array.from({ length: 4 }, () => rpc(outroCliente(cliente), 'cancelar_agendado', args)),
+      ])
+      expect(estorno).toMatchObject({ ok: true, tipo: 'ESTORNO', valor_cent: 2000 })
+      for (const r of repeticoes) expect(r).toEqual(original)
+      expect((await estado(o.id)).lancamentos).toEqual(['RESERVA:2000', 'LIBERACAO_RESERVA:2000', 'MULTA:-2000', 'ESTORNO:2000'])
+    }
+    expect(await conta(empresa)).toEqual({ contabil: 100000, reservado: 0 })
+  }, 60_000)
 })
 
 describe('cancelamento de AGENDADA: concorrência real e multa', () => {
@@ -353,8 +450,18 @@ describe('cancelamento de AGENDADA: concorrência real e multa', () => {
       const o = await pedidoOrcado(cliente, slotPerto(), 7000)
       expect(await aprovar(cliente, o)).toMatchObject({ ok: true })
       const resultados = await Promise.all([
-        rpc(outroCliente(cliente), 'cancelar_agendado', { p_atividade: o.id, p_motivo: null, p_chave: randomUUID() }),
-        rpc(outroCliente(cliente), 'cancelar_agendado', { p_atividade: o.id, p_motivo: 'Mudou o plano', p_chave: randomUUID() }),
+        rpc(outroCliente(cliente), 'cancelar_agendado', {
+          p_atividade: o.id,
+          p_motivo: null,
+          p_chave: randomUUID(),
+          p_multa_esperada_cent: 7000,
+        }),
+        rpc(outroCliente(cliente), 'cancelar_agendado', {
+          p_atividade: o.id,
+          p_motivo: 'Mudou o plano',
+          p_chave: randomUUID(),
+          p_multa_esperada_cent: 7000,
+        }),
         rpc(outroCliente(motorista), 'cancelar_agendado', {
           p_atividade: o.id,
           p_motivo: 'Veículo em manutenção',
@@ -385,7 +492,12 @@ describe('cancelamento de AGENDADA: concorrência real e multa', () => {
     const chave = randomUUID()
     const resultados = await Promise.all(
       Array.from({ length: 5 }, () =>
-        rpc(outroCliente(cliente), 'cancelar_agendado', { p_atividade: o.id, p_motivo: null, p_chave: chave }),
+        rpc(outroCliente(cliente), 'cancelar_agendado', {
+          p_atividade: o.id,
+          p_motivo: null,
+          p_chave: chave,
+          p_multa_esperada_cent: 3333,
+        }),
       ),
     )
     for (const r of resultados) expect(r).toEqual(resultados[0])
@@ -416,6 +528,7 @@ describe('cancelamento de AGENDADA: concorrência real e multa', () => {
       p_atividade: o.id,
       p_motivo: 'Não vamos mais',
       p_chave: randomUUID(),
+      p_multa_esperada_cent: simulacao.multa_cent,
     })
     expect(cancelado).toMatchObject({ ok: true, liberado_cent: 15000, multa_cent: simulacao.multa_cent, disponivel_cent: 5000 })
 

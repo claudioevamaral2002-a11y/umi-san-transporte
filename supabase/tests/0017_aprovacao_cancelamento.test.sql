@@ -6,7 +6,7 @@
 -- Concorrência real: tests/integracao/saldo.test.ts.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(89);
+select plan(90);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -47,14 +47,15 @@ select set_config('t.c' || u, json_build_object('sub', '00000000-0000-0000-0000-
 from unnest(array['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8']) u;
 select set_config('request.headers', '{"cf-connecting-ip": "203.0.113.9", "user-agent": "Navegador pgTAP"}', true);
 
--- Pedidos (início com microssegundos: c2 e c4 caem exatamente na fronteira de 48 h e 24 h).
+-- Pedidos (início com microssegundos). A faixa é pelo relógio (clock_timestamp): c2 e c4 ficam 1 minuto ACIMA das
+-- fronteiras de 48 h e 24 h; as fronteiras exatas estão em 0019 (interno.calcular_multa com relógio fixo).
 create temp table casos (nome text primary key, quem text, atraso interval, total bigint) on commit drop;
 insert into casos values
   ('q0', 'a5', '4 days', null),            ('q1', 'a5', '4 days 3 hours', 30000), ('q2', 'a5', '4 days 6 hours', 20000),
   ('q3', 'a5', '4 days 9 hours', 10001),   ('q4', 'a5', '4 days 12 hours', 10000), ('q5', 'a5', '4 days 15 hours', 1000),
   ('q6', 'a5', '4 days 18 hours', 1000),   ('q7', 'a5', '4 days 21 hours', 1000),
-  ('c1', 'a5', '72 hours', 1001), ('c2', 'a5', '48 hours', 1001), ('c3', 'a5', '30 hours', 1001),
-  ('c4', 'a5', '24 hours', 1001), ('c5', 'a5', '10 hours', 1001), ('c6', 'a5', '2 hours', 1001),
+  ('c1', 'a5', '72 hours', 1001), ('c2', 'a5', '48 hours 1 minute', 1001), ('c3', 'a5', '30 hours', 1001),
+  ('c4', 'a5', '24 hours 1 minute', 1001), ('c5', 'a5', '10 hours', 1001), ('c6', 'a5', '2 hours', 1001),
   ('c7', 'a5', '5 days', 1001),
   ('s1', 'a4', '6 days', 5000), ('s2', 'a4', '6 days 3 hours', 5000), ('s3', 'a4', '6 days 6 hours', 5000);
 
@@ -277,22 +278,24 @@ declare
 begin
   perform set_config('request.jwt.claims', current_setting('t.ca5'), true);
   for x in select nome, row_number() over (order by nome) as i from casos where nome ~ '^c' order by nome loop
+    -- a multa esperada é a da prévia (a tela devolve o que mostrou)
     perform set_config('t.cx_' || x.nome, api.cancelar_agendado(current_setting('t.' || x.nome)::uuid, null,
-      current_setting('t.k' || (10 + x.i))::uuid)::text, true);
+      current_setting('t.k' || (10 + x.i))::uuid,
+      (api.simular_cancelamento(current_setting('t.' || x.nome)::uuid) ->> 'multa_cent')::bigint)::text, true);
   end loop;
 end $$;
 set local role authenticated;
-select set_config('t.cx_c5b', api.cancelar_agendado(current_setting('t.c5')::uuid, null, current_setting('t.k15')::uuid)::text, true);
-select set_config('t.cx_c5c', api.cancelar_agendado(current_setting('t.c5')::uuid, null, current_setting('t.k30')::uuid)::text, true);
+select set_config('t.cx_c5b', api.cancelar_agendado(current_setting('t.c5')::uuid, null, current_setting('t.k15')::uuid, 501)::text, true);
+select set_config('t.cx_c5c', api.cancelar_agendado(current_setting('t.c5')::uuid, null, current_setting('t.k30')::uuid, 501)::text, true);
 select is(api.cancelar_agendado(current_setting('t.s1')::uuid, null, gen_random_uuid()) ->> 'codigo', 'SEM_PERMISSAO',
   'N2 não cancela pedido do colega');
-select is(api.cancelar_agendado(current_setting('t.q7')::uuid, null, gen_random_uuid()) ->> 'codigo', 'STATUS_INVALIDO',
+select is(api.cancelar_agendado(current_setting('t.q7')::uuid, null, gen_random_uuid(), 0) ->> 'codigo', 'STATUS_INVALIDO',
   'cancelar_agendado em ORCADA: STATUS_INVALIDO');
 select is(api.cancelar_pedido(current_setting('t.q1')::uuid, null) ->> 'codigo', 'STATUS_INVALIDO',
   'cancelar_pedido (sem custo) não vale para AGENDADA');
 select is(api.cancelar_agendado(current_setting('t.q1')::uuid, null, null) ->> 'codigo', 'CAMPOS_INVALIDOS',
   'cancelamento sem chave recusado');
-select is(api.cancelar_agendado(current_setting('t.q1')::uuid, repeat('x', 501), gen_random_uuid()) ->> 'codigo',
+select is(api.cancelar_agendado(current_setting('t.q1')::uuid, repeat('x', 501), gen_random_uuid(), 0) ->> 'codigo',
   'MOTIVO_OBRIGATORIO', 'motivo acima de 500 caracteres recusado');
 select set_config('request.jwt.claims', current_setting('t.ca6'), true);
 select is(api.cancelar_agendado(current_setting('t.q1')::uuid, null, gen_random_uuid()) ->> 'codigo', 'SEM_PERMISSAO',
@@ -305,7 +308,7 @@ reset role;
 select is((select jsonb_agg((current_setting('t.cx_' || nome)::jsonb ->> 'multa_cent')::bigint order by nome)
              from casos where nome ~ '^c'),
   '[0, 0, 250, 250, 501, 1001, 1001]'::jsonb,
-  'multa por faixa do snapshot: 72 h 0%; 48 h (fronteira) 0%; 30 h 25%; 24 h (fronteira) 25%; 10 h 50% (501); 2 h 100%; depois do início 100%');
+  'multa por faixa do snapshot: 72 h 0%; 48 h + 1 min 0%; 30 h 25%; 24 h + 1 min 25%; 10 h 50% (501); 2 h 100%; depois do início 100%');
 select is(current_setting('t.cx_c3')::jsonb #> '{faixa}', '{"antecedencia_min_horas": 24, "multa_bp": 2500}'::jsonb,
   'faixa aplicada devolvida (25%: 250,25 → 250)');
 select is(current_setting('t.cx_c5b')::jsonb, current_setting('t.cx_c5')::jsonb, 'cancelamento repetido (mesma chave): mesmo resultado');
@@ -338,9 +341,11 @@ select set_config('t.cs1', api.cancelar_agendado(current_setting('t.s1')::uuid, 
 select set_config('request.jwt.claims', current_setting('t.ca1'), true);
 select set_config('t.cs2', api.cancelar_agendado(current_setting('t.s2')::uuid, 'Reorganização da agenda', gen_random_uuid())::text, true);
 reset role;
-select is(current_setting('t.cs1')::jsonb - 'atividade_id' - 'disponivel_cent',
-  '{"ok": true, "liberado_cent": 5000, "multa_cent": 0, "faixa": null}'::jsonb, 'motorista: libera a reserva, sem custo');
+select is(current_setting('t.cs1')::jsonb - 'atividade_id',
+  '{"ok": true, "liberado_cent": 5000, "multa_cent": 0, "faixa": null}'::jsonb,
+  'motorista: libera a reserva, sem custo, e não recebe o saldo (sem disponivel_cent)');
 select is((current_setting('t.cs2')::jsonb ->> 'multa_cent')::bigint, 0::bigint, 'ADM: sem custo');
+select ok(current_setting('t.cs2')::jsonb ? 'disponivel_cent', 'ADM recebe o disponível');
 select is((select count(*)::int from app.lancamentos where tipo = 'MULTA'
              and atividade_id in (current_setting('t.s1')::uuid, current_setting('t.s2')::uuid)), 0, 'prestador não gera MULTA');
 select is((select observacao from app.atividade_historico where atividade_id = current_setting('t.s1')::uuid and para = 'CANCELADA'),
@@ -390,7 +395,7 @@ select is(current_setting('t.r_limpa')::jsonb -> 'divergencias', '[]'::jsonb, 'r
 select interno.transicionar(current_setting('t.s3')::uuid, 'EM_ANDAMENTO', 'teste');
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca4'), true);
-select is(api.cancelar_agendado(current_setting('t.s3')::uuid, null, gen_random_uuid()) ->> 'codigo', 'STATUS_INVALIDO',
+select is(api.cancelar_agendado(current_setting('t.s3')::uuid, null, gen_random_uuid(), 0) ->> 'codigo', 'STATUS_INVALIDO',
   'EM_ANDAMENTO: cancelamento recusado');
 select is(api.simular_cancelamento(current_setting('t.s3')::uuid) ->> 'codigo', 'STATUS_INVALIDO',
   'EM_ANDAMENTO: simulação recusada');
@@ -401,15 +406,16 @@ update app.reservas set ativa = false, liberada_em = now() where atividade_id = 
 insert into app.lancamentos (empresa_id, tipo, valor_cent, atividade_id, chave_idempotencia)
 values ('00000000-0000-0000-0000-0000000000e1', 'MULTA', -10, current_setting('t.q7')::uuid, gen_random_uuid());
 drop index app.lancamentos_uma_multa;
-insert into app.lancamentos (empresa_id, tipo, valor_cent, atividade_id, chave_idempotencia)
-values ('00000000-0000-0000-0000-0000000000e1', 'MULTA', -10, current_setting('t.c6')::uuid, gen_random_uuid());
+insert into app.lancamentos (empresa_id, tipo, valor_cent, atividade_id, orcamento_id, chave_idempotencia)
+values ('00000000-0000-0000-0000-0000000000e1', 'MULTA', -10, current_setting('t.c6')::uuid,
+        (select orcamento_id from app.aprovacoes where atividade_id = current_setting('t.c6')::uuid), gen_random_uuid());
 select set_config('t.r_div', interno.reconciliar()::text, true);
 select set_config('t.r_tipos', (select jsonb_object_agg(t, n) from (
   select x ->> 'tipo' as t, count(*) as n from jsonb_array_elements(current_setting('t.r_div')::jsonb -> 'divergencias') x
   group by 1) y)::text, true);
 select is(current_setting('t.r_tipos')::jsonb,
   '{"RESERVA_FORA_DE_AGENDADA": 1, "AGENDADA_SEM_RESERVA": 1, "CONTA_DIVERGENTE": 1, "COBRANCA_SEM_APROVACAO": 1,
-    "COBRANCA_DUPLICADA": 1}'::jsonb,
+    "COBRANCA_DUPLICADA": 1, "RESERVA_SEM_PAR": 1}'::jsonb,
   'reconciliação detecta cada divergência injetada');
 select ok(exists (select 1 from jsonb_array_elements(current_setting('t.r_div')::jsonb -> 'divergencias') x
                    where x ->> 'tipo' = 'RESERVA_FORA_DE_AGENDADA' and x ->> 'atividade_id' = current_setting('t.s3')

@@ -268,8 +268,10 @@ alter table app.lancamentos disable trigger lancamentos_aplicar;
 insert into app.lancamentos (empresa_id, tipo, valor_cent, motivo, chave_idempotencia)
 values ('00000000-0000-0000-0000-0000000000e2', 'RECARGA', 777, 'injetado', gen_random_uuid());
 alter table app.lancamentos enable trigger lancamentos_aplicar;
--- e uma reserva fantasma no contador da conta
+-- e uma reserva fantasma no contador da conta (a conta só muda pelo livro-razão: desliga a proteção nesta transação)
+alter table app.contas disable trigger contas_proteger;
 update app.contas set reservado_cent = 10 where empresa_id = '00000000-0000-0000-0000-0000000000e1';
+alter table app.contas enable trigger contas_proteger;
 select set_config('t.rec_div', interno.reconciliar()::text, true);
 select ok(not (current_setting('t.rec_div')::jsonb ->> 'ok')::boolean, 'reconciliação detecta a divergência injetada');
 select is((select jsonb_agg(x ->> 'empresa_id' order by x ->> 'empresa_id')
@@ -312,10 +314,13 @@ select ok((current_setting('t.painel')::jsonb #>> '{pendencias,empresas_abaixo_a
 select is(current_setting('t.painel')::jsonb -> 'aprovado', '{"total_cent": 0, "quantidade": 0}'::jsonb,
   'painel: nada aprovado ainda no período');
 
--- conta criada sob demanda se faltar
-delete from app.contas where empresa_id = '00000000-0000-0000-0000-0000000000e2';
-select is((interno.travar_conta('00000000-0000-0000-0000-0000000000e2')).saldo_contabil_cent, 0::bigint,
-  'travar_conta recria a conta que faltar');
+-- conta criada sob demanda se faltar (só para empresa sem lançamentos; com histórico é integridade: 0019)
+insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e3', 'Empresa C');
+alter table app.contas disable trigger contas_proteger;
+delete from app.contas where empresa_id = '00000000-0000-0000-0000-0000000000e3';
+alter table app.contas enable trigger contas_proteger;
+select is((interno.travar_conta('00000000-0000-0000-0000-0000000000e3')).saldo_contabil_cent, 0::bigint,
+  'travar_conta recria a conta que faltar (empresa sem lançamentos)');
 
 select * from finish();
 rollback;

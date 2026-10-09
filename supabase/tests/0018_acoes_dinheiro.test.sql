@@ -86,7 +86,7 @@ select is(pg_temp.acoes('a3') -> 'cancelar_agendado', 'false'::jsonb, 'AGENDADA:
 
 ------------------------------------------------------------------ CANCELADA
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
-select api.cancelar_agendado(current_setting('t.p')::uuid, null, gen_random_uuid());
+select api.cancelar_agendado(current_setting('t.p')::uuid, null, gen_random_uuid(), 0);
 select ok(pg_temp.acoes('a5') @> '{"aprovar": false, "cancelar_agendado": false}', 'CANCELADA: nada mais a fazer');
 
 select * from finish();

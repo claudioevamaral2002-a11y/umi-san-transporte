@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { criarPessoa, empresaComContrato, motoristaUnico, rpc, type Pessoa } from './ajuda.ts'
@@ -139,4 +140,46 @@ describe('Realtime Broadcast privado por pedido e por empresa (especificação 1
       await clienteA.cliente.removeAllChannels()
     }
   })
+
+  it('tópico saldo:<empresa> (M1): clientes da empresa e ADM recebem `saldo`; motorista, gestor e outra empresa são recusados', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const gestor = await criarPessoa({ papel: 'GESTOR_FROTA' })
+    const n3 = await criarPessoa({ papel: 'CLIENTE', empresa: empresaA, nivel: 3 })
+    const pessoas = [clienteA, n3, adm, motorista, gestor, clienteB]
+    try {
+      for (const p of pessoas) await p.cliente.realtime.setAuth(p.token)
+      const topico = `saldo:${empresaA}`
+      const recebidos = new Map<Pessoa, Array<Record<string, unknown>>>()
+      for (const p of [clienteA, n3, adm]) {
+        const lista: Array<Record<string, unknown>> = []
+        recebidos.set(p, lista)
+        const canal = p.cliente
+          .channel(topico, { config: { private: true } })
+          .on('broadcast', { event: 'saldo' }, (m) => lista.push(m.payload as Record<string, unknown>))
+        expect(await statusAssinatura(canal)).toBe('SUBSCRIBED')
+      }
+      // Sanidade: os tokens são válidos; a recusa vem da política (a equipe não vê saldo; Adendo A10).
+      for (const p of [motorista, gestor, clienteB]) {
+        expect((await p.cliente.rpc('ping')).data).toBe('pong')
+        expect(await statusAssinatura(p.cliente.channel(topico, { config: { private: true } }))).toBe('CHANNEL_ERROR')
+      }
+
+      expect(
+        await rpc(adm, 'lancar_recarga', {
+          p_empresa: empresaA,
+          p_valor_cent: 2500,
+          p_motivo: 'Pix de teste',
+          p_comprovante: null,
+          p_chave: randomUUID(),
+        }),
+      ).toMatchObject({ ok: true })
+      for (const lista of recebidos.values()) {
+        await expect.poll(() => lista.length, { timeout: 8_000 }).toBe(1)
+        expect(lista[0]).toMatchObject({ empresa_id: empresaA })
+        expect(Object.keys(lista[0]!).sort()).toEqual(['em', 'empresa_id'])
+      }
+    } finally {
+      for (const p of pessoas) await p.cliente.removeAllChannels()
+    }
+  }, 60_000)
 })
