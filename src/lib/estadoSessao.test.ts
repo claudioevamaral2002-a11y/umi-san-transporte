@@ -5,9 +5,11 @@ import { lerLinkDeEntrada } from './linkDeEntrada.ts'
 const perfil = (extra: Partial<Perfil> = {}): Perfil => ({
   nome: 'Ana',
   papel: 'MOTORISTA',
+  nivel: null,
   empresa_id: null,
   empresa_nome: null,
   empresa_logo_caminho: null,
+  empresa_tem_contrato: null,
   ativo: true,
   senha_pendente: false,
   tem_2fa: true,
@@ -45,6 +47,13 @@ describe('derivarEstado', () => {
     expect(derivarEstado(base(semFator))).toBe('cadastrar_2fa')
     expect(derivarEstado(base())).toBe('verificar_2fa')
     expect(derivarEstado(base({ aalAtual: 'aal2' }))).toBe('pronto')
+  })
+
+  it('gestor de frota exige 2FA como ADM e motorista', () => {
+    const gestor = perfil({ papel: 'GESTOR_FROTA', tem_2fa: false })
+    expect(derivarEstado(base({ perfil: gestor, aalProximo: 'aal1' }))).toBe('cadastrar_2fa')
+    expect(derivarEstado(base({ perfil: perfil({ papel: 'GESTOR_FROTA' }) }))).toBe('verificar_2fa')
+    expect(derivarEstado(base({ perfil: perfil({ papel: 'GESTOR_FROTA' }), aalAtual: 'aal2' }))).toBe('pronto')
   })
 
   it('cliente não precisa de 2FA', () => {

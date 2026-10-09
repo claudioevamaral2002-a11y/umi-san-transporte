@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { CarregandoPickup } from './design/componentes/CarregandoPickup.tsx'
 import { Guarda, GuardaPapel } from './lib/guardas.tsx'
 import { ErroGeral } from './telas/ErroGeral.tsx'
@@ -74,21 +74,47 @@ export const roteador = createBrowserRouter([
             children: [
               { index: true, lazy: async () => ({ Component: (await import('./telas/Inicio.tsx')).Inicio }) },
               {
-                // Fase 1B: a tabela modelo é só do ADM (cliente e motorista ganham telas próprias na Task 3).
+                // Endereço antigo da tabela de preços (fase 1): o ADM vai para Contratos; os demais, "Sem permissão".
                 element: <GuardaPapel papeis={['ADM']} />,
+                children: [{ path: 'parametros', element: <Navigate to="/adm/contratos" replace /> }],
+              },
+              {
+                element: <GuardaPapel papeis={['CLIENTE']} />,
                 children: [
-                  {
-                    path: 'parametros',
-                    lazy: async () => ({ Component: (await import('./telas/Parametros.tsx')).Parametros }),
-                  },
+                  { path: 'regras', lazy: async () => ({ Component: (await import('./telas/cliente/Regras.tsx')).Regras }) },
+                ],
+              },
+              {
+                // Gestor da empresa (cliente N1): a própria equipe.
+                element: <GuardaPapel papeis={['CLIENTE']} niveis={[1]} />,
+                children: [
+                  { path: 'equipe', lazy: async () => ({ Component: (await import('./telas/pessoas/Pessoas.tsx')).Equipe }) },
+                ],
+              },
+              {
+                element: <GuardaPapel papeis={['MOTORISTA']} />,
+                children: [
+                  { path: 'tabela', lazy: async () => ({ Component: (await import('./telas/motorista/Tabela.tsx')).Tabela }) },
                 ],
               },
               {
                 path: 'adm',
                 element: <GuardaPapel papeis={['ADM']} />,
                 children: [
-                  { path: 'usuarios', lazy: async () => ({ Component: (await import('./telas/adm/Usuarios.tsx')).Usuarios }) },
+                  {
+                    path: 'contratos',
+                    lazy: async () => ({ Component: (await import('./telas/adm/Contratos.tsx')).Contratos }),
+                  },
+                  {
+                    path: 'contratos/:alvo',
+                    lazy: async () => ({ Component: (await import('./telas/adm/Contratos.tsx')).ContratoDetalhe }),
+                  },
+                  { path: 'usuarios', lazy: async () => ({ Component: (await import('./telas/pessoas/Pessoas.tsx')).Usuarios }) },
                   { path: 'empresas', lazy: async () => ({ Component: (await import('./telas/adm/Empresas.tsx')).Empresas }) },
+                  {
+                    path: 'configuracoes',
+                    lazy: async () => ({ Component: (await import('./telas/adm/Configuracoes.tsx')).Configuracoes }),
+                  },
                   {
                     path: 'auditoria',
                     lazy: async () => ({ Component: (await import('./telas/adm/Auditoria.tsx')).Auditoria }),

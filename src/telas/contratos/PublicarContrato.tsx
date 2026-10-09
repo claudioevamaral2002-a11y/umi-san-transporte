@@ -15,10 +15,10 @@ import {
   type CampoNumerico,
   type DefinicaoCampo,
   type ErrosFormulario,
-  type FormularioParametros,
-  type ValoresParametros,
-  type VersaoParametros,
-} from '../../lib/parametros.ts'
+  type FormularioContrato,
+  type ValoresContrato,
+  type VersaoContrato,
+} from '../../lib/contratos.ts'
 import { deEntradaDataHora, formatarDataHora, paraEntradaDataHora } from '../../lib/valores.ts'
 
 const ANO_MS = 365 * 24 * 3600_000
@@ -39,20 +39,32 @@ function validarVigencia(valor: string): { data: Date } | { erro: string } {
 }
 
 interface Revisao {
-  valores: ValoresParametros
+  valores: ValoresContrato
   vigencia: Date
 }
 
+/** Para quem é a versão: a tabela modelo (`empresa` nula) ou o contrato de uma empresa. */
+export interface AlvoContrato {
+  empresa: string | null
+  nome: string
+}
+
 function Conteudo({
+  alvo,
   base,
+  modelo,
   onPublicado,
   onCancelar,
 }: {
-  base: VersaoParametros | null
+  alvo: AlvoContrato
+  base: VersaoContrato | null
+  modelo: VersaoContrato | null
   onPublicado: (texto: string) => void
   onCancelar: () => void
 }) {
-  const [form, setForm] = useState<FormularioParametros>(() => formularioDe(base))
+  // Pré-preenchido com o vigente; empresa sem contrato parte da tabela modelo.
+  const partida = base ?? (alvo.empresa ? modelo : null)
+  const [form, setForm] = useState<FormularioContrato>(() => formularioDe(partida))
   const [vigencia, setVigencia] = useState(() => paraEntradaDataHora(new Date(Date.now() + 5 * 60_000)))
   const [erros, setErros] = useState<ErrosFormulario & { vigencia?: string }>({})
   const [revisao, setRevisao] = useState<Revisao | null>(null)
@@ -87,7 +99,7 @@ function Conteudo({
     setEnviando(true)
     setFalha(null)
     // Sem atualização otimista: a tela só muda com a confirmação do servidor.
-    const r = await api.publicarParametros(revisao.valores, revisao.vigencia, base?.retencao_fotos_dias ?? null)
+    const r = await api.publicarContrato(alvo.empresa, revisao.valores, revisao.vigencia)
     setEnviando(false)
     if (r.ok) {
       onPublicado(`Versão ${String(r.versao)} publicada. Vale a partir de ${formatarDataHora(revisao.vigencia)}.`)
@@ -100,7 +112,7 @@ function Conteudo({
     const lista = diferencas(base, revisao.valores)
     const mudaram = lista.filter((d) => d.mudou).length
     return (
-      <div className="space-y-4" data-testid="confirmacao-parametros">
+      <div className="space-y-4" data-testid="confirmacao-contrato">
         <div ref={topo} tabIndex={-1} className="space-y-1 outline-none">
           <p className="ivo-corpo">
             Passa a valer em <strong className="tabular-nums">{formatarDataHora(revisao.vigencia)}</strong> (horário de
@@ -111,7 +123,11 @@ function Conteudo({
               ? mudaram === 0
                 ? 'Nenhum valor muda em relação à versão atual.'
                 : `${mudaram} ${mudaram === 1 ? 'item muda' : 'itens mudam'} em relação à versão ${base.versao}.`
-              : 'Primeira versão da tabela.'}
+              : alvo.empresa
+                ? partida
+                  ? `Primeiro contrato de ${alvo.nome}, a partir da tabela modelo.`
+                  : `Primeiro contrato de ${alvo.nome}.`
+                : 'Primeira versão da tabela modelo.'}
           </p>
         </div>
         <ul className="divide-y divide-borda rounded-cartao border-[1.5px] border-borda">
@@ -193,10 +209,10 @@ function Conteudo({
             </div>
             {repetidos.length > 0 && (
               <p className="ivo-legenda text-texto-suave">
-                {repetidos.map((c) => c.rotulo).join(', ')}: o mesmo valor do veículo próprio.
+                {repetidos.map((c) => c.rotulo).join(', ')}: o mesmo valor da modalidade veículo próprio.
               </p>
             )}
-            {g.id === 'comuns' && (
+            {g.id === 'regras' && (
               <div className="space-y-2 pt-1">
                 <p className="ivo-legenda font-semibold">Faixas de cancelamento</p>
                 <p id="ajuda-faixas" className="ivo-legenda text-texto-suave">
@@ -279,20 +295,26 @@ function Conteudo({
   )
 }
 
-export function PublicarParametros({
+export function PublicarContrato({
   aberta,
+  alvo,
   base,
+  modelo,
   onFechar,
   onPublicado,
 }: {
   aberta: boolean
-  base: VersaoParametros | null
+  alvo: AlvoContrato
+  /** Versão atual (vigente ou, sem ela, a agendada mais recente): base do pré-preenchimento e da comparação. */
+  base: VersaoContrato | null
+  /** Tabela modelo vigente: ponto de partida de uma empresa ainda sem contrato. */
+  modelo: VersaoContrato | null
   onFechar: () => void
   onPublicado: (texto: string) => void
 }) {
   return (
-    <Folha aberta={aberta} onFechar={onFechar} sobretitulo="Tabela de preços e regras" titulo="Publicar nova versão" largura="md:max-w-2xl">
-      <Conteudo base={base} onPublicado={onPublicado} onCancelar={onFechar} />
+    <Folha aberta={aberta} onFechar={onFechar} sobretitulo={alvo.nome} titulo="Publicar nova versão" largura="md:max-w-2xl">
+      <Conteudo alvo={alvo} base={base} modelo={modelo} onPublicado={onPublicado} onCancelar={onFechar} />
     </Folha>
   )
 }

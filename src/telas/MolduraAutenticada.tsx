@@ -2,52 +2,62 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { Icone, type NomeIcone } from '../design/componentes/Icone.tsx'
 import { LogoIvo } from '../design/componentes/LogoIvo.tsx'
-import type { Papel, Perfil } from '../lib/estadoSessao.ts'
+import { gereEquipe } from '../lib/administracao.ts'
+import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { supabase } from '../lib/supabase.ts'
 
 interface Item {
   para: string
   rotulo: string
+  /** Rótulo da aba inferior (celular). */
   curto?: string
   icone: NomeIcone
-  /** Só para estes papéis (sem = todos os do grupo). */
-  papeis?: Papel[]
+  /** Só para quem passa no filtro (sem = todos os do grupo). */
+  visivel?: (p: Perfil) => boolean
+  /** Também aparece como aba inferior no celular. */
+  aba?: boolean
 }
 
 interface Grupo {
   titulo: string | null
-  papeis?: Papel[]
+  visivel?: (p: Perfil) => boolean
   itens: Item[]
 }
 
+const ehAdm = (p: Perfil) => p.papel === 'ADM'
+
+/** Menu por perfil e nível (Adendo A10): cliente sem preços; motorista sem limites; gestor de frota sem preços. */
 export const MENU: Grupo[] = [
   {
     titulo: null,
     itens: [
-      { para: '/', rotulo: 'Início', icone: 'casa' },
-      { para: '/parametros', rotulo: 'Tabela de preços e regras', curto: 'Tabela', icone: 'tabela', papeis: ['ADM'] },
+      { para: '/', rotulo: 'Início', icone: 'casa', aba: true },
+      { para: '/regras', rotulo: 'Regras do serviço', curto: 'Regras', icone: 'lista', aba: true, visivel: (p) => p.papel === 'CLIENTE' },
+      { para: '/equipe', rotulo: 'Equipe', icone: 'usuarios', aba: true, visivel: gereEquipe },
+      { para: '/tabela', rotulo: 'Tabela', icone: 'tabela', aba: true, visivel: (p) => p.papel === 'MOTORISTA' },
     ],
   },
   {
     titulo: 'Administração',
-    papeis: ['ADM'],
+    visivel: ehAdm,
     itens: [
-      { para: '/adm/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
+      { para: '/adm/contratos', rotulo: 'Contratos', icone: 'tabela', aba: true },
+      { para: '/adm/usuarios', rotulo: 'Usuários', curto: 'Admin', icone: 'usuarios', aba: true },
       { para: '/adm/empresas', rotulo: 'Empresas', icone: 'predio' },
+      { para: '/adm/configuracoes', rotulo: 'Configurações', icone: 'chave' },
       { para: '/adm/auditoria', rotulo: 'Auditoria', icone: 'lista' },
     ],
   },
 ]
 
-const permitido = (papeis: Papel[] | undefined, papel: Papel | undefined) =>
-  !papeis || (papel !== undefined && papeis.includes(papel))
+const permitido = (filtro: ((p: Perfil) => boolean) | undefined, perfil: Perfil | null) =>
+  !filtro || (perfil !== null && filtro(perfil))
 
-function gruposDo(papel: Papel | undefined): Grupo[] {
-  return MENU.filter((g) => permitido(g.papeis, papel)).map((g) => ({
-    ...g,
-    itens: g.itens.filter((i) => permitido(i.papeis, papel)),
-  }))
+function gruposDo(perfil: Perfil | null): Grupo[] {
+  return MENU.filter((g) => permitido(g.visivel, perfil))
+    .map((g) => ({ ...g, itens: g.itens.filter((i) => permitido(i.visivel, perfil)) }))
+    .filter((g) => g.itens.length > 0)
 }
 
 /** URL assinada (1 h) do logo da empresa do cliente; sem logo ou com erro, `null` (mostra o nome). */
@@ -117,8 +127,7 @@ function ListaMenu({ grupos, aoNavegar }: { grupos: Grupo[]; aoNavegar?: () => v
 
 export function MolduraAutenticada() {
   const { perfil, email, sair } = useSessao()
-  const grupos = gruposDo(perfil?.papel)
-  const ehAdm = perfil?.papel === 'ADM'
+  const grupos = gruposDo(perfil)
   const menu = useRef<HTMLDialogElement>(null)
   const local = useLocation()
 
@@ -127,15 +136,8 @@ export function MolduraAutenticada() {
     menu.current?.close()
   }, [local.pathname])
 
-  const abas: Item[] = [
-    { para: '/', rotulo: 'Início', icone: 'casa' },
-    ...(ehAdm
-      ? [
-          { para: '/parametros', rotulo: 'Tabela', icone: 'tabela' as const },
-          { para: '/adm/usuarios', rotulo: 'Admin', icone: 'usuarios' as const },
-        ]
-      : []),
-  ]
+  // Abas do celular: os destinos principais do perfil (no máximo 3) + "Menu".
+  const abas = grupos.flatMap((g) => g.itens.filter((i) => i.aba)).slice(0, 3)
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] md:grid-rows-[auto_1fr]">
@@ -186,7 +188,7 @@ export function MolduraAutenticada() {
                     <span className={`rounded-full px-4 py-1 ${isActive ? 'bg-acao text-acao-texto' : ''}`}>
                       <Icone nome={a.icone} />
                     </span>
-                    {a.rotulo}
+                    {a.curto ?? a.rotulo}
                   </>
                 )}
               </NavLink>

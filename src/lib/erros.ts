@@ -31,10 +31,10 @@ export const MENSAGENS = {
   MOTIVO_OBRIGATORIO: 'Informe o motivo.',
   JA_EXISTE_ADM: 'Já existe um administrador.',
   // Devolvidos por interno.checar_convite (preparar_convite / convidar).
-  JA_CADASTRADO: 'Este e-mail já tem cadastro. Use "Gerar novo link" na lista de usuários.',
-  EMAIL_EM_USO: 'Este e-mail já está em uso. Use "Gerar novo link" na lista de usuários.',
+  JA_CADASTRADO: 'Este e-mail já tem cadastro. Use "Gerar novo link" na lista de pessoas.',
+  EMAIL_EM_USO: 'Este e-mail já está em uso. Use "Gerar novo link" na lista de pessoas.',
 
-  // Matriz, empresas e parâmetros
+  // Empresas e contratos (CHAVE_INVALIDA: só nas migrations da fase 1, da matriz já removida)
   CHAVE_INVALIDA: 'Permissão desconhecida. Atualize a página e tente de novo.',
   CAMINHO_INVALIDO: 'Arquivo de logo inválido. Envie um PNG ou WebP.',
   VIGENCIA_NO_PASSADO: 'A vigência precisa começar agora ou no futuro.',

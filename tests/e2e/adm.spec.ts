@@ -12,8 +12,10 @@ test.describe('administração', () => {
     await simularApi(page)
     await page.goto('/')
     const telas = [
+      ['Contratos', 'Contratos'],
       ['Usuários', 'Usuários'],
       ['Empresas', 'Empresas'],
+      ['Configurações', 'Configurações'],
       ['Auditoria', 'Auditoria'],
     ] as const
     for (const [item, titulo] of telas) {
@@ -31,6 +33,7 @@ test.describe('administração', () => {
     const lista = page.getByTestId('lista-usuarios')
     await expect(lista.getByRole('listitem')).toHaveCount(3)
     const carla = lista.getByRole('listitem').filter({ hasText: 'Carla Dias' })
+    await expect(carla).toContainText('Umi San · Gestor da empresa (N1)')
     await expect(carla).toContainText('Inativo')
     await expect(carla).toContainText('Senha pendente')
     await expect(lista.getByRole('listitem').filter({ hasText: 'Bruno Lima' })).toContainText('2FA ok')
@@ -61,7 +64,9 @@ test.describe('administração', () => {
     await folha.getByLabel('Perfil').selectOption('CLIENTE')
     await folha.getByRole('button', { name: 'Gerar link de convite' }).click()
     await expect(folha.getByText('Escolha a empresa do cliente.')).toBeVisible()
-    await folha.getByLabel('Empresa').selectOption(EMPRESA_UMI.id)
+    await folha.getByLabel('Empresa', { exact: true }).selectOption(EMPRESA_UMI.id)
+    await expect(folha.getByLabel('Nível na empresa')).toHaveValue('1')
+    await folha.getByLabel('Nível na empresa').selectOption('2')
 
     await folha.getByRole('button', { name: 'Gerar link de convite' }).click()
     await expect(folha.getByRole('alert')).toContainText('Gerar novo link')
@@ -85,6 +90,7 @@ test.describe('administração', () => {
       nome: 'Diego Rocha',
       papel: 'CLIENTE',
       empresa_id: EMPRESA_UMI.id,
+      nivel: 2,
     })
 
     // Esc fecha e o foco volta ao botão que abriu.
@@ -148,7 +154,7 @@ test.describe('administração', () => {
     const folha = page.getByRole('dialog', { name: 'Bruno Lima' })
     await folha.getByRole('button', { name: /^Trocar perfil/ }).click()
     await folha.getByLabel('Perfil').selectOption('CLIENTE')
-    await folha.getByLabel('Empresa').selectOption(EMPRESA_UMI.id)
+    await folha.getByLabel('Empresa', { exact: true }).selectOption(EMPRESA_UMI.id)
     await folha.getByRole('button', { name: 'Salvar' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Perfil de Bruno Lima atualizado.' })).toBeVisible()
     expect(chamadas.find((c) => c.rpc === 'alterar_perfil')?.corpo).toEqual({
@@ -156,6 +162,46 @@ test.describe('administração', () => {
       p_nome: 'Bruno Lima',
       p_papel: 'CLIENTE',
       p_empresa: EMPRESA_UMI.id,
+      p_nivel: 1,
+    })
+  })
+
+  test('convite e troca de perfil para gestor de frota (sem empresa nem nível)', async ({ page }) => {
+    const enviados = await comSessaoFalsa(page, ADM, AAL2)
+    const chamadas = await simularApi(page)
+    responderFuncoes(page, { ok: true, link: LINK })
+    await page.goto('/adm/usuarios')
+    await page.getByRole('button', { name: 'Convidar' }).click()
+    const folha = page.getByRole('dialog', { name: 'Convidar pessoa' })
+    await folha.getByLabel('Nome').fill('Gil Frota')
+    await folha.getByLabel('E-mail').fill('gil@ivo.com.br')
+    await folha.getByLabel('Perfil').selectOption('GESTOR_FROTA')
+    await expect(folha.getByLabel('Nível na empresa')).toHaveCount(0)
+    await expect(folha.getByText(/gestores de frota e motoristas cadastram o 2FA/)).toBeVisible()
+    await folha.getByRole('button', { name: 'Gerar link de convite' }).click()
+    await expect(folha.getByTestId('link-gerado')).toBeVisible()
+    expect(enviados[0]?.corpo).toEqual({
+      email: 'gil@ivo.com.br',
+      nome: 'Gil Frota',
+      papel: 'GESTOR_FROTA',
+      empresa_id: null,
+      nivel: null,
+    })
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('button', { name: 'Gerenciar Carla Dias' }).click()
+    const carla = page.getByRole('dialog', { name: 'Carla Dias' })
+    await carla.getByRole('button', { name: /^Trocar perfil/ }).click()
+    await expect(carla.getByLabel('Nível na empresa')).toHaveValue('1')
+    await carla.getByLabel('Nível na empresa').selectOption('3')
+    await carla.getByRole('button', { name: 'Salvar' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Perfil de Carla Dias atualizado.' })).toBeVisible()
+    expect(chamadas.find((c) => c.rpc === 'alterar_perfil')?.corpo).toEqual({
+      p_usuario: USUARIOS[2]!.usuario_id,
+      p_nome: 'Carla Dias',
+      p_papel: 'CLIENTE',
+      p_empresa: EMPRESA_UMI.id,
+      p_nivel: 3,
     })
   })
 

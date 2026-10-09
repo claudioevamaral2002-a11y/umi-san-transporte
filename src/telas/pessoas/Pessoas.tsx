@@ -7,11 +7,11 @@ import { Icone, type NomeIcone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
-import { filtrarUsuarios, motivoValido, PAPEIS } from '../../lib/administracao.ts'
+import { filtrarUsuarios, LISTA_NIVEIS, motivoValido, NIVEIS, NIVEIS_AJUDA, PAPEIS } from '../../lib/administracao.ts'
 import { api, type Empresa, type Usuario } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
-import type { Papel } from '../../lib/estadoSessao.ts'
+import type { Nivel, Papel } from '../../lib/estadoSessao.ts'
 import { chamarFuncao } from '../../lib/funcoes.ts'
 import { useSessao } from '../../lib/sessao.tsx'
 import { linkSeguro } from '../../lib/whatsapp.ts'
@@ -25,6 +25,13 @@ function mensagem(codigo: string | undefined): string {
 }
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
+/**
+ * `adm`: tela Usuários do administrador (todos os perfis).
+ * `equipe`: tela Equipe do gestor da empresa (cliente N1): só colegas cliente da própria empresa
+ * (o banco força a empresa e recusa o resto; aqui só não oferecemos o que não vale).
+ */
+export type Modo = 'adm' | 'equipe'
 
 function Chip({ cor, icone, children }: { cor: string; icone: string; children: React.ReactNode }) {
   return (
@@ -69,19 +76,40 @@ function Situacao({ u }: { u: Usuario }) {
   )
 }
 
+function SeletorNivel({ nivel, onNivel }: { nivel: Nivel; onNivel: (n: Nivel) => void }) {
+  return (
+    <CampoSelecao
+      rotulo="Nível na empresa"
+      value={nivel}
+      ajuda={NIVEIS_AJUDA[nivel]}
+      onChange={(e) => onNivel(Number(e.target.value) as Nivel)}
+    >
+      {LISTA_NIVEIS.map((n) => (
+        <option key={n} value={n}>
+          {NIVEIS[n]}
+        </option>
+      ))}
+    </CampoSelecao>
+  )
+}
+
 function SeletorPapel({
   papel,
+  nivel,
   empresa,
   empresas,
   onPapel,
+  onNivel,
   onEmpresa,
   erroEmpresa,
   desabilitarPapel,
 }: {
   papel: Papel
+  nivel: Nivel
   empresa: string
   empresas: Empresa[]
   onPapel: (p: Papel) => void
+  onNivel: (n: Nivel) => void
   onEmpresa: (id: string) => void
   erroEmpresa?: string
   desabilitarPapel?: boolean
@@ -111,6 +139,7 @@ function SeletorPapel({
           ))}
         </CampoSelecao>
       )}
+      {papel === 'CLIENTE' && <SeletorNivel nivel={nivel} onNivel={onNivel} />}
     </>
   )
 }
@@ -120,17 +149,22 @@ function SeletorPapel({
 // ------------------------------------------------------------------------------------------------
 
 function Convidar({
+  modo,
   empresas,
   onConvidado,
   onVerNaLista,
 }: {
+  modo: Modo
   empresas: Empresa[]
   onConvidado: () => void
   onVerNaLista: (email: string) => void
 }) {
+  const equipe = modo === 'equipe'
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
-  const [papel, setPapel] = useState<Papel>('MOTORISTA')
+  const [papel, setPapel] = useState<Papel>(equipe ? 'CLIENTE' : 'MOTORISTA')
+  // ADM convidando cliente: o primeiro da empresa costuma ser o gestor (N1); colega: solicitante (N2).
+  const [nivel, setNivel] = useState<Nivel>(equipe ? 2 : 1)
   const [empresa, setEmpresa] = useState('')
   const [erros, setErros] = useState<Record<string, string>>({})
   const [enviando, setEnviando] = useState(false)
@@ -143,16 +177,18 @@ function Convidar({
     const novos: Record<string, string> = {}
     if (nome.trim().length < 2 || nome.trim().length > 120) novos.nome = 'Informe o nome (2 a 120 caracteres).'
     if (!EMAIL.test(email.trim()) || email.trim().length > 254) novos.email = 'Informe um e-mail válido.'
-    if (papel === 'CLIENTE' && !empresa) novos.empresa = 'Escolha a empresa do cliente.'
+    if (!equipe && papel === 'CLIENTE' && !empresa) novos.empresa = 'Escolha a empresa do cliente.'
     setErros(novos)
     setFalha(null)
     if (Object.keys(novos).length > 0) return
     setEnviando(true)
+    // Equipe: sem empresa (o servidor usa a do gestor). A permissão é decidida no banco.
     const r = await chamarFuncao('convidar', {
       email: email.trim(),
       nome: nome.trim(),
-      papel,
-      empresa_id: papel === 'CLIENTE' ? empresa : null,
+      papel: equipe ? 'CLIENTE' : papel,
+      empresa_id: !equipe && papel === 'CLIENTE' ? empresa : null,
+      nivel: equipe || papel === 'CLIENTE' ? nivel : null,
     })
     setEnviando(false)
     const seguro = r.ok ? linkSeguro(r.link) : null
@@ -188,22 +224,30 @@ function Convidar({
         erro={erros.email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <SeletorPapel
-        papel={papel}
-        empresa={empresa}
-        empresas={empresas}
-        onPapel={setPapel}
-        onEmpresa={setEmpresa}
-        erroEmpresa={erros.empresa}
-      />
+      {equipe ? (
+        <SeletorNivel nivel={nivel} onNivel={setNivel} />
+      ) : (
+        <SeletorPapel
+          papel={papel}
+          nivel={nivel}
+          empresa={empresa}
+          empresas={empresas}
+          onPapel={setPapel}
+          onNivel={setNivel}
+          onEmpresa={setEmpresa}
+          erroEmpresa={erros.empresa}
+        />
+      )}
       {papel !== 'CLIENTE' && (
-        <p className="ivo-legenda text-texto-suave">Administradores e motoristas cadastram o 2FA no primeiro acesso.</p>
+        <p className="ivo-legenda text-texto-suave">
+          Administradores, gestores de frota e motoristas cadastram o 2FA no primeiro acesso.
+        </p>
       )}
       <div aria-live="assertive" className="space-y-2">
         {falha && <Mensagem tipo="erro">{falha.texto}</Mensagem>}
         {falha?.jaExiste && (
           <Botao className="w-full" onClick={() => onVerNaLista(email.trim().toLowerCase())}>
-            Ver na lista de usuários
+            {equipe ? 'Ver na lista da equipe' : 'Ver na lista de usuários'}
           </Botao>
         )}
       </div>
@@ -240,16 +284,19 @@ function ItemAcao({ onClick, icone, titulo, texto }: { onClick: () => void; icon
 type Visao = 'menu' | 'link' | 'ativo' | 'perfil' | '2fa'
 
 function Gerenciar({
+  modo,
   u,
   souEu,
   empresas,
   onConcluido,
 }: {
+  modo: Modo
   u: Usuario
   souEu: boolean
   empresas: Empresa[]
   onConcluido: (texto: string) => void
 }) {
+  const equipe = modo === 'equipe'
   const [visao, setVisao] = useState<Visao>('menu')
   const [enviando, setEnviando] = useState(false)
   const [falha, setFalha] = useState<string | null>(null)
@@ -259,6 +306,7 @@ function Gerenciar({
   const [nome, setNome] = useState(u.nome)
   const [papel, setPapel] = useState<Papel>(u.papel)
   const [empresa, setEmpresa] = useState(u.empresa_id ?? '')
+  const [nivel, setNivel] = useState<Nivel>(u.nivel ?? 1)
   const ehAdm = u.papel === 'ADM'
 
   const ir = (v: Visao) => {
@@ -313,7 +361,14 @@ function Gerenciar({
       return
     }
     void executar(
-      () => api.alterarPerfil(u.usuario_id, nome.trim(), papel, papel === 'CLIENTE' ? empresa : null),
+      () =>
+        api.alterarPerfil(
+          u.usuario_id,
+          nome.trim(),
+          papel,
+          papel === 'CLIENTE' ? empresa : null,
+          papel === 'CLIENTE' ? nivel : null,
+        ),
       `Perfil de ${nome.trim()} atualizado.`,
     )
   }
@@ -382,9 +437,11 @@ function Gerenciar({
         <Campo rotulo="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
         <SeletorPapel
           papel={papel}
+          nivel={nivel}
           empresa={empresa}
           empresas={empresas}
           onPapel={setPapel}
+          onNivel={setNivel}
           onEmpresa={setEmpresa}
           desabilitarPapel={souEu}
         />
@@ -434,14 +491,17 @@ function Gerenciar({
       <div className="space-y-1.5">
         <p className="ivo-legenda text-texto-suave">{u.email}</p>
         <p className="ivo-legenda">
-          {PAPEIS[u.papel]}
-          {u.empresa_nome ? ` · ${u.empresa_nome}` : ''}
+          {equipe && u.nivel ? NIVEIS[u.nivel] : PAPEIS[u.papel]}
+          {!equipe && u.empresa_nome ? ` · ${u.empresa_nome}` : ''}
+          {!equipe && u.papel === 'CLIENTE' && u.nivel ? ` · ${NIVEIS[u.nivel]}` : ''}
         </p>
         <Situacao u={u} />
       </div>
       <ul className="divide-y divide-borda rounded-cartao border-[1.5px] border-borda">
         {!ehAdm && <ItemAcao onClick={() => ir('link')} icone="link" titulo="Gerar novo link" texto="Para criar nova senha (esqueceu ou não usou o convite)" />}
-        <ItemAcao onClick={() => ir('perfil')} icone="lapis" titulo="Trocar perfil" texto="Nome, perfil e empresa" />
+        {!equipe && (
+          <ItemAcao onClick={() => ir('perfil')} icone="lapis" titulo="Trocar perfil" texto="Nome, perfil, empresa e nível" />
+        )}
         {!souEu && (
           <ItemAcao
             onClick={() => ir('ativo')}
@@ -450,7 +510,7 @@ function Gerenciar({
             texto={u.ativo ? 'Bloqueia o acesso, com motivo' : 'Libera o acesso de novo, com motivo'}
           />
         )}
-        {!ehAdm && u.tem_2fa && <ItemAcao onClick={() => ir('2fa')} icone="escudo" titulo="Resetar 2FA" texto="Quando a pessoa perdeu o autenticador" />}
+        {!equipe && !ehAdm && u.tem_2fa && <ItemAcao onClick={() => ir('2fa')} icone="escudo" titulo="Resetar 2FA" texto="Quando a pessoa perdeu o autenticador" />}
       </ul>
       {ehAdm && <p className="ivo-legenda text-texto-suave">{ALVO_ADM}</p>}
     </div>
@@ -458,13 +518,30 @@ function Gerenciar({
 }
 
 // ------------------------------------------------------------------------------------------------
-// Tela
+// Telas: Usuários (ADM) e Equipe (gestor da empresa, cliente N1)
 // ------------------------------------------------------------------------------------------------
 
-export function Usuarios() {
-  const { email: meuEmail } = useSessao()
-  const { dados, erro, carregando, recarregar } = useConsulta('adm-usuarios', async () => {
-    const [usuarios, empresas] = await Promise.all([api.usuarios(), api.empresas()])
+function Perfil({ u, modo }: { u: Usuario; modo: Modo }) {
+  if (modo === 'equipe') return <>{u.nivel ? NIVEIS[u.nivel] : PAPEIS[u.papel]}</>
+  return <>{PAPEIS[u.papel]}</>
+}
+
+/** ADM: empresa e nível do cliente. */
+function Detalhe({ u }: { u: Usuario }) {
+  return (
+    <>
+      {u.empresa_nome}
+      {u.papel === 'CLIENTE' && u.nivel && <> · {NIVEIS[u.nivel]}</>}
+    </>
+  )
+}
+
+function GestaoPessoas({ modo }: { modo: Modo }) {
+  const equipe = modo === 'equipe'
+  const { email: meuEmail, perfil } = useSessao()
+  const { dados, erro, carregando, recarregar } = useConsulta(equipe ? 'equipe' : 'adm-usuarios', async () => {
+    // A equipe não precisa da lista de empresas: o servidor usa a empresa do gestor.
+    const [usuarios, empresas] = await Promise.all([api.usuarios(), equipe ? Promise.resolve([]) : api.empresas()])
     return { usuarios, empresas }
   })
   const [busca, setBusca] = useState('')
@@ -473,19 +550,26 @@ export function Usuarios() {
   const [gerindo, setGerindo] = useState<Usuario | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 
-  const lista = dados ? filtrarUsuarios(dados.usuarios, busca, papel) : []
+  const lista = dados ? filtrarUsuarios(dados.usuarios, busca, equipe ? 'TODOS' : papel) : []
   const souEu = (u: Usuario) => !!meuEmail && u.email === meuEmail.trim().toLowerCase()
+  // Na equipe ninguém age sobre a própria conta (o banco recusa do mesmo jeito).
+  const podeGerir = (u: Usuario) => !equipe || !souEu(u)
   const abrir = (u: Usuario) => {
     setAviso(null)
     setGerindo(u)
   }
+  const rotuloConvidar = equipe ? 'Convidar colega' : 'Convidar'
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
       <CabecalhoTela
-        sobretitulo="Administração"
-        titulo="Usuários"
-        descricao="Convide pessoas, gere novos links e controle quem tem acesso."
+        sobretitulo={equipe ? (perfil?.empresa_nome ?? 'Sua empresa') : 'Administração'}
+        titulo={equipe ? 'Equipe' : 'Usuários'}
+        descricao={
+          equipe
+            ? 'Convide colegas da sua empresa, gere novos links e controle quem tem acesso.'
+            : 'Convide pessoas, gere novos links e controle quem tem acesso.'
+        }
         acao={
           <Botao
             variante="principal"
@@ -496,12 +580,12 @@ export function Usuarios() {
             }}
           >
             <Icone nome="mais" tamanho={20} />
-            Convidar
+            {rotuloConvidar}
           </Botao>
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-[1fr_14rem]">
+      <div className={equipe ? '' : 'grid gap-3 md:grid-cols-[1fr_14rem]'}>
         <Campo
           rotulo="Buscar por nome ou e-mail"
           icone="busca"
@@ -509,14 +593,16 @@ export function Usuarios() {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
-        <CampoSelecao rotulo="Perfil" value={papel} onChange={(e) => setPapel(e.target.value as Papel | 'TODOS')}>
-          <option value="TODOS">Todos</option>
-          {(Object.keys(PAPEIS) as Papel[]).map((p) => (
-            <option key={p} value={p}>
-              {PAPEIS[p]}
-            </option>
-          ))}
-        </CampoSelecao>
+        {!equipe && (
+          <CampoSelecao rotulo="Perfil" value={papel} onChange={(e) => setPapel(e.target.value as Papel | 'TODOS')}>
+            <option value="TODOS">Todos</option>
+            {(Object.keys(PAPEIS) as Papel[]).map((p) => (
+              <option key={p} value={p}>
+                {PAPEIS[p]}
+              </option>
+            ))}
+          </CampoSelecao>
+        )}
       </div>
 
       <div aria-live="polite">{aviso && <Mensagem tipo="sucesso">{aviso}</Mensagem>}</div>
@@ -526,7 +612,9 @@ export function Usuarios() {
 
       {dados && lista.length === 0 && (
         <EstadoVazio icone="usuarios" titulo={dados.usuarios.length === 0 ? 'Ninguém cadastrado ainda' : 'Nenhum resultado'}>
-          {dados.usuarios.length === 0 ? 'Use "Convidar" para cadastrar a primeira pessoa.' : 'Ajuste a busca ou o filtro.'}
+          {dados.usuarios.length === 0
+            ? `Use "${rotuloConvidar}" para cadastrar a primeira pessoa.`
+            : 'Ajuste a busca ou o filtro.'}
         </EstadoVazio>
       )}
 
@@ -549,14 +637,20 @@ export function Usuarios() {
                       <p className="truncate ivo-legenda text-texto-suave">{u.email}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-marinho px-2.5 py-0.5 text-xs font-bold text-papel">
-                      {PAPEIS[u.papel]}
+                      <Perfil u={u} modo={modo} />
                     </span>
                   </div>
-                  {u.empresa_nome && <p className="ivo-legenda">{u.empresa_nome}</p>}
+                  {!equipe && u.empresa_nome && (
+                    <p className="ivo-legenda">
+                      <Detalhe u={u} />
+                    </p>
+                  )}
                   <Situacao u={u} />
-                  <Botao className="w-full" onClick={() => abrir(u)} aria-label={`Gerenciar ${u.nome}`}>
-                    Gerenciar
-                  </Botao>
+                  {podeGerir(u) && (
+                    <Botao className="w-full" onClick={() => abrir(u)} aria-label={`Gerenciar ${u.nome}`}>
+                      Gerenciar
+                    </Botao>
+                  )}
                 </Cartao>
               </li>
             ))}
@@ -564,14 +658,14 @@ export function Usuarios() {
           {/* Desktop: tabela */}
           <Cartao className="hidden overflow-x-auto p-0 md:block">
             <table className="w-full text-left">
-              <caption className="sr-only">Usuários</caption>
+              <caption className="sr-only">{equipe ? 'Equipe' : 'Usuários'}</caption>
               <thead className="border-b border-borda">
                 <tr className="ivo-sobretitulo text-texto-suave">
                   <th scope="col" className="px-4 py-3">
                     Pessoa
                   </th>
                   <th scope="col" className="px-4 py-3">
-                    Perfil
+                    {equipe ? 'Nível' : 'Perfil'}
                   </th>
                   <th scope="col" className="px-4 py-3">
                     Situação
@@ -592,16 +686,24 @@ export function Usuarios() {
                       <p className="ivo-legenda text-texto-suave">{u.email}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold">{PAPEIS[u.papel]}</p>
-                      {u.empresa_nome && <p className="ivo-legenda text-texto-suave">{u.empresa_nome}</p>}
+                      <p className="font-semibold">
+                        <Perfil u={u} modo={modo} />
+                      </p>
+                      {!equipe && u.empresa_nome && (
+                        <p className="ivo-legenda text-texto-suave">
+                          <Detalhe u={u} />
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Situacao u={u} />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Botao onClick={() => abrir(u)} aria-label={`Gerenciar ${u.nome}`}>
-                        Gerenciar
-                      </Botao>
+                      {podeGerir(u) && (
+                        <Botao onClick={() => abrir(u)} aria-label={`Gerenciar ${u.nome}`}>
+                          Gerenciar
+                        </Botao>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -611,8 +713,14 @@ export function Usuarios() {
         </>
       )}
 
-      <Folha aberta={convidando} onFechar={() => setConvidando(false)} sobretitulo="Usuários" titulo="Convidar pessoa">
+      <Folha
+        aberta={convidando}
+        onFechar={() => setConvidando(false)}
+        sobretitulo={equipe ? 'Equipe' : 'Usuários'}
+        titulo={equipe ? 'Convidar colega' : 'Convidar pessoa'}
+      >
         <Convidar
+          modo={modo}
           empresas={dados?.empresas ?? []}
           onConvidado={recarregar}
           onVerNaLista={(email) => {
@@ -626,6 +734,7 @@ export function Usuarios() {
       <Folha aberta={gerindo !== null} onFechar={() => setGerindo(null)} sobretitulo="Gerenciar" titulo={gerindo?.nome ?? ''}>
         {gerindo && (
           <Gerenciar
+            modo={modo}
             u={gerindo}
             souEu={souEu(gerindo)}
             empresas={dados?.empresas ?? []}
@@ -639,4 +748,14 @@ export function Usuarios() {
       </Folha>
     </main>
   )
+}
+
+/** ADM: todas as pessoas, de todos os perfis. */
+export function Usuarios() {
+  return <GestaoPessoas modo="adm" />
+}
+
+/** Gestor da empresa (cliente N1): colegas da própria empresa. */
+export function Equipe() {
+  return <GestaoPessoas modo="equipe" />
 }

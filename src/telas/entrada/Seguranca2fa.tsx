@@ -113,7 +113,14 @@ export function Seguranca2fa() {
     void confirmar(codigoCompleto(codigo))
   }
 
-  const perfilTexto = perfil?.papel === 'ADM' ? 'de administrador' : perfil?.papel === 'MOTORISTA' ? 'de motorista' : ''
+  const perfilTexto =
+    perfil?.papel === 'ADM'
+      ? 'de administrador'
+      : perfil?.papel === 'GESTOR_FROTA'
+        ? 'de gestor de frota'
+        : perfil?.papel === 'MOTORISTA'
+          ? 'de motorista'
+          : ''
 
   return (
     <main className="flex min-h-dvh flex-col bg-fundo">

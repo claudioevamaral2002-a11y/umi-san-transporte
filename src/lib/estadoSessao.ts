@@ -1,4 +1,7 @@
-export type Papel = 'ADM' | 'MOTORISTA' | 'CLIENTE'
+export type Papel = 'ADM' | 'GESTOR_FROTA' | 'MOTORISTA' | 'CLIENTE'
+
+/** Nível do cliente: 1 gestor da empresa, 2 solicitante, 3 visualizador (nulo para os demais papéis). */
+export type Nivel = 1 | 2 | 3
 
 export type EstadoSessao =
   | 'carregando'
@@ -13,9 +16,12 @@ export type EstadoSessao =
 export interface Perfil {
   nome: string
   papel: Papel
+  nivel: Nivel | null
   empresa_id: string | null
   empresa_nome: string | null
   empresa_logo_caminho: string | null
+  /** Só para cliente: a empresa tem contrato vigente (nulo para os demais papéis). */
+  empresa_tem_contrato: boolean | null
   ativo: boolean
   senha_pendente: boolean
   tem_2fa: boolean
@@ -32,7 +38,7 @@ export interface EntradaEstado {
   viaLink: boolean
 }
 
-export const EXIGE_2FA: readonly Papel[] = ['ADM', 'MOTORISTA']
+export const EXIGE_2FA: readonly Papel[] = ['ADM', 'GESTOR_FROTA', 'MOTORISTA']
 
 /** Máquina de estados da entrada (desenho §3). O banco decide de verdade; isto só guia a tela. */
 export function derivarEstado(e: EntradaEstado): Exclude<EstadoSessao, 'carregando'> {

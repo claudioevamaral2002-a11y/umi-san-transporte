@@ -3,6 +3,7 @@ import {
   CHAVE_PUBLICA,
   ORIGEM_APP,
   URL_SUPABASE,
+  comBanco,
   confirmarCodigo,
   criarPessoa,
   definirSenhaPeloLink,
@@ -17,6 +18,26 @@ import {
 
 // Fluxos contra o Supabase real do CI (Auth + Edge Functions + banco) — só rodam com E2E_BACKEND_REAL=1.
 // Cada teste usa e-mails únicos; as pessoas "semeadas" nascem pelo Admin API com o mesmo helper dos testes de integração.
+
+/** Contrato completo (13 campos), como o ADM publica. */
+const CONTRATO = {
+  km_sem_reboque_cent: 450,
+  km_com_reboque_cent: 650,
+  taxa_fixa_reboque_cent: 15000,
+  retorno_trecho_unico_bp: 5000,
+  hora_espera_cent: 8000,
+  hospedagem_diaria_cent: 25000,
+  diaria_motorista_cent: 20000,
+  faixas_cancelamento: [
+    { antecedencia_min_horas: 48, multa_bp: 0 },
+    { antecedencia_min_horas: 0, multa_bp: 5000 },
+  ],
+  prazo_orcar_horas: 24,
+  validade_orcamento_horas: 72,
+  limiar_urgente_horas: 12,
+  limite_saldo_negativo_cent: 100000,
+  alerta_saldo_baixo_cent: 20000,
+}
 
 /** Segunda pessoa, outro navegador (outro armazenamento): abre o link de convite longe da sessão do ADM. */
 async function novoContexto(browser: Browser) {
@@ -62,18 +83,19 @@ test.describe('fluxos reais', () => {
       await confirmarCodigo(pagina, chave)
       await expect(pagina.getByRole('heading', { name: 'Olá, Marlene' })).toBeVisible()
 
-      // Início de motorista: sem a administração nem a tabela modelo no menu (fase 1B).
+      // Início de motorista: a Tabela para orçar; sem a administração nem os contratos (fase 1B).
       await pagina.getByRole('button', { name: 'Menu' }).click()
       const menu = pagina.getByRole('dialog', { name: 'Menu' })
       await expect(menu.getByRole('link', { name: 'Início' })).toBeVisible()
-      await expect(menu.getByRole('link', { name: 'Tabela de preços e regras' })).toHaveCount(0)
+      await expect(menu.getByRole('link', { name: 'Tabela' })).toBeVisible()
+      await expect(menu.getByRole('link', { name: 'Contratos' })).toHaveCount(0)
       await expect(menu.getByRole('link', { name: 'Usuários' })).toHaveCount(0)
     } finally {
       await contexto.close()
     }
   })
 
-  test('cliente convidado entra sem 2FA, vê a empresa com logo e não vê a tabela de preços', async ({ page }) => {
+  test('cliente convidado entra sem 2FA, vê a empresa com logo e as regras do serviço sem preços', async ({ page }) => {
     const nomeEmpresa = `Empresa Logo ${Date.now()}`
     const empresaId = await empresaNova(nomeEmpresa)
     const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Logo' })
@@ -81,6 +103,13 @@ test.describe('fluxos reais', () => {
     const envio = await adm.cliente.storage.from('logos').upload(caminho, pngMinimo(), { contentType: 'image/png', upsert: true })
     expect(envio.error).toBeNull()
     expect((await rpc(adm, 'definir_logo_empresa', { p_empresa: empresaId, p_caminho: caminho })).ok).toBe(true)
+    // Contrato da empresa (vigente em segundos): o cliente vê só as regras dele.
+    const contrato = await rpc(adm, 'publicar_contrato', {
+      p_empresa: empresaId,
+      p: CONTRATO,
+      p_vigente_desde: new Date(Date.now() + 2_000).toISOString(),
+    })
+    expect(contrato.ok, JSON.stringify(contrato)).toBe(true)
 
     // Convite pela função (a mesma que a tela chama), com o JWT aal2 do ADM.
     const emailCliente = emailUnico('cliente')
@@ -92,7 +121,7 @@ test.describe('fluxos reais', () => {
         'Content-Type': 'application/json',
         Origin: ORIGEM_APP,
       },
-      body: JSON.stringify({ email: emailCliente, nome: 'Carla Cliente', papel: 'CLIENTE', empresa_id: empresaId }),
+      body: JSON.stringify({ email: emailCliente, nome: 'Carla Cliente', papel: 'CLIENTE', empresa_id: empresaId, nivel: 2 }),
     })
     const convite = (await resposta.json()) as { ok: boolean; link?: string; codigo?: string }
     expect(convite, JSON.stringify(convite)).toMatchObject({ ok: true })
@@ -109,9 +138,22 @@ test.describe('fluxos reais', () => {
     await expect(logo).toBeVisible({ timeout: 15_000 })
     expect(await logo.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0)
 
-    // Cliente não vê tabela de preços (Adendo A10): a tela da tabela modelo é só do ADM.
-    await page.goto('/parametros')
-    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    // Regras do serviço (Adendo A10): faixas e prazos do contrato da empresa, sem preços nem limites.
+    await page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Regras' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Regras do serviço' })).toBeVisible()
+    await expect(page.getByTestId('faixas-cancelamento').getByRole('listitem')).toHaveText([
+      '48 h ou mais antes: sem multa',
+      'Menos de 48 h antes: multa de 50%',
+    ])
+    await expect(page.getByTestId('regras-prazos')).toContainText('Orçamento em até 1 dia')
+    await expect(page.getByTestId('regras-prazos')).toContainText('Orçamento vale por 3 dias')
+    expect(await page.locator('main').innerText()).not.toMatch(/R\$|saldo|Versão/i)
+    // Solicitante (N2) não tem Equipe; tabela e contratos não abrem.
+    await expect(page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Equipe' })).toHaveCount(0)
+    for (const rota of ['/parametros', '/adm/contratos', '/tabela', '/equipe']) {
+      await page.goto(rota)
+      await expect(page.getByRole('heading', { name: 'Sem permissão' }), rota).toBeVisible()
+    }
     // Cliente também não entra na administração.
     await page.goto('/adm/usuarios')
     await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
@@ -167,52 +209,55 @@ test.describe('fluxos reais', () => {
     expect(Array.isArray(corpo) ? corpo : []).toHaveLength(0)
   })
 
-  test('ADM publica versão com vigência futura e a vê agendada no histórico', async ({ page }) => {
-    const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Tabela' })
-    // Versão inicial (vigente em segundos) para o formulário partir de valores reais.
-    const inicial = await rpc(adm, 'publicar_contrato', {
+  test('ADM publica nova versão do contrato da Umi San (vigência futura) e a vê agendada', async ({ page }) => {
+    const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Contrato' })
+    const umi = (
+      await comBanco((db) =>
+        db.query<{ id: string }>("select id from app.empresas where nome = 'Umi San' order by criada_em, id limit 1"),
+      )
+    ).rows[0]!.id
+    // Tabela modelo vigente em segundos: base do formulário se a Umi San ainda não tiver contrato.
+    const modelo = await rpc(adm, 'publicar_contrato', {
       p_empresa: null,
-      p: {
-        km_sem_reboque_cent: 450,
-        km_com_reboque_cent: 650,
-        taxa_fixa_reboque_cent: 15000,
-        retorno_trecho_unico_bp: 5000,
-        hora_espera_cent: 8000,
-        hospedagem_diaria_cent: 25000,
-        diaria_motorista_cent: 20000,
-        faixas_cancelamento: [
-          { antecedencia_min_horas: 48, multa_bp: 0 },
-          { antecedencia_min_horas: 0, multa_bp: 5000 },
-        ],
-        prazo_orcar_horas: 24,
-        validade_orcamento_horas: 72,
-        limiar_urgente_horas: 12,
-        limite_saldo_negativo_cent: 100000,
-        alerta_saldo_baixo_cent: 20000,
-      },
+      p: CONTRATO,
       p_vigente_desde: new Date(Date.now() + 3_000).toISOString(),
     })
-    expect(inicial.ok, JSON.stringify(inicial)).toBe(true)
+    expect(modelo.ok, JSON.stringify(modelo)).toBe(true)
 
     await entrarComDoisFatores(page, adm.email, adm.senha, adm.segredoTotp!)
-    await page.goto('/parametros?publicar=1')
+    await page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Contratos' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Contratos' })).toBeVisible()
+    await expect(page.getByTestId('contrato-modelo')).toContainText('Vigente')
+    await page.getByTestId('lista-contratos').getByRole('listitem').filter({ hasText: 'Umi San' }).first().getByRole('link').click()
+    await expect(page).toHaveURL(new RegExp(`/adm/contratos/${umi}$`))
+    await expect(page.getByRole('heading', { level: 1, name: 'Umi San' })).toBeVisible()
+
+    // Com contrato: "Publicar nova versão"; sem contrato: "Criar contrato a partir da tabela modelo".
+    await page.getByRole('button', { name: /^(Publicar nova versão|Criar contrato a partir da tabela modelo)$/ }).first().click()
     const folha = page.getByRole('dialog', { name: 'Publicar nova versão' })
     await expect(folha).toBeVisible()
+    await expect(folha.getByLabel('Quilômetro sem reboque')).not.toHaveValue('')
     await folha.getByLabel('Quilômetro sem reboque').fill('4,75')
 
     // O campo é no horário de São Paulo (UTC-3, sem horário de verão): agora + 2 min, arredondado para cima.
     const alvo = new Date(Math.ceil((Date.now() + 2 * 60_000) / 60_000) * 60_000 - 3 * 3600_000)
     await folha.getByLabel('Vale a partir de').fill(alvo.toISOString().slice(0, 16))
     await folha.getByRole('button', { name: 'Revisar e publicar' }).click()
-    const confirmacao = folha.getByTestId('confirmacao-parametros')
-    await expect(confirmacao.getByText(/1 item muda/)).toBeVisible()
+    const confirmacao = folha.getByTestId('confirmacao-contrato')
+    await expect(confirmacao).toBeVisible()
     await confirmacao.getByRole('button', { name: 'Publicar versão' }).click()
 
     const aviso = page.getByRole('status').filter({ hasText: /Versão \d+ publicada/ })
     await expect(aviso).toBeVisible({ timeout: 30_000 })
     const versao = /Versão (\d+) publicada/.exec(await aviso.innerText())![1]!
-    const linha = page.getByRole('listitem').filter({ hasText: new RegExp(`Versão ${versao}(?!\\d)`) })
+    const linha = page.getByTestId('historico-contrato').getByRole('listitem').filter({ hasText: new RegExp(`Versão ${versao}(?!\\d)`) })
     await expect(linha).toContainText('Agendada')
-    await expect(page.getByText(new RegExp(`A versão ${versao} entra em vigor em`))).toBeVisible()
+    await expect(linha).toContainText('publicada por Admin Contrato')
+
+    // A lista mostra a próxima vigência da Umi San.
+    await page.goto('/adm/contratos')
+    await expect(
+      page.getByTestId('lista-contratos').getByRole('listitem').filter({ hasText: 'Umi San' }).first(),
+    ).toContainText('Nova versão agendada')
   })
 })

@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
 import { CarregandoPickup } from '../design/componentes/CarregandoPickup.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
-import { rotaDoEstado, type EstadoSessao, type Papel } from './estadoSessao.ts'
+import { rotaDoEstado, type EstadoSessao, type Nivel, type Papel } from './estadoSessao.ts'
 import { useSessao } from './sessao.tsx'
 
 /** Só caminhos internos (evita redirecionamento aberto via `state.de`). */
@@ -58,8 +58,13 @@ export function SemPermissao() {
   )
 }
 
-/** Telas por perfil (ex.: Administração só para ADM). O banco recusa do mesmo jeito. */
-export function GuardaPapel({ papeis }: { papeis: Papel[] }) {
+/**
+ * Telas por perfil (ex.: Administração só para ADM; Equipe só para o cliente N1). O banco recusa do mesmo jeito.
+ * `niveis` restringe o nível do cliente.
+ */
+export function GuardaPapel({ papeis, niveis }: { papeis: Papel[]; niveis?: Nivel[] }) {
   const { perfil } = useSessao()
-  return perfil && papeis.includes(perfil.papel) ? <Outlet /> : <SemPermissao />
+  const permitido =
+    !!perfil && papeis.includes(perfil.papel) && (!niveis || (perfil.nivel !== null && niveis.includes(perfil.nivel)))
+  return permitido ? <Outlet /> : <SemPermissao />
 }

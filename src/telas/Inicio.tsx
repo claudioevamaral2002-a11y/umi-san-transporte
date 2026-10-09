@@ -1,10 +1,11 @@
 import { Link } from 'react-router'
 import { Cartao } from '../design/componentes/Cartao.tsx'
 import { Icone, type NomeIcone } from '../design/componentes/Icone.tsx'
+import { gereEquipe } from '../lib/administracao.ts'
 import { api } from '../lib/api.ts'
 import { useConsulta } from '../lib/consulta.ts'
-import type { Papel } from '../lib/estadoSessao.ts'
-import { podeEditarParametros } from '../lib/parametros.ts'
+import { podeEditarContratos } from '../lib/contratos.ts'
+import type { Papel, Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { formatarDataLonga } from '../lib/valores.ts'
 
@@ -15,30 +16,41 @@ interface Atalho {
   icone: NomeIcone
 }
 
-const TABELA: Atalho = {
-  para: '/parametros',
-  rotulo: 'Tabela de preços e regras',
-  descricao: 'Valores vigentes e histórico',
-  icone: 'tabela',
+const REGRAS: Atalho = {
+  para: '/regras',
+  rotulo: 'Regras do serviço',
+  descricao: 'Cancelamento, prazos e validade',
+  icone: 'lista',
+}
+const EQUIPE: Atalho = {
+  para: '/equipe',
+  rotulo: 'Equipe',
+  descricao: 'Convidar colegas e controlar acessos',
+  icone: 'usuarios',
 }
 
-const ATALHOS: Record<Papel, Atalho[]> = {
-  ADM: [
-    { para: '/adm/usuarios', rotulo: 'Usuários', descricao: 'Convidar, links e acessos', icone: 'usuarios' },
-    TABELA,
-    { para: '/adm/auditoria', rotulo: 'Auditoria', descricao: 'Tudo o que foi feito no app', icone: 'lista' },
-  ],
-  // Fase 1B: cliente e motorista ganham "Regras do serviço" e a tabela por modalidade na Task 3.
-  MOTORISTA: [],
-  CLIENTE: [],
+/** Atalhos por perfil e, no cliente, por nível (Adendo A10). Gestor de frota não vê preços. */
+function atalhosDe(perfil: Pick<Perfil, 'papel' | 'nivel'>): Atalho[] {
+  const porPapel: Record<Papel, Atalho[]> = {
+    ADM: [
+      { para: '/adm/contratos', rotulo: 'Contratos', descricao: 'Tabela modelo e contrato de cada empresa', icone: 'tabela' },
+      { para: '/adm/usuarios', rotulo: 'Usuários', descricao: 'Convidar, links e acessos', icone: 'usuarios' },
+      { para: '/adm/empresas', rotulo: 'Empresas', descricao: 'Cadastro e logo das empresas', icone: 'predio' },
+      { para: '/adm/auditoria', rotulo: 'Auditoria', descricao: 'Tudo o que foi feito no app', icone: 'lista' },
+    ],
+    GESTOR_FROTA: [],
+    MOTORISTA: [{ para: '/tabela', rotulo: 'Tabela', descricao: 'Preços e prazos para orçar', icone: 'tabela' }],
+    CLIENTE: gereEquipe(perfil) ? [REGRAS, EQUIPE] : [REGRAS],
+  }
+  return porPapel[perfil.papel]
 }
 
-/** Para quem pode publicar (ADM): sem nenhuma versão da tabela modelo, chama para a primeira. */
-function useSemTabela(papel: Papel | undefined): boolean {
-  const pode = podeEditarParametros(papel)
+/** Para o ADM: sem nenhuma versão da tabela modelo, chama para a primeira. */
+function useSemModelo(papel: Papel | undefined): boolean {
+  const pode = podeEditarContratos(papel)
   const { dados } = useConsulta(pode ? `inicio-${papel}` : 'inicio-nada', async () => {
     if (!pode) return false
-    return !(await api.temParametros())
+    return (await api.historicoContrato(null)).length === 0
   })
   return dados === true
 }
@@ -46,8 +58,8 @@ function useSemTabela(papel: Papel | undefined): boolean {
 export function Inicio() {
   const { perfil } = useSessao()
   const primeiroNome = perfil?.nome.trim().split(/\s+/)[0]
-  const semTabela = useSemTabela(perfil?.papel)
-  const atalhos = perfil ? ATALHOS[perfil.papel] : []
+  const semModelo = useSemModelo(perfil?.papel)
+  const atalhos = perfil ? atalhosDe(perfil) : []
 
   return (
     <main>
@@ -63,23 +75,50 @@ export function Inicio() {
       </section>
 
       <div className="mx-auto -mt-6 max-w-3xl space-y-4 px-4 pb-6">
-        {semTabela && (
+        {semModelo && (
           <Cartao className="space-y-3 border-[var(--cor-laranja)]" data-testid="chamada-primeira-tabela">
             <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
               <Icone nome="alerta" tamanho={16} />
               Ação necessária
             </p>
-            <h2 className="ivo-h3">Publique a primeira tabela de preços</h2>
+            <h2 className="ivo-h3">Publique a tabela modelo</h2>
             <p className="ivo-corpo text-texto-suave">
-              Enquanto não houver tabela publicada, ninguém consegue ver os valores e os orçamentos ficam bloqueados.
+              Ela é a base dos contratos das empresas. Sem contrato vigente, a empresa não consegue fazer pedidos.
             </p>
             <Link
-              to="/parametros?publicar=1"
+              to="/adm/contratos/modelo?publicar=1"
               className="inline-flex min-h-12 items-center gap-2 rounded-cartao bg-acao px-5 ivo-botao text-acao-texto"
             >
-              Publicar tabela
+              Publicar tabela modelo
               <Icone nome="setaDireita" tamanho={20} />
             </Link>
+          </Cartao>
+        )}
+
+        {perfil?.papel === 'CLIENTE' && perfil.empresa_tem_contrato === false && (
+          <Cartao className="space-y-2 border-[var(--cor-laranja)]" data-testid="aviso-sem-contrato">
+            <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+              <Icone nome="alerta" tamanho={16} />
+              Sem contrato vigente
+            </p>
+            <p className="ivo-corpo">Sua empresa ainda não tem contrato vigente. Fale com a IVO Transportes.</p>
+          </Cartao>
+        )}
+
+        {perfil?.papel === 'GESTOR_FROTA' && (
+          <Cartao className="space-y-2" data-testid="agenda-frota">
+            <h2 className="ivo-sobretitulo text-texto-suave">Agenda da frota</h2>
+            <div className="flex items-center gap-3 py-2">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-fundo text-marinho-2">
+                <Icone nome="relogio" />
+              </span>
+              <div>
+                <p className="ivo-h3">Agenda da frota chega na próxima fase</p>
+                <p className="ivo-legenda text-texto-suave">
+                  Aqui você vai ver a agenda dos motoristas e distribuir os pedidos.
+                </p>
+              </div>
+            </div>
           </Cartao>
         )}
 
