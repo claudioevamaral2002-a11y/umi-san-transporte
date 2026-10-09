@@ -48,7 +48,10 @@ export const MENSAGENS = {
   CAMPOS_INCOMPATIVEIS: 'Há campos que não valem para a modalidade escolhida.',
   VALOR_FORA_DO_LIMITE: 'O valor calculado passou do limite permitido. Confira as quantidades.',
 
-  // Saldo: livro-razão, lançamentos do ADM e reconciliação (fase 2B)
+  // Saldo, aprovação e cancelamento de agendado (fase 2B)
+  SALDO_INSUFICIENTE: 'Saldo insuficiente para aprovar este orçamento.',
+  ORCAMENTO_VENCIDO: 'A validade deste orçamento venceu. Peça um novo pedido.',
+  ORCAMENTO_ALTERADO: 'Este orçamento mudou desde que você abriu. Atualize a página e confira antes de aprovar.',
   JA_PROCESSADO: 'Esta operação já foi feita. Atualize a página.',
   CHAVE_REUTILIZADA: 'Algo deu errado. Atualize a página e tente de novo.',
   NAO_ESTORNAVEL: 'Este lançamento não pode ser estornado.',

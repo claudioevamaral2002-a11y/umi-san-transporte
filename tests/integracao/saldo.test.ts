@@ -134,3 +134,335 @@ describe('livro-razão: recarga, ajuste e estorno com concorrência real', () =>
     expect((extrato.itens as { tipo: string }[]).map((i) => i.tipo)).toEqual(['RECARGA'])
   })
 })
+
+// ------------------------------------------------------------------------------------------------ Task 2
+
+/** Início daqui a `horas` horas (minuto cheio), em ISO UTC. */
+function emHoras(horas: number): string {
+  const d = new Date(Date.now() + horas * 3_600_000)
+  d.setUTCSeconds(0, 0)
+  return d.toISOString()
+}
+/** Horários distintos (pedidos de 2 h): longe (sem multa) e perto (< 24 h: multa de 100% no contrato de teste). */
+let horaLonge = 24 * 60
+const slotLonge = () => emHoras((horaLonge += 3))
+let horaPerto = 1
+const slotPerto = () => {
+  horaPerto += 2.5
+  if (horaPerto > 22) throw new Error('acabaram os horários a menos de 24 h')
+  return emHoras(horaPerto)
+}
+
+interface Orcado {
+  id: string
+  versao: number
+  hash: string
+}
+
+/** Cliente cria → motorista orça (total = pedágio informado) → o cliente lê versão e hash no detalhe. */
+async function pedidoOrcado(cliente: Pessoa, inicio: string, total: number): Promise<Orcado> {
+  const p = await rpc(cliente, 'criar_pedido', {
+    p: {
+      inicio,
+      duracao_min: 120,
+      origem: 'Porto de Itajaí',
+      destino: 'Base Navegantes',
+      levar: true,
+      trazer: false,
+      carga: 'PESSOAS',
+      pessoas_qtd: 2,
+      modalidade: 'VEICULO_PROPRIO',
+      reboque: 'NAO',
+    },
+  })
+  expect(p, 'criar_pedido').toMatchObject({ ok: true })
+  expect(await rpc(motorista, 'enviar_orcamento', { p_atividade: p.id, p: { pedagio_cent: total } })).toMatchObject({
+    ok: true,
+    total_cent: total,
+  })
+  const detalhe = await rpc(cliente, 'pedido', { p_id: p.id })
+  const o = detalhe.orcamento as { versao: number; hash: string; total_cent: number }
+  expect(o.total_cent).toBe(total)
+  return { id: p.id as string, versao: o.versao, hash: o.hash }
+}
+
+function aprovar(quem: Pick<Pessoa, 'cliente'>, o: Orcado, chave = randomUUID()): Promise<Resultado> {
+  return rpc(quem, 'aprovar_orcamento', {
+    p_atividade: o.id,
+    p_versao: o.versao,
+    p_hash: o.hash,
+    p_chave: chave,
+    p_dispositivo: 'vitest',
+  })
+}
+
+async function estado(atividade: string) {
+  return comBanco(async (db) => {
+    const a = await db.query<{ status: string; tipo: string; ativo: boolean }>(
+      'select a.status, b.tipo, b.ativo from app.atividades a join app.agenda_blocos b on b.atividade_id = a.id where a.id = $1',
+      [atividade],
+    )
+    const r = await db.query<{ n: string }>('select count(*) as n from app.reservas where atividade_id = $1 and ativa', [
+      atividade,
+    ])
+    const l = await db.query<{ tipo: string; valor: string }>(
+      'select tipo, valor_cent as valor from app.lancamentos where atividade_id = $1 order by id',
+      [atividade],
+    )
+    const ap = await db.query<{ n: string }>('select count(*) as n from app.aprovacoes where atividade_id = $1', [atividade])
+    return {
+      ...a.rows[0]!,
+      reservasAtivas: Number(r.rows[0]!.n),
+      aprovacoes: Number(ap.rows[0]!.n),
+      lancamentos: l.rows.map((x) => `${x.tipo}:${Number(x.valor)}`),
+    }
+  })
+}
+
+/** Empresa com contrato (limite R$ 500,00), saldo inicial e um cliente N2 novo (limites de taxa são por usuário). */
+async function cenario(saldo: number): Promise<{ empresa: string; cliente: Pessoa }> {
+  const empresa = await empresaComContrato()
+  if (saldo > 0) expect(await recarga(empresa, saldo)).toMatchObject({ ok: true })
+  const cliente = await criarPessoa({ papel: 'CLIENTE', empresa, nivel: 2 })
+  return { empresa, cliente }
+}
+
+describe('aprovação: concorrência real e crédito', () => {
+  it('10 aprovações simultâneas (chaves diferentes) → 1 reserva; a reserva não altera o contábil', async () => {
+    const { empresa, cliente } = await cenario(100000)
+    const o = await pedidoOrcado(cliente, slotLonge(), 30000)
+    const resultados = await Promise.all(Array.from({ length: 10 }, () => aprovar(outroCliente(cliente), o)))
+    expect(codigos(resultados)).toEqual(['OK', ...Array<string>(9).fill('STATUS_INVALIDO')])
+    expect(resultados.find((r) => r.ok)).toEqual({
+      ok: true,
+      atividade_id: o.id,
+      reservado_cent: 30000,
+      disponivel_cent: 70000,
+    })
+    expect(await estado(o.id)).toEqual({
+      status: 'AGENDADA',
+      tipo: 'RESERVA',
+      ativo: true,
+      reservasAtivas: 1,
+      aprovacoes: 1,
+      lancamentos: ['RESERVA:30000'],
+    })
+    expect(await conta(empresa)).toEqual({ contabil: 100000, reservado: 30000 })
+    expect(await rpc(cliente, 'saldo_empresa', {})).toMatchObject({
+      saldo_contabil_cent: 100000,
+      reservado_cent: 30000,
+      disponivel_cent: 70000,
+    })
+  })
+
+  it('dois pedidos disputando o mesmo saldo → só o que cabe no limite é aprovado', async () => {
+    const { empresa, cliente } = await cenario(0)
+    const a = await pedidoOrcado(cliente, slotLonge(), 30000)
+    const b = await pedidoOrcado(cliente, slotLonge(), 30000)
+    const resultados = await Promise.all([aprovar(outroCliente(cliente), a), aprovar(outroCliente(cliente), b)])
+    expect(codigos(resultados)).toEqual(['OK', 'SALDO_INSUFICIENTE'])
+    expect(resultados.find((r) => !r.ok)).toEqual({
+      ok: false,
+      codigo: 'SALDO_INSUFICIENTE',
+      disponivel_cent: -30000,
+      limite_cent: 50000,
+      total_cent: 30000,
+      falta_cent: 10000,
+    })
+    expect(await conta(empresa)).toEqual({ contabil: 0, reservado: 30000 })
+  })
+
+  it('cinco pedidos de R$ 200,00 ao mesmo tempo com limite de R$ 500,00 → exatamente 2 aprovados', async () => {
+    const { empresa, cliente } = await cenario(0)
+    const pedidos: Orcado[] = []
+    for (let i = 0; i < 5; i++) pedidos.push(await pedidoOrcado(cliente, slotLonge(), 20000))
+    const resultados = await Promise.all(pedidos.map((o) => aprovar(outroCliente(cliente), o)))
+    expect(codigos(resultados)).toEqual(['OK', 'OK', 'SALDO_INSUFICIENTE', 'SALDO_INSUFICIENTE', 'SALDO_INSUFICIENTE'])
+    expect(await conta(empresa)).toEqual({ contabil: 0, reservado: 40000 })
+  })
+
+  it('limite negativo respeitado no centavo', async () => {
+    const { empresa, cliente } = await cenario(0)
+    expect(await aprovar(cliente, await pedidoOrcado(cliente, slotLonge(), 50000))).toMatchObject({
+      ok: true,
+      disponivel_cent: -50000,
+    })
+    expect(await aprovar(cliente, await pedidoOrcado(cliente, slotLonge(), 1))).toMatchObject({
+      ok: false,
+      codigo: 'SALDO_INSUFICIENTE',
+      falta_cent: 1,
+    })
+    expect(await conta(empresa)).toEqual({ contabil: 0, reservado: 50000 })
+  })
+
+  it('mesma chave repetida (em sequência e em paralelo) → mesmo resultado, nenhum lançamento novo', async () => {
+    const { empresa, cliente } = await cenario(100000)
+    const o = await pedidoOrcado(cliente, slotLonge(), 12000)
+    const chave = randomUUID()
+    const primeiro = await aprovar(cliente, o, chave)
+    expect(primeiro).toMatchObject({ ok: true })
+    expect(await aprovar(cliente, o, chave)).toEqual(primeiro)
+
+    const o2 = await pedidoOrcado(cliente, slotLonge(), 8000)
+    const chave2 = randomUUID()
+    const paralelos = await Promise.all(Array.from({ length: 5 }, () => aprovar(outroCliente(cliente), o2, chave2)))
+    for (const r of paralelos) expect(r).toEqual(paralelos[0])
+    expect(paralelos[0]).toMatchObject({ ok: true, reservado_cent: 8000 })
+    expect((await lancamentos(empresa)).map((l) => `${l.tipo}:${l.valor}`)).toEqual([
+      'RECARGA:100000',
+      'RESERVA:12000',
+      'RESERVA:8000',
+    ])
+  })
+
+  it('aprovação × expiração simultâneas → um resultado único e coerente', async () => {
+    const { empresa, cliente } = await cenario(1000000)
+    let aprovados = 0
+    for (let i = 0; i < 4; i++) {
+      const o = await pedidoOrcado(cliente, slotLonge(), 1000)
+      const [r] = await Promise.all([
+        aprovar(outroCliente(cliente), o),
+        comBanco(async (db) => {
+          // a validade venceu (só enquanto ainda é pré-reserva) e o cron roda ao mesmo tempo
+          await db.query(
+            `update app.agenda_blocos set expira_em = now() - interval '1 second'
+              where atividade_id = $1 and tipo = 'PRE_RESERVA'`,
+            [o.id],
+          )
+          await db.query('select interno.expirar_vencidos()')
+        }),
+      ])
+      const e = await estado(o.id)
+      if (r.ok) {
+        aprovados++
+        expect(e).toMatchObject({ status: 'AGENDADA', tipo: 'RESERVA', ativo: true, reservasAtivas: 1, aprovacoes: 1 })
+      } else {
+        expect(r.codigo).toMatch(/^(ORCAMENTO_VENCIDO|STATUS_INVALIDO)$/)
+        expect(e).toMatchObject({ status: 'EXPIRADA', ativo: false, reservasAtivas: 0, aprovacoes: 0, lancamentos: [] })
+      }
+    }
+    expect(await conta(empresa)).toEqual({ contabil: 1000000, reservado: aprovados * 1000 })
+  })
+})
+
+describe('cancelamento de AGENDADA: concorrência real e multa', () => {
+  it('cancelamento × cancelamento simultâneos → um vence, no máximo uma multa', async () => {
+    const { empresa, cliente } = await cenario(100000)
+    let multas = 0
+    for (let i = 0; i < 3; i++) {
+      const o = await pedidoOrcado(cliente, slotPerto(), 7000)
+      expect(await aprovar(cliente, o)).toMatchObject({ ok: true })
+      const resultados = await Promise.all([
+        rpc(outroCliente(cliente), 'cancelar_agendado', { p_atividade: o.id, p_motivo: null, p_chave: randomUUID() }),
+        rpc(outroCliente(cliente), 'cancelar_agendado', { p_atividade: o.id, p_motivo: 'Mudou o plano', p_chave: randomUUID() }),
+        rpc(outroCliente(motorista), 'cancelar_agendado', {
+          p_atividade: o.id,
+          p_motivo: 'Veículo em manutenção',
+          p_chave: randomUUID(),
+        }),
+      ])
+      expect(codigos(resultados)).toEqual(['OK', 'STATUS_INVALIDO', 'STATUS_INVALIDO'])
+      const vencedor = resultados.findIndex((r) => r.ok)
+      const doCliente = vencedor < 2
+      const e = await estado(o.id)
+      expect(e).toMatchObject({ status: 'CANCELADA', ativo: false, reservasAtivas: 0 })
+      // cliente venceu: libera e cobra 100% (< 24 h); motorista venceu: só libera
+      expect(e.lancamentos).toEqual(
+        doCliente
+          ? ['RESERVA:7000', 'LIBERACAO_RESERVA:7000', 'MULTA:-7000']
+          : ['RESERVA:7000', 'LIBERACAO_RESERVA:7000'],
+      )
+      expect(resultados[vencedor]).toMatchObject({ multa_cent: doCliente ? 7000 : 0, liberado_cent: 7000 })
+      if (doCliente) multas++
+    }
+    expect(await conta(empresa)).toEqual({ contabil: 100000 - multas * 7000, reservado: 0 })
+  })
+
+  it('cancelamento repetido com a mesma chave (em paralelo) → mesmo resultado, uma multa', async () => {
+    const { empresa, cliente } = await cenario(100000)
+    const o = await pedidoOrcado(cliente, slotPerto(), 3333)
+    expect(await aprovar(cliente, o)).toMatchObject({ ok: true })
+    const chave = randomUUID()
+    const resultados = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        rpc(outroCliente(cliente), 'cancelar_agendado', { p_atividade: o.id, p_motivo: null, p_chave: chave }),
+      ),
+    )
+    for (const r of resultados) expect(r).toEqual(resultados[0])
+    expect(resultados[0]).toMatchObject({
+      ok: true,
+      liberado_cent: 3333,
+      multa_cent: 3333,
+      faixa: { antecedencia_min_horas: 0, multa_bp: 10000 },
+    })
+    expect((await estado(o.id)).lancamentos).toEqual(['RESERVA:3333', 'LIBERACAO_RESERVA:3333', 'MULTA:-3333'])
+    expect(await conta(empresa)).toEqual({ contabil: 100000 - 3333, reservado: 0 })
+  })
+
+  it('fluxo: ADM recarrega → cliente cria → motorista orça → cliente aprova → cancela com multa; extrato mostra tudo', async () => {
+    const { empresa, cliente } = await cenario(0)
+    expect(await recarga(empresa, 20000)).toMatchObject({ ok: true, saldo_contabil_cent: 20000 })
+    const o = await pedidoOrcado(cliente, slotPerto(), 15000)
+    expect(await aprovar(cliente, o)).toEqual({ ok: true, atividade_id: o.id, reservado_cent: 15000, disponivel_cent: 5000 })
+    expect(await rpc(cliente, 'saldo_empresa', {})).toMatchObject({
+      saldo_contabil_cent: 20000,
+      reservado_cent: 15000,
+      disponivel_cent: 5000,
+    })
+
+    const simulacao = await rpc(cliente, 'simular_cancelamento', { p_atividade: o.id })
+    expect(simulacao).toMatchObject({ ok: true, total_cent: 15000, liberado_cent: 15000, multa_cent: 15000, cobra_multa: true })
+    const cancelado = await rpc(cliente, 'cancelar_agendado', {
+      p_atividade: o.id,
+      p_motivo: 'Não vamos mais',
+      p_chave: randomUUID(),
+    })
+    expect(cancelado).toMatchObject({ ok: true, liberado_cent: 15000, multa_cent: simulacao.multa_cent, disponivel_cent: 5000 })
+
+    const extrato = await rpc(cliente, 'extrato', { p_empresa: null, p_filtro: {} })
+    const itens = extrato.itens as {
+      tipo: string
+      valor_cent: number
+      efeito_contabil_cent: number
+      pode_abrir: boolean
+      numero: number | null
+    }[]
+    expect(itens.map((i) => `${i.tipo}:${i.valor_cent}:${i.efeito_contabil_cent}`)).toEqual([
+      'MULTA:-15000:-15000',
+      'LIBERACAO_RESERVA:15000:0',
+      'RESERVA:15000:0',
+      'RECARGA:20000:20000',
+    ])
+    expect(itens.filter((i) => i.numero !== null).every((i) => i.pode_abrir)).toBe(true)
+
+    // colega N2 da mesma empresa: vê a linha (nº e solicitante), mas não abre o pedido
+    const colega = await criarPessoa({ papel: 'CLIENTE', empresa, nivel: 2 })
+    const visto = await rpc(colega, 'extrato', { p_empresa: null, p_filtro: { tipos: ['MULTA'] } })
+    expect(visto.itens).toEqual([
+      expect.objectContaining({
+        tipo: 'MULTA',
+        valor_cent: -15000,
+        pode_abrir: false,
+        atividade_id: null,
+        solicitante_nome: expect.any(String),
+      }),
+    ])
+    expect(await conta(empresa)).toEqual({ contabil: 5000, reservado: 0 })
+  })
+
+  it('a reconciliação continua limpa nas empresas deste arquivo depois de toda a concorrência', async () => {
+    const r = await comBanco(
+      async (db) =>
+        (await db.query<{ r: { divergencias: { empresa_id: string }[] } }>('select interno.reconciliar() as r')).rows[0]!.r,
+    )
+    const minhas = await comBanco(async (db) =>
+      (
+        await db.query<{ id: string }>(
+          `select distinct empresa_id as id from app.lancamentos where criado_em > now() - interval '1 hour'`,
+        )
+      ).rows.map((x) => x.id),
+    )
+    expect(minhas.length).toBeGreaterThan(5)
+    expect(r.divergencias.filter((d) => minhas.includes(d.empresa_id))).toEqual([])
+  })
+})
