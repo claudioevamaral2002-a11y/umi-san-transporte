@@ -1,42 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { CHAVE_PUBLICA, URL_SUPABASE, comBanco, criarPessoa, empresaNova, rpc, type Pessoa, type Resultado } from './ajuda.ts'
+import {
+  CHAVE_PUBLICA,
+  URL_SUPABASE,
+  comBanco,
+  criarPessoa,
+  empresaComContrato,
+  motoristaUnico,
+  rpc,
+  type Pessoa,
+  type Resultado,
+} from './ajuda.ts'
 
 /**
  * Fase 2A (pedidos, agenda e orçamento) com concorrência real: várias chamadas em paralelo (Promise.all), cada uma
  * por um cliente HTTP próprio — logo, conexões e transações independentes no banco.
  */
-
-const CONTRATO = {
-  km_sem_reboque_cent: 250,
-  km_com_reboque_cent: 350,
-  taxa_fixa_reboque_cent: 15000,
-  retorno_trecho_unico_bp: 5000,
-  hora_espera_cent: 5000,
-  hospedagem_diaria_cent: 18000,
-  diaria_motorista_cent: 30000,
-  faixas_cancelamento: [
-    { antecedencia_min_horas: 24, multa_bp: 0 },
-    { antecedencia_min_horas: 0, multa_bp: 10000 },
-  ],
-  prazo_orcar_horas: 12,
-  validade_orcamento_horas: 24,
-  limiar_urgente_horas: 6,
-  limite_saldo_negativo_cent: 50000,
-  alerta_saldo_baixo_cent: 20000,
-}
-
-/** Empresa nova com contrato vigente (gravado direto no banco: cenário de teste). */
-async function empresaComContrato(): Promise<string> {
-  const empresa = await empresaNova()
-  await comBanco((db) =>
-    db.query(`select interno.inserir_contrato($1, $2::jsonb, now() - interval '1 minute', null, 'Teste')`, [
-      empresa,
-      JSON.stringify(CONTRATO),
-    ]),
-  )
-  return empresa
-}
 
 /** Outro cliente HTTP com o mesmo token (mesma sessão, inclusive aal2): requisição e transação independentes. */
 function outroCliente(p: Pessoa): Pick<Pessoa, 'cliente'> {
@@ -106,10 +85,7 @@ let clienteA: Pessoa
 let clienteB: Pessoa
 
 beforeAll(async () => {
-  // v1: o pedido vai para o motorista ativo mais antigo. Os motoristas de outros arquivos de teste saem de cena,
-  // e o deste arquivo passa a ser o atribuído (os criados depois são mais novos).
-  await comBanco((db) => db.query(`update app.perfis set ativo = false where papel = 'MOTORISTA'`))
-  motorista = await criarPessoa({ papel: 'MOTORISTA' })
+  motorista = await motoristaUnico()
   adm = await criarPessoa({ papel: 'ADM' })
   empresaA = await empresaComContrato()
   empresaB = await empresaComContrato()

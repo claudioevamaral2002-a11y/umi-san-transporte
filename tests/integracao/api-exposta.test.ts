@@ -43,7 +43,7 @@ describe('superfície da API (especificação 1.1 e especificação 9, item 10)'
   })
 
   it.each(['app', 'interno', 'public'])('schema %s não é servido pela API', async (schema) => {
-    const r = await fetch(`${URL_SUPABASE}/rest/v1/prova_canal?select=id`, {
+    const r = await fetch(`${URL_SUPABASE}/rest/v1/atividades?select=id`, {
       headers: autenticado({ 'Accept-Profile': schema }),
     })
     expect(r.status).toBe(406)
@@ -54,7 +54,7 @@ describe('superfície da API (especificação 1.1 e especificação 9, item 10)'
     ['PATCH', '?id=not.is.null'],
     ['DELETE', '?id=not.is.null'],
   ])('escrita direta %s via API em app é bloqueada (schema não exposto)', async (metodo, filtro) => {
-    const r = await fetch(`${URL_SUPABASE}/rest/v1/prova_canal${filtro}`, {
+    const r = await fetch(`${URL_SUPABASE}/rest/v1/atividades${filtro}`, {
       method: metodo,
       headers: autenticado({ 'Content-Type': 'application/json', 'Content-Profile': 'app' }),
       body: metodo === 'DELETE' ? undefined : JSON.stringify({ status: 'X' }),

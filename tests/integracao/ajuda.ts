@@ -163,3 +163,44 @@ export async function rpc(
   if (error) throw new Error(`rpc ${nome}: ${error.message}`)
   return data as Resultado
 }
+
+/** Contrato de teste (centavos, pontos-base, horas). */
+export const CONTRATO_TESTE = {
+  km_sem_reboque_cent: 250,
+  km_com_reboque_cent: 350,
+  taxa_fixa_reboque_cent: 15000,
+  retorno_trecho_unico_bp: 5000,
+  hora_espera_cent: 5000,
+  hospedagem_diaria_cent: 18000,
+  diaria_motorista_cent: 30000,
+  faixas_cancelamento: [
+    { antecedencia_min_horas: 24, multa_bp: 0 },
+    { antecedencia_min_horas: 0, multa_bp: 10000 },
+  ],
+  prazo_orcar_horas: 12,
+  validade_orcamento_horas: 24,
+  limiar_urgente_horas: 6,
+  limite_saldo_negativo_cent: 50000,
+  alerta_saldo_baixo_cent: 20000,
+}
+
+/** Empresa nova com contrato vigente (gravado direto no banco: cenário de teste). */
+export async function empresaComContrato(): Promise<string> {
+  const empresa = await empresaNova()
+  await comBanco((db) =>
+    db.query(`select interno.inserir_contrato($1, $2::jsonb, now() - interval '1 minute', null, 'Teste')`, [
+      empresa,
+      JSON.stringify(CONTRATO_TESTE),
+    ]),
+  )
+  return empresa
+}
+
+/**
+ * v1: o pedido vai para o motorista ativo mais antigo. Os motoristas de outros arquivos de teste saem de cena e o
+ * criado aqui passa a ser o atribuído (e o da agenda de pedidos novos).
+ */
+export async function motoristaUnico(): Promise<Pessoa> {
+  await comBanco((db) => db.query(`update app.perfis set ativo = false where papel = 'MOTORISTA'`))
+  return criarPessoa({ papel: 'MOTORISTA' })
+}
