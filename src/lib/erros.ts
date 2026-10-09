@@ -38,6 +38,14 @@ export const MENSAGENS = {
   CHAVE_INVALIDA: 'Permissão desconhecida. Atualize a página e tente de novo.',
   CAMINHO_INVALIDO: 'Arquivo de logo inválido. Envie um PNG ou WebP.',
   VIGENCIA_NO_PASSADO: 'A vigência precisa começar agora ou no futuro.',
+
+  // Pedidos, agenda e orçamento (fase 2A)
+  SEM_CONTRATO: 'Sua empresa ainda não tem contrato vigente. Fale com a IVO Transportes.',
+  SEM_MOTORISTA: 'Nenhum motorista disponível no momento. Tente de novo mais tarde.',
+  HORARIO_OCUPADO: 'Esse horário acabou de ser ocupado. Escolha outro.',
+  STATUS_INVALIDO: 'Este pedido mudou de situação. Atualize a página.',
+  PRAZO_VENCIDO: 'O prazo deste pedido venceu.',
+  CAMPOS_INCOMPATIVEIS: 'Há campos que não valem para a modalidade escolhida.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
