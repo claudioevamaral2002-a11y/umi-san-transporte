@@ -532,3 +532,32 @@ O teste mensal restaura o backup no Supabase local (CLI) dentro do próprio GitH
 
 ### A6. Projetos Supabase
 Um único projeto remoto (produção, sa-east-1). CI e desenvolvimento usam o Supabase local. A segunda vaga do plano Free fica livre para restauração de emergência.
+
+### A10. Especificação v6 — contratos, papéis e visibilidade (decisões de 2026-10-09)
+Prevalece sobre as seções 2, 3, 4.2 e Adendo A1 onde conflitar.
+
+**Contrato por empresa (substitui a "tabela geral" da seção 3)**
+- Só o ADM cria e edita tabelas. Existe uma **tabela modelo** (base) e um **contrato por empresa cliente**, versionado com vigência; o contrato contém preços, faixas de cancelamento, prazos, validade, limiar de urgente e **limite de saldo negativo / alerta de saldo baixo da empresa** (gestão de crédito por cliente).
+- Empresa só opera com contrato vigente (o cadastro da empresa e o endereço dela só são criados após contrato assinado). Sem contrato vigente: "Novo pedido" indisponível com explicação.
+- Cada orçamento grava snapshot do contrato vigente da empresa (regra de snapshot inalterada).
+- Retenção de fotos é configuração global do ADM (não faz parte do contrato).
+
+**Orçamento (substitui 4.2 "regras de preenchimento")**
+- Preços unitários vêm **travados do contrato**; o motorista preenche só quantidades (km, diárias, horas de espera, pedágio/balsa, hospedagem) e o campo **"Outros"** (descrição obrigatória, destacado no memorial). Motorista não altera preço unitário.
+
+**Papéis**
+- Lado do prestador: **ADM** (você: tudo; único que altera saldo e contratos), **Gestor de frota** (estrutura pronta: operação — agenda de todos os motoristas e distribuição de pedidos; sem preço e sem saldo), **Motorista** (orça quantidades e executa). Banco preparado para vários motoristas e frota; telas da v1 para 1 motorista.
+- Lado do cliente (por empresa): **N1 Gestor da empresa** (cria/aprova/pede revisão/cancela todos os pedidos da empresa e convida colegas da empresa), **N2 Solicitante** (só os próprios pedidos), **N3 Visualizador** (vê pedidos e saldo; não age). Ninguém do cliente altera saldo.
+- A matriz de delegação (seção 2) deixa de existir: as três chaves são substituídas pelos papéis acima ("motorista lança recarga" e "motorista edita tabela" removidos; atuar em pedido de colega = só N1).
+- Futuro (não v1): repasse ao motorista separado do preço ao cliente (margem/terceiros).
+
+**Visibilidade**
+- Cliente: **não vê tabela de preços**; vê "Regras do serviço" do próprio contrato (faixas de cancelamento, prazos, validade) e o memorial completo em cada orçamento.
+- Motorista: vê só o que usa para orçar (preços unitários das modalidades e prazos do contrato da empresa do pedido); não vê limites de saldo, retenção de fotos, número de versão nem autor.
+- ADM: tudo, inclusive histórico de versões e autores.
+- Textos: "Modalidade veículo próprio" e "Modalidade veículo do cliente" (nunca o nome de uma empresa na modalidade).
+
+**Painel do ADM** (fase 3): crédito por cliente (disponível/reservado/limite), corridas em andamento, valor realizado no período, pendências, além de usuários, contratos e auditoria.
+
+**Operação**
+- Várias contas no mesmo navegador: uma sessão por site; para testar perfis em paralelo, usar perfis distintos do navegador ou janelas anônimas.
