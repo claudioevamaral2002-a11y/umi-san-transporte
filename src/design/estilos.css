@@ -59,11 +59,20 @@
   .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 600ms linear infinite; }
   .pickup-balanco { animation: pickup-balancar 450ms ease-in-out infinite; }
   .pickup-estrada { animation: estrada-andar 400ms linear infinite; }
+  /* Check de sucesso (pedido enviado): círculo cresce e o traço é desenhado uma vez. */
+  .check-circulo { transform-box: fill-box; transform-origin: center; animation: check-crescer 320ms var(--curva) both; }
+  .check-traco { stroke-dasharray: 70; stroke-dashoffset: 70; animation: check-desenhar 360ms 220ms var(--curva) forwards; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check-traco { stroke-dashoffset: 0; }
 }
 
 @keyframes pickup-girar { to { transform: rotate(360deg); } }
 @keyframes pickup-balancar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
 @keyframes estrada-andar { to { stroke-dashoffset: 30; } }
+@keyframes check-crescer { from { transform: scale(0.6); opacity: 0; } }
+@keyframes check-desenhar { to { stroke-dashoffset: 0; } }
 
 /* Transição de tela (View Transitions). Sem preferência de movimento reduzido apenas. */
 @media (prefers-reduced-motion: no-preference) {

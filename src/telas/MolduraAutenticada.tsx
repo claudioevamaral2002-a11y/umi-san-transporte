@@ -33,8 +33,10 @@ export const MENU: Grupo[] = [
     titulo: null,
     itens: [
       { para: '/', rotulo: 'Início', icone: 'casa', aba: true },
-      { para: '/regras', rotulo: 'Regras do serviço', curto: 'Regras', icone: 'lista', aba: true, visivel: (p) => p.papel === 'CLIENTE' },
-      { para: '/equipe', rotulo: 'Equipe', icone: 'usuarios', aba: true, visivel: gereEquipe },
+      { para: '/pedidos', rotulo: 'Pedidos', icone: 'lista', aba: true },
+      { para: '/agenda', rotulo: 'Agenda', icone: 'calendario', aba: true },
+      { para: '/regras', rotulo: 'Regras do serviço', curto: 'Regras', icone: 'escudo', aba: true, visivel: (p) => p.papel === 'CLIENTE' },
+      { para: '/equipe', rotulo: 'Equipe', icone: 'usuarios', visivel: gereEquipe },
       { para: '/tabela', rotulo: 'Tabela', icone: 'tabela', aba: true, visivel: (p) => p.papel === 'MOTORISTA' },
     ],
   },
@@ -136,8 +138,8 @@ export function MolduraAutenticada() {
     menu.current?.close()
   }, [local.pathname])
 
-  // Abas do celular: os destinos principais do perfil (no máximo 3) + "Menu".
-  const abas = grupos.flatMap((g) => g.itens.filter((i) => i.aba)).slice(0, 3)
+  // Abas do celular: os destinos principais do perfil (no máximo 4) + "Menu" — até 5 na barra.
+  const abas = grupos.flatMap((g) => g.itens.filter((i) => i.aba)).slice(0, 4)
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] md:grid-rows-[auto_1fr]">

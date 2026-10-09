@@ -16,9 +16,9 @@ test.describe('cliente', () => {
     const chamadas = await simularApi(page)
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Olá, Diego' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Regras do serviço/])
+    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Pedidos/, /Agenda/, /Regras do serviço/])
     const menu = await abrirMenu(page)
-    await expect(menu.getByRole('link')).toHaveText(['Início', 'Regras do serviço'])
+    await expect(menu.getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda', 'Regras do serviço'])
     await menu.getByRole('link', { name: 'Regras do serviço' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Regras do serviço' })).toBeVisible()
@@ -60,13 +60,21 @@ test.describe('cliente', () => {
     const chamadas = await simularApi(page, { usuarios: EQUIPE })
     responderFuncoes(page, { ok: true, link: LINK }, { ok: true })
     await page.goto('/')
-    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Regras do serviço/, /Equipe/])
+    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([
+      /Pedidos/,
+      /Agenda/,
+      /Regras do serviço/,
+      /Equipe/,
+    ])
+    // Barra inferior: até 4 destinos + "Menu"; Equipe fica no menu.
     await expect(page.getByRole('navigation', { name: 'Navegação' }).getByRole('link')).toHaveText([
       'Início',
+      'Pedidos',
+      'Agenda',
       'Regras',
-      'Equipe',
     ])
-    await page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Equipe' }).click()
+    const menuN1 = await abrirMenu(page)
+    await menuN1.getByRole('link', { name: 'Equipe' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Equipe' })).toBeVisible()
     const lista = page.getByTestId('lista-usuarios')
@@ -169,7 +177,7 @@ test.describe('gestor de frota', () => {
     await expect(page.getByTestId('agenda-frota')).toContainText('Agenda da frota chega na próxima fase')
     await expect(page.getByRole('region', { name: 'Atalhos' })).toHaveCount(0)
     const menu = await abrirMenu(page)
-    await expect(menu.getByRole('link')).toHaveText(['Início'])
+    await expect(menu.getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda'])
     await page.keyboard.press('Escape')
     for (const rota of ['/tabela', '/regras', '/adm/contratos', '/parametros', '/equipe']) {
       await page.goto(rota)

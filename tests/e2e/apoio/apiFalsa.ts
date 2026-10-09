@@ -240,6 +240,9 @@ export async function simularApi(page: Page, api: ApiFalsa = {}) {
   await tabela('empresas', api.empresas ?? [EMPRESA_UMI])
   await leitura('listar_usuarios', () => api.usuarios ?? USUARIOS)
   await leitura('listar_auditoria', () => api.auditoria ?? AUDITORIA)
+  // Fase 2A: o Início lê as pendências de todo perfil (detalhes em pedidosFalsos.ts).
+  await leitura('pendencias', () => ({ ok: true, aguardando_orcamento: [], aguardando_aprovacao: [], proximos: [] }))
+  await leitura('meus_pedidos', () => ({ ok: true, itens: [] }))
   for (const nome of ['publicar_contrato', 'definir_retencao_fotos', 'alterar_perfil', 'salvar_empresa', 'definir_logo_empresa']) {
     await page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, (route) => {
       chamadas.push({ rpc: nome, corpo: corpoDe(route) })

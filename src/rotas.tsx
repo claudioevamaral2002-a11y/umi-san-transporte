@@ -69,10 +69,24 @@ export const roteador = createBrowserRouter([
       {
         element: <Guarda permitidos={['pronto']} />,
         children: [
+          // Fluxos de tela cheia (sem o menu): novo pedido do cliente N1/N2.
+          {
+            element: <GuardaPapel papeis={['CLIENTE']} niveis={[1, 2]} />,
+            children: [
+              {
+                path: 'pedidos/novo',
+                lazy: async () => ({ Component: (await import('./telas/pedidos/NovoPedido.tsx')).NovoPedido }),
+              },
+            ],
+          },
           {
             lazy: async () => ({ Component: (await import('./telas/MolduraAutenticada.tsx')).MolduraAutenticada }),
             children: [
               { index: true, lazy: async () => ({ Component: (await import('./telas/Inicio.tsx')).Inicio }) },
+              // Pedidos e agenda: todos os perfis (o banco filtra o que cada um vê).
+              { path: 'pedidos', lazy: async () => ({ Component: (await import('./telas/pedidos/Pedidos.tsx')).Pedidos }) },
+              { path: 'pedidos/:id', lazy: async () => ({ Component: (await import('./telas/pedidos/Pedido.tsx')).Pedido }) },
+              { path: 'agenda', lazy: async () => ({ Component: (await import('./telas/agenda/Agenda.tsx')).Agenda }) },
               {
                 // Endereço antigo da tabela de preços (fase 1): o ADM vai para Contratos; os demais, "Sem permissão".
                 element: <GuardaPapel papeis={['ADM']} />,
