@@ -544,3 +544,154 @@ describe('gerir-usuario', () => {
     expect(linhas.rows.some((l) => l.detalhe.includes('access_token') || l.detalhe.includes('token='))).toBe(false)
   })
 })
+
+describe('gestor da empresa (cliente N1) e a própria equipe', () => {
+  const existeConta = async (email: string) =>
+    (await comBanco((db) => db.query('select 1 from auth.users where email = $1', [email]))).rowCount
+
+  it('N1 convida colega da própria empresa (empresa forçada pelo servidor); o link abre com o nível pedido', async () => {
+    const empresa = await empresaNova()
+    const gestor = await criarPessoa({ papel: 'CLIENTE', nivel: 1, empresa })
+
+    // sem empresa_id: o servidor usa a do gestor
+    const r = await convidar(gestor, { email: novoEmail(), nome: 'Colega Visualizador', papel: 'CLIENTE', nivel: 3 })
+    expect(r.corpo, JSON.stringify(r.corpo)).toMatchObject({ ok: true })
+    const novo = await abrirLink(r.corpo.link)
+    expect(await meuPerfil(novo.cliente)).toMatchObject({
+      nome: 'Colega Visualizador',
+      papel: 'CLIENTE',
+      nivel: 3,
+      empresa_id: empresa,
+      senha_pendente: true,
+    })
+
+    // com a própria empresa explícita também vale
+    const r2 = await convidar(gestor, {
+      email: novoEmail(),
+      nome: 'Colega Gestor',
+      papel: 'CLIENTE',
+      empresa_id: empresa,
+      nivel: 1,
+    })
+    expect(r2.corpo).toMatchObject({ ok: true })
+    const outro = await abrirLink(r2.corpo.link)
+    expect(await meuPerfil(outro.cliente)).toMatchObject({ nivel: 1, empresa_id: empresa })
+
+    // auditado como sistema em nome do gestor
+    const linhas = await comBanco((db) =>
+      db.query("select 1 from app.auditoria where usuario_id = $1 and acao = 'CONVIDAR_LINK' and resultado = 'OK'", [
+        gestor.id,
+      ]),
+    )
+    expect(linhas.rowCount).toBe(2)
+  })
+
+  it('N1 não convida para outra empresa nem papel que não seja cliente; nível é obrigatório e de 1 a 3', async () => {
+    const gestor = await criarPessoa({ papel: 'CLIENTE', nivel: 1 })
+    const outraEmpresa = await empresaNova()
+    const casos: Array<[Record<string, unknown>, string]> = [
+      [{ papel: 'CLIENTE', empresa_id: outraEmpresa, nivel: 2 }, 'SEM_PERMISSAO'],
+      [{ papel: 'MOTORISTA' }, 'SEM_PERMISSAO'],
+      [{ papel: 'ADM' }, 'SEM_PERMISSAO'],
+      [{ papel: 'GESTOR_FROTA' }, 'SEM_PERMISSAO'],
+      [{ papel: 'CLIENTE' }, 'CAMPOS_INVALIDOS'],
+      [{ papel: 'CLIENTE', nivel: 4 }, 'CAMPOS_INVALIDOS'],
+      [{ papel: 'CLIENTE', nivel: 1.5 }, 'CAMPOS_INVALIDOS'],
+      [{ papel: 'CLIENTE', nivel: '2' }, 'CAMPOS_INVALIDOS'],
+    ]
+    for (const [extra, codigo] of casos) {
+      const email = novoEmail()
+      const r = await convidar(gestor, { email, nome: 'Convidado Indevido', ...extra })
+      expect(r.corpo, JSON.stringify(extra)).toMatchObject({ ok: false, codigo })
+      expect(r.corpo.link).toBeUndefined()
+      expect(await existeConta(email)).toBe(0)
+    }
+  })
+
+  it('N2 e N3 não convidam nem gerenciam colegas', async () => {
+    const empresa = await empresaNova()
+    const colega = await criarPessoa({ papel: 'CLIENTE', nivel: 2, empresa })
+    for (const nivel of [2, 3] as const) {
+      const quem = await criarPessoa({ papel: 'CLIENTE', nivel, empresa })
+      const email = novoEmail()
+      const r = await convidar(quem, { email, nome: 'Colega Novo', papel: 'CLIENTE', nivel: 3 })
+      expect(r.corpo, `N${nivel} convidar`).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+      expect(await existeConta(email)).toBe(0)
+      for (const acao of ['GERAR_LINK', 'DESATIVAR', 'REATIVAR']) {
+        const g = await gerir(quem, { acao, usuario_id: colega.id, motivo: 'tentativa indevida' })
+        expect(g.corpo, `N${nivel} ${acao}`).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+      }
+    }
+    expect((await colega.cliente.auth.refreshSession()).error).toBeNull()
+  })
+
+  it('N1 desativa (banimento no Auth) e reativa colega; gera novo link; não age sobre si, não-clientes nem outra empresa', async () => {
+    const empresa = await empresaNova()
+    const gestor = await criarPessoa({ papel: 'CLIENTE', nivel: 1, empresa })
+    const colega = await criarPessoa({ papel: 'CLIENTE', nivel: 2, empresa })
+    const motorista = await criarPessoa({ papel: 'MOTORISTA' })
+    const deFora = await criarPessoa({ papel: 'CLIENTE', nivel: 2 })
+    const banidoAte = async (id: string) =>
+      (await comBanco((db) => db.query('select banned_until from auth.users where id = $1', [id]))).rows[0].banned_until
+
+    const off = await gerir(gestor, { acao: 'DESATIVAR', usuario_id: colega.id, motivo: 'saiu da empresa' })
+    expect(off.corpo).toEqual({ ok: true })
+    expect(await banidoAte(colega.id)).not.toBeNull()
+    expect((await colega.cliente.auth.refreshSession()).error).not.toBeNull()
+
+    const on = await gerir(gestor, { acao: 'REATIVAR', usuario_id: colega.id, motivo: 'voltou para a empresa' })
+    expect(on.corpo).toEqual({ ok: true })
+    expect(await banidoAte(colega.id)).toBeNull()
+
+    // novo link para o colega: abre a sessão dele
+    const link = await gerir(gestor, { acao: 'GERAR_LINK', usuario_id: colega.id })
+    expect(link.corpo).toMatchObject({ ok: true })
+    expect((await abrirLink(link.corpo.link)).usuarioId).toBe(colega.id)
+
+    // RESETAR_2FA segue só do ADM
+    expect((await gerir(gestor, { acao: 'RESETAR_2FA', usuario_id: colega.id })).corpo).toMatchObject({
+      ok: false,
+      codigo: 'SEM_PERMISSAO',
+    })
+    // a si mesmo
+    expect((await gerir(gestor, { acao: 'DESATIVAR', usuario_id: gestor.id, motivo: 'a mim mesmo' })).corpo).toMatchObject({
+      ok: false,
+      codigo: 'PROPRIO_USUARIO',
+    })
+    expect((await gerir(gestor, { acao: 'GERAR_LINK', usuario_id: gestor.id })).corpo).toMatchObject({
+      ok: false,
+      codigo: 'PROPRIO_USUARIO',
+    })
+    // não-cliente e cliente de outra empresa (não revela se existe)
+    for (const alvo of [motorista, deFora]) {
+      for (const acao of ['DESATIVAR', 'GERAR_LINK']) {
+        const r = await gerir(gestor, { acao, usuario_id: alvo.id, motivo: 'tentativa indevida' })
+        expect(r.corpo, `${alvo.papel} ${acao}`).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+      }
+      expect(await banidoAte(alvo.id)).toBeNull()
+    }
+    expect(await banidoAte(gestor.id)).toBeNull()
+    expect((await motorista.cliente.auth.refreshSession()).error).toBeNull()
+  })
+
+  it('ADM convida cliente com nível; sem nível o cliente nasce N1 (compatível); nível só para cliente', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const empresa = await empresaNova()
+    const r = await convidar(adm, {
+      email: novoEmail(),
+      nome: 'Cliente Solicitante',
+      papel: 'CLIENTE',
+      empresa_id: empresa,
+      nivel: 2,
+    })
+    expect(r.corpo).toMatchObject({ ok: true })
+    expect(await meuPerfil((await abrirLink(r.corpo.link)).cliente)).toMatchObject({ nivel: 2, empresa_id: empresa })
+
+    const sem = await convidar(adm, { email: novoEmail(), nome: 'Cliente Gestor', papel: 'CLIENTE', empresa_id: empresa })
+    expect(sem.corpo).toMatchObject({ ok: true })
+    expect(await meuPerfil((await abrirLink(sem.corpo.link)).cliente)).toMatchObject({ nivel: 1 })
+
+    const motorista = await convidar(adm, { email: novoEmail(), nome: 'Motorista Nivel', papel: 'MOTORISTA', nivel: 1 })
+    expect(motorista.corpo).toMatchObject({ ok: false, codigo: 'CAMPOS_INVALIDOS' })
+  })
+})

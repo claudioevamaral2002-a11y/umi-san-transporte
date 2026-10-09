@@ -4,21 +4,27 @@ import { criarServidor, registrar } from '../_compartilhado/servidor.ts'
 
 Deno.serve(
   criarServidor('convidar', async (ctx) => {
-    const { email, nome, papel, empresa_id: empresa } = ctx.corpo
+    const { email, nome, papel, empresa_id: empresa, nivel } = ctx.corpo
     if (typeof email !== 'string' || typeof nome !== 'string' || typeof papel !== 'string') {
       return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
     }
     if (empresa !== undefined && empresa !== null && typeof empresa !== 'string') {
       return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
     }
+    // Nível do cliente (1 gestor da empresa, 2 solicitante, 3 visualizador): só a forma é conferida aqui.
+    if (nivel !== undefined && nivel !== null && !(typeof nivel === 'number' && Number.isInteger(nivel))) {
+      return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
+    }
     if (!ctx.origem) return { ok: false, codigo: 'ERRO_INESPERADO' }
 
-    // A RPC decide (permissão, aal2, limite, validações) com o JWT do ADM.
+    // A RPC decide tudo com o JWT de quem chama (ADM ou gestor da empresa N1): permissão, aal2, empresa
+    // forçada para o N1, nível, limite e validações. Esta função não tem regra de papel própria.
     const { data: preparo, error } = await ctx.usuario.rpc('preparar_convite', {
       p_email: email,
       p_nome: nome,
       p_papel: papel,
       p_empresa: empresa ?? null,
+      p_nivel: nivel ?? null,
     })
     if (error) {
       logErro(ctx.funcao, 'preparar', error)

@@ -82,6 +82,9 @@ async function resetar2fa(ctx: Contexto, usuario: string): Promise<Retorno> {
   return { ok: true }
 }
 
+// Quem pode cada ação é decidido só pelas RPCs, com o JWT de quem chama: o ADM faz tudo; o gestor da
+// empresa (cliente N1) gera link e desativa/reativa colegas CLIENTE da própria empresa (nunca a si);
+// RESETAR_2FA continua só do ADM (autorizar_operacao_usuario recusa o N1).
 Deno.serve(
   criarServidor('gerir-usuario', async (ctx) => {
     const { acao, usuario_id: usuario, motivo } = ctx.corpo
