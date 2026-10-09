@@ -65,7 +65,7 @@ end $$;
 select is(pg_temp.acoes('a5') -> 'aprovar', 'true'::jsonb, 'ORCADA: o dono (N2) pode aprovar');
 select is(pg_temp.acoes('a4') -> 'aprovar', 'true'::jsonb, 'ORCADA: a N1 pode aprovar pela empresa');
 select is(pg_temp.acoes('a6') -> 'aprovar', 'false'::jsonb, 'ORCADA: N3 não aprova');
-select is(pg_temp.acoes('a8') -> 'aprovar', 'false'::jsonb, 'ORCADA: colega N2 não aprova');
+select is(pg_temp.acoes('a8'), null::jsonb, 'ORCADA: colega N2 nem vê o pedido do colega (sem ações)');
 select is(pg_temp.acoes('a2') -> 'aprovar', 'false'::jsonb, 'ORCADA: motorista não aprova');
 select is(pg_temp.acoes('a1') -> 'aprovar', 'false'::jsonb, 'ORCADA: ADM não aprova pelo cliente');
 select is(pg_temp.acoes('a5') -> 'cancelar_agendado', 'false'::jsonb, 'ORCADA: ainda não há agendamento para cancelar');
@@ -81,7 +81,7 @@ select is(pg_temp.acoes('a4') -> 'cancelar_agendado', 'true'::jsonb, 'AGENDADA: 
 select is(pg_temp.acoes('a2') -> 'cancelar_agendado', 'true'::jsonb, 'AGENDADA: o motorista atribuído cancela (sem custo)');
 select is(pg_temp.acoes('a1') -> 'cancelar_agendado', 'true'::jsonb, 'AGENDADA: o ADM cancela (sem custo)');
 select is(pg_temp.acoes('a6') -> 'cancelar_agendado', 'false'::jsonb, 'AGENDADA: N3 não cancela');
-select is(pg_temp.acoes('a8') -> 'cancelar_agendado', 'false'::jsonb, 'AGENDADA: colega N2 não cancela');
+select is(pg_temp.acoes('a8'), null::jsonb, 'AGENDADA: colega N2 nem vê o pedido do colega (sem ações)');
 select is(pg_temp.acoes('a3') -> 'cancelar_agendado', 'false'::jsonb, 'AGENDADA: gestor de frota não cancela');
 
 ------------------------------------------------------------------ CANCELADA
