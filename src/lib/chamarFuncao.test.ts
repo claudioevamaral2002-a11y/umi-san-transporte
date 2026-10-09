@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { criarChamador } from './chamarFuncao.ts'
+import { criarChamador, criarChamadorPublico } from './chamarFuncao.ts'
 
 const json = (corpo: unknown, status = 200) =>
   new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
@@ -62,5 +62,23 @@ describe('criarChamador', () => {
     })
     expect(await com(async () => new Response('', { status: 401 }))).toEqual({ ok: false, codigo: 'NAO_AUTENTICADO' })
     expect(await com(async () => json({ ok: false }))).toEqual({ ok: false, codigo: 'ERRO_INESPERADO' })
+  })
+})
+
+describe('criarChamadorPublico', () => {
+  it('POST sem Authorization (só apikey), para funções sem sessão', async () => {
+    let pedido: { url: string; init?: RequestInit } | undefined
+    const chamar = criarChamadorPublico({
+      url: 'https://x.supabase.co',
+      chavePublica: 'sb_publishable_x',
+      buscar: async (url, init) => {
+        pedido = { url: String(url), init }
+        return json({ ok: false, codigo: 'EXPIRADO' })
+      },
+    })
+    expect(await chamar('resgatar-link', { codigo: 'K7M2QX9PRT' })).toEqual({ ok: false, codigo: 'EXPIRADO' })
+    expect(pedido?.url).toBe('https://x.supabase.co/functions/v1/resgatar-link')
+    expect(pedido?.init?.method).toBe('POST')
+    expect(pedido?.init?.headers).toEqual({ apikey: 'sb_publishable_x', 'Content-Type': 'application/json' })
   })
 })

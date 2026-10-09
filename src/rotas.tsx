@@ -28,6 +28,11 @@ export const roteador = createBrowserRouter([
     // Primeira carga das telas sob demanda: pickup só se passar de 400 ms.
     HydrateFallback: () => <CarregandoPickup ativo />,
     children: [
+      // Link curto de convite/recuperação: aberto em qualquer estado; nada acontece até "Continuar".
+      {
+        path: 'c/:codigo',
+        lazy: async () => ({ Component: (await import('./telas/entrada/ResgatarLink.tsx')).ResgatarLink }),
+      },
       {
         element: <Guarda permitidos={['anonimo']} />,
         children: [

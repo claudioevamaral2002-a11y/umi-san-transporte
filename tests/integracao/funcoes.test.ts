@@ -19,17 +19,19 @@ async function chamar(
   funcao: string,
   token: string | null,
   corpo: unknown,
-  extra: { metodo?: string; origem?: string } = {},
+  extra: { metodo?: string; origem?: string; cabecalhos?: Record<string, string>; consulta?: string } = {},
 ): Promise<{ status: number; corpo: Resultado; cabecalhos: Headers }> {
-  const resposta = await fetch(`${URL_SUPABASE}/functions/v1/${funcao}`, {
+  const semCorpo = extra.metodo === 'GET' || extra.metodo === 'HEAD'
+  const resposta = await fetch(`${URL_SUPABASE}/functions/v1/${funcao}${extra.consulta ?? ''}`, {
     method: extra.metodo ?? 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: CHAVE_PUBLICA,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(extra.origem ? { Origin: extra.origem } : {}),
+      ...extra.cabecalhos,
     },
-    body: extra.metodo === 'GET' ? undefined : JSON.stringify(corpo),
+    body: semCorpo ? undefined : JSON.stringify(corpo),
   })
   const texto = await resposta.text()
   let json: Resultado
@@ -46,22 +48,58 @@ const gerir = (quem: Pessoa, corpo: Record<string, unknown>) => chamar('gerir-us
 const novoEmail = () => `convite-${randomUUID()}@teste.local`
 const SENHA_FORTE = () => 'Forte-' + randomUUID()
 
-/** Abre o link do Auth sem seguir o redirect e devolve a sessão que o fragmento carrega. */
-async function abrirLink(link: string) {
-  const resposta = await fetch(link, { redirect: 'manual' })
-  expect([302, 303, 307], `status ${resposta.status}`).toContain(resposta.status)
-  const destino = new URL(resposta.headers.get('location') ?? '')
-  expect(destino.origin).toBe(ORIGEM_APP)
-  expect(destino.pathname).toBe('/definir-senha')
-  const params = new URLSearchParams(destino.hash.slice(1))
-  const accessToken = params.get('access_token')
-  const refreshToken = params.get('refresh_token')
-  if (!accessToken || !refreshToken) throw new Error(`link sem sessão: ${params.get('error_code') ?? 'sem erro'}`)
+const ALFABETO = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+const CODIGO_CURTO = new RegExp(`^[${ALFABETO}]{10}$`)
+const LINK_CURTO = {
+  exec: (link: string) => {
+    const codigo = link.startsWith(`${ORIGEM_APP}/c/`) ? link.slice(`${ORIGEM_APP}/c/`.length) : ''
+    return CODIGO_CURTO.test(codigo) ? ([link, codigo] as const) : null
+  },
+}
+
+/** IP fictício e único por chamada de teste (o limite do resgate é por IP/dia). */
+const ipNovo = () => `198.51.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`
+
+/** Código do link curto devolvido pelas funções (`${ORIGEM_APP}/c/<código>`). */
+function codigoDe(link: unknown): string {
+  expect(typeof link).toBe('string')
+  const m = LINK_CURTO.exec(link as string)
+  expect(m, `link fora do formato curto: ${String(link)}`).not.toBeNull()
+  return m![1]!
+}
+
+/** "Continuar": POST resgatar-link com o código (como o front faz). */
+const resgatar = (codigo: string, ip = ipNovo()) =>
+  chamar('resgatar-link', null, { codigo }, { origem: ORIGEM_APP, cabecalhos: { 'cf-connecting-ip': ip, 'x-forwarded-for': ip } })
+
+/** Abre o link curto como a pessoa: resgata (uso único) e monta a sessão com os tokens devolvidos. */
+async function abrirLink(link: unknown) {
+  const r = await resgatar(codigoDe(link))
+  expect(r.corpo, JSON.stringify(r.corpo)).toMatchObject({ ok: true })
+  expect(r.cabecalhos.get('cache-control')).toBe('no-store')
   const cliente = clientePublico()
-  const { data, error } = await cliente.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+  const { data, error } = await cliente.auth.setSession({
+    access_token: r.corpo.access_token as string,
+    refresh_token: r.corpo.refresh_token as string,
+  })
   if (error || !data.session) throw error ?? new Error('setSession sem sessão')
   return { cliente, token: data.session.access_token, usuarioId: data.session.user.id }
 }
+
+const linkNoBanco = async (codigo: string) =>
+  (
+    await comBanco((db) =>
+      db.query<{ usado_em: Date | null; tipo: string; token_hash: string }>(
+        'select usado_em, tipo, token_hash from interno.links_acesso where codigo_hash = interno.hash_texto($1)',
+        [codigo],
+      ),
+    )
+  ).rows[0]
+
+const metodosAmr = (token: string) =>
+  ((JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString()) as { amr?: Array<{ method: string }> }).amr ?? []).map(
+    (a) => a.method,
+  )
 
 const meuPerfil = async (cliente: ReturnType<typeof clientePublico>) => {
   const r = await cliente.rpc('meu_perfil')
@@ -110,7 +148,7 @@ describe('convidar', () => {
     expect(r.corpo).toMatchObject({ ok: true })
     expect(typeof r.corpo.link).toBe('string')
 
-    const novo = await abrirLink(r.corpo.link as string)
+    const novo = await abrirLink(r.corpo.link)
     expect(await meuPerfil(novo.cliente)).toMatchObject({
       nome: 'Cliente Convidado',
       papel: 'CLIENTE',
@@ -121,9 +159,10 @@ describe('convidar', () => {
     // enquanto a senha está pendente o banco não entrega dados
     expect((await novo.cliente.from('empresas').select('id')).data).toEqual([])
 
-    // diagnóstico: só os nomes dos métodos de autenticação (amr) que o link emite
-    const amr = (JSON.parse(Buffer.from(novo.token.split('.')[1]!, 'base64url').toString()) as { amr?: Array<{ method: string }> }).amr
-    console.log('amr do link de convite:', JSON.stringify(amr?.map((a) => a.method)))
+    // diagnóstico: só os nomes dos métodos de autenticação (amr) que o verifyOtp do convite emite
+    const amr = metodosAmr(novo.token)
+    console.log('amr do link de convite (verifyOtp):', JSON.stringify(amr))
+    expect(amr.some((m) => ['invite', 'recovery', 'otp', 'magiclink'].includes(m))).toBe(true)
 
     const fraca = await chamar('definir-senha', novo.token, { senha: 'curta1A' })
     expect((await chamar('definir-senha', novo.token, { senha: 'Aa1' + 'x'.repeat(80) })).corpo).toMatchObject({
@@ -164,7 +203,7 @@ describe('convidar', () => {
     const senha = `Forte-${randomUUID()}`
     const r = await convidar(adm, { email, nome: 'Motorista Convidado', papel: 'MOTORISTA' })
     expect(r.corpo).toMatchObject({ ok: true })
-    const novo = await abrirLink(r.corpo.link as string)
+    const novo = await abrirLink(r.corpo.link)
     expect(await meuPerfil(novo.cliente)).toMatchObject({ papel: 'MOTORISTA', senha_pendente: true, tem_2fa: false })
 
     expect((await chamar('definir-senha', novo.token, { senha })).corpo).toEqual({ ok: true })
@@ -214,6 +253,124 @@ describe('convidar', () => {
     expect(linhas.rows[0].resultado).toBe('OK')
     expect(linhas.rows[0].detalhe).toContain('sistema')
     expect(linhas.rows[0].detalhe).not.toContain(r.corpo.link as string)
+  })
+})
+
+describe('links curtos: imunes a pré-visualização (WhatsApp, navegador, varredores)', () => {
+  it('o link é curto, sem token do Auth; só o hash do código fica no banco', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const r = await convidar(adm, { email: novoEmail(), nome: 'Convidado Curto', papel: 'MOTORISTA' })
+    expect(r.corpo).toMatchObject({ ok: true })
+    const link = r.corpo.link as string
+    const codigo = codigoDe(link)
+    expect(link).not.toMatch(/token|verify|type=|redirect|supabase/)
+    expect(link.length).toBeLessThan(45)
+    const linha = await linkNoBanco(codigo)
+    expect(linha).toMatchObject({ tipo: 'invite', usado_em: null })
+    const emClaro = await comBanco((db) =>
+      db.query('select 1 from interno.links_acesso where codigo_hash = $1 or token_hash = $1', [codigo]),
+    )
+    expect(emClaro.rowCount).toBe(0)
+  })
+
+  it('GET/HEAD (pré-carregamento, pré-visualização) não gastam o link; o resgate vale uma vez só', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const r = await convidar(adm, { email: novoEmail(), nome: 'Convidado Previa', papel: 'CLIENTE', empresa_id: await empresaNova() })
+    const codigo = codigoDe(r.corpo.link)
+
+    // o que um robô de pré-visualização faria com a função (a página do app é estática e não chama nada)
+    expect((await chamar('resgatar-link', null, {}, { metodo: 'GET', consulta: `?codigo=${codigo}` })).status).toBe(405)
+    expect((await chamar('resgatar-link', null, {}, { metodo: 'HEAD', consulta: `?codigo=${codigo}` })).status).toBe(405)
+    expect((await linkNoBanco(codigo))?.usado_em).toBeNull()
+
+    // o token do Auth continua válido: o resgate abre a sessão…
+    const primeira = await abrirLink(r.corpo.link)
+    expect(await meuPerfil(primeira.cliente)).toMatchObject({ nome: 'Convidado Previa', senha_pendente: true })
+    expect((await linkNoBanco(codigo))?.usado_em).not.toBeNull()
+
+    // …e só uma vez (no app e no Auth)
+    expect((await resgatar(codigo)).corpo).toEqual({ ok: false, codigo: 'EXPIRADO' })
+    const tokenHash = (await linkNoBanco(codigo))!.token_hash
+    const direto = await clientePublico().auth.verifyOtp({ token_hash: tokenHash, type: 'invite' })
+    expect(direto.error).not.toBeNull()
+  })
+
+  it('verifyOtp com o token_hash funciona uma vez e falha na segunda', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    const r = await gerir(adm, { acao: 'GERAR_LINK', usuario_id: cliente.id })
+    const { token_hash: tokenHash, tipo } = (await linkNoBanco(codigoDe(r.corpo.link)))!
+    expect(tipo).toBe('recovery')
+    const uma = await clientePublico().auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+    expect(uma.error).toBeNull()
+    expect(uma.data.session?.user.id).toBe(cliente.id)
+    console.log('amr do verifyOtp(recovery) direto:', JSON.stringify(metodosAmr(uma.data.session!.access_token)))
+    const duas = await clientePublico().auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+    expect(duas.error).not.toBeNull()
+  })
+
+  it('um link novo da mesma pessoa anula o anterior', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    const antigo = codigoDe((await gerir(adm, { acao: 'GERAR_LINK', usuario_id: cliente.id })).corpo.link)
+    const novo = (await gerir(adm, { acao: 'GERAR_LINK', usuario_id: cliente.id })).corpo.link
+    expect((await resgatar(antigo)).corpo).toEqual({ ok: false, codigo: 'EXPIRADO' })
+    expect((await abrirLink(novo)).usuarioId).toBe(cliente.id)
+  })
+
+  it('código errado: NAO_ENCONTRADO; sem sessão e sem detalhes', async () => {
+    for (const codigo of ['ZZZZZZZZZZ', 'curto', '', 'K7M2-QX9PRT']) {
+      const r = await resgatar(codigo)
+      expect(r.corpo, codigo).toEqual({ ok: false, codigo: 'NAO_ENCONTRADO' })
+    }
+    expect((await chamar('resgatar-link', null, 'não é objeto', { origem: ORIGEM_APP })).corpo).toMatchObject({ ok: false })
+  })
+
+  it('força bruta: 30 tentativas por IP/dia; a 31ª é recusada mesmo com código certo (sem gastar o link)', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    const codigo = codigoDe((await gerir(adm, { acao: 'GERAR_LINK', usuario_id: cliente.id })).corpo.link)
+    const ip = ipNovo()
+    // 30 tentativas já gastas hoje por este IP (direto no banco: o freio em memória barraria antes)
+    await comBanco((db) =>
+      db.query(
+        `insert into interno.limites_ip (ip_hash, acao, janela_inicio, contagem)
+         values (interno.hash_texto('ip:' || $1), 'RESGATAR_LINK',
+                 date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo', 30)`,
+        [ip],
+      ),
+    )
+    expect((await resgatar(codigo, ip)).corpo).toEqual({ ok: false, codigo: 'LIMITE_EXCEDIDO' })
+    expect((await linkNoBanco(codigo))?.usado_em).toBeNull()
+    // outro IP segue normal
+    expect((await resgatar(codigo, ipNovo())).corpo).toMatchObject({ ok: true })
+  })
+
+  it('freio em memória: rajada do mesmo IP é cortada antes do banco', async () => {
+    const ip = ipNovo()
+    const codigos: string[] = []
+    for (let i = 0; i < 15; i++) codigos.push(String((await resgatar('ZZZZZZZZZZ', ip)).corpo.codigo))
+    expect(codigos).toContain('LIMITE_EXCEDIDO')
+  })
+
+  it('protocolo: só POST; origem de navegador só a configurada', async () => {
+    expect((await chamar('resgatar-link', null, {}, { metodo: 'GET' })).status).toBe(405)
+    expect((await chamar('resgatar-link', null, { codigo: 'ZZZZZZZZZZ' }, { origem: 'https://mau.example' })).status).toBe(403)
+  })
+
+  it('o resgate fica auditado (origem sistema), sem o código nem o token', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    const codigo = codigoDe((await gerir(adm, { acao: 'GERAR_LINK', usuario_id: cliente.id })).corpo.link)
+    await abrirLink(`${ORIGEM_APP}/c/${codigo}`)
+    const linhas = await comBanco((db) =>
+      db.query<{ acao: string; resultado: string; detalhe: string }>(
+        "select acao, resultado, detalhe::text as detalhe from app.auditoria where usuario_id = $1 and acao in ('CRIAR_LINK_CURTO', 'RESGATAR_LINK')",
+        [cliente.id],
+      ),
+    )
+    expect(linhas.rows.map((l) => `${l.acao}:${l.resultado}`).sort()).toEqual(['CRIAR_LINK_CURTO:OK', 'RESGATAR_LINK:OK'])
+    expect(linhas.rows.every((l) => l.detalhe.includes('sistema') && !l.detalhe.includes(codigo))).toBe(true)
   })
 })
 
@@ -286,8 +443,12 @@ describe('gerir-usuario', () => {
 
     const r = await gerir(adm, { acao: 'GERAR_LINK', usuario_id: cliente.id })
     expect(r.corpo).toMatchObject({ ok: true })
-    const sessao = await abrirLink(r.corpo.link as string)
+    const sessao = await abrirLink(r.corpo.link)
     expect(sessao.usuarioId).toBe(cliente.id)
+    const amr = metodosAmr(sessao.token)
+    console.log('amr do link de recuperação (verifyOtp):', JSON.stringify(amr))
+    // a recuperação também passa pela porta de definir-senha (amr de link recente)
+    expect((await chamar('definir-senha', sessao.token, { senha: SENHA_FORTE() })).corpo).toEqual({ ok: true })
 
     expect((await gerir(adm, { acao: 'GERAR_LINK', usuario_id: outroAdm.id })).corpo).toMatchObject({ ok: false, codigo: 'ALVO_ADM' })
     expect((await gerir(adm, { acao: 'GERAR_LINK', usuario_id: adm.id })).corpo).toMatchObject({

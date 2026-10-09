@@ -9,6 +9,8 @@ Guia passo a passo para o dono do sistema. Não precisa saber programar. Em todo
 - Painel Cloudflare: https://dash.cloudflare.com
 
 > Regra de ouro: nunca cole links de acesso, senhas ou chaves em conversas, e-mails ou prints. Os links gerados valem por 24 horas (`otp_expiry` no `config.toml`) e só funcionam uma vez.
+>
+> **Como é o link:** curto, no formato `https://umi-san-transporte.pages.dev/c/K7M2QX9PRT` (10 letras/números, sem 0, O, 1, I nem L). Ao abrir, aparece a tela **Crie sua senha** com o texto "Toque em Continuar para validar seu link de acesso." e o botão **Continuar**. O link só é gasto quando a pessoa toca em **Continuar**: a pré-visualização do WhatsApp/Telegram, o pré-carregamento do navegador e os antivírus de e-mail **não** queimam mais o link. Se aparecer "Este link expirou ou já foi usado. Peça um novo ao administrador.", gere um novo link.
 
 ---
 
@@ -20,7 +22,7 @@ Só funciona enquanto ainda não existe nenhum ADM.
 2. Clique em **Run workflow** (botão à direita). Preencha **e-mail** e **nome** do administrador e clique no botão verde **Run workflow**.
 3. Aguarde ~1 minuto. Clique na execução que apareceu (a mais recente) e espere o círculo ficar verde.
 4. Na página da execução, role até o **resumo** (seção "Convite do primeiro ADM"). Lá está o botão **Abrir link para criar a senha**. O link não aparece nos logs, só no resumo.
-5. Clique no link. Abre o aplicativo na tela **Crie sua senha**. Escolha uma senha com pelo menos 10 caracteres, com maiúscula, minúscula e número (letras sem acento: A-Z e a-z) e clique em **Criar senha**.
+5. Clique no link. Abre o aplicativo na tela **Crie sua senha**; toque em **Continuar** (é aqui que o link é usado). No formulário que aparece, escolha uma senha com pelo menos 10 caracteres, com maiúscula, minúscula e número (letras sem acento: A-Z e a-z) e clique em **Criar senha**.
 6. O app volta para a tela **Entrar** com o aviso "Senha criada. Entre com a nova senha." Entre com **e-mail e senha** (o CAPTCHA é automático).
 7. Em seguida aparece a tela do **2FA**: abra um aplicativo autenticador no celular (Google Authenticator, Microsoft Authenticator, Authy...), leia o QR code e digite o código de 6 dígitos.
 8. Pronto. A partir daí o login é e-mail + senha + código do autenticador.
@@ -49,7 +51,7 @@ Se o ADM também esqueceu a senha, veja o item 3 (outro ADM gera o link) ou, sen
 1. Entre no aplicativo como ADM: https://umi-san-transporte.pages.dev
 2. Menu **Usuários**.
 3. Para quem ainda não tem conta: botão **Convidar** (no topo da tela), preencha o formulário e clique em **Gerar link de convite**. Para quem já tem conta: na linha da pessoa, clique em **Gerenciar**, depois em **Gerar novo link** e em **Gerar link**.
-4. Use **Copiar** ou **Enviar no WhatsApp**. O link vale 24 horas e só funciona uma vez. Sem domínio próprio, o app não envia e-mail: você entrega o link.
+4. Use **Copiar** ou **Enviar no WhatsApp**. O link vale 24 horas e só funciona uma vez; a pessoa abre e toca em **Continuar** (a prévia do WhatsApp não gasta o link). Gerar um novo link para a mesma pessoa anula o anterior. Sem domínio próprio, o app não envia e-mail: você entrega o link.
 5. Para motorista que perdeu o 2FA: na linha da pessoa, **Gerenciar**, depois **Resetar 2FA** (aparece só para quem tem 2FA cadastrado).
 
 ---

@@ -16,6 +16,11 @@ interface ValorSessao {
   recarregar: () => void
   /** Encerra a sessão (revoga o refresh token no servidor) e, se houver, deixa um aviso para /entrar. */
   sair: (aviso?: string) => Promise<void>
+  /**
+   * Abre a sessão devolvida pelo resgate do link curto (convite/recuperação) como "aberta por link"
+   * e devolve o novo estado já carregado (ou `null` se falhou).
+   */
+  entrarPorLink: (tokens: { access_token: string; refresh_token: string }) => Promise<EstadoSessao | null>
 }
 
 const ContextoSessao = createContext<ValorSessao | null>(null)
@@ -116,6 +121,23 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     if (error) await supabase.auth.signOut({ scope: 'local' })
   }, [])
 
+  const entrarPorLink = useCallback(async (tokens: { access_token: string; refresh_token: string }) => {
+    const supabase = await cliente()
+    viaLink = true
+    const { error } = await supabase.auth.setSession(tokens)
+    if (error) {
+      viaLink = false
+      return null
+    }
+    // Descarta cargas antigas (de antes da sessão nova) e já entrega o estado novo à guarda.
+    ++sequencia.current
+    const r = await carregar().catch(() => null)
+    if (!r) return null
+    setResultado(r)
+    setFalhou(false)
+    return r.estado
+  }, [])
+
   const valor = useMemo<ValorSessao>(
     () => ({
       estado: resultado?.estado ?? 'carregando',
@@ -126,8 +148,9 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       limparAviso: () => setAviso(null),
       recarregar: atualizar,
       sair,
+      entrarPorLink,
     }),
-    [resultado, falhou, aviso, atualizar, sair],
+    [resultado, falhou, aviso, atualizar, sair, entrarPorLink],
   )
 
   return <ContextoSessao.Provider value={valor}>{children}</ContextoSessao.Provider>

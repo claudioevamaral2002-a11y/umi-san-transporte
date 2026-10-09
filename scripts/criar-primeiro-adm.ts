@@ -2,6 +2,7 @@
 // Uso: SUPABASE_URL=... SUPABASE_SERVICE_KEY=... GITHUB_STEP_SUMMARY=... node scripts/criar-primeiro-adm.ts <email> <nome>
 // O link vai SOMENTE para o arquivo GITHUB_STEP_SUMMARY; nunca para stdout/stderr.
 import { createClient } from '@supabase/supabase-js'
+import { registrarLinkCurto } from '../supabase/functions/_compartilhado/links.ts'
 import { escreverResumo, falhar, lerConfig, montarResumoLink, validarEmail, validarNome } from './adm-comum.ts'
 
 const email = validarEmail(process.argv[2])
@@ -28,13 +29,16 @@ if (!convite.data?.ok) {
   recuperacao = true
 }
 
+const tipo = recuperacao ? 'recovery' : 'invite'
 const gerado = await cliente.auth.admin.generateLink({
-  type: recuperacao ? 'recovery' : 'invite',
+  type: tipo,
   email,
   options: { redirectTo: `${config.siteUrl}/definir-senha` },
 })
-const link = gerado.data?.properties?.action_link
-if (gerado.error || !link) falhar('ERRO_AUTH')
+// Link curto (/c/<código>): a pré-visualização do link não gasta o token; só o toque em "Continuar".
+const curto = await registrarLinkCurto(cliente, gerado, tipo, config.siteUrl)
+if (!curto.ok) falhar(curto.etapa === 'gerar' ? 'ERRO_AUTH' : 'ERRO_RPC')
+const link = curto.link
 
 const titulo = recuperacao ? 'Link de recuperação do primeiro ADM' : 'Convite do primeiro ADM'
 if (!escreverResumo(process.env.GITHUB_STEP_SUMMARY, montarResumoLink({ titulo, email, link, recuperacao }))) {

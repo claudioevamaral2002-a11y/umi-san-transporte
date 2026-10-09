@@ -525,5 +525,10 @@ O teste mensal restaura o backup no Supabase local (CLI) dentro do próprio GitH
 - Fase futura: **SMS como fator alternativo** (Supabase MFA por telefone + provedor Twilio), com preenchimento automático do código (`autocomplete="one-time-code"`; WebOTP no Android). A pessoa escolhe autenticador ou SMS. Exige conta Twilio (custo por SMS) e telefone cadastrado.
 - WhatsApp descartado como canal de código: não preenche automaticamente em app web e exige WhatsApp Business verificado.
 
+### A9. Um endereço e uma marca por cliente, mesmo backend
+- Cada empresa cliente terá endereço próprio com sua marca (ex.: `umisan.ivotransportes.com.br`), servindo o mesmo app e o mesmo Supabase (o banco já separa por empresa — A1). Agenda do motorista única entre clientes.
+- Depende de domínio próprio (adiado por decisão do usuário em 2026-10-08). Até lá: `umi-san-transporte.pages.dev`.
+- Links de acesso curtos: `<endereço>/c/<código de 10 caracteres>`, imunes a pré-visualização (validação só no clique "Continuar").
+
 ### A6. Projetos Supabase
 Um único projeto remoto (produção, sa-east-1). CI e desenvolvimento usam o Supabase local. A segunda vaga do plano Free fica livre para restauração de emergência.

@@ -35,6 +35,7 @@ describe('resumo', () => {
     expect(md).toContain('(https://l/x)')
     expect(md).toContain('24 h')
     expect(md).toContain('uso único')
+    expect(md).toContain('Continuar')
     expect(md).toContain('recuperação')
   })
   it('escreve no arquivo (append) e recusa sem caminho', () => {

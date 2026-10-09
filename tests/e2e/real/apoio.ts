@@ -67,10 +67,20 @@ export async function entrarComDoisFatores(page: Page, email: string, senha: str
   await confirmarCodigo(page, segredo)
 }
 
-/** Da tela do link de convite até o novo login: "Crie sua senha" → /entrar. */
+/**
+ * Da tela do link curto até o novo login: prévia (GET) → "Continuar" → "Crie sua senha" → /entrar.
+ * Antes do toque, simula o que WhatsApp/navegador fazem (GET do link e uma recarga): nada pode ser gasto.
+ */
 export async function definirSenhaPeloLink(page: Page, link: string, senha: string) {
+  expect(link).toMatch(/\/c\/[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{10}$/)
+  const previa = await page.request.get(link)
+  expect(previa.status()).toBe(200)
   await page.goto(link)
-  await expect(page.getByRole('heading', { name: 'Crie sua senha' })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('Toque em Continuar para validar seu link de acesso.')).toBeVisible({ timeout: 30_000 })
+  await page.reload()
+  await page.getByRole('button', { name: 'Continuar' }).click()
+  await expect(page).toHaveURL(/\/definir-senha$/, { timeout: 30_000 })
+  await expect(page.getByRole('heading', { name: 'Crie sua senha' })).toBeVisible()
   await page.getByLabel('Nova senha').fill(senha)
   await page.getByLabel('Repita a senha').fill(senha)
   await page.getByRole('button', { name: 'Criar senha' }).click()

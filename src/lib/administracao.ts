@@ -53,6 +53,9 @@ export const ACOES: Record<string, string> = {
   CONFIRMAR_SENHA: 'Confirmar senha',
   CONVITE_PRIMEIRO_ADM: 'Convite do primeiro administrador',
   LINK_PRIMEIRO_ADM: 'Link do primeiro administrador',
+  CRIAR_LINK_CURTO: 'Criar link de acesso',
+  RESGATAR_LINK: 'Abrir link de acesso (Continuar)',
+  VERIFICAR_LINK: 'Validar link de acesso',
 }
 
 export const nomeAcao = (acao: string) => ACOES[acao] ?? acao

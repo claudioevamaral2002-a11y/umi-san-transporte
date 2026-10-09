@@ -54,6 +54,15 @@ export function criarClientes(jwt: string): Clientes {
   }
 }
 
+/** Sem usuário (resgate de link): `publico` para o verifyOtp e `servico` para as RPCs de sistema. */
+export function criarClientesSistema(): { publico: ClienteApi; servico: ClienteApi } {
+  const url = exigir('SUPABASE_URL')
+  return {
+    publico: createClient(url, chave('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS'), opcoes),
+    servico: createClient(url, chave('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEYS'), opcoes),
+  }
+}
+
 export function origensConfiguradas(): string | undefined {
   return Deno.env.get('APP_ORIGENS')
 }

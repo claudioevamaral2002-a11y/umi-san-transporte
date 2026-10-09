@@ -4,8 +4,8 @@ export function mensagemDoLink(nome: string, link: string, tipo: 'convite' | 're
   const saudacao = primeiro ? `Olá, ${primeiro}!` : 'Olá!'
   const corpo =
     tipo === 'convite'
-      ? 'Seu acesso à IVO Transportes está pronto. Abra o link para criar sua senha'
-      : 'Aqui está o link para criar uma nova senha na IVO Transportes'
+      ? 'Seu acesso à IVO Transportes está pronto. Abra o link e toque em Continuar para criar sua senha'
+      : 'Aqui está o link para criar uma nova senha na IVO Transportes. Abra e toque em Continuar'
   return `${saudacao} ${corpo} (válido por 24 h, uso único): ${link}`
 }
 
