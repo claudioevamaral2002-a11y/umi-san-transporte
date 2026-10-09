@@ -16,9 +16,9 @@ test.describe('cliente', () => {
     const chamadas = await simularApi(page)
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Olá, Diego' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Pedidos/, /Agenda/, /Regras do serviço/])
+    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Pedidos/, /Agenda/, /Regras do serviço/, /Extrato/])
     const menu = await abrirMenu(page)
-    await expect(menu.getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda', 'Regras do serviço'])
+    await expect(menu.getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda', 'Regras do serviço', 'Extrato'])
     await menu.getByRole('link', { name: 'Regras do serviço' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Regras do serviço' })).toBeVisible()
@@ -64,6 +64,7 @@ test.describe('cliente', () => {
       /Pedidos/,
       /Agenda/,
       /Regras do serviço/,
+      /Extrato/,
       /Equipe/,
     ])
     // Barra inferior: até 4 destinos + "Menu"; Equipe fica no menu.

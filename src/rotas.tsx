@@ -106,6 +106,8 @@ export const roteador = createBrowserRouter([
                 element: <GuardaPapel papeis={['CLIENTE']} />,
                 children: [
                   { path: 'regras', lazy: async () => ({ Component: (await import('./telas/cliente/Regras.tsx')).Regras }) },
+                  // Saldo e extrato da empresa: todos os níveis (N3 também vê).
+                  { path: 'extrato', lazy: async () => ({ Component: (await import('./telas/extrato/Extrato.tsx')).Extrato }) },
                 ],
               },
               {
@@ -133,6 +135,13 @@ export const roteador = createBrowserRouter([
                     path: 'contratos/:alvo',
                     lazy: async () => ({ Component: (await import('./telas/adm/Contratos.tsx')).ContratoDetalhe }),
                   },
+                  // Fase 2B: clientes e crédito (recarga, ajuste, estorno) e painel.
+                  { path: 'creditos', lazy: async () => ({ Component: (await import('./telas/adm/Creditos.tsx')).Creditos }) },
+                  {
+                    path: 'creditos/:empresa',
+                    lazy: async () => ({ Component: (await import('./telas/adm/Creditos.tsx')).CreditoEmpresa }),
+                  },
+                  { path: 'painel', lazy: async () => ({ Component: (await import('./telas/adm/Painel.tsx')).Painel }) },
                   { path: 'usuarios', lazy: async () => ({ Component: (await import('./telas/pessoas/Pessoas.tsx')).Usuarios }) },
                   { path: 'empresas', lazy: async () => ({ Component: (await import('./telas/adm/Empresas.tsx')).Empresas }) },
                   {

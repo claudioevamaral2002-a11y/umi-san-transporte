@@ -29,7 +29,7 @@ test.describe('início do ADM', () => {
     const chamada = page.getByTestId('chamada-primeira-tabela')
     await expect(chamada).toContainText('Publique a tabela modelo')
     const atalhos = page.getByRole('region', { name: 'Atalhos' }).getByRole('link')
-    await expect(atalhos).toHaveText([/Contratos/, /Usuários/, /Empresas/, /Auditoria/])
+    await expect(atalhos).toHaveText([/Contratos/, /Usuários/, /Empresas/, /Auditoria/, /Créditos/, /Painel/])
 
     await chamada.getByRole('link', { name: 'Publicar tabela modelo' }).click()
     await expect(page).toHaveURL(/\/adm\/contratos\/modelo\?publicar=1$/)

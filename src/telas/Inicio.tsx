@@ -14,8 +14,10 @@ import { formatarDuracao, formatarQuando, numeroPedido } from '../lib/tempo.ts'
 import { useTempoReal } from '../lib/tempoReal.ts'
 import { topicoDoPerfil } from '../lib/topicos.ts'
 import { formatarDataLonga } from '../lib/valores.ts'
+import { PainelResumo } from './adm/Painel.tsx'
 import { Contagem, Rota } from './pedidos/componentes.tsx'
 import { BotaoNovoPedido, podeCriarPedido } from './pedidos/Pedidos.tsx'
+import { SaldoDaEmpresa } from './saldo/CartaoSaldo.tsx'
 
 interface Atalho {
   para: string
@@ -42,6 +44,12 @@ const PEDIDOS: Atalho = {
   descricao: 'Em aberto, agendados e encerrados',
   icone: 'lista',
 }
+const EXTRATO: Atalho = {
+  para: '/extrato',
+  rotulo: 'Extrato',
+  descricao: 'Recargas, reservas e cobranças; CSV e PDF',
+  icone: 'dinheiro',
+}
 const EQUIPE: Atalho = {
   para: '/equipe',
   rotulo: 'Equipe',
@@ -57,6 +65,8 @@ function atalhosDe(perfil: Pick<Perfil, 'papel' | 'nivel'>): Atalho[] {
       { para: '/adm/usuarios', rotulo: 'Usuários', descricao: 'Convidar, links e acessos', icone: 'usuarios' },
       { para: '/adm/empresas', rotulo: 'Empresas', descricao: 'Cadastro e logo das empresas', icone: 'predio' },
       { para: '/adm/auditoria', rotulo: 'Auditoria', descricao: 'Tudo o que foi feito no app', icone: 'lista' },
+      { para: '/adm/creditos', rotulo: 'Créditos', descricao: 'Saldo por cliente: recarga, ajuste e estorno', icone: 'dinheiro' },
+      { para: '/adm/painel', rotulo: 'Painel', descricao: 'Crédito, corridas, pendências e reconciliação', icone: 'grafico' },
     ],
     GESTOR_FROTA: [AGENDA, PEDIDOS],
     MOTORISTA: [
@@ -64,7 +74,7 @@ function atalhosDe(perfil: Pick<Perfil, 'papel' | 'nivel'>): Atalho[] {
       PEDIDOS,
       { para: '/tabela', rotulo: 'Tabela', descricao: 'Preços e prazos para orçar', icone: 'tabela' },
     ],
-    CLIENTE: gereEquipe(perfil) ? [PEDIDOS, AGENDA, REGRAS, EQUIPE] : [PEDIDOS, AGENDA, REGRAS],
+    CLIENTE: gereEquipe(perfil) ? [PEDIDOS, AGENDA, REGRAS, EXTRATO, EQUIPE] : [PEDIDOS, AGENDA, REGRAS, EXTRATO],
   }
   return porPapel[perfil.papel]
 }
@@ -129,6 +139,9 @@ export function Inicio() {
           </Cartao>
         )}
 
+        {/* Saldo da empresa: todo cliente (N1, N2 e N3) vê; relido a cada evento de saldo. */}
+        {perfil?.papel === 'CLIENTE' && perfil.empresa_id && <SaldoDaEmpresa empresa={perfil.empresa_id} linkExtrato="/extrato" />}
+
         {(perfil?.papel === 'GESTOR_FROTA' || perfil?.papel === 'MOTORISTA') && (
           <Link
             to="/agenda"
@@ -150,6 +163,8 @@ export function Inicio() {
         {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande />}
 
         {perfil && <PendenciasDoPerfil perfil={perfil} />}
+
+        {perfil?.papel === 'ADM' && <PainelResumo />}
 
         {atalhos.length > 0 && (
           <section aria-labelledby="titulo-atalhos" className="space-y-2">

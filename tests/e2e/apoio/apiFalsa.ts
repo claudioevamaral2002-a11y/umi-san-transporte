@@ -1,6 +1,7 @@
 // Respostas simuladas do PostgREST (views e RPCs do schema `api`) para testar as telas sem banco.
 // O e2e contra o Supabase do CI fica em tests/e2e/real.
 import type { Page, Route } from '@playwright/test'
+import { painelFalso, saldoFalso } from './dinheiroFalso.ts'
 import { json, URL_SUPABASE } from './sessaoFalsa.ts'
 
 export const FAIXAS_PADRAO = [
@@ -243,6 +244,10 @@ export async function simularApi(page: Page, api: ApiFalsa = {}) {
   // Fase 2A: o Início lê as pendências de todo perfil (detalhes em pedidosFalsos.ts).
   await leitura('pendencias', () => ({ ok: true, aguardando_orcamento: [], aguardando_aprovacao: [], proximos: [] }))
   await leitura('meus_pedidos', () => ({ ok: true, itens: [] }))
+  // Fase 2B: o Início do cliente mostra o saldo e o do ADM, o resumo do painel (detalhes em dinheiroFalso.ts).
+  await leitura('saldo_empresa', () => saldoFalso())
+  await leitura('extrato', () => ({ ok: true, itens: [] }))
+  await leitura('painel_adm', () => painelFalso())
   for (const nome of ['publicar_contrato', 'definir_retencao_fotos', 'alterar_perfil', 'salvar_empresa', 'definir_logo_empresa']) {
     await page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, (route) => {
       chamadas.push({ rpc: nome, corpo: corpoDe(route) })
