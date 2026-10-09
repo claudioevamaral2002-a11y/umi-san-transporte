@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   Intencao,
+  ROTULO_DIVERGENCIA,
+  rotuloDivergencia,
   fracaoReservada,
   ordenarPorRisco,
   resumoDispositivo,
@@ -98,5 +100,28 @@ describe('outros', () => {
       'Windows · Edge · app IVO',
     )
     expect(resumoDispositivo('')).toBe('Outro sistema · Outro navegador · app IVO')
+  })
+})
+
+describe('rótulos das divergências da reconciliação', () => {
+  it('cobre todos os tipos que interno.reconciliar devolve', () => {
+    expect(Object.keys(ROTULO_DIVERGENCIA).sort()).toEqual(
+      [
+        'AGENDADA_SEM_APROVACAO',
+        'AGENDADA_SEM_RESERVA',
+        'COBRANCA_DUPLICADA',
+        'COBRANCA_SEM_APROVACAO',
+        'CONTA_DIVERGENTE',
+        'EMPRESA_DIVERGENTE',
+        'ESTORNO_DIVERGENTE',
+        'RESERVA_FORA_DE_AGENDADA',
+        'RESERVA_SEM_PAR',
+        'RESERVA_VALOR_DIVERGENTE',
+      ].sort(),
+    )
+  })
+  it('tipo desconhecido aparece como veio', () => {
+    expect(rotuloDivergencia('RESERVA_SEM_PAR')).toBe('Reserva sem o lançamento de reserva/liberação correspondente')
+    expect(rotuloDivergencia('NOVO_TIPO')).toBe('NOVO_TIPO')
   })
 })

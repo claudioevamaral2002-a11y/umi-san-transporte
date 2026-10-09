@@ -1,4 +1,4 @@
--- Confere a migração da fase 1B aplicada sobre o estado de antes.sql (CI). Qualquer divergência aborta.
+-- Confere as migrações das fases 1B, 2A e 2B aplicadas sobre o estado de antes.sql (CI). Qualquer divergência aborta.
 do $$
 declare
   esperado jsonb := '{"km_sem_reboque_cent":350,"km_com_reboque_cent":480,"taxa_fixa_reboque_cent":15000,
@@ -64,5 +64,50 @@ begin
   if not exists (select 1 from cron.job where jobname = 'reconciliar-saldos' and schedule = '0 6 * * *') then
     raise exception 'job reconciliar-saldos ausente';
   end if;
-  raise notice 'migração das fases 1B e 2B conferida sobre dados de produção';
+  -- fase 1B: valor GESTOR_FROTA do enum (arquivo próprio, transação separada do uso)
+  if not exists (select 1 from pg_enum where enumtypid = 'app.papel'::regtype and enumlabel = 'GESTOR_FROTA') then
+    raise exception 'papel GESTOR_FROTA ausente';
+  end if;
+
+  -- fase 2A: extensões, tabelas, exclusão da agenda, tempo real e job de expiração
+  if not exists (select 1 from pg_extension where extname = 'btree_gist' and extnamespace = 'extensions'::regnamespace) then
+    raise exception 'btree_gist ausente no schema extensions';
+  end if;
+  if not exists (select 1 from pg_extension where extname = 'pg_cron') then raise exception 'pg_cron ausente'; end if;
+  if to_regclass('app.atividades') is null or to_regclass('app.atividade_historico') is null
+     or to_regclass('app.agenda_blocos') is null or to_regclass('app.orcamentos') is null
+     or to_regclass('app.transicoes_permitidas') is null then
+    raise exception 'tabela da fase 2A ausente';
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'agenda_blocos_sem_conflito' and contype = 'x') then
+    raise exception 'exclusão anti-conflito da agenda ausente';
+  end if;
+  if not exists (select 1 from app.transicoes_permitidas) then raise exception 'transições não semeadas'; end if;
+  if exists (select 1 from app.atividades) or exists (select 1 from app.orcamentos)
+     or exists (select 1 from app.agenda_blocos) then
+    raise exception 'pedidos/orçamentos/agenda deveriam nascer vazios';
+  end if;
+  if to_regclass('app.prova_canal') is not null
+     or exists (select 1 from pg_policy where polrelid = 'realtime.messages'::regclass and polname = 'prova_assinar') then
+    raise exception 'prova de tempo real da fase 0 ainda existe';
+  end if;
+  if not exists (select 1 from pg_policy where polrelid = 'realtime.messages'::regclass and polname = 'pedidos_assinar') then
+    raise exception 'política pedidos_assinar ausente';
+  end if;
+  if not exists (select 1 from cron.job where jobname = 'expirar-vencidos' and schedule = '*/15 * * * *' and active) then
+    raise exception 'job expirar-vencidos ausente';
+  end if;
+
+  -- fase 2B: tabelas do dinheiro vazias (salvo a reconciliação acima) e jobs ativos
+  if to_regclass('app.reservas') is null or to_regclass('app.aprovacoes') is null
+     or to_regclass('app.idempotencia') is null or to_regclass('app.reconciliacoes') is null then
+    raise exception 'tabela da fase 2B ausente';
+  end if;
+  if exists (select 1 from app.reservas) or exists (select 1 from app.aprovacoes) then
+    raise exception 'reservas/aprovações deveriam nascer vazias';
+  end if;
+  if (select count(*) from cron.job where jobname in ('expirar-vencidos', 'reconciliar-saldos') and active) <> 2 then
+    raise exception 'jobs agendados inativos ou duplicados';
+  end if;
+  raise notice 'migração das fases 1B, 2A e 2B conferida sobre dados de produção';
 end $$;

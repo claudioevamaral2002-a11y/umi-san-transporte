@@ -100,3 +100,24 @@ export function resumoDispositivo(ua: string): string {
               : 'Outro navegador'
   return `${sistema} · ${navegador} · app IVO`
 }
+
+/**
+ * Tipos de divergência da reconciliação diária (`interno.reconciliar`, migration 20261009141000) com o texto do
+ * painel do ADM. O RUNBOOK ("Divergência de saldo") explica cada um.
+ */
+export const ROTULO_DIVERGENCIA = {
+  CONTA_DIVERGENTE: 'Saldo da conta diferente do livro-razão',
+  RESERVA_FORA_DE_AGENDADA: 'Reserva ativa em pedido que não está agendado',
+  AGENDADA_SEM_RESERVA: 'Pedido agendado sem reserva',
+  AGENDADA_SEM_APROVACAO: 'Pedido agendado sem aprovação registrada',
+  RESERVA_SEM_PAR: 'Reserva sem o lançamento de reserva/liberação correspondente',
+  RESERVA_VALOR_DIVERGENTE: 'Lançamento de reserva com valor diferente da reserva',
+  EMPRESA_DIVERGENTE: 'Lançamento ou reserva ligado a pedido de outra empresa',
+  ESTORNO_DIVERGENTE: 'Estorno que não é o inverso exato do lançamento original',
+  COBRANCA_SEM_APROVACAO: 'Cobrança sem aprovação registrada',
+  COBRANCA_DUPLICADA: 'Cobrança duplicada no mesmo pedido',
+} as const satisfies Record<string, string>
+
+export function rotuloDivergencia(tipo: string): string {
+  return (ROTULO_DIVERGENCIA as Record<string, string>)[tipo] ?? tipo
+}

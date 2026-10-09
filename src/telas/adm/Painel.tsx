@@ -9,18 +9,11 @@ import { CabecalhoTela, ErroAoCarregar } from '../../design/componentes/Tela.tsx
 import { useConsulta } from '../../lib/consulta.ts'
 import { ROTULO_PRESET, diaBr, periodoDe, type Preset } from '../../lib/extrato.ts'
 import { dinheiro, ordenarPorRisco, type Divergencia, type Painel as DadosPainel } from '../../lib/saldo.ts'
+import { rotuloDivergencia } from '../../lib/saldoExibicao.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
 import { SeloAlerta } from './Creditos.tsx'
 
 const PRESETS: Exclude<Preset, 'personalizado'>[] = ['mes', '7d', '30d', 'mes_anterior']
-
-export const ROTULO_DIVERGENCIA: Record<string, string> = {
-  CONTA_DIVERGENTE: 'Saldo da conta diferente do livro-razão',
-  RESERVA_FORA_DE_AGENDADA: 'Reserva ativa em pedido que não está agendado',
-  AGENDADA_SEM_RESERVA: 'Pedido agendado sem reserva',
-  COBRANCA_SEM_APROVACAO: 'Cobrança sem aprovação registrada',
-  COBRANCA_DUPLICADA: 'Cobrança duplicada no mesmo pedido',
-}
 
 function Numero({ rotulo, valor, testid }: { rotulo: string; valor: ReactNode; testid?: string }) {
   return (
@@ -93,7 +86,7 @@ function Reconciliacao({ dados }: { dados: DadosPainel }) {
         <ul className="space-y-1.5" data-testid="lista-divergencias">
           {r.divergencias.map((d: Divergencia, i) => (
             <li key={i} className="rounded-xl border border-[var(--status-cancelada)] px-3 py-2">
-              <p className="font-semibold">{ROTULO_DIVERGENCIA[d.tipo] ?? d.tipo}</p>
+              <p className="font-semibold">{rotuloDivergencia(d.tipo)}</p>
               <p className="ivo-legenda text-texto-suave">
                 {d.empresa_id ? (nomes.get(d.empresa_id) ?? 'Empresa') : 'Empresa'}
                 {d.atividade_id && (

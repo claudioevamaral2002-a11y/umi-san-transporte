@@ -65,7 +65,7 @@ jobs:
         run: npm run test:e2e
       # Por último (recria o banco): aplica as migrations novas sobre um estado igual ao de produção, como o
       # `db push` do deploy fará. Os testes acima partem de banco vazio e não exercitam a migração de dados.
-      - name: Migração sobre dados de produção (fase 1B)
+      - name: Migração sobre dados de produção (fases 1B, 2A e 2B)
         run: |
           set -euo pipefail
           npx supabase db reset --version 20261008130900
