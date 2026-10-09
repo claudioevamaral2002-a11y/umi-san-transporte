@@ -102,6 +102,7 @@ Detalhes em [docs/fases/fase-1-desenho.md](fases/fase-1-desenho.md), seção 7. 
 - O gestor da empresa (cliente N1) gera link de senha para colegas da própria empresa, o que equivale a assumir a conta deles; e pode reativar um colega da própria empresa que o ADM tenha desativado. Tudo auditado; o ADM pode desativar o próprio N1 (ver [fase-1b-desenho-e-plano.md](fases/fase-1b-desenho-e-plano.md), "Revisão de segurança").
 - Se o serviço de senhas vazadas (HIBP) estiver fora do ar, definir senha fica bloqueado até voltar.
 - A configuração de Auth só muda pelo código (`config.toml`); mudanças feitas no painel seriam sobrescritas no próximo deploy.
+- Pedidos (fase 2A): um cliente pode pré-reservar horários do motorista (até 20 pedidos por hora) mesmo sem intenção real; o motorista recusa e o horário volta. Quem trabalha na IVO (ADM, gestor de frota, motorista) recebe em tempo real o número interno e o status de todos os pedidos, sem detalhes. Ver [fase-2a-desenho-e-plano.md](fases/fase-2a-desenho-e-plano.md), "Revisão de segurança e concorrência".
 
 ---
 
@@ -113,7 +114,7 @@ Detalhes em [docs/fases/fase-1-desenho.md](fases/fase-1-desenho.md), seção 7. 
 | **Gestor de frota** | prestador | obrigatório | estrutura pronta para a fase 3 (agenda e distribuição de pedidos); **não vê preços nem saldo** |
 | **Motorista** | prestador | obrigatório | menu **Tabela**: preços unitários e prazos do contrato da empresa, para orçar; não vê limites de saldo, versão nem autor |
 | **Cliente N1 — Gestor da empresa** | cliente | não | tudo da própria empresa; menu **Equipe** (convida e gerencia colegas da própria empresa) |
-| **Cliente N2 — Solicitante** | cliente | não | os próprios pedidos (fase 3) |
+| **Cliente N2 — Solicitante** | cliente | não | cria e acompanha os próprios pedidos (fase 2A) |
 | **Cliente N3 — Visualizador** | cliente | não | só vê; não age |
 
 Nenhum cliente vê a tabela de preços: todos veem **Regras do serviço** (faixas de cancelamento, prazos, validade, o que é urgente). A antiga "matriz de delegação" (tela Permissões) não existe mais; quem pode o quê depende só do papel e do nível. Para trocar o papel ou o nível de alguém: **Usuários**, **Gerenciar**, **Trocar perfil** (só ADM; ninguém troca o próprio papel).
@@ -150,3 +151,42 @@ O gestor da empresa (N1) cuida dos colegas sem depender do ADM:
 ## 10. Configurações (retenção de fotos)
 
 Menu **Configurações** (https://umi-san-transporte.pages.dev/adm/configuracoes), só ADM: **Fotos guardadas após a entrega** (1 a 3650 dias). Vale para todas as empresas (não faz parte do contrato). A mudança fica na auditoria (`DEFINIR_RETENCAO_FOTOS`). Na passagem para a fase 1B o valor veio da tabela antiga.
+
+---
+
+## 11. Pedidos, orçamentos e agenda (fase 2A)
+
+**Caminho de um pedido:** o cliente pede → o horário fica **pré-reservado** (ninguém mais pega) → o motorista **orça** dentro do prazo → o cliente **pede revisão**, **reprova** ou (fase 2B) **aprova**. Encerrados: **Recusada** (motorista recusou), **Reprovada** (cliente reprovou), **Cancelada**, **Expirada** (prazo vencido). Encerrar libera o horário na hora.
+
+| Quem | O que faz |
+| --- | --- |
+| **Cliente N1** | cria pedidos; vê, pede revisão, reprova e cancela **todos** os pedidos da empresa |
+| **Cliente N2** | cria pedidos; vê e age **só nos próprios**; na agenda os pedidos dos colegas aparecem só como **Ocupado** |
+| **Cliente N3** | só vê os pedidos da empresa (sem botões) |
+| **Motorista** | **Início**: "Aguardando seu orçamento" com contagem regressiva (**URGENTE** perto do fim); **Orçar**: calculadora com os preços travados do contrato (só informa quantidades: km, reboque, espera, diárias, pedágio, hospedagem, até 5 "Outros" com descrição); pode **Recusar** (com motivo) e **Cancelar** (com motivo); vê só os pedidos atribuídos a ele |
+| **ADM** | vê tudo (pedidos e agenda de todas as empresas); pode orçar, recusar e cancelar qualquer pedido aberto |
+| **Gestor de frota** | vê a agenda e os pedidos de todos, **sem valores** |
+
+- **Quem atende:** nesta versão, todo pedido novo vai para o **motorista ativo mais antigo**. Sem motorista ativo, o cliente vê "Nenhum motorista disponível no momento".
+- **Preço:** sempre do contrato vigente da empresa, calculado no servidor (o aparelho só manda quantidades). O orçamento guarda uma cópia do contrato (o preço não muda se o contrato mudar depois) e uma "impressão digital" (hash) do conteúdo.
+- **Revisão:** quando o cliente pede revisão, o pedido volta para o motorista com novo prazo; o **Orçar** já vem preenchido com o orçamento anterior e mostra "Revisão pedida: <motivo>".
+- **Tempo real:** as telas atualizam sozinhas quando um pedido muda (cliente: pedidos da empresa; equipe: todos). Se algo parecer parado, puxe para atualizar ou recarregue a página: a tela sempre relê do servidor.
+
+### Prazos e expiração
+- **Prazo para orçar** = horas do contrato (ou até o início do serviço, se for antes). **Validade do orçamento** = horas do contrato (ou até o início). Pedir revisão abre um novo prazo para orçar.
+- Venceu o prazo: **ninguém consegue mais agir** no pedido (as telas mostram prazo vencido) e o horário **já conta como livre** para outros clientes, mesmo antes do status mudar. Quem pede um horário que colide com uma pré-reserva vencida a encerra na hora.
+- O restante é encerrado pelo agendamento **`expirar-vencidos`** (a cada 15 minutos, no banco): vira **Expirada** e aparece na auditoria como `EXPIRAR_VENCIDOS`.
+
+### Um horário parece preso (aparece ocupado e não deveria)
+1. Abra a **Agenda** como ADM, toque no dia e no bloco: veja o pedido (número, empresa, status e "pré-reserva até…").
+2. Se o pedido ainda está **Solicitado/Orçado dentro do prazo**, o horário está corretamente reservado: o motorista pode **Recusar**, o cliente ou o ADM pode **Cancelar** (o ADM informa o motivo). Isso libera na hora.
+3. Se o prazo **já venceu**, o horário já é tratado como livre (novos pedidos entram) e o status vira **Expirada** em até 15 minutos.
+4. Se depois de **30 minutos** um pedido com prazo vencido continua **Solicitado/Orçado**, o agendamento pode estar parado: no painel Supabase, *Integrations → Cron*, confira o job `expirar-vencidos` (ativo, execuções recentes com sucesso). Se estiver com erro, anote a mensagem e peça ajuda técnica; enquanto isso, cancele pelo app os pedidos que precisar liberar.
+5. **Motorista desativado** com pedidos abertos: os pedidos continuam com ele. Cancele-os como ADM (com motivo) e peça ao cliente para pedir de novo; os novos vão para o motorista ativo mais antigo.
+
+### Mensagens que o cliente/motorista pode ver
+- "Esse horário acabou de ser ocupado. Escolha outro." — outra pessoa pegou o mesmo horário segundos antes.
+- "O prazo deste pedido venceu." — prazo para orçar ou validade do orçamento venceu.
+- "Este pedido mudou de situação. Atualize a página." — alguém agiu antes (ex.: o cliente cancelou enquanto o motorista orçava).
+- "O valor calculado passou do limite permitido." — quantidades ou preços absurdos (confira o contrato da empresa).
+- "Muitas tentativas seguidas." — limites: 20 pedidos/hora por pessoa, 10 pedidos de revisão/hora, 600 prévias de orçamento/hora.
