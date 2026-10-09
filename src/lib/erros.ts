@@ -47,6 +47,12 @@ export const MENSAGENS = {
   PRAZO_VENCIDO: 'O prazo deste pedido venceu.',
   CAMPOS_INCOMPATIVEIS: 'Há campos que não valem para a modalidade escolhida.',
   VALOR_FORA_DO_LIMITE: 'O valor calculado passou do limite permitido. Confira as quantidades.',
+
+  // Saldo: livro-razão, lançamentos do ADM e reconciliação (fase 2B)
+  JA_PROCESSADO: 'Esta operação já foi feita. Atualize a página.',
+  CHAVE_REUTILIZADA: 'Algo deu errado. Atualize a página e tente de novo.',
+  NAO_ESTORNAVEL: 'Este lançamento não pode ser estornado.',
+  DIVERGENCIA_SALDO: 'A conferência de saldo encontrou divergência. Veja o painel.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS

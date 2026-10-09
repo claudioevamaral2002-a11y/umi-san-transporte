@@ -54,5 +54,15 @@ begin
      or to_regclass('api.parametros_vigentes') is not null or to_regclass('api.permissoes') is not null then
     raise exception 'estrutura antiga ainda existe';
   end if;
-  raise notice 'migração da fase 1B conferida sobre dados de produção';
+  -- fase 2B: toda empresa existente ganhou conta zerada; livro-razão vazio e reconciliação limpa
+  if exists (select 1 from app.empresas e left join app.contas c on c.empresa_id = e.id
+              where c.empresa_id is null or c.saldo_contabil_cent <> 0 or c.reservado_cent <> 0) then
+    raise exception 'empresa sem conta zerada após a migração da fase 2B';
+  end if;
+  if exists (select 1 from app.lancamentos) then raise exception 'livro-razão deveria nascer vazio'; end if;
+  if not (interno.reconciliar() ->> 'ok')::boolean then raise exception 'reconciliação divergente após a migração'; end if;
+  if not exists (select 1 from cron.job where jobname = 'reconciliar-saldos' and schedule = '0 6 * * *') then
+    raise exception 'job reconciliar-saldos ausente';
+  end if;
+  raise notice 'migração das fases 1B e 2B conferida sobre dados de produção';
 end $$;
