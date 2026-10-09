@@ -46,7 +46,7 @@ Se o ADM também esqueceu a senha, veja o item 3 (outro ADM gera o link) ou, sen
 
 ## 3. Gerar link de senha para motorista ou cliente
 
-(Também serve para quem esqueceu a senha.)
+(Também serve para quem esqueceu a senha. Para colegas de uma empresa cliente, o gestor da empresa (N1) faz o mesmo pela tela **Equipe**; ver item 9.)
 
 1. Entre no aplicativo como ADM: https://umi-san-transporte.pages.dev
 2. Menu **Usuários**.
@@ -99,5 +99,54 @@ Detalhes em [docs/fases/fase-1-desenho.md](fases/fase-1-desenho.md), seção 7. 
 - Quem tiver a chave de serviço consegue assumir qualquer conta; por isso ela só existe no ambiente `producao` e as operações de sistema são auditadas.
 - O link do primeiro ADM aparece no resumo do GitHub Actions (repositório privado, 24 h, uso único).
 - Um ADM pode desativar outro ADM (nunca o último ativo) e pode resetar o 2FA e gerar link de não-ADMs, o que equivale a assumir a conta; tudo auditado.
+- O gestor da empresa (cliente N1) gera link de senha para colegas da própria empresa, o que equivale a assumir a conta deles; e pode reativar um colega da própria empresa que o ADM tenha desativado. Tudo auditado; o ADM pode desativar o próprio N1 (ver [fase-1b-desenho-e-plano.md](fases/fase-1b-desenho-e-plano.md), "Revisão de segurança").
 - Se o serviço de senhas vazadas (HIBP) estiver fora do ar, definir senha fica bloqueado até voltar.
 - A configuração de Auth só muda pelo código (`config.toml`); mudanças feitas no painel seriam sobrescritas no próximo deploy.
+
+---
+
+## 7. Papéis e níveis (quem é quem)
+
+| Papel | Quem é | 2FA | O que faz |
+| --- | --- | --- | --- |
+| **ADM** | você (prestador) | obrigatório | tudo: contratos, empresas, usuários, configurações, auditoria; único que altera contratos (e, na fase 2, saldo) |
+| **Gestor de frota** | prestador | obrigatório | estrutura pronta para a fase 3 (agenda e distribuição de pedidos); **não vê preços nem saldo** |
+| **Motorista** | prestador | obrigatório | menu **Tabela**: preços unitários e prazos do contrato da empresa, para orçar; não vê limites de saldo, versão nem autor |
+| **Cliente N1 — Gestor da empresa** | cliente | não | tudo da própria empresa; menu **Equipe** (convida e gerencia colegas da própria empresa) |
+| **Cliente N2 — Solicitante** | cliente | não | os próprios pedidos (fase 3) |
+| **Cliente N3 — Visualizador** | cliente | não | só vê; não age |
+
+Nenhum cliente vê a tabela de preços: todos veem **Regras do serviço** (faixas de cancelamento, prazos, validade, o que é urgente). A antiga "matriz de delegação" (tela Permissões) não existe mais; quem pode o quê depende só do papel e do nível. Para trocar o papel ou o nível de alguém: **Usuários**, **Gerenciar**, **Trocar perfil** (só ADM; ninguém troca o próprio papel).
+
+---
+
+## 8. Contrato por empresa (só o ADM publica)
+
+Cada empresa cliente tem o próprio contrato (preços, faixas de cancelamento, prazos, validade, limiar de urgente, limite de saldo negativo e alerta de saldo baixo), versionado e imutável. A **Tabela modelo** é a base para contratos novos.
+
+1. Menu **Contratos** (https://umi-san-transporte.pages.dev/adm/contratos). A lista mostra a Tabela modelo e cada empresa com a versão vigente (ou **Sem contrato vigente**) e a próxima vigência agendada.
+2. Abra a empresa. Botão **Publicar nova versão** (o formulário vem preenchido com o contrato vigente; sem contrato, com a Tabela modelo — **Criar contrato a partir da tabela modelo**).
+3. Altere os valores, escolha **Vale a partir de** (agora ou até 1 ano à frente; nunca no passado), confira o resumo das mudanças e **Publicar versão**.
+4. A versão anterior continua no histórico e vale até a nova vigência começar. Nada é apagado nem editado depois de publicado: para corrigir, publique outra versão.
+5. **Empresa nova:** em **Empresas**, crie a empresa e depois publique o contrato dela (item 2). Sem contrato vigente, o cliente vê "Sua empresa ainda não tem contrato vigente" (na fase 3, "Novo pedido" fica bloqueado).
+6. Tudo fica na **Auditoria** (`PUBLICAR_CONTRATO`).
+
+Na passagem para a fase 1B, a tabela única da fase 1 virou **Tabela modelo v1** e **contrato Umi San v1**, com os mesmos valores e o mesmo autor, vigentes desde o deploy.
+
+---
+
+## 9. Equipe da empresa (cliente N1)
+
+O gestor da empresa (N1) cuida dos colegas sem depender do ADM:
+
+1. Menu **Equipe** (https://umi-san-transporte.pages.dev/equipe): só pessoas da própria empresa.
+2. **Convidar colega**: nome, e-mail e nível (N1, N2 ou N3). A empresa é sempre a dele (o servidor força) e o perfil é sempre cliente. Entregue o link (copiar ou WhatsApp).
+3. Na linha do colega, **Gerenciar**: **Gerar novo link** (senha esquecida ou convite vencido) e **Desativar/Reativar** com motivo. O N1 não age sobre si mesmo, nem sobre motorista/ADM/outra empresa, e não reseta 2FA (cliente não tem 2FA).
+4. Limite: 10 convites por dia por pessoa. Tudo fica na auditoria do ADM com o nome do N1.
+5. O ADM continua podendo fazer tudo isso pela tela **Usuários** (e é quem cria o primeiro N1 de cada empresa).
+
+---
+
+## 10. Configurações (retenção de fotos)
+
+Menu **Configurações** (https://umi-san-transporte.pages.dev/adm/configuracoes), só ADM: **Fotos guardadas após a entrega** (1 a 3650 dias). Vale para todas as empresas (não faz parte do contrato). A mudança fica na auditoria (`DEFINIR_RETENCAO_FOTOS`). Na passagem para a fase 1B o valor veio da tabela antiga.
