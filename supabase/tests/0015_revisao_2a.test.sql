@@ -119,7 +119,7 @@ reset role;
 select ok((current_setting('t.envio2')::jsonb ->> 'versao')::int = 2
           and current_setting('t.r_v2')::jsonb -> 'orcamento_anterior' = 'null'::jsonb,
   'reenviado (ORCADA de novo): sem orçamento anterior');
-select is(current_setting('t.r_rev2')::jsonb -> 'orcamento_anterior' - 'linhas' - 'total_cent',
+select is((current_setting('t.r_rev2')::jsonb -> 'orcamento_anterior') - 'linhas' - 'total_cent',
   '{"versao": 2, "modalidade": "VEICULO_PROPRIO", "entrada": {"km": 80}, "motivo_revisao": "Inclua a espera"}'::jsonb,
   'segunda revisão (pelo N1): a última versão e o último motivo');
 
