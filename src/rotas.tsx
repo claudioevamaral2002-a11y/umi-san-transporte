@@ -69,13 +69,23 @@ export const roteador = createBrowserRouter([
       {
         element: <Guarda permitidos={['pronto']} />,
         children: [
-          // Fluxos de tela cheia (sem o menu): novo pedido do cliente N1/N2.
+          // Fluxos de tela cheia (sem o menu): novo pedido do cliente N1/N2 e orçamento do motorista.
           {
             element: <GuardaPapel papeis={['CLIENTE']} niveis={[1, 2]} />,
             children: [
               {
                 path: 'pedidos/novo',
                 lazy: async () => ({ Component: (await import('./telas/pedidos/NovoPedido.tsx')).NovoPedido }),
+              },
+            ],
+          },
+          // Orçar: motorista atribuído ou ADM (o banco confere a atribuição).
+          {
+            element: <GuardaPapel papeis={['MOTORISTA', 'ADM']} />,
+            children: [
+              {
+                path: 'pedidos/:id/orcar',
+                lazy: async () => ({ Component: (await import('./telas/pedidos/Orcar.tsx')).Orcar }),
               },
             ],
           },

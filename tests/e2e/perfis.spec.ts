@@ -128,7 +128,7 @@ test.describe('motorista', () => {
     await comSessaoFalsa(page, { papel: 'MOTORISTA', nome: 'Bruno Lima', tem_2fa: true }, AAL2)
     const chamadas = await simularApi(page)
     await page.goto('/')
-    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Tabela/])
+    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Agenda/, /Pedidos/, /Tabela/])
     await page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Tabela' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Tabela' })).toBeVisible()
@@ -169,13 +169,13 @@ test.describe('gestor de frota', () => {
     await expect(page.getByRole('heading', { name: 'Proteja sua conta de gestor de frota' })).toBeVisible()
   })
 
-  test('início com a agenda prevista; nenhuma tela de preço', async ({ page }) => {
+  test('início com a agenda da frota; nenhuma tela de preço', async ({ page }) => {
     await comSessaoFalsa(page, { papel: 'GESTOR_FROTA', nome: 'Gil Frota', tem_2fa: true }, AAL2)
     const chamadas = await simularApi(page)
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Olá, Gil' })).toBeVisible()
-    await expect(page.getByTestId('agenda-frota')).toContainText('Agenda da frota chega na próxima fase')
-    await expect(page.getByRole('region', { name: 'Atalhos' })).toHaveCount(0)
+    await expect(page.getByTestId('atalho-agenda')).toContainText('Agenda da frota')
+    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Agenda/, /Pedidos/])
     const menu = await abrirMenu(page)
     await expect(menu.getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda'])
     await page.keyboard.press('Escape')

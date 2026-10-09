@@ -57,8 +57,12 @@ function atalhosDe(perfil: Pick<Perfil, 'papel' | 'nivel'>): Atalho[] {
       { para: '/adm/empresas', rotulo: 'Empresas', descricao: 'Cadastro e logo das empresas', icone: 'predio' },
       { para: '/adm/auditoria', rotulo: 'Auditoria', descricao: 'Tudo o que foi feito no app', icone: 'lista' },
     ],
-    GESTOR_FROTA: [],
-    MOTORISTA: [{ para: '/tabela', rotulo: 'Tabela', descricao: 'Preços e prazos para orçar', icone: 'tabela' }],
+    GESTOR_FROTA: [AGENDA, PEDIDOS],
+    MOTORISTA: [
+      AGENDA,
+      PEDIDOS,
+      { para: '/tabela', rotulo: 'Tabela', descricao: 'Preços e prazos para orçar', icone: 'tabela' },
+    ],
     CLIENTE: gereEquipe(perfil) ? [PEDIDOS, AGENDA, REGRAS, EQUIPE] : [PEDIDOS, AGENDA, REGRAS],
   }
   return porPapel[perfil.papel]
@@ -124,21 +128,22 @@ export function Inicio() {
           </Cartao>
         )}
 
-        {perfil?.papel === 'GESTOR_FROTA' && (
-          <Cartao className="space-y-2" data-testid="agenda-frota">
-            <h2 className="ivo-sobretitulo text-texto-suave">Agenda da frota</h2>
-            <div className="flex items-center gap-3 py-2">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-fundo text-marinho-2">
-                <Icone nome="relogio" />
-              </span>
-              <div>
-                <p className="ivo-h3">Agenda da frota chega na próxima fase</p>
-                <p className="ivo-legenda text-texto-suave">
-                  Aqui você vai ver a agenda dos motoristas e distribuir os pedidos.
-                </p>
-              </div>
-            </div>
-          </Cartao>
+        {(perfil?.papel === 'GESTOR_FROTA' || perfil?.papel === 'MOTORISTA') && (
+          <Link
+            to="/agenda"
+            viewTransition
+            data-testid="atalho-agenda"
+            className="flex min-h-16 items-center gap-3 rounded-cartao border-[1.5px] border-borda bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2"
+          >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-marinho text-papel">
+              <Icone nome="calendario" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold">{perfil.papel === 'GESTOR_FROTA' ? 'Agenda da frota' : 'Minha agenda'}</span>
+              <span className="block ivo-legenda text-texto-suave">Pedidos, pré-reservas e horários livres do mês</span>
+            </span>
+            <Icone nome="setaDireita" className="text-texto-suave" />
+          </Link>
         )}
 
         {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande />}
@@ -302,14 +307,32 @@ interface DefGrupo {
 
 /** Grupos de pendências por perfil (especificação 5): o banco já filtra o que cada um vê. */
 function gruposDe(perfil: Perfil, p: Pendencias): DefGrupo[] {
-  if (perfil.papel === 'CLIENTE') {
-    return [
-      { titulo: 'Aguardando sua aprovação', itens: p.aguardando_aprovacao, tipo: 'aprovar' },
-      { titulo: 'Em andamento', itens: p.aguardando_orcamento, tipo: 'acompanhar' },
-      { titulo: 'Próximos', itens: p.proximos, tipo: 'proximo' },
-    ]
+  switch (perfil.papel) {
+    case 'CLIENTE':
+      return [
+        { titulo: 'Aguardando sua aprovação', itens: p.aguardando_aprovacao, tipo: 'aprovar' },
+        { titulo: 'Em andamento', itens: p.aguardando_orcamento, tipo: 'acompanhar' },
+        { titulo: 'Próximos', itens: p.proximos, tipo: 'proximo' },
+      ]
+    case 'MOTORISTA':
+      return [
+        { titulo: 'Aguardando seu orçamento', itens: p.aguardando_orcamento, tipo: 'orcar' },
+        // Serviços agendados chegam com a aprovação (fase 2B).
+        { titulo: 'Próximos serviços', itens: p.proximos, tipo: 'proximo', vazio: 'Nenhum serviço agendado por enquanto.' },
+      ]
+    case 'ADM':
+      return [
+        { titulo: 'Aguardando orçamento', itens: p.aguardando_orcamento, tipo: 'orcar' },
+        { titulo: 'Aguardando aprovação do cliente', itens: p.aguardando_aprovacao, tipo: 'aprovar' },
+        { titulo: 'Próximos serviços', itens: p.proximos, tipo: 'proximo' },
+      ]
+    case 'GESTOR_FROTA':
+      return [
+        { titulo: 'Aguardando orçamento', itens: p.aguardando_orcamento, tipo: 'acompanhar' },
+        { titulo: 'Aguardando aprovação do cliente', itens: p.aguardando_aprovacao, tipo: 'aprovar' },
+        { titulo: 'Próximos serviços', itens: p.proximos, tipo: 'proximo' },
+      ]
   }
-  return []
 }
 
 function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
