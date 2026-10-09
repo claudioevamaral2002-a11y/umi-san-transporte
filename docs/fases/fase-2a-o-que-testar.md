@@ -1,5 +1,7 @@
 # Fase 2A — o que testar em produção (roteiro manual)
 
+> **Substituído:** a publicação é conjunta (1B + 2A + 2B). Siga o roteiro único [roteiro-producao-1b-2a-2b.md](roteiro-producao-1b-2a-2b.md); este arquivo fica só como referência de detalhes.
+
 > **Quando executar:** a 2A **não** vai sozinha para produção. A publicação é **conjunta 1B + 2A + 2B** (o fluxo pedido → aprovação só fica completo com a 2B). Execute este roteiro **depois** do merge conjunto na `main` e do deploy verde, **logo após** o roteiro da 1B ([fase-1b-o-que-testar.md](fase-1b-o-que-testar.md)) e **antes** do roteiro da 2B. Os itens que dependem da aprovação (botão **Aprovar**) estão marcados **(2B)**: na 2A o botão aparece desabilitado com "disponível em breve"; depois da 2B ele funciona e é testado no roteiro da 2B.
 
 Aplicativo: https://umi-san-transporte.pages.dev. Como funciona cada perfil: [RUNBOOK](../RUNBOOK.md), item 11. Marque cada item. Se algo falhar, pare e anote a tela e a mensagem (sem links nem senhas).

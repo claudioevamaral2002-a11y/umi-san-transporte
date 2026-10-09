@@ -1,5 +1,7 @@
 # Fase 1B — o que testar em produção (roteiro manual)
 
+> **Substituído:** a publicação é conjunta (1B + 2A + 2B). Siga o roteiro único [roteiro-producao-1b-2a-2b.md](roteiro-producao-1b-2a-2b.md); este arquivo fica só como referência de detalhes.
+
 Faça depois do merge da `fase-1b` na `main` e do deploy verde (https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions/workflows/deploy.yml). Aplicativo: https://umi-san-transporte.pages.dev. Passo a passo de operação no [RUNBOOK](../RUNBOOK.md) (itens 7 a 10 são os novos desta fase).
 
 Marque cada item. Se algo falhar, pare e anote a tela e a mensagem (sem links nem senhas).

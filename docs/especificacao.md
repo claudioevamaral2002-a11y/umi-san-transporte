@@ -553,6 +553,7 @@ Prevalece sobre as seções 2, 3, 4.2 e Adendo A1 onde conflitar.
 
 **Visibilidade**
 - Cliente: **não vê tabela de preços**; vê "Regras do serviço" do próprio contrato (faixas de cancelamento, prazos, validade) e o memorial completo em cada orçamento.
+- Cliente: **vê o próprio limite de crédito** (decisão de 2026-10-09): o cartão de saldo de todos os níveis (N1, N2 e N3) mostra disponível, reservado, total e o limite de crédito (saldo negativo permitido) do contrato vigente da empresa e, quando o disponível fica abaixo do alerta de saldo baixo, um aviso para falar com a IVO Transportes. Ninguém do cliente altera saldo nem limite.
 - Motorista: vê só o que usa para orçar (preços unitários das modalidades e prazos do contrato da empresa do pedido); não vê limites de saldo, retenção de fotos, número de versão nem autor.
 - ADM: tudo, inclusive histórico de versões e autores.
 - Textos: "Modalidade veículo próprio" e "Modalidade veículo do cliente" (nunca o nome de uma empresa na modalidade).

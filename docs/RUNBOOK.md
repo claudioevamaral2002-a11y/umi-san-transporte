@@ -190,3 +190,91 @@ Menu **Configurações** (https://umi-san-transporte.pages.dev/adm/configuracoes
 - "Este pedido mudou de situação. Atualize a página." — alguém agiu antes (ex.: o cliente cancelou enquanto o motorista orçava).
 - "O valor calculado passou do limite permitido." — quantidades ou preços absurdos (confira o contrato da empresa).
 - "Muitas tentativas seguidas." — limites: 20 pedidos/hora por pessoa, 10 pedidos de revisão/hora, 600 prévias de orçamento/hora.
+
+---
+
+## 12. Saldo e dinheiro (fase 2B)
+
+Cada empresa cliente tem **uma conta** com um **livro-razão**: a lista de todos os lançamentos (recarga, ajuste, estorno, reserva, liberação de reserva, multa e, na fase 3, débito do serviço). **Nada é editado nem apagado**: o banco recusa qualquer alteração de lançamento, inclusive do ADM. O saldo é sempre a soma do livro-razão.
+
+- **Saldo total (contábil)** = soma de recargas, ajustes, estornos, multas e débitos.
+- **Reservado** = soma das reservas ativas (pedidos aprovados e ainda não realizados). A reserva **não** muda o total; só deixa de estar disponível.
+- **Disponível** = total − reservado. Pode ficar negativo até o **limite de crédito** do contrato vigente da empresa.
+- **Alerta de saldo baixo** (do contrato): abaixo dele, o cartão de saldo fica laranja para o ADM e para o cliente ("Fale com a IVO Transportes para recarregar") e o painel conta a empresa em pendências.
+- **Quem vê:** o ADM vê todas as empresas; os clientes (N1, N2 e N3) veem o saldo, o limite de crédito e o extrato **da própria empresa**. Motorista e gestor de frota **não veem saldo**. Só o ADM lança dinheiro; nenhum cliente altera saldo.
+
+### Operações do ADM (Créditos)
+Menu **Créditos** (https://umi-san-transporte.pages.dev/adm/creditos): uma linha por empresa com disponível, reservado, limite e alerta. Abra a empresa:
+
+1. **Recarga** (o cliente pagou): valor em reais (ex.: `2.000,00`), **motivo** obrigatório (3 a 500 caracteres, ex.: "Pix recebido em 09/10") e **comprovante** opcional (ID do Pix ou observação, até 200 caracteres). Confira o resumo (saldo antes → depois) e **Confirmar recarga**.
+2. **Ajuste** (correção ou cortesia): escolha **Crédito** (aumenta) ou **Débito** (diminui), valor e **motivo** obrigatório. **Confirmar ajuste**.
+3. **Estorno** (desfazer um lançamento): no **Extrato** da empresa, na linha do lançamento, **Estornar**, informe o **motivo** e **Confirmar estorno**. O estorno cria um lançamento novo com o valor **oposto** exato; o original continua no extrato. Só recarga, ajuste, multa, débito e aditivo podem ser estornados, e **uma única vez** ("Este lançamento já tinha sido estornado."). Reserva e liberação não se estornam: são desfeitas cancelando o pedido.
+
+Garantias: o resultado só aparece **depois** que o servidor confirma (nada otimista). Se a internet cair no meio, toque em **Tentar de novo**: a operação leva uma chave única e **nunca é lançada duas vezes**. Valores acima de R$ 1 bilhão são recusados. Tudo fica na **Auditoria** (`LANCAR_RECARGA`, `LANCAR_AJUSTE`, `ESTORNAR_LANCAMENTO`) com o nome de quem fez e o motivo.
+
+### Aprovação do orçamento (cliente)
+- Quem aprova: o **N2 dono do pedido** ou o **N1** da empresa (N3 não age). No pedido orçado, **Aprovar** abre o recibo (memorial, total, saldo depois da aprovação) → **Confirmar aprovação**.
+- O servidor confere, numa única operação: orçamento ainda **válido** (pelo relógio do servidor); **versão e impressão digital** do orçamento que a pessoa viu (se o motorista reenviou nesse meio tempo, a tela pede para conferir de novo); **horário** ainda livre; e **crédito**: disponível − total ≥ −limite. Sem crédito aparece "Saldo insuficiente para aprovar este orçamento." com quanto falta.
+- Aprovado: o valor vai para **Reservado** (extrato: **Reserva**), o pedido vira **Agendado** e o horário fica reservado. A aprovação fica registrada (quem, quando, IP, aparelho, versão e impressão digital do orçamento). Dez cliques ou aparelhos ao mesmo tempo resultam em **uma** aprovação só.
+
+### Cancelamento de um pedido agendado
+- **Cliente (N2 dono ou N1):** **Cancelar agendamento** mostra, **antes de confirmar**, a multa pela faixa de cancelamento do contrato **gravado no orçamento** (mudanças posteriores no contrato não afetam). Confirmado, o extrato mostra **Liberação de reserva** (o reservado volta a ficar disponível) e, se houver, **Multa de cancelamento** (sai do total). Se o horário passar para outra faixa enquanto a pessoa decide, nada é feito e a tela mostra o valor novo para confirmar de novo ("A multa mudou…").
+- **Motorista atribuído ou ADM:** cancela **sem custo** para o cliente, com **motivo obrigatório**; só a liberação da reserva aparece no extrato.
+- Quer devolver uma multa ao cliente? **Estorne** a multa no extrato (item 3 acima), com motivo.
+- Cancelamentos simultâneos (cliente e motorista ao mesmo tempo): só um vale; o outro vê "Este pedido mudou de situação. Atualize a página."
+
+### Extrato
+Cliente: menu **Extrato** (https://umi-san-transporte.pages.dev/extrato). ADM: **Créditos** → empresa → **Extrato**. Filtros de período (Este mês, Últimos 7 dias, Últimos 30 dias, Mês passado ou Escolher datas) e de tipo; exportar **CSV** ou **PDF** (impressão). Cada linha: data, tipo, valor, número do pedido e quem pediu; o pedido só abre para quem pode vê-lo (um N2 vê a reserva do colega no extrato, mas não abre o pedido dele).
+
+---
+
+## 13. Divergência de saldo (reconciliação diária)
+
+Todo dia às **03:00** (horário de Brasília; job `reconciliar-saldos` no banco, `0 6 * * *` em UTC) o banco **refaz todas as contas a partir do livro-razão** e confere as regras do dinheiro. O resultado aparece no **Painel** do ADM (https://umi-san-transporte.pages.dev/adm/painel, também no **Início** do ADM), bloco **Última reconciliação**: data/hora, quantas empresas foram conferidas e **Tudo confere** ou **N divergências** com a lista (tipo, empresa e, quando houver, **ver pedido**). Uma reconciliação com divergência também entra na **Auditoria** como `RECONCILIAR_SALDOS` com resultado `ERRO` (`DIVERGENCIA_SALDO`). Antes da primeira execução o bloco diz "Ainda não houve reconciliação (roda todo dia às 03:00)".
+
+### O que cada divergência quer dizer
+| No painel | Código | Significa |
+| --- | --- | --- |
+| Saldo da conta diferente do livro-razão | `CONTA_DIVERGENTE` | o total ou o reservado guardado na conta não bate com a soma dos lançamentos/reservas |
+| Reserva ativa em pedido que não está agendado | `RESERVA_FORA_DE_AGENDADA` | o pedido saiu de Agendado, mas a reserva não foi liberada |
+| Pedido agendado sem reserva | `AGENDADA_SEM_RESERVA` | pedido Agendado sem dinheiro reservado |
+| Pedido agendado sem aprovação registrada | `AGENDADA_SEM_APROVACAO` | pedido Agendado sem o registro da aprovação do orçamento aprovado |
+| Reserva sem o lançamento de reserva/liberação correspondente | `RESERVA_SEM_PAR` | a reserva não tem exatamente um lançamento **Reserva** (e uma **Liberação**, se já liberada) |
+| Lançamento de reserva com valor diferente da reserva | `RESERVA_VALOR_DIVERGENTE` | o valor reservado no extrato difere do valor da reserva |
+| Lançamento ou reserva ligado a pedido de outra empresa | `EMPRESA_DIVERGENTE` | um lançamento ou reserva aponta para pedido/reserva de outra empresa |
+| Estorno que não é o inverso exato do lançamento original | `ESTORNO_DIVERGENTE` | estorno com valor diferente de −original, de outra empresa ou de tipo não estornável |
+| Cobrança sem aprovação registrada | `COBRANCA_SEM_APROVACAO` | multa/débito sem a aprovação do mesmo orçamento |
+| Cobrança duplicada no mesmo pedido | `COBRANCA_DUPLICADA` | mais de uma multa (ou mais de um débito) no mesmo pedido |
+
+As travas do banco impedem todas essas situações; uma divergência indica falha técnica ou mexida manual no banco.
+
+### Passo a passo
+1. **Não edite saldo nem lançamento** — nem pelo app, nem pelo painel Supabase. O banco recusa, e qualquer tentativa por fora (SQL manual) piora a situação e apaga a pista do que aconteceu.
+2. **Anote** a data/hora da reconciliação, o tipo, a empresa e o número do pedido (print do bloco, sem links).
+3. **Veja o livro-razão pelo app:** **Créditos** → empresa → **Extrato** (período que cobre o problema, todos os tipos); abra o pedido em **ver pedido** e confira a linha do tempo e o histórico. Na **Auditoria**, veja as ações do período (`APROVAR_ORCAMENTO`, `CANCELAR_AGENDADO`, `LANCAR_RECARGA`, `LANCAR_AJUSTE`, `ESTORNAR_LANCAMENTO`).
+4. **Se precisar ver mais (técnico):** no painel Supabase, *SQL Editor*, apenas **consultas de leitura**, por exemplo:
+   ```sql
+   select criado_em, tipo, valor_cent, atividade_id, reserva_id, estorna_id, motivo
+     from app.lancamentos where empresa_id = '<id da empresa>' order by criado_em, id;
+   select * from app.contas where empresa_id = '<id da empresa>';
+   select em, ok, empresas, divergencias from app.reconciliacoes order by em desc limit 5;
+   ```
+   Nunca rode `update`, `delete` ou `insert` nessas tabelas.
+5. **Corrija só pelo app, com motivo:** se o cliente ficou com valor a mais ou a menos, lance um **Ajuste** (crédito ou débito) com motivo citando a reconciliação (ex.: "Correção da divergência de 10/10, pedido #0012"); se um lançamento estava errado, **estorne-o** com motivo. Se a divergência é de pedido (reserva/agendado), **cancele o pedido** como ADM (sem custo, com motivo) e peça ao cliente para pedir de novo.
+6. **Confira no dia seguinte:** a próxima reconciliação (03:00) deve voltar a **Tudo confere**. Se `CONTA_DIVERGENTE` persistir com o extrato correto, é falha técnica: não lance mais ajustes e peça ajuda técnica com as anotações do passo 2.
+7. **O job parou?** Se a última reconciliação tiver mais de 1 dia, veja no painel Supabase, *Integrations → Cron*, o job `reconciliar-saldos` (ativo, execuções com *succeeded*).
+
+---
+
+## 14. Tempo real (o que atualiza sozinho)
+
+As telas assinam **tópicos privados**; o banco decide quem pode assinar cada um. A mensagem só diz "mudou" (número, status, horário): a tela sempre relê os dados do servidor com as permissões de quem está vendo.
+
+| Tópico | Quem assina | Quando chega |
+| --- | --- | --- |
+| `atividade:<id do pedido>` | quem pode ver aquele pedido | o status do pedido mudou (detalhe do pedido) |
+| `empresa:<id da empresa>` | clientes da empresa (N1, N2, N3) e a equipe (ADM, gestor de frota, motorista) | um pedido da empresa mudou (listas, início, agenda) |
+| `equipe` | ADM, gestor de frota e motorista | qualquer pedido de qualquer empresa mudou (só número interno, empresa e status) |
+| `saldo:<id da empresa>` | ADM e clientes da empresa (nunca motorista nem gestor de frota) | entrou um lançamento (cartão de saldo e extrato) |
+
+Se uma tela parecer parada, puxe para atualizar ou recarregue: nada depende só do tempo real.
