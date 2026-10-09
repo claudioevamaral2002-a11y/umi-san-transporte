@@ -62,17 +62,18 @@ test.describe('fluxos reais', () => {
       await confirmarCodigo(pagina, chave)
       await expect(pagina.getByRole('heading', { name: 'Olá, Marlene' })).toBeVisible()
 
-      // Início de motorista: sem a administração no menu.
+      // Início de motorista: sem a administração nem a tabela modelo no menu (fase 1B).
       await pagina.getByRole('button', { name: 'Menu' }).click()
       const menu = pagina.getByRole('dialog', { name: 'Menu' })
-      await expect(menu.getByRole('link', { name: 'Tabela de preços e regras' })).toBeVisible()
+      await expect(menu.getByRole('link', { name: 'Início' })).toBeVisible()
+      await expect(menu.getByRole('link', { name: 'Tabela de preços e regras' })).toHaveCount(0)
       await expect(menu.getByRole('link', { name: 'Usuários' })).toHaveCount(0)
     } finally {
       await contexto.close()
     }
   })
 
-  test('cliente convidado entra sem 2FA, vê a empresa com logo e a tabela só para leitura', async ({ page }) => {
+  test('cliente convidado entra sem 2FA, vê a empresa com logo e não vê a tabela de preços', async ({ page }) => {
     const nomeEmpresa = `Empresa Logo ${Date.now()}`
     const empresaId = await empresaNova(nomeEmpresa)
     const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Logo' })
@@ -108,12 +109,9 @@ test.describe('fluxos reais', () => {
     await expect(logo).toBeVisible({ timeout: 15_000 })
     expect(await logo.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0)
 
+    // Cliente não vê tabela de preços (Adendo A10): a tela da tabela modelo é só do ADM.
     await page.goto('/parametros')
-    await expect(page.getByRole('heading', { name: 'Tabela de preços e regras' })).toBeVisible()
-    await expect(page.getByText('Somente leitura')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Publicar nova versão' })).toHaveCount(0)
-    await page.goto('/parametros?publicar=1')
-    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
     // Cliente também não entra na administração.
     await page.goto('/adm/usuarios')
     await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
@@ -172,7 +170,8 @@ test.describe('fluxos reais', () => {
   test('ADM publica versão com vigência futura e a vê agendada no histórico', async ({ page }) => {
     const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Tabela' })
     // Versão inicial (vigente em segundos) para o formulário partir de valores reais.
-    const inicial = await rpc(adm, 'publicar_parametros', {
+    const inicial = await rpc(adm, 'publicar_contrato', {
+      p_empresa: null,
       p: {
         km_sem_reboque_cent: 450,
         km_com_reboque_cent: 650,
@@ -190,7 +189,6 @@ test.describe('fluxos reais', () => {
         limiar_urgente_horas: 12,
         limite_saldo_negativo_cent: 100000,
         alerta_saldo_baixo_cent: 20000,
-        retencao_fotos_dias: 365,
       },
       p_vigente_desde: new Date(Date.now() + 3_000).toISOString(),
     })

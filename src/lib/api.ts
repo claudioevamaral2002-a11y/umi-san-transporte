@@ -4,12 +4,6 @@ import type { Papel } from './estadoSessao.ts'
 import type { ValoresParametros, VersaoParametros } from './parametros.ts'
 import { supabase } from './supabase.ts'
 
-export interface Permissao {
-  chave: string
-  ativo: boolean
-  alterado_em: string | null
-}
-
 export interface Empresa {
   id: string
   nome: string
@@ -69,30 +63,35 @@ async function rpc(nome: string, args: Record<string, unknown>): Promise<Respost
   }
 }
 
-const COLUNAS_PARAMETROS =
-  'versao,vigente_desde,publicado_em,publicado_por_nome,km_sem_reboque_cent,km_com_reboque_cent,taxa_fixa_reboque_cent,retorno_trecho_unico_bp,hora_espera_cent,hospedagem_diaria_cent,diaria_motorista_cent,faixas_cancelamento,prazo_orcar_horas,validade_orcamento_horas,limiar_urgente_horas,limite_saldo_negativo_cent,alerta_saldo_baixo_cent,retencao_fotos_dias'
+/** Versão de contrato como vem de `api.listar_contratos()`/`api.historico_contrato()` (sem a retenção de fotos). */
+type VersaoContrato = Omit<VersaoParametros, 'retencao_fotos_dias'> & { empresa_id?: string | null }
 
 export const api = {
-  permissoes: async () =>
-    exigir(await supabase.from('permissoes').select('chave,ativo,alterado_em').order('chave')) as Permissao[],
-
   empresas: async () => exigir(await supabase.from('empresas').select('id,nome,logo_caminho').order('nome')) as Empresa[],
 
-  /** Vigente (no máximo 1) e histórico completo, do mais novo para o mais antigo. */
+  /**
+   * Tabela modelo (fase 1B, só ADM): vigente (no máximo 1) e histórico, do mais novo para o mais antigo.
+   * A retenção de fotos agora é configuração global; entra em cada versão só para a tela atual.
+   * (A tela de contratos por empresa vem na Task 3.)
+   */
   parametros: async () => {
-    const [vigente, historico] = await Promise.all([
-      supabase.from('parametros_vigentes').select(COLUNAS_PARAMETROS).limit(1),
-      supabase.from('parametros_historico').select(COLUNAS_PARAMETROS).limit(200),
+    const [contratos, historico, configuracao] = await Promise.all([
+      supabase.rpc('listar_contratos'),
+      supabase.rpc('historico_contrato', { p_empresa: null }),
+      supabase.rpc('ler_configuracao'),
     ])
+    const retencao = (exigir(configuracao) as Array<{ retencao_fotos_dias: number }>)[0]?.retencao_fotos_dias ?? 30
+    const comRetencao = (v: VersaoContrato): VersaoParametros => ({ ...v, retencao_fotos_dias: retencao })
+    const modelo = (exigir(contratos) as VersaoContrato[]).find((c) => c.empresa_id === null && c.versao !== null)
     return {
-      vigente: ((exigir(vigente) as unknown as VersaoParametros[])[0] ?? null) as VersaoParametros | null,
-      historico: exigir(historico) as unknown as VersaoParametros[],
+      vigente: modelo ? comRetencao(modelo) : null,
+      historico: (exigir(historico) as VersaoContrato[]).map(comRetencao),
     }
   },
 
-  /** Existe alguma versão publicada (mesmo que ainda não vigente)? */
+  /** Existe alguma versão da tabela modelo (mesmo que ainda não vigente)? */
   temParametros: async () =>
-    (exigir(await supabase.from('parametros_historico').select('versao').limit(1)) as unknown[]).length > 0,
+    (exigir(await supabase.rpc('historico_contrato', { p_empresa: null })) as unknown[]).length > 0,
 
   usuarios: async () => exigir(await supabase.rpc('listar_usuarios')) as Usuario[],
 
@@ -108,14 +107,17 @@ export const api = {
       }),
     ) as RegistroAuditoria[],
 
-  publicarParametros: (valores: ValoresParametros, vigenteDesde: Date) =>
-    rpc('publicar_parametros', { p: valores, p_vigente_desde: vigenteDesde.toISOString() }),
+  /** Publica a tabela modelo; a retenção de fotos (global) só é gravada se mudou. */
+  publicarParametros: async (valores: ValoresParametros, vigenteDesde: Date, retencaoAtual: number | null) => {
+    const { retencao_fotos_dias: retencao, ...contrato } = valores
+    const r = await rpc('publicar_contrato', { p_empresa: null, p: contrato, p_vigente_desde: vigenteDesde.toISOString() })
+    if (!r.ok || retencao === retencaoAtual) return r
+    const config = await rpc('definir_retencao_fotos', { p_dias: retencao })
+    return config.ok ? r : config
+  },
 
   alterarPerfil: (usuario: string, nome: string, papel: Papel, empresa: string | null) =>
     rpc('alterar_perfil', { p_usuario: usuario, p_nome: nome, p_papel: papel, p_empresa: empresa }),
-
-  definirPermissao: (chave: string, ativo: boolean, motivo: string) =>
-    rpc('definir_permissao', { p_chave: chave, p_ativo: ativo, p_motivo: motivo }),
 
   salvarEmpresa: (id: string | null, nome: string) => rpc('salvar_empresa', { p_id: id, p_nome: nome }),
 

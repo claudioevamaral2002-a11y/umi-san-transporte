@@ -33,12 +33,6 @@ export function versaoFalsa(versao: number, extra: Record<string, unknown> = {})
   }
 }
 
-export const PERMISSOES_DESLIGADAS = [
-  { chave: 'CLIENTE_ATUA_EM_PEDIDO_DE_OUTRO', ativo: false, alterado_em: null },
-  { chave: 'MOTORISTA_EDITA_PARAMETROS', ativo: false, alterado_em: null },
-  { chave: 'MOTORISTA_LANCA_RECARGA', ativo: false, alterado_em: null },
-]
-
 export const EMPRESA_UMI = { id: '00000000-0000-4000-8000-0000000000e1', nome: 'Umi San', logo_caminho: null }
 
 export const USUARIOS = [
@@ -115,9 +109,10 @@ export const AUDITORIA = [
 ]
 
 export interface ApiFalsa {
+  /** Versão vigente da tabela modelo (vira a linha `empresa_id: null` de `listar_contratos`). */
   vigente?: unknown[]
   historico?: unknown[]
-  permissoes?: unknown[]
+  retencaoFotosDias?: number
   empresas?: unknown[]
   usuarios?: unknown[]
   auditoria?: unknown[]
@@ -130,16 +125,19 @@ export async function simularApi(page: Page, api: ApiFalsa = {}) {
   const chamadas: Array<{ rpc: string; corpo: Record<string, unknown> }> = []
   const tabela = (nome: string, linhas: unknown[]) =>
     page.route(new RegExp(`${URL_SUPABASE}/rest/v1/${nome}(\\?|$)`), (route) => json(route, linhas))
-  await tabela('parametros_vigentes', api.vigente ?? [])
-  await tabela('parametros_historico', api.historico ?? api.vigente ?? [])
-  await tabela('permissoes', api.permissoes ?? PERMISSOES_DESLIGADAS)
+  const leitura = (nome: string, linhas: unknown[]) =>
+    page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, (route) => json(route, linhas))
+  const modelo = (api.vigente ?? []).map((v) => ({ empresa_id: null, empresa_nome: null, ...(v as object) }))
+  await leitura('listar_contratos', modelo.length > 0 ? modelo : [{ empresa_id: null, empresa_nome: null, versao: null }])
+  await leitura('historico_contrato', api.historico ?? api.vigente ?? [])
+  await leitura('ler_configuracao', [{ retencao_fotos_dias: api.retencaoFotosDias ?? 30, alterado_em: '2026-10-01T00:00:00Z' }])
   await tabela('empresas', api.empresas ?? [EMPRESA_UMI])
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/listar_usuarios`, (route) => json(route, api.usuarios ?? USUARIOS))
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/listar_auditoria`, (route) => {
     chamadas.push({ rpc: 'listar_auditoria', corpo: route.request().postDataJSON() as Record<string, unknown> })
     return json(route, api.auditoria ?? AUDITORIA)
   })
-  for (const nome of ['publicar_parametros', 'alterar_perfil', 'definir_permissao', 'salvar_empresa', 'definir_logo_empresa']) {
+  for (const nome of ['publicar_contrato', 'definir_retencao_fotos', 'alterar_perfil', 'salvar_empresa', 'definir_logo_empresa']) {
     await page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, (route) => {
       chamadas.push({ rpc: nome, corpo: route.request().postDataJSON() as Record<string, unknown> })
       return json(route, api.rpc?.[nome] ?? { ok: true })

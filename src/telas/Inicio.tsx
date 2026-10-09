@@ -28,17 +28,17 @@ const ATALHOS: Record<Papel, Atalho[]> = {
     TABELA,
     { para: '/adm/auditoria', rotulo: 'Auditoria', descricao: 'Tudo o que foi feito no app', icone: 'lista' },
   ],
-  MOTORISTA: [TABELA],
-  CLIENTE: [TABELA],
+  // Fase 1B: cliente e motorista ganham "Regras do serviço" e a tabela por modalidade na Task 3.
+  MOTORISTA: [],
+  CLIENTE: [],
 }
 
-/** Para quem pode publicar: sem nenhuma versão, chama para a primeira tabela. */
+/** Para quem pode publicar (ADM): sem nenhuma versão da tabela modelo, chama para a primeira. */
 function useSemTabela(papel: Papel | undefined): boolean {
-  const podeTalvez = papel === 'ADM' || papel === 'MOTORISTA'
-  const { dados } = useConsulta(podeTalvez ? `inicio-${papel}` : 'inicio-nada', async () => {
-    if (!podeTalvez) return false
-    const [permissoes, tem] = await Promise.all([api.permissoes(), api.temParametros()])
-    return podeEditarParametros(papel, permissoes) && !tem
+  const pode = podeEditarParametros(papel)
+  const { dados } = useConsulta(pode ? `inicio-${papel}` : 'inicio-nada', async () => {
+    if (!pode) return false
+    return !(await api.temParametros())
   })
   return dados === true
 }
@@ -96,30 +96,32 @@ export function Inicio() {
           </div>
         </Cartao>
 
-        <section aria-labelledby="titulo-atalhos" className="space-y-2">
-          <h2 id="titulo-atalhos" className="px-1 ivo-sobretitulo text-texto-suave">
-            Atalhos
-          </h2>
-          <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {atalhos.map((a) => (
-              <li key={a.para}>
-                <Link
-                  to={a.para}
-                  viewTransition
-                  className="flex min-h-16 items-center gap-3 rounded-cartao border-[1.5px] border-borda bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2"
-                >
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-marinho text-papel">
-                    <Icone nome={a.icone} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-bold">{a.rotulo}</span>
-                    <span className="block ivo-legenda text-texto-suave">{a.descricao}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        {atalhos.length > 0 && (
+          <section aria-labelledby="titulo-atalhos" className="space-y-2">
+            <h2 id="titulo-atalhos" className="px-1 ivo-sobretitulo text-texto-suave">
+              Atalhos
+            </h2>
+            <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {atalhos.map((a) => (
+                <li key={a.para}>
+                  <Link
+                    to={a.para}
+                    viewTransition
+                    className="flex min-h-16 items-center gap-3 rounded-cartao border-[1.5px] border-borda bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2"
+                  >
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-marinho text-papel">
+                      <Icone nome={a.icone} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-bold">{a.rotulo}</span>
+                      <span className="block ivo-legenda text-texto-suave">{a.descricao}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </main>
   )

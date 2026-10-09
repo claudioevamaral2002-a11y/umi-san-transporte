@@ -110,12 +110,12 @@ export function Parametros() {
   const { perfil } = useSessao()
   const [busca, setBusca] = useSearchParams()
   const [aviso, setAviso] = useState<string | null>(null)
-  const { dados, erro, carregando, recarregar } = useConsulta('parametros', async () => {
-    const [parametros, permissoes] = await Promise.all([api.parametros(), api.permissoes()])
-    return { ...parametros, permissoes, agora: Date.now() }
-  })
+  const { dados, erro, carregando, recarregar } = useConsulta('parametros', async () => ({
+    ...(await api.parametros()),
+    agora: Date.now(),
+  }))
 
-  const pode = dados ? podeEditarParametros(perfil?.papel, dados.permissoes) : false
+  const pode = dados ? podeEditarParametros(perfil?.papel) : false
   const formularioAberto = pode && busca.get('publicar') === '1'
   const abrir = (sim: boolean) =>
     setBusca(
@@ -136,9 +136,9 @@ export function Parametros() {
   return (
     <main className="mx-auto max-w-4xl space-y-5 p-4 md:p-6">
       <CabecalhoTela
-        sobretitulo={perfil?.papel === 'ADM' || pode ? 'Parâmetros' : 'Somente leitura'}
+        sobretitulo="Tabela modelo"
         titulo="Tabela de preços e regras"
-        descricao="Valores padrão de cada modalidade. Mudanças valem só para orçamentos criados depois da vigência."
+        descricao="Base dos contratos das empresas. Mudanças valem só para orçamentos criados depois da vigência."
         acao={
           pode && (
             <Botao variante="principal" className="flex w-full items-center justify-center gap-2 md:w-auto" onClick={() => abrir(true)}>

@@ -74,8 +74,14 @@ export const roteador = createBrowserRouter([
             children: [
               { index: true, lazy: async () => ({ Component: (await import('./telas/Inicio.tsx')).Inicio }) },
               {
-                path: 'parametros',
-                lazy: async () => ({ Component: (await import('./telas/Parametros.tsx')).Parametros }),
+                // Fase 1B: a tabela modelo é só do ADM (cliente e motorista ganham telas próprias na Task 3).
+                element: <GuardaPapel papeis={['ADM']} />,
+                children: [
+                  {
+                    path: 'parametros',
+                    lazy: async () => ({ Component: (await import('./telas/Parametros.tsx')).Parametros }),
+                  },
+                ],
               },
               {
                 path: 'adm',
@@ -83,10 +89,6 @@ export const roteador = createBrowserRouter([
                 children: [
                   { path: 'usuarios', lazy: async () => ({ Component: (await import('./telas/adm/Usuarios.tsx')).Usuarios }) },
                   { path: 'empresas', lazy: async () => ({ Component: (await import('./telas/adm/Empresas.tsx')).Empresas }) },
-                  {
-                    path: 'permissoes',
-                    lazy: async () => ({ Component: (await import('./telas/adm/Permissoes.tsx')).Permissoes }),
-                  },
                   {
                     path: 'auditoria',
                     lazy: async () => ({ Component: (await import('./telas/adm/Auditoria.tsx')).Auditoria }),

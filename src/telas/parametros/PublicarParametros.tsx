@@ -87,7 +87,7 @@ function Conteudo({
     setEnviando(true)
     setFalha(null)
     // Sem atualização otimista: a tela só muda com a confirmação do servidor.
-    const r = await api.publicarParametros(revisao.valores, revisao.vigencia)
+    const r = await api.publicarParametros(revisao.valores, revisao.vigencia, base?.retencao_fotos_dias ?? null)
     setEnviando(false)
     if (r.ok) {
       onPublicado(`Versão ${String(r.versao)} publicada. Vale a partir de ${formatarDataHora(revisao.vigencia)}.`)

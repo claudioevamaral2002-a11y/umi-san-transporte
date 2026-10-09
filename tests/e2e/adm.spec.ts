@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { EMPRESA_UMI, PERMISSOES_DESLIGADAS, simularApi, USUARIOS } from './apoio/apiFalsa.ts'
+import { EMPRESA_UMI, simularApi, USUARIOS } from './apoio/apiFalsa.ts'
 import { comSessaoFalsa, responderFuncoes } from './apoio/sessaoFalsa.ts'
 
 const ADM = { papel: 'ADM' as const, tem_2fa: true }
@@ -14,7 +14,6 @@ test.describe('administração', () => {
     const telas = [
       ['Usuários', 'Usuários'],
       ['Empresas', 'Empresas'],
-      ['Permissões', 'Permissões'],
       ['Auditoria', 'Auditoria'],
     ] as const
     for (const [item, titulo] of telas) {
@@ -160,28 +159,14 @@ test.describe('administração', () => {
     })
   })
 
-  test('permissões: chave pede confirmação com motivo e mostra a última alteração', async ({ page }) => {
+  test('permissões: a matriz de delegação saiu do menu e da rota (fase 1B)', async ({ page }) => {
     await comSessaoFalsa(page, ADM, AAL2)
-    const permissoes = PERMISSOES_DESLIGADAS.map((p) =>
-      p.chave === 'MOTORISTA_LANCA_RECARGA' ? { ...p, alterado_em: '2026-10-05T13:00:00Z' } : p,
-    )
-    const chamadas = await simularApi(page, { permissoes })
+    await simularApi(page)
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Menu' }).click()
+    await expect(page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Permissões' })).toHaveCount(0)
     await page.goto('/adm/permissoes')
-    await expect(page.getByTestId('permissao-MOTORISTA_LANCA_RECARGA')).toContainText('Última alteração: 05/10/2026 10:00')
-    const chave = page.getByRole('switch', { name: 'Motorista edita a tabela de preços' })
-    await expect(chave).toHaveAttribute('aria-checked', 'false')
-    await chave.click()
-    const folha = page.getByRole('dialog', { name: 'Confirmar mudança' })
-    await folha.getByRole('button', { name: 'Ligar permissão' }).click()
-    await expect(folha.getByText('Explique o motivo (3 a 500 caracteres).')).toBeVisible()
-    await folha.getByLabel('Motivo').fill('Bruno vai cuidar da tabela')
-    await folha.getByRole('button', { name: 'Ligar permissão' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'ligada' })).toBeVisible()
-    expect(chamadas.find((c) => c.rpc === 'definir_permissao')?.corpo).toEqual({
-      p_chave: 'MOTORISTA_EDITA_PARAMETROS',
-      p_ativo: true,
-      p_motivo: 'Bruno vai cuidar da tabela',
-    })
+    await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible()
   })
 
   test('empresas: criar, e logo com conferência de tipo/tamanho e envio', async ({ page }) => {

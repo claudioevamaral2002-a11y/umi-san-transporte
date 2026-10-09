@@ -8,15 +8,15 @@ insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
   ('00000000-0000-0000-0000-0000000000e2', 'Empresa B');
 
-insert into app.convites (email, nome, papel, empresa_id) values
-  ('adm@teste.local',   'Admin Teste',     'ADM',       null),
-  ('mot@teste.local',   'Motorista Teste', 'MOTORISTA', null),
-  ('inat@teste.local',  'Inativo Teste',   'MOTORISTA', null),
-  ('clia@teste.local',  'Cliente A',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e1'),
-  ('clib@teste.local',  'Cliente B',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e2'),
-  ('pend@teste.local',  'Pendente Teste',  'CLIENTE',   '00000000-0000-0000-0000-0000000000e1'),
-  ('pend2@teste.local', 'Pendente Dois',   'CLIENTE',   '00000000-0000-0000-0000-0000000000e1'),
-  ('caso@teste.local',  'Caso Teste',      'CLIENTE',   '00000000-0000-0000-0000-0000000000e1');
+insert into app.convites (email, nome, papel, empresa_id, nivel) values
+  ('adm@teste.local',   'Admin Teste',     'ADM',       null, null),
+  ('mot@teste.local',   'Motorista Teste', 'MOTORISTA', null, null),
+  ('inat@teste.local',  'Inativo Teste',   'MOTORISTA', null, null),
+  ('clia@teste.local',  'Cliente A',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e1', 2),
+  ('clib@teste.local',  'Cliente B',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e2', 1),
+  ('pend@teste.local',  'Pendente Teste',  'CLIENTE',   '00000000-0000-0000-0000-0000000000e1', 3),
+  ('pend2@teste.local', 'Pendente Dois',   'CLIENTE',   '00000000-0000-0000-0000-0000000000e1', 1),
+  ('caso@teste.local',  'Caso Teste',      'CLIENTE',   '00000000-0000-0000-0000-0000000000e1', 1);
 
 insert into auth.users (id, instance_id, aud, role, email) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'adm@teste.local'),
@@ -41,8 +41,9 @@ select ok(
             and papel = 'CLIENTE'
             and empresa_id = '00000000-0000-0000-0000-0000000000e1'
             and nome = 'Pendente Teste'
+            and nivel = 3
             and senha_pendente),
-  'convite gera perfil com papel/empresa do convite e senha_pendente = true'
+  'convite gera perfil com papel/empresa/nível do convite e senha_pendente = true'
 );
 select ok(
   (select usado_em is not null from app.convites where email = 'pend@teste.local'),
@@ -147,19 +148,15 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select ok((app.pode_acessar()).usuario_id is null, 'pode_acessar nulo: ADM sem claim aal');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
 
--- 5. pode_fazer('EDITAR_PARAMETROS')
-select is(app.pode_fazer('EDITAR_PARAMETROS'), true, 'EDITAR_PARAMETROS: ADM pode');
+-- 5. pode_fazer por papel (sem matriz de delegação)
+select is(app.pode_fazer('GERIR_CONTRATOS'), true, 'GERIR_CONTRATOS: ADM pode');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
-select is(app.pode_fazer('EDITAR_PARAMETROS'), false, 'EDITAR_PARAMETROS: MOTORISTA não pode sem delegação');
-
-reset role;
-update app.permissoes_delegadas set ativo = true where chave = 'MOTORISTA_EDITA_PARAMETROS';
-set local role authenticated;
-select is(app.pode_fazer('EDITAR_PARAMETROS'), true, 'EDITAR_PARAMETROS: MOTORISTA pode com delegação ativa');
+select is(app.pode_fazer('GERIR_CONTRATOS'), false, 'GERIR_CONTRATOS: MOTORISTA não pode');
+select is(app.pode_fazer('LANCAR_SALDO'), false, 'LANCAR_SALDO: MOTORISTA não pode');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a4","role":"authenticated","aal":"aal1"}', true);
-select is(app.pode_fazer('EDITAR_PARAMETROS'), false, 'EDITAR_PARAMETROS: CLIENTE não pode');
+select is(app.pode_fazer('GERIR_CONTRATOS'), false, 'GERIR_CONTRATOS: CLIENTE não pode');
 
 -- 5b. MOTORISTA aal2: ações de ADM, ação desconhecida e nula
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
@@ -187,17 +184,12 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select is((select count(*)::int from app.perfis), 7, 'RLS: ADM lê todos os perfis');
 select ok((select count(*) from app.auditoria) > 0, 'RLS: ADM lê a auditoria');
 
--- 8b. matriz de delegação legível por quem tem acesso
-select is((select count(*)::int from app.permissoes_delegadas), 3, 'matriz legível: ADM aal2');
-
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
-select is((select count(*)::int from app.permissoes_delegadas), 3, 'matriz legível: MOTORISTA aal2');
-
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a4","role":"authenticated","aal":"aal1"}', true);
-select is((select count(*)::int from app.permissoes_delegadas), 3, 'matriz legível: CLIENTE aal1');
-
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a7","role":"authenticated","aal":"aal2"}', true);
-select is((select count(*)::int from app.permissoes_delegadas), 0, 'matriz ilegível: sem perfil');
+-- 8b. matriz de delegação removida
+select hasnt_table('app', 'permissoes_delegadas', 'matriz removida: app.permissoes_delegadas não existe');
+select hasnt_view('api', 'permissoes', 'matriz removida: api.permissoes não existe');
+select hasnt_function('api', 'definir_permissao', 'matriz removida: api.definir_permissao não existe');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
+select is(app.pode_fazer('GERIR_PERMISSOES'), false, 'GERIR_PERMISSOES deixou de existir (false até para ADM)');
 
 select * from finish();
 rollback;

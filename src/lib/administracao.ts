@@ -7,35 +7,11 @@ export const PAPEIS: Record<Papel, string> = {
   CLIENTE: 'Cliente',
 }
 
-export interface DefinicaoPermissao {
-  chave: string
-  titulo: string
-  explicacao: string
-}
-
-/** As 3 chaves da matriz (especificação 2), na ordem da tela. */
-export const PERMISSOES: DefinicaoPermissao[] = [
-  {
-    chave: 'MOTORISTA_EDITA_PARAMETROS',
-    titulo: 'Motorista edita a tabela de preços',
-    explicacao: 'O motorista pode publicar novas versões da tabela de preços e regras, como o administrador.',
-  },
-  {
-    chave: 'MOTORISTA_LANCA_RECARGA',
-    titulo: 'Motorista lança recarga de saldo',
-    explicacao: 'O motorista pode registrar recargas (Pix recebido) no saldo da empresa cliente, com comprovante.',
-  },
-  {
-    chave: 'CLIENTE_ATUA_EM_PEDIDO_DE_OUTRO',
-    titulo: 'Cliente atua em pedido de colega',
-    explicacao:
-      'Um cliente pode aprovar, reprovar, pedir revisão ou cancelar pedidos criados por outra pessoa da mesma empresa.',
-  },
-]
-
 /** Nomes das ações registradas na auditoria; ação desconhecida aparece com o código. */
 export const ACOES: Record<string, string> = {
   PUBLICAR_PARAMETROS: 'Publicar tabela de preços',
+  PUBLICAR_CONTRATO: 'Publicar contrato',
+  DEFINIR_RETENCAO_FOTOS: 'Alterar retenção de fotos',
   PREPARAR_CONVITE: 'Preparar convite',
   CONVIDAR_LINK: 'Gerar link de convite',
   GERAR_LINK: 'Gerar novo link',

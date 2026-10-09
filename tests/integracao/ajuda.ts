@@ -58,7 +58,10 @@ export async function comBanco<T>(fn: (db: pg.Client) => Promise<T>): Promise<T>
   }
 }
 
-export type PapelTeste = 'ADM' | 'MOTORISTA' | 'CLIENTE'
+export type PapelTeste = 'ADM' | 'GESTOR_FROTA' | 'MOTORISTA' | 'CLIENTE'
+
+/** Nível do cliente: 1 gestor da empresa, 2 solicitante, 3 visualizador. */
+export type NivelTeste = 1 | 2 | 3
 
 export interface Resultado {
   ok: boolean
@@ -70,6 +73,7 @@ export interface Pessoa extends UsuarioTeste {
   email: string
   senha: string
   papel: PapelTeste
+  nivel: NivelTeste | null
   empresaId: string | null
   /** Segredo base32 do TOTP, quando cadastrado. */
   segredoTotp: string | null
@@ -101,25 +105,27 @@ export async function cadastrarTotp(cliente: UsuarioTeste['cliente']): Promise<s
 
 /**
  * Cria uma pessoa com perfil: convite (direto no banco) → usuário pela Admin API (a trigger cria o perfil)
- * → senha confirmada → login com captcha → TOTP para ADM/MOTORISTA (a menos que `mfa: false`).
- * Sem `mfa`, ADM/MOTORISTA ficam em aal1 (útil para provar a recusa).
+ * → senha confirmada → login com captcha → TOTP para quem não é CLIENTE (a menos que `mfa: false`).
+ * Sem `mfa`, ADM/GESTOR_FROTA/MOTORISTA ficam em aal1 (útil para provar a recusa).
+ * CLIENTE sem `nivel` nasce N2 (solicitante: sem poderes de gestão).
  */
 export async function criarPessoa(
-  opcoes: { papel: PapelTeste; empresa?: string; nome?: string; mfa?: boolean } = { papel: 'CLIENTE' },
+  opcoes: { papel: PapelTeste; nivel?: NivelTeste; empresa?: string; nome?: string; mfa?: boolean } = {
+    papel: 'CLIENTE',
+  },
 ): Promise<Pessoa> {
   const { papel } = opcoes
   const empresaId = papel === 'CLIENTE' ? (opcoes.empresa ?? (await empresaNova())) : null
+  const nivel = papel === 'CLIENTE' ? (opcoes.nivel ?? 2) : null
   const email = `${papel.toLowerCase()}-${randomUUID()}@teste.local`
   const senha = `Senha-${randomUUID()}`
   const nome = opcoes.nome ?? `Pessoa ${papel} ${randomUUID().slice(0, 6)}`
 
   await comBanco((db) =>
-    db.query('insert into app.convites (email, nome, papel, empresa_id) values ($1, $2, $3::app.papel, $4)', [
-      email,
-      nome,
-      papel,
-      empresaId,
-    ]),
+    db.query(
+      'insert into app.convites (email, nome, papel, empresa_id, nivel) values ($1, $2, $3::app.papel, $4, $5::smallint)',
+      [email, nome, papel, empresaId, nivel],
+    ),
   )
   const criado = await clienteServico().auth.admin.createUser({ email, password: senha, email_confirm: true })
   if (criado.error || !criado.data.user) throw criado.error ?? new Error('createUser não retornou usuário')
@@ -144,7 +150,7 @@ export async function criarPessoa(
   const sessao = await cliente.auth.getSession()
   const token = sessao.data.session?.access_token
   if (!token) throw new Error('sem sessão após preparar a pessoa')
-  return { id, email, senha, papel, empresaId, cliente, token, segredoTotp }
+  return { id, email, senha, papel, nivel, empresaId, cliente, token, segredoTotp }
 }
 
 /** Chama uma RPC de negócio (`{ok, codigo}`) e devolve o resultado tipado. */

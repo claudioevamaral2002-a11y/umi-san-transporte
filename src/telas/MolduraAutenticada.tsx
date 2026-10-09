@@ -11,6 +11,8 @@ interface Item {
   rotulo: string
   curto?: string
   icone: NomeIcone
+  /** Só para estes papéis (sem = todos os do grupo). */
+  papeis?: Papel[]
 }
 
 interface Grupo {
@@ -24,7 +26,7 @@ export const MENU: Grupo[] = [
     titulo: null,
     itens: [
       { para: '/', rotulo: 'Início', icone: 'casa' },
-      { para: '/parametros', rotulo: 'Tabela de preços e regras', curto: 'Tabela', icone: 'tabela' },
+      { para: '/parametros', rotulo: 'Tabela de preços e regras', curto: 'Tabela', icone: 'tabela', papeis: ['ADM'] },
     ],
   },
   {
@@ -33,14 +35,19 @@ export const MENU: Grupo[] = [
     itens: [
       { para: '/adm/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
       { para: '/adm/empresas', rotulo: 'Empresas', icone: 'predio' },
-      { para: '/adm/permissoes', rotulo: 'Permissões', icone: 'chave' },
       { para: '/adm/auditoria', rotulo: 'Auditoria', icone: 'lista' },
     ],
   },
 ]
 
+const permitido = (papeis: Papel[] | undefined, papel: Papel | undefined) =>
+  !papeis || (papel !== undefined && papeis.includes(papel))
+
 function gruposDo(papel: Papel | undefined): Grupo[] {
-  return MENU.filter((g) => !g.papeis || (papel !== undefined && g.papeis.includes(papel)))
+  return MENU.filter((g) => permitido(g.papeis, papel)).map((g) => ({
+    ...g,
+    itens: g.itens.filter((i) => permitido(i.papeis, papel)),
+  }))
 }
 
 /** URL assinada (1 h) do logo da empresa do cliente; sem logo ou com erro, `null` (mostra o nome). */
@@ -122,8 +129,12 @@ export function MolduraAutenticada() {
 
   const abas: Item[] = [
     { para: '/', rotulo: 'Início', icone: 'casa' },
-    { para: '/parametros', rotulo: 'Tabela', icone: 'tabela' },
-    ...(ehAdm ? [{ para: '/adm/usuarios', rotulo: 'Admin', icone: 'usuarios' as const }] : []),
+    ...(ehAdm
+      ? [
+          { para: '/parametros', rotulo: 'Tabela', icone: 'tabela' as const },
+          { para: '/adm/usuarios', rotulo: 'Admin', icone: 'usuarios' as const },
+        ]
+      : []),
   ]
 
   return (

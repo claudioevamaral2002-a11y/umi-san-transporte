@@ -30,16 +30,11 @@ const BASE: ValoresParametros = {
 }
 
 describe('podeEditarParametros', () => {
-  const ligada = [{ chave: 'MOTORISTA_EDITA_PARAMETROS', ativo: true }]
-  const desligada = [{ chave: 'MOTORISTA_EDITA_PARAMETROS', ativo: false }]
-  it('ADM sempre; motorista só com a delegação; cliente nunca', () => {
-    expect(podeEditarParametros('ADM', [])).toBe(true)
-    expect(podeEditarParametros('MOTORISTA', [])).toBe(false)
-    expect(podeEditarParametros('MOTORISTA', desligada)).toBe(false)
-    expect(podeEditarParametros('MOTORISTA', ligada)).toBe(true)
-    expect(podeEditarParametros('MOTORISTA', [{ chave: 'MOTORISTA_LANCA_RECARGA', ativo: true }])).toBe(false)
-    expect(podeEditarParametros('CLIENTE', ligada)).toBe(false)
-    expect(podeEditarParametros(null, ligada)).toBe(false)
+  it('só o ADM (sem matriz de delegação)', () => {
+    expect(podeEditarParametros('ADM')).toBe(true)
+    expect(podeEditarParametros('MOTORISTA')).toBe(false)
+    expect(podeEditarParametros('CLIENTE')).toBe(false)
+    expect(podeEditarParametros(null)).toBe(false)
   })
 })
 

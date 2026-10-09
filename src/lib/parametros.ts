@@ -16,7 +16,7 @@ export interface Faixa {
   multa_bp: number
 }
 
-/** Os 14 campos enviados a `api.publicar_parametros` (nomes das colunas). */
+/** Os 13 campos do contrato (`api.publicar_contrato`) + a retenção de fotos (configuração global). */
 export interface ValoresParametros {
   km_sem_reboque_cent: number
   km_com_reboque_cent: number
@@ -34,7 +34,7 @@ export interface ValoresParametros {
   retencao_fotos_dias: number
 }
 
-/** Linha de `api.parametros_vigentes` / `api.parametros_historico`. */
+/** Versão da tabela modelo (`api.listar_contratos` / `api.historico_contrato`) com a retenção global. */
 export interface VersaoParametros extends ValoresParametros {
   versao: number
   vigente_desde: string
@@ -153,14 +153,9 @@ export function descreverFaixas(faixas: Faixa[]): string[] {
   })
 }
 
-/** Quem pode publicar: ADM, ou MOTORISTA com a delegação ligada (o banco confere de novo). */
-export function podeEditarParametros(
-  papel: Papel | null | undefined,
-  permissoes: ReadonlyArray<{ chave: string; ativo: boolean }>,
-): boolean {
-  if (papel === 'ADM') return true
-  if (papel !== 'MOTORISTA') return false
-  return permissoes.some((p) => p.chave === 'MOTORISTA_EDITA_PARAMETROS' && p.ativo === true)
+/** Só o ADM publica contratos e a tabela modelo (Adendo A10; o banco confere de novo). */
+export function podeEditarParametros(papel: Papel | null | undefined): boolean {
+  return papel === 'ADM'
 }
 
 // ------------------------------------------------------------------------------------------------

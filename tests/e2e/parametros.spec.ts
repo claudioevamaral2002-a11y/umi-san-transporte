@@ -1,13 +1,10 @@
 import { expect, test } from '@playwright/test'
-import { EMPRESA_UMI, PERMISSOES_DESLIGADAS, simularApi, versaoFalsa } from './apoio/apiFalsa.ts'
+import { simularApi, versaoFalsa } from './apoio/apiFalsa.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
 const ADM = { papel: 'ADM' as const, tem_2fa: true }
 const MOTORISTA = { papel: 'MOTORISTA' as const, nome: 'Bruno Lima', tem_2fa: true }
 const AAL2 = { aal: 'aal2' as const }
-const DELEGADO = PERMISSOES_DESLIGADAS.map((p) =>
-  p.chave === 'MOTORISTA_EDITA_PARAMETROS' ? { ...p, ativo: true, alterado_em: '2026-10-05T10:00:00Z' } : p,
-)
 
 test.describe('início por perfil', () => {
   test('ADM sem tabela publicada: chamada para publicar e atalhos de administração', async ({ page }) => {
@@ -26,25 +23,42 @@ test.describe('início por perfil', () => {
     await expect(page.getByRole('dialog', { name: 'Publicar nova versão' })).toBeVisible()
   })
 
-  test('motorista sem delegação não recebe a chamada e só tem o atalho da tabela', async ({ page }) => {
+  test('motorista não recebe a chamada nem o atalho da tabela modelo (só o ADM publica)', async ({ page }) => {
     await comSessaoFalsa(page, MOTORISTA, AAL2)
     await simularApi(page, { vigente: [], historico: [] })
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Olá, Bruno' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Tabela de preços e regras/])
+    await expect(page.getByText('Nada pendente por aqui.')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Atalhos' })).toHaveCount(0)
     await expect(page.getByTestId('chamada-primeira-tabela')).toHaveCount(0)
   })
 })
 
 test.describe('/parametros', () => {
-  test('cliente vê a tabela só para leitura, com a empresa no topo', async ({ page }) => {
+  test('cliente não abre a tabela modelo nem a vê no menu (sem preços para o cliente)', async ({ page }) => {
     await comSessaoFalsa(page, { papel: 'CLIENTE', nome: 'Carla Dias', empresa_nome: 'Umi San' })
-    await simularApi(page, { vigente: [versaoFalsa(3)], historico: [versaoFalsa(3), versaoFalsa(2)], empresas: [EMPRESA_UMI] })
-    await page.goto('/')
-    await expect(page.getByRole('region', { name: 'Atalhos' }).getByRole('link')).toHaveText([/Tabela de preços e regras/])
+    await simularApi(page, { vigente: [versaoFalsa(3)] })
+    await page.goto('/parametros')
+    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await expect(page.getByTestId('versao-vigente')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Menu' }).click()
+    await expect(page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Tabela de preços e regras' })).toHaveCount(0)
+  })
+
+  test('motorista não abre a tabela modelo (limites e histórico só para o ADM)', async ({ page }) => {
+    await comSessaoFalsa(page, MOTORISTA, AAL2)
+    await simularApi(page, { vigente: [versaoFalsa(3)] })
+    await page.goto('/parametros')
+    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await expect(page.getByTestId('versao-vigente')).toHaveCount(0)
+  })
+
+  test('ADM vê a tabela modelo vigente e o histórico', async ({ page }) => {
+    await comSessaoFalsa(page, ADM, AAL2)
+    await simularApi(page, { vigente: [versaoFalsa(3)], historico: [versaoFalsa(3), versaoFalsa(2)] })
     await page.goto('/parametros')
     await expect(page.getByRole('heading', { name: 'Tabela de preços e regras' })).toBeVisible()
-    await expect(page.getByTestId('empresa-cliente')).toHaveText('Umi San')
+    await expect(page.getByText('Tabela modelo', { exact: true })).toBeVisible()
     await expect(page.getByTestId('versao-vigente')).toContainText('Versão 3')
     await expect(page.getByRole('heading', { name: 'Veículo próprio' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Veículo da Umi San' })).toBeVisible()
@@ -56,37 +70,22 @@ test.describe('/parametros', () => {
       'Menos de 6 h antes: multa de 100%',
     ])
     await expect(page.getByText('Versão 2', { exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Publicar nova versão' })).toHaveCount(0)
-    // Forçar a URL do formulário não abre nada para quem não pode.
-    await page.goto('/parametros?publicar=1')
-    await expect(page.getByTestId('versao-vigente')).toBeVisible()
-    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.getByText('Fotos guardadas após a entrega')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Publicar nova versão' })).toBeVisible()
   })
 
   test('sem versão publicada: estado vazio', async ({ page }) => {
-    await comSessaoFalsa(page, { papel: 'CLIENTE', empresa_nome: 'Umi San' })
+    await comSessaoFalsa(page, ADM, AAL2)
     await simularApi(page, { vigente: [], historico: [] })
     await page.goto('/parametros')
     await expect(page.getByText('Tabela ainda não publicada')).toBeVisible()
-  })
-
-  test('motorista: sem delegação não publica; com delegação vê o botão', async ({ page }) => {
-    await comSessaoFalsa(page, MOTORISTA, AAL2)
-    await simularApi(page, { vigente: [versaoFalsa(1)] })
-    await page.goto('/parametros')
-    await expect(page.getByTestId('versao-vigente')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Publicar nova versão' })).toHaveCount(0)
-
-    await simularApi(page, { vigente: [versaoFalsa(1)], permissoes: DELEGADO })
-    await page.reload()
-    await expect(page.getByRole('button', { name: 'Publicar nova versão' })).toBeVisible()
   })
 
   test('publicar: validação, confirmação com o que mudou e resultado do servidor', async ({ page }) => {
     await comSessaoFalsa(page, ADM, AAL2)
     const chamadas = await simularApi(page, {
       vigente: [versaoFalsa(4)],
-      rpc: { publicar_parametros: { ok: true, versao: 5 } },
+      rpc: { publicar_contrato: { ok: true, versao: 5 } },
     })
     await page.goto('/parametros')
     await page.getByRole('button', { name: 'Publicar nova versão' }).click()
@@ -123,20 +122,23 @@ test.describe('/parametros', () => {
     await expect(alterados.first()).toContainText('Quilômetro sem reboque')
     await expect(alterados.first()).toContainText(/R\$\s1\.234,56/)
     await expect(alterados.nth(1)).toContainText('12,5%')
-    expect(chamadas.filter((c) => c.rpc === 'publicar_parametros')).toHaveLength(0)
+    expect(chamadas.filter((c) => c.rpc === 'publicar_contrato')).toHaveLength(0)
 
     await confirmacao.getByRole('button', { name: 'Publicar versão' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Versão 5 publicada.' })).toBeVisible()
     await expect(folha).toBeHidden()
-    const envio = chamadas.find((c) => c.rpc === 'publicar_parametros')
+    const envio = chamadas.find((c) => c.rpc === 'publicar_contrato')
+    expect(envio?.corpo.p_empresa).toBeNull()
     expect(envio?.corpo.p).toMatchObject({ km_sem_reboque_cent: 123456, retorno_trecho_unico_bp: 1250, prazo_orcar_horas: 12 })
-    expect(Object.keys(envio?.corpo.p as object)).toHaveLength(14)
+    // 13 campos do contrato; a retenção de fotos é global e só é enviada quando muda.
+    expect(Object.keys(envio?.corpo.p as object)).toHaveLength(13)
+    expect(chamadas.filter((c) => c.rpc === 'definir_retencao_fotos')).toHaveLength(0)
     expect(new Date(String(envio?.corpo.p_vigente_desde)).getTime()).toBeGreaterThan(Date.now())
   })
 
   test('publicar: recusa do servidor é traduzida e nada muda', async ({ page }) => {
     await comSessaoFalsa(page, ADM, AAL2)
-    await simularApi(page, { vigente: [versaoFalsa(4)], rpc: { publicar_parametros: { ok: false, codigo: 'VIGENCIA_NO_PASSADO' } } })
+    await simularApi(page, { vigente: [versaoFalsa(4)], rpc: { publicar_contrato: { ok: false, codigo: 'VIGENCIA_NO_PASSADO' } } })
     await page.goto('/parametros?publicar=1')
     const folha = page.getByRole('dialog', { name: 'Publicar nova versão' })
     await folha.getByRole('button', { name: 'Revisar e publicar' }).click()
