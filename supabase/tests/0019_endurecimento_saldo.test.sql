@@ -137,9 +137,9 @@ reset role;
 select is(current_setting('t.sim_p4')::jsonb -> 'faixa', '{"antecedencia_min_horas": 48, "multa_bp": 0}'::jsonb,
   'I3: prévia de p4 (mais de 48 h antes): sem multa');
 -- a faixa muda entre a prévia e a confirmação (o horário chegou a menos de 6 h)
-update app.atividades set prazo_orcar_ate = least(prazo_orcar_ate, clock_timestamp() + interval '5 hours 59 minutes'),
-                          inicio = clock_timestamp() + interval '5 hours 59 minutes'
- where id = current_setting('t.p4')::uuid;
+update app.atividades a set prazo_orcar_ate = least(a.prazo_orcar_ate, x.t), inicio = x.t
+  from (select clock_timestamp() + interval '5 hours 59 minutes' as t) x
+ where a.id = current_setting('t.p4')::uuid;
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.cx_p4', api.cancelar_agendado(current_setting('t.p4')::uuid, null, current_setting('t.k9')::uuid,
@@ -169,12 +169,12 @@ select is(current_setting('t.cx_p4b')::jsonb - 'atividade_id' - 'disponivel_cent
   'I3: nova confirmação (chave nova, multa nova): cancela com a multa que o cliente viu');
 
 -- fronteiras pela RPC (margem de 30 s do relógio): pouco acima de 6 h → 50%; início já passado → 100%
-update app.atividades set prazo_orcar_ate = least(prazo_orcar_ate, clock_timestamp() + interval '6 hours 30 seconds'),
-                          inicio = clock_timestamp() + interval '6 hours 30 seconds'
- where id = current_setting('t.p5')::uuid;
-update app.atividades set prazo_orcar_ate = least(prazo_orcar_ate, clock_timestamp() - interval '2 seconds'),
-                          inicio = clock_timestamp() - interval '1 second'
- where id = current_setting('t.p6')::uuid;
+update app.atividades a set prazo_orcar_ate = least(a.prazo_orcar_ate, x.t), inicio = x.t
+  from (select clock_timestamp() + interval '6 hours 30 seconds' as t) x
+ where a.id = current_setting('t.p5')::uuid;
+update app.atividades a set prazo_orcar_ate = least(a.prazo_orcar_ate, x.t), inicio = x.t
+  from (select clock_timestamp() - interval '1 second' as t) x
+ where a.id = current_setting('t.p6')::uuid;
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.sim_p5', api.simular_cancelamento(current_setting('t.p5')::uuid)::text, true);
