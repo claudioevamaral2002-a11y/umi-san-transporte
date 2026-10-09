@@ -73,7 +73,7 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/migracao-producao/antes.sql
           npx supabase migration up
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/migracao-producao/depois.sql
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: playwright-report
