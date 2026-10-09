@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CAMPOS,
   descreverFaixas,
+  faixaAplicada,
   diferencas,
   FAIXAS_PADRAO,
   formularioDe,
@@ -68,6 +69,18 @@ describe('descreverFaixas', () => {
       'De 6 h a menos de 24 h antes: multa de 50%',
       'Menos de 6 h antes: multa de 100%',
     ])
+  })
+  it('faixa aplicada num cancelamento (frase da multa)', () => {
+    expect(faixaAplicada(FAIXAS_PADRAO, { antecedencia_min_horas: 6, multa_bp: 5000 })).toEqual({
+      percentual: '50%',
+      quando: 'de 6 h a menos de 24 h antes',
+    })
+    expect(faixaAplicada(FAIXAS_PADRAO, { antecedencia_min_horas: 24, multa_bp: 0 }).quando).toBe('24 h ou mais antes')
+    expect(faixaAplicada(FAIXAS_PADRAO, { antecedencia_min_horas: 0, multa_bp: 10000 }).quando).toBe('menos de 6 h antes')
+    expect(faixaAplicada(null, { antecedencia_min_horas: 6, multa_bp: 5000 })).toEqual({
+      percentual: '50%',
+      quando: '6 h ou mais antes',
+    })
   })
   it('faixa única', () => {
     expect(descreverFaixas([{ antecedencia_min_horas: 0, multa_bp: 1250 }])).toEqual([

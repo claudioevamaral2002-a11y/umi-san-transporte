@@ -230,11 +230,13 @@ select ok(current_setting('t.p_a5') not like '%limite_saldo%' and current_settin
           and current_setting('t.p_a5') not like '%entrada%' and current_setting('t.p_a5') not like '%km_sem_reboque%',
   'cliente: nada de limites, autor, versão, entrada ou tabela de preços');
 select is(current_setting('t.p_a5')::jsonb -> 'acoes',
-  '{"orcar": false, "recusar": false, "pedir_revisao": true, "reprovar": true, "cancelar": true}'::jsonb,
-  'dono: pode pedir revisão, reprovar e cancelar');
+  '{"orcar": false, "recusar": false, "pedir_revisao": true, "reprovar": true, "cancelar": true, "aprovar": true,
+    "cancelar_agendado": false}'::jsonb,
+  'dono: pode pedir revisão, reprovar, cancelar e aprovar');
 select ok((current_setting('t.p_a6')::jsonb ->> 'ok')::boolean
           and current_setting('t.p_a6')::jsonb -> 'acoes'
-              = '{"orcar": false, "recusar": false, "pedir_revisao": false, "reprovar": false, "cancelar": false}'::jsonb,
+              = '{"orcar": false, "recusar": false, "pedir_revisao": false, "reprovar": false, "cancelar": false,
+                  "aprovar": false, "cancelar_agendado": false}'::jsonb,
   'N3 vê o detalhe, sem ações');
 select is(current_setting('t.p_a4')::jsonb -> 'acoes' -> 'reprovar', 'true'::jsonb, 'N1 decide pelo pedido da empresa');
 select is(current_setting('t.p_a2')::jsonb -> 'orcamento' -> 'entrada', '{"km": 100}'::jsonb, 'motorista: vê a entrada');
@@ -248,7 +250,8 @@ select ok(current_setting('t.p_a2') not like '%limite_saldo%' and current_settin
           and (current_setting('t.p_a2')::jsonb -> 'orcamento' ->> 'total_cent')::int = 37500,
   'motorista: nunca limites, versão do contrato ou autor');
 select is(current_setting('t.p_a2q2')::jsonb -> 'acoes',
-  '{"orcar": true, "recusar": true, "pedir_revisao": false, "reprovar": false, "cancelar": true}'::jsonb,
+  '{"orcar": true, "recusar": true, "pedir_revisao": false, "reprovar": false, "cancelar": true, "aprovar": false,
+    "cancelar_agendado": false}'::jsonb,
   'motorista atribuído pode orçar, recusar e cancelar o SOLICITADA');
 select ok(current_setting('t.p_a2q2')::jsonb -> 'orcamento' = 'null'::jsonb, 'sem orçamento vigente: nulo');
 select is(current_setting('t.p_a1')::jsonb -> 'orcamento' -> 'snapshot',

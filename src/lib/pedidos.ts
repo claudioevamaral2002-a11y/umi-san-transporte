@@ -100,6 +100,10 @@ export interface Acoes {
   pedir_revisao: boolean
   reprovar: boolean
   cancelar: boolean
+  /** Fase 2B: aprovar o orçamento (dono N2 ou N1, dentro da validade). */
+  aprovar: boolean
+  /** Fase 2B: cancelar AGENDADA (cliente com multa pela faixa; prestador sem custo, com motivo). */
+  cancelar_agendado: boolean
 }
 
 /** Motorista/ADM, pedido SOLICITADA depois de uma revisão: a última versão enviada e o motivo do cliente. */

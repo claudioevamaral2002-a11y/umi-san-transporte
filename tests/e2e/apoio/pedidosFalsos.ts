@@ -125,7 +125,15 @@ export const HISTORICO_ORCADO = [
   { de: 'SOLICITADA', para: 'ORCADA', em: new Date(Date.now() - HORA).toISOString(), observacao: null, por_nome: 'Bruno Lima' },
 ]
 
-const SEM_ACOES = { orcar: false, recusar: false, pedir_revisao: false, reprovar: false, cancelar: false }
+export const SEM_ACOES = {
+  orcar: false,
+  recusar: false,
+  pedir_revisao: false,
+  reprovar: false,
+  cancelar: false,
+  aprovar: false,
+  cancelar_agendado: false,
+}
 
 /** Detalhe que o cliente que decide (dono N2/N1) recebe com o orçamento PENDENTE. */
 export function pedidoOrcadoCliente() {
@@ -134,7 +142,7 @@ export function pedidoOrcadoCliente() {
     pedido: detalheFalso(),
     historico: HISTORICO_ORCADO,
     orcamento: orcamentoCliente(),
-    acoes: { ...SEM_ACOES, pedir_revisao: true, reprovar: true, cancelar: true },
+    acoes: { ...SEM_ACOES, pedir_revisao: true, reprovar: true, cancelar: true, aprovar: true },
   }
 }
 

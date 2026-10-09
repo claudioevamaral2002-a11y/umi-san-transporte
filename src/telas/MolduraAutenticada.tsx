@@ -36,6 +36,7 @@ export const MENU: Grupo[] = [
       { para: '/pedidos', rotulo: 'Pedidos', icone: 'lista', aba: true },
       { para: '/agenda', rotulo: 'Agenda', icone: 'calendario', aba: true },
       { para: '/regras', rotulo: 'Regras do serviço', curto: 'Regras', icone: 'escudo', aba: true, visivel: (p) => p.papel === 'CLIENTE' },
+      { para: '/extrato', rotulo: 'Extrato', icone: 'dinheiro', visivel: (p) => p.papel === 'CLIENTE' },
       { para: '/equipe', rotulo: 'Equipe', icone: 'usuarios', visivel: gereEquipe },
       { para: '/tabela', rotulo: 'Tabela', icone: 'tabela', aba: true, visivel: (p) => p.papel === 'MOTORISTA' },
     ],
@@ -46,6 +47,8 @@ export const MENU: Grupo[] = [
     itens: [
       { para: '/adm/contratos', rotulo: 'Contratos', icone: 'tabela', aba: true },
       { para: '/adm/usuarios', rotulo: 'Usuários', curto: 'Admin', icone: 'usuarios', aba: true },
+      { para: '/adm/painel', rotulo: 'Painel', icone: 'grafico' },
+      { para: '/adm/creditos', rotulo: 'Créditos', icone: 'dinheiro' },
       { para: '/adm/empresas', rotulo: 'Empresas', icone: 'predio' },
       { para: '/adm/configuracoes', rotulo: 'Configurações', icone: 'chave' },
       { para: '/adm/auditoria', rotulo: 'Auditoria', icone: 'lista' },
@@ -143,7 +146,7 @@ export function MolduraAutenticada() {
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] md:grid-rows-[auto_1fr]">
-      <header className="sobre-marinho sticky top-0 z-20 flex items-center justify-between gap-3 bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-2.5 text-papel md:col-span-2">
+      <header className="nao-imprimir sobre-marinho sticky top-0 z-20 flex items-center justify-between gap-3 bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-2.5 text-papel md:col-span-2">
         <NavLink to="/" aria-label="IVO Transportes — início" className="flex min-h-12 items-center rounded-lg">
           <LogoIvo variante="simbolo" cor="branco" altura={34} />
         </NavLink>
@@ -160,7 +163,7 @@ export function MolduraAutenticada() {
         </div>
       </header>
 
-      <nav aria-label="Menu principal" className="hidden border-r border-borda bg-superficie p-3 md:block">
+      <nav aria-label="Menu principal" className="nao-imprimir hidden border-r border-borda bg-superficie p-3 md:block">
         <ListaMenu grupos={grupos} />
       </nav>
 
@@ -170,7 +173,7 @@ export function MolduraAutenticada() {
 
       <nav
         aria-label="Navegação"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="nao-imprimir fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="flex">
           {abas.map((a) => (

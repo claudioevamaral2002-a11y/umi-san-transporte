@@ -34,6 +34,8 @@ const CAMINHOS = {
   caminhao: 'M2 6h11v10H2z M13 9h4.5l3.5 3.5V16h-8 M6 19a1.75 1.75 0 1 0 0-3.5A1.75 1.75 0 0 0 6 19z M17 19a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5z',
   local: 'M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
   setaDireitaPequena: 'M9 6l6 6-6 6',
+  dinheiro: 'M3 7h18v12H3z M3 7l3-3h12l3 3 M12 15.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M6.5 13h.01 M17.5 13h.01',
+  grafico: 'M4 20h16 M7 16v-5 M12 16V7 M17 16v-8',
 } as const
 
 export type NomeIcone = keyof typeof CAMINHOS

@@ -242,7 +242,7 @@ test.describe('cliente: pedidos e orçamento recebido', () => {
     expect(csp).toEqual([])
   })
 
-  test('detalhe com orçamento: memorial, regras, Aprovar indisponível, pedir revisão e reprovar', async ({ page }) => {
+  test('detalhe com orçamento: memorial, regras, Aprovar habilitado, pedir revisão e reprovar', async ({ page }) => {
     const csp = await vigiarCsp(page)
     await comSessaoFalsa(page, CLIENTE_N2)
     await simularApi(page)
@@ -271,8 +271,7 @@ test.describe('cliente: pedidos e orçamento recebido', () => {
       'De 6 h a menos de 24 h antes: multa de 50%',
       'Menos de 6 h antes: multa de 100%',
     ])
-    await expect(orc.getByRole('button', { name: 'Aprovar' })).toBeDisabled()
-    await expect(orc.getByText('Aprovação disponível na próxima atualização.')).toBeVisible()
+    await expect(orc.getByRole('button', { name: 'Aprovar' })).toBeEnabled()
     // Texto do pedido nunca vira HTML.
     await expect(page.getByText('<b>portão 3</b>')).toBeVisible()
 

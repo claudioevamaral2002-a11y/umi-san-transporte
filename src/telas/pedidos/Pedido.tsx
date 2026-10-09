@@ -18,6 +18,8 @@ import { formatarDuracao, formatarQuando, numeroPedido } from '../../lib/tempo.t
 import { useTempoReal } from '../../lib/tempoReal.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
 import { FaixasCancelamento } from '../contratos/CartoesContrato.tsx'
+import { CartaoAgendado, FolhaAprovar, type Aprovacao } from './Aprovar.tsx'
+import { avisoCancelamento, FolhaCancelarAgendado } from './CancelarAgendado.tsx'
 import { Contagem, LinhaDoTempo, Memorial, Rota, SelosStatus } from './componentes.tsx'
 
 type Acao = 'revisao' | 'reprovar' | 'cancelar'
@@ -212,6 +214,9 @@ export function Pedido() {
   const avisoInicial = (local.state as { aviso?: unknown } | null)?.aviso
   const [aviso, setAviso] = useState<string | null>(typeof avisoInicial === 'string' ? avisoInicial : null)
   const [acao, setAcao] = useState<Acao | null>(null)
+  const [aprovando, setAprovando] = useState(false)
+  const [aprovacao, setAprovacao] = useState<Aprovacao | null>(null)
+  const [cancelandoAgendado, setCancelandoAgendado] = useState(false)
   // Inexistente ou de outra empresa: o banco devolve NAO_ENCONTRADO (igual) → `null`. Rede: erro com "tentar de novo".
   const { dados, erro, carregando, recarregar } = useConsulta(`pedido-${id}`, () =>
     pedidos.detalhe(id).catch((e: unknown) => {
@@ -255,7 +260,7 @@ export function Pedido() {
   const o = dados.orcamento
   const cliente = perfil?.papel === 'CLIENTE'
   const prestador = perfil?.papel === 'MOTORISTA' || perfil?.papel === 'ADM'
-  const decide = dados.acoes.pedir_revisao || dados.acoes.reprovar
+  const decide = dados.acoes.aprovar || dados.acoes.pedir_revisao || dados.acoes.reprovar
   const aberto = !p.prazo_vencido && (p.status === 'SOLICITADA' || p.status === 'ORCADA')
   const comValores = o && o.total_cent !== undefined && o.linhas
 
@@ -289,6 +294,8 @@ export function Pedido() {
 
       <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
         {aviso && <Mensagem tipo="sucesso">{aviso}</Mensagem>}
+
+        {aprovacao && <CartaoAgendado pedido={p} aprovacao={aprovacao} />}
 
         <Cartao>
           <LinhaDoTempo status={p.status} historico={dados.historico} />
@@ -336,14 +343,11 @@ export function Pedido() {
             )}
             {cliente && decide && (
               <div className="space-y-3 border-t border-borda pt-4">
-                <div>
-                  <Botao variante="principal" className="w-full" disabled aria-describedby="nota-aprovar">
+                {dados.acoes.aprovar && (
+                  <Botao variante="principal" className="w-full" onClick={() => setAprovando(true)}>
                     Aprovar
                   </Botao>
-                  <p id="nota-aprovar" className="mt-1.5 text-center ivo-legenda text-texto-suave">
-                    Aprovação disponível na próxima atualização.
-                  </p>
-                </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   {dados.acoes.pedir_revisao && <Botao onClick={() => setAcao('revisao')}>Pedir revisão</Botao>}
                   {dados.acoes.reprovar && <Botao onClick={() => setAcao('reprovar')}>Reprovar</Botao>}
@@ -354,6 +358,12 @@ export function Pedido() {
         )}
 
         <Detalhes r={dados} />
+
+        {dados.acoes.cancelar_agendado && (
+          <Botao className="w-full !text-[var(--status-cancelada)]" onClick={() => setCancelandoAgendado(true)}>
+            Cancelar agendamento
+          </Botao>
+        )}
 
         {dados.acoes.cancelar && (
           <Botao className="w-full !text-[var(--status-cancelada)]" onClick={() => setAcao('cancelar')}>
@@ -382,6 +392,46 @@ export function Pedido() {
           </ol>
         </Cartao>
       </div>
+
+      <FolhaAprovar
+        aberta={aprovando}
+        pedido={p}
+        orcamento={o}
+        aoFechar={() => setAprovando(false)}
+        aoAprovado={(a) => {
+          // Só depois do OK do servidor: fecha o recibo, mostra o check → card "Agendado" e relê o pedido.
+          setAprovando(false)
+          setAviso(null)
+          setAprovacao(a)
+          recarregar()
+        }}
+        aoJaAprovado={() => {
+          setAprovando(false)
+          setAviso('Este orçamento já tinha sido aprovado.')
+          recarregar()
+        }}
+        aoMudou={recarregar}
+      />
+
+      <FolhaCancelarAgendado
+        aberta={cancelandoAgendado}
+        atividade={p.id}
+        numero={p.numero}
+        faixas={o?.regras?.faixas_cancelamento}
+        aoFechar={() => setCancelandoAgendado(false)}
+        aoCancelado={(c) => {
+          setCancelandoAgendado(false)
+          setAprovacao(null)
+          setAviso(avisoCancelamento(c))
+          recarregar()
+        }}
+        aoJaCancelado={() => {
+          setCancelandoAgendado(false)
+          setAviso('Este agendamento já tinha sido cancelado.')
+          recarregar()
+        }}
+        aoMudou={recarregar}
+      />
 
       <FolhaAcao
         acao={acao}

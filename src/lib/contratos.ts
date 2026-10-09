@@ -173,6 +173,17 @@ export function descreverFaixas(faixas: Faixa[]): string[] {
   })
 }
 
+/**
+ * A faixa que vale num cancelamento, para a frase da multa: {6, 5000} nas faixas padrão →
+ * "50% — de 6 h a menos de 24 h antes". Sem as faixas (ou faixa fora delas): "50% — 6 h ou mais antes".
+ */
+export function faixaAplicada(faixas: readonly Faixa[] | null | undefined, faixa: Faixa): { percentual: string; quando: string } {
+  const i = faixas?.findIndex((f) => f.antecedencia_min_horas === faixa.antecedencia_min_horas && f.multa_bp === faixa.multa_bp) ?? -1
+  const frase =
+    faixas && i >= 0 ? descreverFaixas([...faixas])[i]!.split(':')[0]! : `${horas(faixa.antecedencia_min_horas)} ou mais antes`
+  return { percentual: formatarPercentual(faixa.multa_bp), quando: frase.charAt(0).toLowerCase() + frase.slice(1) }
+}
+
 /** Só o ADM publica contratos e a tabela modelo (Adendo A10; o banco confere de novo). */
 export function podeEditarContratos(papel: Papel | null | undefined): boolean {
   return papel === 'ADM'
