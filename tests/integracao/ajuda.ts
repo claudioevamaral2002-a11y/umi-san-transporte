@@ -58,7 +58,10 @@ export async function comBanco<T>(fn: (db: pg.Client) => Promise<T>): Promise<T>
   }
 }
 
-export type PapelTeste = 'ADM' | 'MOTORISTA' | 'CLIENTE'
+export type PapelTeste = 'ADM' | 'GESTOR_FROTA' | 'MOTORISTA' | 'CLIENTE'
+
+/** Nível do cliente: 1 gestor da empresa, 2 solicitante, 3 visualizador. */
+export type NivelTeste = 1 | 2 | 3
 
 export interface Resultado {
   ok: boolean
@@ -70,6 +73,7 @@ export interface Pessoa extends UsuarioTeste {
   email: string
   senha: string
   papel: PapelTeste
+  nivel: NivelTeste | null
   empresaId: string | null
   /** Segredo base32 do TOTP, quando cadastrado. */
   segredoTotp: string | null
@@ -101,25 +105,27 @@ export async function cadastrarTotp(cliente: UsuarioTeste['cliente']): Promise<s
 
 /**
  * Cria uma pessoa com perfil: convite (direto no banco) → usuário pela Admin API (a trigger cria o perfil)
- * → senha confirmada → login com captcha → TOTP para ADM/MOTORISTA (a menos que `mfa: false`).
- * Sem `mfa`, ADM/MOTORISTA ficam em aal1 (útil para provar a recusa).
+ * → senha confirmada → login com captcha → TOTP para quem não é CLIENTE (a menos que `mfa: false`).
+ * Sem `mfa`, ADM/GESTOR_FROTA/MOTORISTA ficam em aal1 (útil para provar a recusa).
+ * CLIENTE sem `nivel` nasce N2 (solicitante: sem poderes de gestão).
  */
 export async function criarPessoa(
-  opcoes: { papel: PapelTeste; empresa?: string; nome?: string; mfa?: boolean } = { papel: 'CLIENTE' },
+  opcoes: { papel: PapelTeste; nivel?: NivelTeste; empresa?: string; nome?: string; mfa?: boolean } = {
+    papel: 'CLIENTE',
+  },
 ): Promise<Pessoa> {
   const { papel } = opcoes
   const empresaId = papel === 'CLIENTE' ? (opcoes.empresa ?? (await empresaNova())) : null
+  const nivel = papel === 'CLIENTE' ? (opcoes.nivel ?? 2) : null
   const email = `${papel.toLowerCase()}-${randomUUID()}@teste.local`
   const senha = `Senha-${randomUUID()}`
   const nome = opcoes.nome ?? `Pessoa ${papel} ${randomUUID().slice(0, 6)}`
 
   await comBanco((db) =>
-    db.query('insert into app.convites (email, nome, papel, empresa_id) values ($1, $2, $3::app.papel, $4)', [
-      email,
-      nome,
-      papel,
-      empresaId,
-    ]),
+    db.query(
+      'insert into app.convites (email, nome, papel, empresa_id, nivel) values ($1, $2, $3::app.papel, $4, $5::smallint)',
+      [email, nome, papel, empresaId, nivel],
+    ),
   )
   const criado = await clienteServico().auth.admin.createUser({ email, password: senha, email_confirm: true })
   if (criado.error || !criado.data.user) throw criado.error ?? new Error('createUser não retornou usuário')
@@ -144,7 +150,7 @@ export async function criarPessoa(
   const sessao = await cliente.auth.getSession()
   const token = sessao.data.session?.access_token
   if (!token) throw new Error('sem sessão após preparar a pessoa')
-  return { id, email, senha, papel, empresaId, cliente, token, segredoTotp }
+  return { id, email, senha, papel, nivel, empresaId, cliente, token, segredoTotp }
 }
 
 /** Chama uma RPC de negócio (`{ok, codigo}`) e devolve o resultado tipado. */
@@ -156,4 +162,45 @@ export async function rpc(
   const { data, error } = await quem.cliente.rpc(nome, args)
   if (error) throw new Error(`rpc ${nome}: ${error.message}`)
   return data as Resultado
+}
+
+/** Contrato de teste (centavos, pontos-base, horas). */
+export const CONTRATO_TESTE = {
+  km_sem_reboque_cent: 250,
+  km_com_reboque_cent: 350,
+  taxa_fixa_reboque_cent: 15000,
+  retorno_trecho_unico_bp: 5000,
+  hora_espera_cent: 5000,
+  hospedagem_diaria_cent: 18000,
+  diaria_motorista_cent: 30000,
+  faixas_cancelamento: [
+    { antecedencia_min_horas: 24, multa_bp: 0 },
+    { antecedencia_min_horas: 0, multa_bp: 10000 },
+  ],
+  prazo_orcar_horas: 12,
+  validade_orcamento_horas: 24,
+  limiar_urgente_horas: 6,
+  limite_saldo_negativo_cent: 50000,
+  alerta_saldo_baixo_cent: 20000,
+}
+
+/** Empresa nova com contrato vigente (gravado direto no banco: cenário de teste). */
+export async function empresaComContrato(): Promise<string> {
+  const empresa = await empresaNova()
+  await comBanco((db) =>
+    db.query(`select interno.inserir_contrato($1, $2::jsonb, now() - interval '1 minute', null, 'Teste')`, [
+      empresa,
+      JSON.stringify(CONTRATO_TESTE),
+    ]),
+  )
+  return empresa
+}
+
+/**
+ * v1: o pedido vai para o motorista ativo mais antigo. Os motoristas de outros arquivos de teste saem de cena e o
+ * criado aqui passa a ser o atribuído (e o da agenda de pedidos novos).
+ */
+export async function motoristaUnico(): Promise<Pessoa> {
+  await comBanco((db) => db.query(`update app.perfis set ativo = false where papel = 'MOTORISTA'`))
+  return criarPessoa({ papel: 'MOTORISTA' })
 }

@@ -63,6 +63,16 @@ jobs:
         env:
           E2E_BACKEND_REAL: '1'
         run: npm run test:e2e
+      # Por último (recria o banco): aplica as migrations novas sobre um estado igual ao de produção, como o
+      # `db push` do deploy fará. Os testes acima partem de banco vazio e não exercitam a migração de dados.
+      - name: Migração sobre dados de produção (fases 1B, 2A e 2B)
+        run: |
+          set -euo pipefail
+          npx supabase db reset --version 20261008130900
+          eval "$(npx supabase status -o env | grep '^DB_URL=')"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/migracao-producao/antes.sql
+          npx supabase migration up
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/migracao-producao/depois.sql
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

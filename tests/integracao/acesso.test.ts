@@ -1,13 +1,23 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { CHAVE_PUBLICA, URL_SUPABASE, cadastrarTotp, comBanco, criarPessoa, rpc, type Pessoa, type Resultado } from './ajuda.ts'
+import {
+  CHAVE_PUBLICA,
+  URL_SUPABASE,
+  cadastrarTotp,
+  comBanco,
+  criarPessoa,
+  empresaNova,
+  rpc,
+  type Pessoa,
+  type Resultado,
+} from './ajuda.ts'
 
 const FAIXAS = [
   { antecedencia_min_horas: 48, multa_bp: 0 },
   { antecedencia_min_horas: 0, multa_bp: 5000 },
 ]
 
-function parametrosValidos() {
+function contratoValido() {
   return {
     km_sem_reboque_cent: 450,
     km_com_reboque_cent: 650,
@@ -22,14 +32,15 @@ function parametrosValidos() {
     limiar_urgente_horas: 12,
     limite_saldo_negativo_cent: 100000,
     alerta_saldo_baixo_cent: 20000,
-    retencao_fotos_dias: 365,
   }
 }
 
-const publicar = (quem: Pessoa) =>
-  rpc(quem, 'publicar_parametros', {
-    p: parametrosValidos(),
-    p_vigente_desde: new Date(Date.now() + 5_000).toISOString(),
+/** Publica o contrato de uma empresa (nula = tabela modelo). `jaVigente`: vigência 30 s no passado (tolerância é 1 min). */
+const publicar = (quem: Pessoa, empresa: string | null = null, jaVigente = false) =>
+  rpc(quem, 'publicar_contrato', {
+    p_empresa: empresa,
+    p: contratoValido(),
+    p_vigente_desde: new Date(Date.now() + (jaVigente ? -30_000 : 5_000)).toISOString(),
   })
 
 const nomeEmpresa = () => `Empresa ${randomUUID().slice(0, 8)}`
@@ -53,8 +64,6 @@ async function negacoes(adm: Pessoa, alvo: string, acao?: string): Promise<Linha
   return data as LinhaAuditoria[]
 }
 
-const desligarDelegacoes = () => comBanco((db) => db.query('update app.permissoes_delegadas set ativo = false'))
-
 type Tentativas = Array<[string, Promise<Resultado>]>
 
 async function esperarSemPermissao(tentativas: Tentativas) {
@@ -70,11 +79,8 @@ describe('cliente não administra nada', () => {
     const intrusa = `Intrusa ${randomUUID()}`
 
     const tentativas: Tentativas = [
-      ['PUBLICAR_PARAMETROS', publicar(cliente)],
-      [
-        'DEFINIR_PERMISSAO',
-        rpc(cliente, 'definir_permissao', { p_chave: 'MOTORISTA_LANCA_RECARGA', p_ativo: true, p_motivo: 'tentativa' }),
-      ],
+      ['PUBLICAR_CONTRATO', publicar(cliente, cliente.empresaId)],
+      ['DEFINIR_RETENCAO_FOTOS', rpc(cliente, 'definir_retencao_fotos', { p_dias: 1 })],
       [
         'ALTERAR_PERFIL',
         rpc(cliente, 'alterar_perfil', { p_usuario: cliente.id, p_nome: 'Outro Nome', p_papel: 'ADM', p_empresa: null }),
@@ -128,83 +134,224 @@ describe('cliente não administra nada', () => {
   })
 })
 
-describe('delegação de parâmetros ao motorista', () => {
-  it('motorista só publica com MOTORISTA_EDITA_PARAMETROS ligada; desligar volta a bloquear', async () => {
+describe('contratos: só o ADM publica', () => {
+  it('motorista e gestor de frota são negados (auditado); o ADM publica o modelo e o contrato da empresa', async () => {
     const adm = await criarPessoa({ papel: 'ADM' })
     const motorista = await criarPessoa({ papel: 'MOTORISTA' })
+    const gestor = await criarPessoa({ papel: 'GESTOR_FROTA' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE', nivel: 1 })
 
-    try {
-      expect(await publicar(motorista)).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
-
-      expect(
-        await rpc(adm, 'definir_permissao', {
-          p_chave: 'MOTORISTA_EDITA_PARAMETROS',
-          p_ativo: true,
-          p_motivo: 'teste de delegação',
-        }),
-      ).toMatchObject({ ok: true })
-      const publicada = await publicar(motorista)
-      expect(publicada).toMatchObject({ ok: true })
-      expect(typeof publicada.versao).toBe('number')
-
-      expect(
-        await rpc(adm, 'definir_permissao', {
-          p_chave: 'MOTORISTA_EDITA_PARAMETROS',
-          p_ativo: false,
-          p_motivo: 'teste de revogação',
-        }),
-      ).toMatchObject({ ok: true })
-      expect(await publicar(motorista)).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
-    } finally {
-      await desligarDelegacoes()
+    for (const quem of [motorista, gestor]) {
+      expect(await publicar(quem, cliente.empresaId), quem.papel).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+      expect(await rpc(quem, 'definir_retencao_fotos', { p_dias: 10 }), quem.papel).toMatchObject({
+        ok: false,
+        codigo: 'SEM_PERMISSAO',
+      })
+      expect((await negacoes(adm, quem.id, 'PUBLICAR_CONTRATO')).length, quem.papel).toBe(1)
     }
 
-    const lista = await negacoes(adm, motorista.id, 'PUBLICAR_PARAMETROS')
-    expect(lista).toHaveLength(2)
+    const modelo = await publicar(adm)
+    expect(modelo).toMatchObject({ ok: true })
+    expect(typeof modelo.versao).toBe('number')
+    expect(await publicar(adm, cliente.empresaId)).toMatchObject({ ok: true, versao: 1 })
+    expect(await publicar(adm, cliente.empresaId)).toMatchObject({ ok: true, versao: 2 })
+
+    const historico = await adm.cliente.rpc('historico_contrato', { p_empresa: cliente.empresaId })
+    expect(historico.error).toBeNull()
+    expect((historico.data as Array<{ versao: number }>).map((v) => v.versao)).toEqual([2, 1])
   })
 
-  it('motorista nunca altera matriz nem usuários, mesmo com todas as delegações ligadas', async () => {
+  it('motorista nunca altera usuários nem empresas', async () => {
     const adm = await criarPessoa({ papel: 'ADM' })
     const motorista = await criarPessoa({ papel: 'MOTORISTA' })
     const alvo = await criarPessoa({ papel: 'CLIENTE' })
     const intrusa = `Intrusa ${randomUUID()}`
 
-    try {
-      await comBanco((db) => db.query('update app.permissoes_delegadas set ativo = true'))
+    const tentativas: Tentativas = [
+      [
+        'PREPARAR_CONVITE',
+        rpc(motorista, 'preparar_convite', {
+          p_email: `x-${randomUUID()}@teste.local`,
+          p_nome: 'Fulano',
+          p_papel: 'MOTORISTA',
+          p_empresa: null,
+        }),
+      ],
+      [
+        'ALTERAR_PERFIL',
+        rpc(motorista, 'alterar_perfil', { p_usuario: alvo.id, p_nome: 'Outro Nome', p_papel: 'MOTORISTA', p_empresa: null }),
+      ],
+      ['DEFINIR_ATIVO', rpc(motorista, 'definir_ativo', { p_usuario: alvo.id, p_ativo: false, p_motivo: 'tentativa' })],
+      ['SALVAR_EMPRESA', rpc(motorista, 'salvar_empresa', { p_id: null, p_nome: intrusa })],
+    ]
+    await esperarSemPermissao(tentativas)
+    expect((await motorista.cliente.rpc('listar_usuarios')).data).toEqual([])
+    expect((await motorista.cliente.rpc('listar_auditoria')).data).toEqual([])
 
-      const tentativas: Tentativas = [
-        [
-          'DEFINIR_PERMISSAO',
-          rpc(motorista, 'definir_permissao', { p_chave: 'MOTORISTA_LANCA_RECARGA', p_ativo: false, p_motivo: 'tentativa' }),
-        ],
-        [
-          'PREPARAR_CONVITE',
-          rpc(motorista, 'preparar_convite', {
-            p_email: `x-${randomUUID()}@teste.local`,
-            p_nome: 'Fulano',
-            p_papel: 'MOTORISTA',
-            p_empresa: null,
-          }),
-        ],
-        [
-          'ALTERAR_PERFIL',
-          rpc(motorista, 'alterar_perfil', { p_usuario: alvo.id, p_nome: 'Outro Nome', p_papel: 'MOTORISTA', p_empresa: null }),
-        ],
-        ['DEFINIR_ATIVO', rpc(motorista, 'definir_ativo', { p_usuario: alvo.id, p_ativo: false, p_motivo: 'tentativa' })],
-        ['SALVAR_EMPRESA', rpc(motorista, 'salvar_empresa', { p_id: null, p_nome: intrusa })],
-      ]
-      await esperarSemPermissao(tentativas)
-      expect((await motorista.cliente.rpc('listar_usuarios')).data).toEqual([])
-      expect((await motorista.cliente.rpc('listar_auditoria')).data).toEqual([])
+    const lista = await negacoes(adm, motorista.id)
+    for (const [acao] of tentativas) expect(lista.some((l) => l.acao === acao), acao).toBe(true)
 
-      const lista = await negacoes(adm, motorista.id)
-      for (const [acao] of tentativas) expect(lista.some((l) => l.acao === acao), acao).toBe(true)
+    const perfil = await comBanco((db) => db.query('select ativo, papel from app.perfis where usuario_id = $1', [alvo.id]))
+    expect(perfil.rows[0]).toMatchObject({ ativo: true, papel: 'CLIENTE' })
+  })
 
-      const perfil = await comBanco((db) => db.query('select ativo, papel from app.perfis where usuario_id = $1', [alvo.id]))
-      expect(perfil.rows[0]).toMatchObject({ ativo: true, papel: 'CLIENTE' })
-    } finally {
-      await desligarDelegacoes()
+  it('a matriz de delegação e a tabela única não existem mais na API', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    expect((await adm.cliente.from('permissoes').select('*')).error).not.toBeNull()
+    expect((await adm.cliente.rpc('definir_permissao', { p_chave: 'X', p_ativo: true, p_motivo: 'teste' })).error).not.toBeNull()
+    expect((await adm.cliente.from('parametros_vigentes').select('*')).error).not.toBeNull()
+    expect((await adm.cliente.rpc('publicar_parametros', { p: {}, p_vigente_desde: null })).error).not.toBeNull()
+  })
+})
+
+describe('visibilidade do contrato por perfil', () => {
+  it('cliente vê só as regras do serviço: nem preços nem limites (nem pela RPC do motorista)', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE', nivel: 1 })
+    expect((await cliente.cliente.rpc('meu_perfil')).data[0]).toMatchObject({ empresa_tem_contrato: false, nivel: 1 })
+    expect(await publicar(adm, cliente.empresaId, true)).toMatchObject({ ok: true })
+
+    const regras = await cliente.cliente.rpc('regras_do_servico')
+    expect(regras.error).toBeNull()
+    expect(regras.data).toHaveLength(1)
+    expect(Object.keys(regras.data[0]).sort()).toEqual(
+      ['faixas_cancelamento', 'limiar_urgente_horas', 'prazo_orcar_horas', 'validade_orcamento_horas'].sort(),
+    )
+    expect(regras.data[0]).toMatchObject({ prazo_orcar_horas: 24, faixas_cancelamento: FAIXAS })
+    expect((await cliente.cliente.rpc('meu_perfil')).data[0]).toMatchObject({ empresa_tem_contrato: true })
+
+    expect((await cliente.cliente.rpc('precos_para_orcar', { p_empresa: cliente.empresaId })).data).toEqual([])
+    expect((await cliente.cliente.rpc('listar_contratos')).data).toEqual([])
+    expect((await cliente.cliente.rpc('historico_contrato', { p_empresa: cliente.empresaId })).data).toEqual([])
+    expect((await cliente.cliente.rpc('ler_configuracao')).data).toEqual([])
+    expect((await cliente.cliente.from('contratos_versoes').select('*')).error).not.toBeNull()
+  })
+
+  it('motorista lê preços e prazos para orçar, sem limites, versão, autor nem histórico', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const motorista = await criarPessoa({ papel: 'MOTORISTA' })
+    const cliente = await criarPessoa({ papel: 'CLIENTE' })
+    expect(await publicar(adm, cliente.empresaId, true)).toMatchObject({ ok: true })
+
+    const precos = await motorista.cliente.rpc('precos_para_orcar', { p_empresa: cliente.empresaId })
+    expect(precos.error).toBeNull()
+    expect(precos.data).toHaveLength(1)
+    const linha = precos.data[0] as Record<string, unknown>
+    expect(linha).toMatchObject({ km_sem_reboque_cent: 450, diaria_motorista_cent: 20000, prazo_orcar_horas: 24 })
+    for (const proibido of ['limite_saldo_negativo_cent', 'alerta_saldo_baixo_cent', 'versao', 'publicado_por_nome', 'retencao_fotos_dias']) {
+      expect(linha, proibido).not.toHaveProperty(proibido)
     }
+    expect((await motorista.cliente.rpc('historico_contrato', { p_empresa: cliente.empresaId })).data).toEqual([])
+    expect((await motorista.cliente.rpc('listar_contratos')).data).toEqual([])
+    expect((await motorista.cliente.rpc('ler_configuracao')).data).toEqual([])
+    expect((await motorista.cliente.rpc('regras_do_servico')).data).toEqual([])
+
+    // gestor de frota: sem preço (Adendo A10)
+    const gestor = await criarPessoa({ papel: 'GESTOR_FROTA' })
+    expect((await gestor.cliente.rpc('precos_para_orcar', { p_empresa: cliente.empresaId })).data).toEqual([])
+  })
+})
+
+describe('equipe do cliente (nível 1)', () => {
+  it('N1 convida colega da própria empresa; não convida para outra empresa nem papel não-cliente', async () => {
+    const n1 = await criarPessoa({ papel: 'CLIENTE', nivel: 1 })
+    const outra = await criarPessoa({ papel: 'CLIENTE', nivel: 1 })
+    const email = `colega-${randomUUID()}@teste.local`
+    const convidar = (args: Record<string, unknown>) =>
+      rpc(n1, 'preparar_convite', { p_email: `x-${randomUUID()}@teste.local`, p_nome: 'Colega Teste', ...args })
+
+    expect(
+      await rpc(n1, 'preparar_convite', { p_email: email, p_nome: 'Colega Teste', p_papel: 'CLIENTE', p_empresa: null, p_nivel: 3 }),
+    ).toMatchObject({ ok: true, email })
+    const convite = await comBanco((db) =>
+      db.query<{ empresa_id: string; nivel: number; papel: string }>(
+        'select empresa_id, nivel, papel from app.convites where email = $1 and usado_em is null',
+        [email],
+      ),
+    )
+    expect(convite.rows[0]).toEqual({ empresa_id: n1.empresaId, nivel: 3, papel: 'CLIENTE' })
+
+    expect(await convidar({ p_papel: 'CLIENTE', p_empresa: outra.empresaId, p_nivel: 2 })).toMatchObject({
+      ok: false,
+      codigo: 'SEM_PERMISSAO',
+    })
+    for (const papel of ['MOTORISTA', 'GESTOR_FROTA', 'ADM']) {
+      expect(await convidar({ p_papel: papel, p_empresa: null }), papel).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+    }
+  })
+
+  it('N2 e N3 não convidam', async () => {
+    const empresa = await empresaNova()
+    for (const nivel of [2, 3] as const) {
+      const pessoa = await criarPessoa({ papel: 'CLIENTE', nivel, empresa })
+      expect(
+        await rpc(pessoa, 'preparar_convite', {
+          p_email: `x-${randomUUID()}@teste.local`,
+          p_nome: 'Colega Teste',
+          p_papel: 'CLIENTE',
+          p_empresa: null,
+          p_nivel: 3,
+        }),
+        `N${nivel}`,
+      ).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+    }
+  })
+
+  it('N1 desativa colega, mas não a si nem quem não é cliente da empresa; vê só a própria equipe', async () => {
+    const empresa = await empresaNova()
+    const n1 = await criarPessoa({ papel: 'CLIENTE', nivel: 1, empresa })
+    const colega = await criarPessoa({ papel: 'CLIENTE', nivel: 2, empresa })
+    const motorista = await criarPessoa({ papel: 'MOTORISTA' })
+    const deFora = await criarPessoa({ papel: 'CLIENTE', nivel: 2 })
+    const definir = (alvo: Pessoa, ativo: boolean) =>
+      rpc(n1, 'definir_ativo', { p_usuario: alvo.id, p_ativo: ativo, p_motivo: 'teste da equipe' })
+
+    expect(await definir(n1, false)).toMatchObject({ ok: false, codigo: 'PROPRIO_USUARIO' })
+    expect(await definir(motorista, false)).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+    expect(await definir(deFora, false)).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
+    expect(await definir(colega, false)).toMatchObject({ ok: true })
+    expect((await colega.cliente.from('empresas').select('id')).data).toEqual([])
+    expect(await definir(colega, true)).toMatchObject({ ok: true })
+
+    expect(await rpc(n1, 'autorizar_operacao_usuario', { p_usuario: colega.id, p_acao: 'GERAR_LINK' })).toMatchObject({
+      ok: true,
+      email: colega.email,
+    })
+    expect(await rpc(n1, 'autorizar_operacao_usuario', { p_usuario: deFora.id, p_acao: 'GERAR_LINK' })).toMatchObject({
+      ok: false,
+      codigo: 'SEM_PERMISSAO',
+    })
+
+    const equipe = (await n1.cliente.rpc('listar_usuarios')).data as Array<{ usuario_id: string }>
+    expect(equipe.map((u) => u.usuario_id).sort()).toEqual([n1.id, colega.id].sort())
+
+    const ativos = await comBanco((db) =>
+      db.query<{ ativo: boolean }>('select ativo from app.perfis where usuario_id = any($1)', [
+        [n1.id, motorista.id, deFora.id, colega.id],
+      ]),
+    )
+    expect(ativos.rows.every((l) => l.ativo)).toBe(true)
+  })
+
+  it('N3 não age: nem convida, nem desativa, nem gera link, nem lista', async () => {
+    const empresa = await empresaNova()
+    const n3 = await criarPessoa({ papel: 'CLIENTE', nivel: 3, empresa })
+    const colega = await criarPessoa({ papel: 'CLIENTE', nivel: 2, empresa })
+    await esperarSemPermissao([
+      [
+        'PREPARAR_CONVITE',
+        rpc(n3, 'preparar_convite', {
+          p_email: `x-${randomUUID()}@teste.local`,
+          p_nome: 'Colega Teste',
+          p_papel: 'CLIENTE',
+          p_empresa: null,
+          p_nivel: 3,
+        }),
+      ],
+      ['DEFINIR_ATIVO', rpc(n3, 'definir_ativo', { p_usuario: colega.id, p_ativo: false, p_motivo: 'tentativa' })],
+      ['AUTORIZAR_OPERACAO_USUARIO', rpc(n3, 'autorizar_operacao_usuario', { p_usuario: colega.id, p_acao: 'GERAR_LINK' })],
+    ])
+    expect((await n3.cliente.rpc('listar_usuarios')).data).toEqual([])
   })
 })
 
@@ -320,25 +467,15 @@ describe('segundo fator (aal2)', () => {
 
     // a negação em aal1 ficou auditada
     const lista = await negacoes(outro, adm.id)
-    expect(lista.some((l) => l.acao === 'PUBLICAR_PARAMETROS' && l.codigo === 'SEM_PERMISSAO')).toBe(true)
+    expect(lista.some((l) => l.acao === 'PUBLICAR_CONTRATO' && l.codigo === 'SEM_PERMISSAO')).toBe(true)
   })
 
-  it('motorista em aal1 é recusado mesmo com a delegação ligada; em aal2 é liberado', async () => {
-    const adm = await criarPessoa({ papel: 'ADM' })
-    const motorista = await criarPessoa({ papel: 'MOTORISTA', mfa: false })
-    try {
-      expect(
-        await rpc(adm, 'definir_permissao', {
-          p_chave: 'MOTORISTA_EDITA_PARAMETROS',
-          p_ativo: true,
-          p_motivo: 'teste de aal1',
-        }),
-      ).toMatchObject({ ok: true })
-      expect(await publicar(motorista)).toMatchObject({ ok: false, codigo: 'SEM_PERMISSAO' })
-      await cadastrarTotp(motorista.cliente)
-      expect(await publicar(motorista)).toMatchObject({ ok: true })
-    } finally {
-      await desligarDelegacoes()
+  it('gestor de frota e motorista em aal1 são recusados; em aal2 são liberados', async () => {
+    for (const papel of ['GESTOR_FROTA', 'MOTORISTA'] as const) {
+      const pessoa = await criarPessoa({ papel, mfa: false })
+      expect((await pessoa.cliente.from('empresas').select('id')).data, `${papel} aal1`).toEqual([])
+      await cadastrarTotp(pessoa.cliente)
+      expect(((await pessoa.cliente.from('empresas').select('id')).data ?? []).length, `${papel} aal2`).toBeGreaterThan(0)
     }
   })
 

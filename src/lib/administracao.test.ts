@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { detalheComoTexto, filtrarUsuarios, motivoValido, nomeAcao, normalizar, validarLogo } from './administracao.ts'
+import {
+  detalheComoTexto,
+  filtrarUsuarios,
+  gereEquipe,
+  motivoValido,
+  nomeAcao,
+  normalizar,
+  rotuloPerfil,
+  validarLogo,
+} from './administracao.ts'
 
 describe('administração', () => {
   const lista = [
@@ -37,5 +46,16 @@ describe('administração', () => {
     expect(nomeAcao('ACAO_NOVA')).toBe('ACAO_NOVA')
     expect(detalheComoTexto(null)).toBe('—')
     expect(detalheComoTexto({ a: '<b>' })).toBe('{\n  "a": "<b>"\n}')
+  })
+
+  it('perfis: gestor de frota e níveis do cliente', () => {
+    expect(rotuloPerfil('GESTOR_FROTA', null)).toBe('Gestor de frota')
+    expect(rotuloPerfil('CLIENTE', 1)).toBe('Cliente · Gestor da empresa (N1)')
+    expect(rotuloPerfil('CLIENTE', 3)).toBe('Cliente · Visualizador (N3)')
+    expect(rotuloPerfil('CLIENTE', null)).toBe('Cliente')
+    expect(gereEquipe({ papel: 'CLIENTE', nivel: 1 })).toBe(true)
+    expect(gereEquipe({ papel: 'CLIENTE', nivel: 2 })).toBe(false)
+    expect(gereEquipe({ papel: 'ADM', nivel: null })).toBe(false)
+    expect(gereEquipe(null)).toBe(false)
   })
 })

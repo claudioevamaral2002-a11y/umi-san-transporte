@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo } from '../../design/componentes/Campo.tsx'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
@@ -39,7 +40,13 @@ function Logo({ url, nome }: { url: string | undefined; nome: string }) {
   )
 }
 
-function FormNome({ empresa, onSalvo }: { empresa: Empresa | null; onSalvo: (texto: string) => void }) {
+function FormNome({
+  empresa,
+  onSalvo,
+}: {
+  empresa: Empresa | null
+  onSalvo: (texto: string, criada?: { id: string; nome: string }) => void
+}) {
   const [nome, setNome] = useState(empresa?.nome ?? '')
   const [erro, setErro] = useState<string | undefined>()
   const [falha, setFalha] = useState<string | null>(null)
@@ -57,7 +64,11 @@ function FormNome({ empresa, onSalvo }: { empresa: Empresa | null; onSalvo: (tex
     setEnviando(true)
     const r = await api.salvarEmpresa(empresa?.id ?? null, nome.trim())
     setEnviando(false)
-    if (r.ok) onSalvo(empresa ? `Empresa renomeada para ${nome.trim()}.` : `Empresa ${nome.trim()} criada.`)
+    if (r.ok && empresa) onSalvo(`Empresa renomeada para ${nome.trim()}.`)
+    else if (r.ok) {
+      const id = typeof r.id === 'string' ? r.id : null
+      onSalvo(`Empresa ${nome.trim()} criada.`, id ? { id, nome: nome.trim() } : undefined)
+    }
     else setFalha(mensagemDoCodigo(r.codigo))
   }
 
@@ -169,14 +180,18 @@ export function Empresas() {
   const logos = useLogos((dados ?? []).flatMap((e) => (e.logo_caminho ? [e.logo_caminho] : [])))
   const [edicao, setEdicao] = useState<Edicao | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  // Empresa recém-criada: próximo passo é o contrato (sem contrato vigente, os clientes dela não fazem pedidos).
+  const [criada, setCriada] = useState<{ id: string; nome: string } | null>(null)
 
-  const concluir = (texto: string) => {
+  const concluir = (texto: string, nova?: { id: string; nome: string }) => {
     setAviso(texto)
+    setCriada(nova ?? null)
     setEdicao(null)
     recarregar()
   }
   const abrir = (e: Edicao) => {
     setAviso(null)
+    setCriada(null)
     setEdicao(e)
   }
   const urlDe = (e: Empresa) => (e.logo_caminho ? logos[e.logo_caminho] : undefined)
@@ -199,7 +214,7 @@ export function Empresas() {
       <CabecalhoTela
         sobretitulo="Administração"
         titulo="Empresas"
-        descricao="Empresas clientes: nome e logo exibido para os clientes de cada uma."
+        descricao="Empresas clientes: nome e logo exibido para os clientes de cada uma. Preços e regras ficam em Contratos."
         acao={
           <Botao variante="principal" className="flex w-full items-center justify-center gap-2 md:w-auto" onClick={() => abrir({ tipo: 'nova' })}>
             <Icone nome="mais" tamanho={20} />
@@ -208,6 +223,24 @@ export function Empresas() {
         }
       />
       <div aria-live="polite">{aviso && <Mensagem tipo="sucesso">{aviso}</Mensagem>}</div>
+      {criada && (
+        <Cartao className="space-y-3 border-[var(--cor-laranja)]" data-testid="proximo-passo-contrato">
+          <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+            <Icone nome="alerta" tamanho={16} />
+            Próximo passo
+          </p>
+          <p className="ivo-corpo">
+            {criada.nome} ainda não tem contrato. Sem contrato vigente, os clientes dela não conseguem fazer pedidos.
+          </p>
+          <Link
+            to={`/adm/contratos/${criada.id}?publicar=1`}
+            className="inline-flex min-h-12 items-center gap-2 rounded-cartao bg-acao px-5 ivo-botao text-acao-texto"
+          >
+            Criar contrato a partir da tabela modelo
+            <Icone nome="setaDireita" tamanho={20} />
+          </Link>
+        </Cartao>
+      )}
 
       {erro && !dados && <ErroAoCarregar onTentar={recarregar} />}
       {carregando && !dados && <Skeleton className="h-40" />}

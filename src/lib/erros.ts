@@ -31,13 +31,32 @@ export const MENSAGENS = {
   MOTIVO_OBRIGATORIO: 'Informe o motivo.',
   JA_EXISTE_ADM: 'Já existe um administrador.',
   // Devolvidos por interno.checar_convite (preparar_convite / convidar).
-  JA_CADASTRADO: 'Este e-mail já tem cadastro. Use "Gerar novo link" na lista de usuários.',
-  EMAIL_EM_USO: 'Este e-mail já está em uso. Use "Gerar novo link" na lista de usuários.',
+  JA_CADASTRADO: 'Este e-mail já tem cadastro. Use "Gerar novo link" na lista de pessoas.',
+  EMAIL_EM_USO: 'Este e-mail já está em uso. Use "Gerar novo link" na lista de pessoas.',
 
-  // Matriz, empresas e parâmetros
+  // Empresas e contratos (CHAVE_INVALIDA: só nas migrations da fase 1, da matriz já removida)
   CHAVE_INVALIDA: 'Permissão desconhecida. Atualize a página e tente de novo.',
   CAMINHO_INVALIDO: 'Arquivo de logo inválido. Envie um PNG ou WebP.',
   VIGENCIA_NO_PASSADO: 'A vigência precisa começar agora ou no futuro.',
+
+  // Pedidos, agenda e orçamento (fase 2A)
+  SEM_CONTRATO: 'Sua empresa ainda não tem contrato vigente. Fale com a IVO Transportes.',
+  SEM_MOTORISTA: 'Nenhum motorista disponível no momento. Tente de novo mais tarde.',
+  HORARIO_OCUPADO: 'Esse horário acabou de ser ocupado. Escolha outro.',
+  STATUS_INVALIDO: 'Este pedido mudou de situação. Atualize a página.',
+  PRAZO_VENCIDO: 'O prazo deste pedido venceu.',
+  CAMPOS_INCOMPATIVEIS: 'Há campos que não valem para a modalidade escolhida.',
+  VALOR_FORA_DO_LIMITE: 'O valor calculado passou do limite permitido. Confira as quantidades.',
+
+  // Saldo, aprovação e cancelamento de agendado (fase 2B)
+  SALDO_INSUFICIENTE: 'Saldo insuficiente para aprovar este orçamento.',
+  ORCAMENTO_VENCIDO: 'A validade deste orçamento venceu. Peça um novo pedido.',
+  ORCAMENTO_ALTERADO: 'Este orçamento mudou desde que você abriu. Atualize a página e confira antes de aprovar.',
+  JA_PROCESSADO: 'Esta operação já foi feita. Atualize a página.',
+  CHAVE_REUTILIZADA: 'Algo deu errado. Atualize a página e tente de novo.',
+  NAO_ESTORNAVEL: 'Este lançamento não pode ser estornado.',
+  MULTA_ALTERADA: 'A multa mudou: o horário do cancelamento passou para outra faixa. Confira o novo valor e confirme de novo.',
+  DIVERGENCIA_SALDO: 'A conferência de saldo encontrou divergência. Veja o painel.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS

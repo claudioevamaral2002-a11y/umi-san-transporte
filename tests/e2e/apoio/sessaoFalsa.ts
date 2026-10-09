@@ -8,8 +8,12 @@ const USUARIO = '00000000-0000-4000-8000-000000000001'
 
 export interface PerfilFalso {
   nome?: string
-  papel?: 'ADM' | 'MOTORISTA' | 'CLIENTE'
+  papel?: 'ADM' | 'GESTOR_FROTA' | 'MOTORISTA' | 'CLIENTE'
+  /** Nível do cliente (padrão 2, solicitante); nulo para os demais papéis. */
+  nivel?: 1 | 2 | 3
   empresa_nome?: string | null
+  /** Só cliente (padrão `true`). */
+  empresa_tem_contrato?: boolean
   senha_pendente?: boolean
   tem_2fa?: boolean
   ativo?: boolean
@@ -74,9 +78,11 @@ export async function comSessaoFalsa(page: Page, perfil: PerfilFalso, opcoes: { 
       {
         nome: perfil.nome ?? 'Ana Souza',
         papel: perfil.papel ?? 'MOTORISTA',
+        nivel: perfil.papel === 'CLIENTE' ? (perfil.nivel ?? 2) : null,
         empresa_id: perfil.papel === 'CLIENTE' ? '00000000-0000-4000-8000-0000000000e1' : null,
         empresa_nome: perfil.empresa_nome ?? null,
         empresa_logo_caminho: null,
+        empresa_tem_contrato: perfil.papel === 'CLIENTE' ? (perfil.empresa_tem_contrato ?? true) : null,
         ativo: perfil.ativo ?? true,
         senha_pendente: perfil.senha_pendente ?? false,
         tem_2fa: tem2fa,
@@ -144,9 +150,11 @@ export async function simularResgateDeLink(
       {
         nome: perfil.nome ?? 'Carla Dias',
         papel: perfil.papel ?? 'CLIENTE',
+        nivel: (perfil.papel ?? 'CLIENTE') === 'CLIENTE' ? (perfil.nivel ?? 2) : null,
         empresa_id: null,
         empresa_nome: null,
         empresa_logo_caminho: null,
+        empresa_tem_contrato: null,
         ativo: perfil.ativo ?? true,
         senha_pendente: perfil.senha_pendente ?? true,
         tem_2fa: false,

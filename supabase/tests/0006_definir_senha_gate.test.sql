@@ -4,10 +4,10 @@ create extension if not exists pgtap with schema extensions;
 select plan(13);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
-insert into app.convites (email, nome, papel, empresa_id) values
-  ('mot@teste.local', 'Motorista Teste', 'MOTORISTA', null),
-  ('cli@teste.local', 'Cliente Teste', 'CLIENTE', '00000000-0000-0000-0000-0000000000e1'),
-  ('ina@teste.local', 'Inativo Teste', 'MOTORISTA', null);
+insert into app.convites (email, nome, papel, empresa_id, nivel) values
+  ('mot@teste.local', 'Motorista Teste', 'MOTORISTA', null, null),
+  ('cli@teste.local', 'Cliente Teste', 'CLIENTE', '00000000-0000-0000-0000-0000000000e1', 2),
+  ('ina@teste.local', 'Inativo Teste', 'MOTORISTA', null, null);
 insert into auth.users (id, instance_id, aud, role, email) values
   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'mot@teste.local'),
   ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'cli@teste.local'),

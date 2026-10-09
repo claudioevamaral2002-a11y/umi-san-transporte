@@ -46,7 +46,7 @@ Se o ADM também esqueceu a senha, veja o item 3 (outro ADM gera o link) ou, sen
 
 ## 3. Gerar link de senha para motorista ou cliente
 
-(Também serve para quem esqueceu a senha.)
+(Também serve para quem esqueceu a senha. Para colegas de uma empresa cliente, o gestor da empresa (N1) faz o mesmo pela tela **Equipe**; ver item 9.)
 
 1. Entre no aplicativo como ADM: https://umi-san-transporte.pages.dev
 2. Menu **Usuários**.
@@ -99,5 +99,182 @@ Detalhes em [docs/fases/fase-1-desenho.md](fases/fase-1-desenho.md), seção 7. 
 - Quem tiver a chave de serviço consegue assumir qualquer conta; por isso ela só existe no ambiente `producao` e as operações de sistema são auditadas.
 - O link do primeiro ADM aparece no resumo do GitHub Actions (repositório privado, 24 h, uso único).
 - Um ADM pode desativar outro ADM (nunca o último ativo) e pode resetar o 2FA e gerar link de não-ADMs, o que equivale a assumir a conta; tudo auditado.
+- O gestor da empresa (cliente N1) gera link de senha para colegas da própria empresa, o que equivale a assumir a conta deles; e pode reativar um colega da própria empresa que o ADM tenha desativado. Tudo auditado; o ADM pode desativar o próprio N1 (ver [fase-1b-desenho-e-plano.md](fases/fase-1b-desenho-e-plano.md), "Revisão de segurança").
 - Se o serviço de senhas vazadas (HIBP) estiver fora do ar, definir senha fica bloqueado até voltar.
 - A configuração de Auth só muda pelo código (`config.toml`); mudanças feitas no painel seriam sobrescritas no próximo deploy.
+- Pedidos (fase 2A): um cliente pode pré-reservar horários do motorista (até 20 pedidos por hora) mesmo sem intenção real; o motorista recusa e o horário volta. Quem trabalha na IVO (ADM, gestor de frota, motorista) recebe em tempo real o número interno e o status de todos os pedidos, sem detalhes. Ver [fase-2a-desenho-e-plano.md](fases/fase-2a-desenho-e-plano.md), "Revisão de segurança e concorrência".
+
+---
+
+## 7. Papéis e níveis (quem é quem)
+
+| Papel | Quem é | 2FA | O que faz |
+| --- | --- | --- | --- |
+| **ADM** | você (prestador) | obrigatório | tudo: contratos, empresas, usuários, configurações, auditoria; único que altera contratos (e, na fase 2, saldo) |
+| **Gestor de frota** | prestador | obrigatório | estrutura pronta para a fase 3 (agenda e distribuição de pedidos); **não vê preços nem saldo** |
+| **Motorista** | prestador | obrigatório | menu **Tabela**: preços unitários e prazos do contrato da empresa, para orçar; não vê limites de saldo, versão nem autor |
+| **Cliente N1 — Gestor da empresa** | cliente | não | tudo da própria empresa; menu **Equipe** (convida e gerencia colegas da própria empresa) |
+| **Cliente N2 — Solicitante** | cliente | não | cria e acompanha os próprios pedidos (fase 2A) |
+| **Cliente N3 — Visualizador** | cliente | não | só vê; não age |
+
+Nenhum cliente vê a tabela de preços: todos veem **Regras do serviço** (faixas de cancelamento, prazos, validade, o que é urgente). A antiga "matriz de delegação" (tela Permissões) não existe mais; quem pode o quê depende só do papel e do nível. Para trocar o papel ou o nível de alguém: **Usuários**, **Gerenciar**, **Trocar perfil** (só ADM; ninguém troca o próprio papel).
+
+---
+
+## 8. Contrato por empresa (só o ADM publica)
+
+Cada empresa cliente tem o próprio contrato (preços, faixas de cancelamento, prazos, validade, limiar de urgente, limite de saldo negativo e alerta de saldo baixo), versionado e imutável. A **Tabela modelo** é a base para contratos novos.
+
+1. Menu **Contratos** (https://umi-san-transporte.pages.dev/adm/contratos). A lista mostra a Tabela modelo e cada empresa com a versão vigente (ou **Sem contrato vigente**) e a próxima vigência agendada.
+2. Abra a empresa. Botão **Publicar nova versão** (o formulário vem preenchido com o contrato vigente; sem contrato, com a Tabela modelo — **Criar contrato a partir da tabela modelo**).
+3. Altere os valores, escolha **Vale a partir de** (agora ou até 1 ano à frente; nunca no passado), confira o resumo das mudanças e **Publicar versão**.
+4. A versão anterior continua no histórico e vale até a nova vigência começar. Nada é apagado nem editado depois de publicado: para corrigir, publique outra versão.
+5. **Empresa nova:** em **Empresas**, crie a empresa e depois publique o contrato dela (item 2). Sem contrato vigente, o cliente vê "Sua empresa ainda não tem contrato vigente" (na fase 3, "Novo pedido" fica bloqueado).
+6. Tudo fica na **Auditoria** (`PUBLICAR_CONTRATO`).
+
+Na passagem para a fase 1B, a tabela única da fase 1 virou **Tabela modelo v1** e **contrato Umi San v1**, com os mesmos valores e o mesmo autor, vigentes desde o deploy.
+
+---
+
+## 9. Equipe da empresa (cliente N1)
+
+O gestor da empresa (N1) cuida dos colegas sem depender do ADM:
+
+1. Menu **Equipe** (https://umi-san-transporte.pages.dev/equipe): só pessoas da própria empresa.
+2. **Convidar colega**: nome, e-mail e nível (N1, N2 ou N3). A empresa é sempre a dele (o servidor força) e o perfil é sempre cliente. Entregue o link (copiar ou WhatsApp).
+3. Na linha do colega, **Gerenciar**: **Gerar novo link** (senha esquecida ou convite vencido) e **Desativar/Reativar** com motivo. O N1 não age sobre si mesmo, nem sobre motorista/ADM/outra empresa, e não reseta 2FA (cliente não tem 2FA).
+4. Limite: 10 convites por dia por pessoa. Tudo fica na auditoria do ADM com o nome do N1.
+5. O ADM continua podendo fazer tudo isso pela tela **Usuários** (e é quem cria o primeiro N1 de cada empresa).
+
+---
+
+## 10. Configurações (retenção de fotos)
+
+Menu **Configurações** (https://umi-san-transporte.pages.dev/adm/configuracoes), só ADM: **Fotos guardadas após a entrega** (1 a 3650 dias). Vale para todas as empresas (não faz parte do contrato). A mudança fica na auditoria (`DEFINIR_RETENCAO_FOTOS`). Na passagem para a fase 1B o valor veio da tabela antiga.
+
+---
+
+## 11. Pedidos, orçamentos e agenda (fase 2A)
+
+**Caminho de um pedido:** o cliente pede → o horário fica **pré-reservado** (ninguém mais pega) → o motorista **orça** dentro do prazo → o cliente **pede revisão**, **reprova** ou (fase 2B) **aprova**. Encerrados: **Recusada** (motorista recusou), **Reprovada** (cliente reprovou), **Cancelada**, **Expirada** (prazo vencido). Encerrar libera o horário na hora.
+
+| Quem | O que faz |
+| --- | --- |
+| **Cliente N1** | cria pedidos; vê, pede revisão, reprova e cancela **todos** os pedidos da empresa |
+| **Cliente N2** | cria pedidos; vê e age **só nos próprios**; na agenda os pedidos dos colegas aparecem só como **Ocupado** |
+| **Cliente N3** | só vê os pedidos da empresa (sem botões) |
+| **Motorista** | **Início**: "Aguardando seu orçamento" com contagem regressiva (**URGENTE** perto do fim); **Orçar**: calculadora com os preços travados do contrato (só informa quantidades: km, reboque, espera, diárias, pedágio, hospedagem, até 5 "Outros" com descrição); pode **Recusar** (com motivo) e **Cancelar** (com motivo); vê só os pedidos atribuídos a ele |
+| **ADM** | vê tudo (pedidos e agenda de todas as empresas); pode orçar, recusar e cancelar qualquer pedido aberto |
+| **Gestor de frota** | vê a agenda e os pedidos de todos, **sem valores** |
+
+- **Quem atende:** nesta versão, todo pedido novo vai para o **motorista ativo mais antigo**. Sem motorista ativo, o cliente vê "Nenhum motorista disponível no momento".
+- **Preço:** sempre do contrato vigente da empresa, calculado no servidor (o aparelho só manda quantidades). O orçamento guarda uma cópia do contrato (o preço não muda se o contrato mudar depois) e uma "impressão digital" (hash) do conteúdo.
+- **Revisão:** quando o cliente pede revisão, o pedido volta para o motorista com novo prazo; o **Orçar** já vem preenchido com o orçamento anterior e mostra "Revisão pedida: <motivo>".
+- **Tempo real:** as telas atualizam sozinhas quando um pedido muda (cliente: pedidos da empresa; equipe: todos). Se algo parecer parado, puxe para atualizar ou recarregue a página: a tela sempre relê do servidor.
+
+### Prazos e expiração
+- **Prazo para orçar** = horas do contrato (ou até o início do serviço, se for antes). **Validade do orçamento** = horas do contrato (ou até o início). Pedir revisão abre um novo prazo para orçar.
+- Venceu o prazo: **ninguém consegue mais agir** no pedido (as telas mostram prazo vencido) e o horário **já conta como livre** para outros clientes, mesmo antes do status mudar. Quem pede um horário que colide com uma pré-reserva vencida a encerra na hora.
+- O restante é encerrado pelo agendamento **`expirar-vencidos`** (a cada 15 minutos, no banco): vira **Expirada** e aparece na auditoria como `EXPIRAR_VENCIDOS`.
+
+### Um horário parece preso (aparece ocupado e não deveria)
+1. Abra a **Agenda** como ADM, toque no dia e no bloco: veja o pedido (número, empresa, status e "pré-reserva até…").
+2. Se o pedido ainda está **Solicitado/Orçado dentro do prazo**, o horário está corretamente reservado: o motorista pode **Recusar**, o cliente ou o ADM pode **Cancelar** (o ADM informa o motivo). Isso libera na hora.
+3. Se o prazo **já venceu**, o horário já é tratado como livre (novos pedidos entram) e o status vira **Expirada** em até 15 minutos.
+4. Se depois de **30 minutos** um pedido com prazo vencido continua **Solicitado/Orçado**, o agendamento pode estar parado: no painel Supabase, *Integrations → Cron*, confira o job `expirar-vencidos` (ativo, execuções recentes com sucesso). Se estiver com erro, anote a mensagem e peça ajuda técnica; enquanto isso, cancele pelo app os pedidos que precisar liberar.
+5. **Motorista desativado** com pedidos abertos: os pedidos continuam com ele. Cancele-os como ADM (com motivo) e peça ao cliente para pedir de novo; os novos vão para o motorista ativo mais antigo.
+
+### Mensagens que o cliente/motorista pode ver
+- "Esse horário acabou de ser ocupado. Escolha outro." — outra pessoa pegou o mesmo horário segundos antes.
+- "O prazo deste pedido venceu." — prazo para orçar ou validade do orçamento venceu.
+- "Este pedido mudou de situação. Atualize a página." — alguém agiu antes (ex.: o cliente cancelou enquanto o motorista orçava).
+- "O valor calculado passou do limite permitido." — quantidades ou preços absurdos (confira o contrato da empresa).
+- "Muitas tentativas seguidas." — limites: 20 pedidos/hora por pessoa, 10 pedidos de revisão/hora, 600 prévias de orçamento/hora.
+
+---
+
+## 12. Saldo e dinheiro (fase 2B)
+
+Cada empresa cliente tem **uma conta** com um **livro-razão**: a lista de todos os lançamentos (recarga, ajuste, estorno, reserva, liberação de reserva, multa e, na fase 3, débito do serviço). **Nada é editado nem apagado**: o banco recusa qualquer alteração de lançamento, inclusive do ADM. O saldo é sempre a soma do livro-razão.
+
+- **Saldo total (contábil)** = soma de recargas, ajustes, estornos, multas e débitos.
+- **Reservado** = soma das reservas ativas (pedidos aprovados e ainda não realizados). A reserva **não** muda o total; só deixa de estar disponível.
+- **Disponível** = total − reservado. Pode ficar negativo até o **limite de crédito** do contrato vigente da empresa.
+- **Alerta de saldo baixo** (do contrato): abaixo dele, o cartão de saldo fica laranja para o ADM e para o cliente ("Fale com a IVO Transportes para recarregar") e o painel conta a empresa em pendências.
+- **Quem vê:** o ADM vê todas as empresas; os clientes (N1, N2 e N3) veem o saldo, o limite de crédito e o extrato **da própria empresa**. Motorista e gestor de frota **não veem saldo**. Só o ADM lança dinheiro; nenhum cliente altera saldo.
+
+### Operações do ADM (Créditos)
+Menu **Créditos** (https://umi-san-transporte.pages.dev/adm/creditos): uma linha por empresa com disponível, reservado, limite e alerta. Abra a empresa:
+
+1. **Recarga** (o cliente pagou): valor em reais (ex.: `2.000,00`), **motivo** obrigatório (3 a 500 caracteres, ex.: "Pix recebido em 09/10") e **comprovante** opcional (ID do Pix ou observação, até 200 caracteres). Confira o resumo (saldo antes → depois) e **Confirmar recarga**.
+2. **Ajuste** (correção ou cortesia): escolha **Crédito** (aumenta) ou **Débito** (diminui), valor e **motivo** obrigatório. **Confirmar ajuste**.
+3. **Estorno** (desfazer um lançamento): no **Extrato** da empresa, na linha do lançamento, **Estornar**, informe o **motivo** e **Confirmar estorno**. O estorno cria um lançamento novo com o valor **oposto** exato; o original continua no extrato. Só recarga, ajuste, multa, débito e aditivo podem ser estornados, e **uma única vez** ("Este lançamento já tinha sido estornado."). Reserva e liberação não se estornam: são desfeitas cancelando o pedido.
+
+Garantias: o resultado só aparece **depois** que o servidor confirma (nada otimista). Se a internet cair no meio, toque em **Tentar de novo**: a operação leva uma chave única e **nunca é lançada duas vezes**. Valores acima de R$ 1 bilhão são recusados. Tudo fica na **Auditoria** (`LANCAR_RECARGA`, `LANCAR_AJUSTE`, `ESTORNAR_LANCAMENTO`) com o nome de quem fez e o motivo.
+
+### Aprovação do orçamento (cliente)
+- Quem aprova: o **N2 dono do pedido** ou o **N1** da empresa (N3 não age). No pedido orçado, **Aprovar** abre o recibo (memorial, total, saldo depois da aprovação) → **Confirmar aprovação**.
+- O servidor confere, numa única operação: orçamento ainda **válido** (pelo relógio do servidor); **versão e impressão digital** do orçamento que a pessoa viu (se o motorista reenviou nesse meio tempo, a tela pede para conferir de novo); **horário** ainda livre; e **crédito**: disponível − total ≥ −limite. Sem crédito aparece "Saldo insuficiente para aprovar este orçamento." com quanto falta.
+- Aprovado: o valor vai para **Reservado** (extrato: **Reserva**), o pedido vira **Agendado** e o horário fica reservado. A aprovação fica registrada (quem, quando, IP, aparelho, versão e impressão digital do orçamento). Dez cliques ou aparelhos ao mesmo tempo resultam em **uma** aprovação só.
+
+### Cancelamento de um pedido agendado
+- **Cliente (N2 dono ou N1):** **Cancelar agendamento** mostra, **antes de confirmar**, a multa pela faixa de cancelamento do contrato **gravado no orçamento** (mudanças posteriores no contrato não afetam). Confirmado, o extrato mostra **Liberação de reserva** (o reservado volta a ficar disponível) e, se houver, **Multa de cancelamento** (sai do total). Se o horário passar para outra faixa enquanto a pessoa decide, nada é feito e a tela mostra o valor novo para confirmar de novo ("A multa mudou…").
+- **Motorista atribuído ou ADM:** cancela **sem custo** para o cliente, com **motivo obrigatório**; só a liberação da reserva aparece no extrato.
+- Quer devolver uma multa ao cliente? **Estorne** a multa no extrato (item 3 acima), com motivo.
+- Cancelamentos simultâneos (cliente e motorista ao mesmo tempo): só um vale; o outro vê "Este pedido mudou de situação. Atualize a página."
+
+### Extrato
+Cliente: menu **Extrato** (https://umi-san-transporte.pages.dev/extrato). ADM: **Créditos** → empresa → **Extrato**. Filtros de período (Este mês, Últimos 7 dias, Últimos 30 dias, Mês passado ou Escolher datas) e de tipo; exportar **CSV** ou **PDF** (impressão). Cada linha: data, tipo, valor, número do pedido e quem pediu; o pedido só abre para quem pode vê-lo (um N2 vê a reserva do colega no extrato, mas não abre o pedido dele).
+
+---
+
+## 13. Divergência de saldo (reconciliação diária)
+
+Todo dia às **03:00** (horário de Brasília; job `reconciliar-saldos` no banco, `0 6 * * *` em UTC) o banco **refaz todas as contas a partir do livro-razão** e confere as regras do dinheiro. O resultado aparece no **Painel** do ADM (https://umi-san-transporte.pages.dev/adm/painel, também no **Início** do ADM), bloco **Última reconciliação**: data/hora, quantas empresas foram conferidas e **Tudo confere** ou **N divergências** com a lista (tipo, empresa e, quando houver, **ver pedido**). Uma reconciliação com divergência também entra na **Auditoria** como `RECONCILIAR_SALDOS` com resultado `ERRO` (`DIVERGENCIA_SALDO`). Antes da primeira execução o bloco diz "Ainda não houve reconciliação (roda todo dia às 03:00)".
+
+### O que cada divergência quer dizer
+| No painel | Código | Significa |
+| --- | --- | --- |
+| Saldo da conta diferente do livro-razão | `CONTA_DIVERGENTE` | o total ou o reservado guardado na conta não bate com a soma dos lançamentos/reservas |
+| Reserva ativa em pedido que não está agendado | `RESERVA_FORA_DE_AGENDADA` | o pedido saiu de Agendado, mas a reserva não foi liberada |
+| Pedido agendado sem reserva | `AGENDADA_SEM_RESERVA` | pedido Agendado sem dinheiro reservado |
+| Pedido agendado sem aprovação registrada | `AGENDADA_SEM_APROVACAO` | pedido Agendado sem o registro da aprovação do orçamento aprovado |
+| Reserva sem o lançamento de reserva/liberação correspondente | `RESERVA_SEM_PAR` | a reserva não tem exatamente um lançamento **Reserva** (e uma **Liberação**, se já liberada) |
+| Lançamento de reserva com valor diferente da reserva | `RESERVA_VALOR_DIVERGENTE` | o valor reservado no extrato difere do valor da reserva |
+| Lançamento ou reserva ligado a pedido de outra empresa | `EMPRESA_DIVERGENTE` | um lançamento ou reserva aponta para pedido/reserva de outra empresa |
+| Estorno que não é o inverso exato do lançamento original | `ESTORNO_DIVERGENTE` | estorno com valor diferente de −original, de outra empresa ou de tipo não estornável |
+| Cobrança sem aprovação registrada | `COBRANCA_SEM_APROVACAO` | multa/débito sem a aprovação do mesmo orçamento |
+| Cobrança duplicada no mesmo pedido | `COBRANCA_DUPLICADA` | mais de uma multa (ou mais de um débito) no mesmo pedido |
+
+As travas do banco impedem todas essas situações; uma divergência indica falha técnica ou mexida manual no banco.
+
+### Passo a passo
+1. **Não edite saldo nem lançamento** — nem pelo app, nem pelo painel Supabase. O banco recusa, e qualquer tentativa por fora (SQL manual) piora a situação e apaga a pista do que aconteceu.
+2. **Anote** a data/hora da reconciliação, o tipo, a empresa e o número do pedido (print do bloco, sem links).
+3. **Veja o livro-razão pelo app:** **Créditos** → empresa → **Extrato** (período que cobre o problema, todos os tipos); abra o pedido em **ver pedido** e confira a linha do tempo e o histórico. Na **Auditoria**, veja as ações do período (`APROVAR_ORCAMENTO`, `CANCELAR_AGENDADO`, `LANCAR_RECARGA`, `LANCAR_AJUSTE`, `ESTORNAR_LANCAMENTO`).
+4. **Se precisar ver mais (técnico):** no painel Supabase, *SQL Editor*, apenas **consultas de leitura**, por exemplo:
+   ```sql
+   select criado_em, tipo, valor_cent, atividade_id, reserva_id, estorna_id, motivo
+     from app.lancamentos where empresa_id = '<id da empresa>' order by criado_em, id;
+   select * from app.contas where empresa_id = '<id da empresa>';
+   select em, ok, empresas, divergencias from app.reconciliacoes order by em desc limit 5;
+   ```
+   Nunca rode `update`, `delete` ou `insert` nessas tabelas.
+5. **Corrija só pelo app, com motivo:** se o cliente ficou com valor a mais ou a menos, lance um **Ajuste** (crédito ou débito) com motivo citando a reconciliação (ex.: "Correção da divergência de 10/10, pedido #0012"); se um lançamento estava errado, **estorne-o** com motivo. Se a divergência é de pedido (reserva/agendado), **cancele o pedido** como ADM (sem custo, com motivo) e peça ao cliente para pedir de novo.
+6. **Confira no dia seguinte:** a próxima reconciliação (03:00) deve voltar a **Tudo confere**. Se `CONTA_DIVERGENTE` persistir com o extrato correto, é falha técnica: não lance mais ajustes e peça ajuda técnica com as anotações do passo 2.
+7. **O job parou?** Se a última reconciliação tiver mais de 1 dia, veja no painel Supabase, *Integrations → Cron*, o job `reconciliar-saldos` (ativo, execuções com *succeeded*).
+
+---
+
+## 14. Tempo real (o que atualiza sozinho)
+
+As telas assinam **tópicos privados**; o banco decide quem pode assinar cada um. A mensagem só diz "mudou" (número, status, horário): a tela sempre relê os dados do servidor com as permissões de quem está vendo.
+
+| Tópico | Quem assina | Quando chega |
+| --- | --- | --- |
+| `atividade:<id do pedido>` | quem pode ver aquele pedido | o status do pedido mudou (detalhe do pedido) |
+| `empresa:<id da empresa>` | clientes da empresa (N1, N2, N3) e a equipe (ADM, gestor de frota, motorista) | um pedido da empresa mudou (listas, início, agenda) |
+| `equipe` | ADM, gestor de frota e motorista | qualquer pedido de qualquer empresa mudou (só número interno, empresa e status) |
+| `saldo:<id da empresa>` | ADM e clientes da empresa (nunca motorista nem gestor de frota) | entrou um lançamento (cartão de saldo e extrato) |
+
+Se uma tela parecer parada, puxe para atualizar ou recarregue: nada depende só do tempo real.

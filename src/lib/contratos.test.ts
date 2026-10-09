@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest'
 import {
   CAMPOS,
   descreverFaixas,
+  faixaAplicada,
   diferencas,
   FAIXAS_PADRAO,
   formularioDe,
-  podeEditarParametros,
+  GRUPOS,
+  podeEditarContratos,
+  prazoPorExtenso,
   validarFormulario,
-  type ValoresParametros,
-} from './parametros.ts'
+  type ValoresContrato,
+} from './contratos.ts'
 
 const normal = (s: string | null) => s?.replace(/\u00a0/g, ' ') ?? null
 
-const BASE: ValoresParametros = {
+const BASE: ValoresContrato = {
   km_sem_reboque_cent: 350,
   km_com_reboque_cent: 520,
   taxa_fixa_reboque_cent: 15000,
@@ -26,20 +29,36 @@ const BASE: ValoresParametros = {
   limiar_urgente_horas: 6,
   limite_saldo_negativo_cent: 100000,
   alerta_saldo_baixo_cent: 50000,
-  retencao_fotos_dias: 30,
 }
 
-describe('podeEditarParametros', () => {
-  const ligada = [{ chave: 'MOTORISTA_EDITA_PARAMETROS', ativo: true }]
-  const desligada = [{ chave: 'MOTORISTA_EDITA_PARAMETROS', ativo: false }]
-  it('ADM sempre; motorista só com a delegação; cliente nunca', () => {
-    expect(podeEditarParametros('ADM', [])).toBe(true)
-    expect(podeEditarParametros('MOTORISTA', [])).toBe(false)
-    expect(podeEditarParametros('MOTORISTA', desligada)).toBe(false)
-    expect(podeEditarParametros('MOTORISTA', ligada)).toBe(true)
-    expect(podeEditarParametros('MOTORISTA', [{ chave: 'MOTORISTA_LANCA_RECARGA', ativo: true }])).toBe(false)
-    expect(podeEditarParametros('CLIENTE', ligada)).toBe(false)
-    expect(podeEditarParametros(null, ligada)).toBe(false)
+describe('podeEditarContratos', () => {
+  it('só o ADM', () => {
+    expect(podeEditarContratos('ADM')).toBe(true)
+    expect(podeEditarContratos('GESTOR_FROTA')).toBe(false)
+    expect(podeEditarContratos('MOTORISTA')).toBe(false)
+    expect(podeEditarContratos('CLIENTE')).toBe(false)
+    expect(podeEditarContratos(null)).toBe(false)
+  })
+})
+
+describe('rótulos', () => {
+  it('modalidades sem nome de empresa; contrato com os 13 campos (sem retenção de fotos)', () => {
+    expect(GRUPOS.map((g) => g.titulo)).toEqual([
+      'Modalidade veículo próprio',
+      'Modalidade veículo do cliente',
+      'Regras de cancelamento e prazos',
+      'Crédito da empresa',
+    ])
+    expect(CAMPOS).toHaveLength(12)
+    expect(CAMPOS.map((c) => c.campo)).not.toContain('retencao_fotos_dias')
+  })
+
+  it('prazos em linguagem simples', () => {
+    expect(prazoPorExtenso(1)).toBe('1 hora')
+    expect(prazoPorExtenso(12)).toBe('12 horas')
+    expect(prazoPorExtenso(24)).toBe('1 dia')
+    expect(prazoPorExtenso(72)).toBe('3 dias')
+    expect(prazoPorExtenso(36)).toBe('36 horas')
   })
 })
 
@@ -50,6 +69,18 @@ describe('descreverFaixas', () => {
       'De 6 h a menos de 24 h antes: multa de 50%',
       'Menos de 6 h antes: multa de 100%',
     ])
+  })
+  it('faixa aplicada num cancelamento (frase da multa)', () => {
+    expect(faixaAplicada(FAIXAS_PADRAO, { antecedencia_min_horas: 6, multa_bp: 5000 })).toEqual({
+      percentual: '50%',
+      quando: 'de 6 h a menos de 24 h antes',
+    })
+    expect(faixaAplicada(FAIXAS_PADRAO, { antecedencia_min_horas: 24, multa_bp: 0 }).quando).toBe('24 h ou mais antes')
+    expect(faixaAplicada(FAIXAS_PADRAO, { antecedencia_min_horas: 0, multa_bp: 10000 }).quando).toBe('menos de 6 h antes')
+    expect(faixaAplicada(null, { antecedencia_min_horas: 6, multa_bp: 5000 })).toEqual({
+      percentual: '50%',
+      quando: '6 h ou mais antes',
+    })
   })
   it('faixa única', () => {
     expect(descreverFaixas([{ antecedencia_min_horas: 0, multa_bp: 1250 }])).toEqual([

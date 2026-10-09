@@ -2,6 +2,8 @@
 
 Referência: `docs/especificacao.md` seções 1–3 e 9, Adendos A1–A7. Execução sem Docker local (testes de banco só no CI).
 
+> **Substituído em parte pela fase 1B (2026-10-09):** a matriz de delegação (`permissoes_delegadas`, `api.permissoes`, `/adm/permissoes`, `EDITAR_PARAMETROS`) e a tabela única de parâmetros (`parametros_versoes`, `/parametros` para todos) deixaram de existir. Valem os papéis/níveis (ADM, Gestor de frota, Motorista; cliente N1/N2/N3), o contrato por empresa publicado só pelo ADM e a visibilidade por perfil do [Adendo A10](../especificacao.md) / [fase-1b-desenho-e-plano.md](fase-1b-desenho-e-plano.md). Os trechos afetados abaixo estão marcados com **[substituído — A10]**.
+
 ## Objetivo
 Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e motorista), cada uma só faz o que o perfil e a matriz permitem — garantido no banco —, a tabela de preços e regras fica versionada e visível a todos, e tudo que importa fica auditado. O app passa a ter a identidade IVO Transportes.
 
@@ -18,8 +20,8 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 | `empresas` | id, nome, logo_caminho (nullable), criada_em | Umi San é a primeira. ADM cria/edita. |
 | `perfis` | usuario_id (= auth.users.id), nome, telefone, papel (`ADM`/`MOTORISTA`/`CLIENTE`), empresa_id (obrigatória para CLIENTE, nula para os outros), ativo, senha_pendente, criado_em | 1 por usuário. CHECK papel × empresa. |
 | `convites` | id, email, papel, empresa_id, nome, criado_por, criado_em, usado_em | Pré-cadastro que dá origem ao perfil. |
-| `permissoes_delegadas` | chave (`MOTORISTA_LANCA_RECARGA`, `MOTORISTA_EDITA_PARAMETROS`, `CLIENTE_ATUA_EM_PEDIDO_DE_OUTRO`), ativo, alterado_por, alterado_em | Tudo desligado por padrão. |
-| `parametros_versoes` | versao (serial), vigente_desde, publicado_por, publicado_em, colunas tipadas (abaixo), faixas_cancelamento jsonb | Imutável (só INSERT). |
+| `permissoes_delegadas` | chave (`MOTORISTA_LANCA_RECARGA`, `MOTORISTA_EDITA_PARAMETROS`, `CLIENTE_ATUA_EM_PEDIDO_DE_OUTRO`), ativo, alterado_por, alterado_em | Tudo desligado por padrão. **[substituído — A10: removida; quem pode o quê é só papel/nível]** |
+| `parametros_versoes` | versao (serial), vigente_desde, publicado_por, publicado_em, colunas tipadas (abaixo), faixas_cancelamento jsonb | Imutável (só INSERT). **[substituído — A10: virou `contratos_versoes` (tabela modelo + contrato por empresa); retenção de fotos em `configuracao`]** |
 | `auditoria` | id, em, usuario_id, papel, acao, alvo, resultado (`OK`/`NEGADO`/`ERRO`), codigo, detalhe jsonb, ip, dispositivo | Imutável para todos, inclusive ADM (sem grant + trigger que recusa UPDATE/DELETE/TRUNCATE). |
 | `interno.limites` | usuario_id, acao, janela_inicio, contagem | Rate limit (especificação 1.3). |
 
@@ -34,14 +36,14 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 ## 2. Regras de acesso (no banco)
 
 - `app.pode_acessar()` (e `app.pode_fazer(acao)` para a matriz) — `SECURITY DEFINER`, devolve o perfil do `auth.uid()` e **recusa** (retorna nulo) quem: não tem perfil, está inativo, tem `senha_pendente`, ou é ADM/MOTORISTA sem `aal2` no JWT. Toda política RLS e toda RPC passa por ela.
-- `app.pode_fazer(acao text) → boolean` — única fonte de "quem pode o quê": lê papel + matriz. Exemplos: `EDITAR_PARAMETROS` = ADM ou (MOTORISTA e `MOTORISTA_EDITA_PARAMETROS`); `GERIR_USUARIOS` = ADM.
+- **[substituído — A10: sem matriz; ações por papel/nível, ver fase 1B "Matriz removida"]** `app.pode_fazer(acao text) → boolean` — única fonte de "quem pode o quê": lê papel + matriz. Exemplos: `EDITAR_PARAMETROS` = ADM ou (MOTORISTA e `MOTORISTA_EDITA_PARAMETROS`); `GERIR_USUARIOS` = ADM.
 - RPCs `api.*` devolvem `jsonb {ok, codigo, ...}`; negação e excesso de limite são auditados e a transação é confirmada (Adendo A2). Integridade (unique/check) continua com `RAISE`.
 - Views `api.*` são `security_invoker` sobre tabelas com RLS:
   - `api.meu_perfil()` (função) — o próprio perfil + nome/logo da empresa.
   - `api.listar_usuarios()` (função) — ADM vê todos; demais não veem nada.
   - `api.empresas` — ADM vê todas; cliente vê a própria; motorista vê todas (nome/logo).
-  - `api.permissoes` — todos leem (transparência, especificação 2); só ADM altera.
-  - `api.parametros_vigentes` e `api.parametros_historico` — todos leem.
+  - **[substituído — A10: removida]** `api.permissoes` — todos leem (transparência, especificação 2); só ADM altera.
+  - **[substituído — A10: removidas; ADM usa `listar_contratos`/`historico_contrato`, cliente `regras_do_servico`, motorista `precos_para_orcar`]** `api.parametros_vigentes` e `api.parametros_historico` — todos leem.
   - `api.listar_auditoria()` (função) — só ADM.
 - Logo do cliente: bucket privado `logos` (PNG/WebP, ≤ 500 KB, limite do bucket); escrita só ADM; leitura por usuários da própria empresa e pela equipe (ADM/motorista), por URL assinada curta.
 
@@ -76,10 +78,10 @@ Pessoas entram com segurança (convite, senha forte não vazada, 2FA para ADM e 
 | `/definir-senha` | via link | nova senha com medidor de força e checagem de vazamento |
 | `/seguranca/2fa` | ADM, motorista | cadastro do autenticador (mockup aprovado) |
 | `/` | todos | início provisório por perfil: saudação, pendências (vazio por enquanto), atalhos; cliente com logo da empresa no canto superior direito |
-| `/parametros` | todos | "Tabela de preços e regras": vigente + histórico; editar só para quem `pode_fazer('EDITAR_PARAMETROS')` (formulário publica nova versão com data de vigência) |
+| `/parametros` **[substituído — A10: ADM → `/adm/contratos`; cliente → `/regras`; motorista → `/tabela`]** | todos | "Tabela de preços e regras": vigente + histórico; editar só para quem `pode_fazer('EDITAR_PARAMETROS')` (formulário publica nova versão com data de vigência) |
 | `/adm/usuarios` | ADM | lista, convidar, gerar link, desativar/reativar, trocar perfil, resetar 2FA |
 | `/adm/empresas` | ADM | nome e logo das empresas clientes |
-| `/adm/permissoes` | ADM | as 3 chaves da matriz, com confirmação e motivo |
+| `/adm/permissoes` **[substituído — A10: removida]** | ADM | as 3 chaves da matriz, com confirmação e motivo |
 | `/adm/auditoria` | ADM | lista filtrável (data, usuário, ação, resultado) |
 
 Guardas de rota no front só para experiência; a proteção real é o banco.
@@ -95,7 +97,7 @@ Guardas de rota no front só para experiência; a proteção real é o banco.
 
 **Integração (supabase-js contra o Supabase do CI)**
 - cliente não altera parâmetros, matriz, usuários, empresas, auditoria
-- motorista não publica parâmetros sem delegação; publica quando ADM liga `MOTORISTA_EDITA_PARAMETROS`; desligar volta a bloquear
+- **[substituído — A10: só o ADM publica contratos]** motorista não publica parâmetros sem delegação; publica quando ADM liga `MOTORISTA_EDITA_PARAMETROS`; desligar volta a bloquear
 - motorista nunca altera a matriz nem usuários
 - ninguém edita/apaga auditoria (inclusive ADM)
 - cliente A não vê perfil de cliente B; vê a própria empresa; não chama `api.listar_usuarios()` nem `api.listar_auditoria()`
@@ -117,6 +119,7 @@ Guardas de rota no front só para experiência; a proteção real é o banco.
 Saldo (fase 2); pedidos, agenda/calendário e Realtime real de pedidos (fase 3 — a prova de Realtime da fase 0 permanece até lá); notificações e e-mail (fase 5; a mudança de parâmetros/matriz já fica auditada e passa a notificar na fase 5); upload validado por conteúdo real (fase 4 — logos aceitam só PNG/WebP por tipo declarado, escrita restrita ao ADM, exibição via `<img>`).
 
 ## 7. Riscos e decisões registradas
+- **Fase 1B:** riscos aceitos e correções da revisão de segurança da fase 1B estão em [fase-1b-desenho-e-plano.md](fase-1b-desenho-e-plano.md), seção "Revisão de segurança (Task 4)".
 - **Sem domínio**: links copiados pelo ADM substituem e-mail; "confirmação de e-mail" vira confirmação de posse do link. Bloqueante antes de clientes reais em produção.
 - **Link de recuperação = acesso à conta**: se um CLIENTE recarregar a página depois de abrir um link de recuperação, ele fica logado sem ter definido a senha. Aceito: o link é a credencial (24 h, uso único, entregue pelo ADM).
 - **`config push`** pode sobrescrever ajustes feitos no painel — por isso nenhuma configuração de Auth é feita no painel daqui em diante (especificação 11).

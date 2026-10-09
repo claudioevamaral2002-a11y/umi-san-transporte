@@ -2,45 +2,67 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { Icone, type NomeIcone } from '../design/componentes/Icone.tsx'
 import { LogoIvo } from '../design/componentes/LogoIvo.tsx'
-import type { Papel, Perfil } from '../lib/estadoSessao.ts'
+import { gereEquipe } from '../lib/administracao.ts'
+import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { supabase } from '../lib/supabase.ts'
 
 interface Item {
   para: string
   rotulo: string
+  /** Rótulo da aba inferior (celular). */
   curto?: string
   icone: NomeIcone
+  /** Só para quem passa no filtro (sem = todos os do grupo). */
+  visivel?: (p: Perfil) => boolean
+  /** Também aparece como aba inferior no celular. */
+  aba?: boolean
 }
 
 interface Grupo {
   titulo: string | null
-  papeis?: Papel[]
+  visivel?: (p: Perfil) => boolean
   itens: Item[]
 }
 
+const ehAdm = (p: Perfil) => p.papel === 'ADM'
+
+/** Menu por perfil e nível (Adendo A10): cliente sem preços; motorista sem limites; gestor de frota sem preços. */
 export const MENU: Grupo[] = [
   {
     titulo: null,
     itens: [
-      { para: '/', rotulo: 'Início', icone: 'casa' },
-      { para: '/parametros', rotulo: 'Tabela de preços e regras', curto: 'Tabela', icone: 'tabela' },
+      { para: '/', rotulo: 'Início', icone: 'casa', aba: true },
+      { para: '/pedidos', rotulo: 'Pedidos', icone: 'lista', aba: true },
+      { para: '/agenda', rotulo: 'Agenda', icone: 'calendario', aba: true },
+      { para: '/regras', rotulo: 'Regras do serviço', curto: 'Regras', icone: 'escudo', aba: true, visivel: (p) => p.papel === 'CLIENTE' },
+      { para: '/extrato', rotulo: 'Extrato', icone: 'dinheiro', visivel: (p) => p.papel === 'CLIENTE' },
+      { para: '/equipe', rotulo: 'Equipe', icone: 'usuarios', visivel: gereEquipe },
+      { para: '/tabela', rotulo: 'Tabela', icone: 'tabela', aba: true, visivel: (p) => p.papel === 'MOTORISTA' },
     ],
   },
   {
     titulo: 'Administração',
-    papeis: ['ADM'],
+    visivel: ehAdm,
     itens: [
-      { para: '/adm/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
+      { para: '/adm/contratos', rotulo: 'Contratos', icone: 'tabela', aba: true },
+      { para: '/adm/usuarios', rotulo: 'Usuários', curto: 'Admin', icone: 'usuarios', aba: true },
+      { para: '/adm/painel', rotulo: 'Painel', icone: 'grafico' },
+      { para: '/adm/creditos', rotulo: 'Créditos', icone: 'dinheiro' },
       { para: '/adm/empresas', rotulo: 'Empresas', icone: 'predio' },
-      { para: '/adm/permissoes', rotulo: 'Permissões', icone: 'chave' },
+      { para: '/adm/configuracoes', rotulo: 'Configurações', icone: 'chave' },
       { para: '/adm/auditoria', rotulo: 'Auditoria', icone: 'lista' },
     ],
   },
 ]
 
-function gruposDo(papel: Papel | undefined): Grupo[] {
-  return MENU.filter((g) => !g.papeis || (papel !== undefined && g.papeis.includes(papel)))
+const permitido = (filtro: ((p: Perfil) => boolean) | undefined, perfil: Perfil | null) =>
+  !filtro || (perfil !== null && filtro(perfil))
+
+function gruposDo(perfil: Perfil | null): Grupo[] {
+  return MENU.filter((g) => permitido(g.visivel, perfil))
+    .map((g) => ({ ...g, itens: g.itens.filter((i) => permitido(i.visivel, perfil)) }))
+    .filter((g) => g.itens.length > 0)
 }
 
 /** URL assinada (1 h) do logo da empresa do cliente; sem logo ou com erro, `null` (mostra o nome). */
@@ -110,8 +132,7 @@ function ListaMenu({ grupos, aoNavegar }: { grupos: Grupo[]; aoNavegar?: () => v
 
 export function MolduraAutenticada() {
   const { perfil, email, sair } = useSessao()
-  const grupos = gruposDo(perfil?.papel)
-  const ehAdm = perfil?.papel === 'ADM'
+  const grupos = gruposDo(perfil)
   const menu = useRef<HTMLDialogElement>(null)
   const local = useLocation()
 
@@ -120,15 +141,12 @@ export function MolduraAutenticada() {
     menu.current?.close()
   }, [local.pathname])
 
-  const abas: Item[] = [
-    { para: '/', rotulo: 'Início', icone: 'casa' },
-    { para: '/parametros', rotulo: 'Tabela', icone: 'tabela' },
-    ...(ehAdm ? [{ para: '/adm/usuarios', rotulo: 'Admin', icone: 'usuarios' as const }] : []),
-  ]
+  // Abas do celular: os destinos principais do perfil (no máximo 4) + "Menu" — até 5 na barra.
+  const abas = grupos.flatMap((g) => g.itens.filter((i) => i.aba)).slice(0, 4)
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] md:grid-rows-[auto_1fr]">
-      <header className="sobre-marinho sticky top-0 z-20 flex items-center justify-between gap-3 bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-2.5 text-papel md:col-span-2">
+      <header className="nao-imprimir sobre-marinho sticky top-0 z-20 flex items-center justify-between gap-3 bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-2.5 text-papel md:col-span-2">
         <NavLink to="/" aria-label="IVO Transportes — início" className="flex min-h-12 items-center rounded-lg">
           <LogoIvo variante="simbolo" cor="branco" altura={34} />
         </NavLink>
@@ -145,7 +163,7 @@ export function MolduraAutenticada() {
         </div>
       </header>
 
-      <nav aria-label="Menu principal" className="hidden border-r border-borda bg-superficie p-3 md:block">
+      <nav aria-label="Menu principal" className="nao-imprimir hidden border-r border-borda bg-superficie p-3 md:block">
         <ListaMenu grupos={grupos} />
       </nav>
 
@@ -155,7 +173,7 @@ export function MolduraAutenticada() {
 
       <nav
         aria-label="Navegação"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="nao-imprimir fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="flex">
           {abas.map((a) => (
@@ -175,7 +193,7 @@ export function MolduraAutenticada() {
                     <span className={`rounded-full px-4 py-1 ${isActive ? 'bg-acao text-acao-texto' : ''}`}>
                       <Icone nome={a.icone} />
                     </span>
-                    {a.rotulo}
+                    {a.curto ?? a.rotulo}
                   </>
                 )}
               </NavLink>

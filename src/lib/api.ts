@@ -1,14 +1,8 @@
 // Leituras e chamadas ao banco usadas pelas telas (schema `api`). O banco decide quem vê o quê.
 import { exigir } from './consulta.ts'
-import type { Papel } from './estadoSessao.ts'
-import type { ValoresParametros, VersaoParametros } from './parametros.ts'
+import type { PrecosParaOrcar, RegrasServico, ValoresContrato, VersaoContrato } from './contratos.ts'
+import type { Nivel, Papel } from './estadoSessao.ts'
 import { supabase } from './supabase.ts'
-
-export interface Permissao {
-  chave: string
-  ativo: boolean
-  alterado_em: string | null
-}
 
 export interface Empresa {
   id: string
@@ -22,6 +16,7 @@ export interface Usuario {
   email: string
   telefone: string | null
   papel: Papel
+  nivel: Nivel | null
   empresa_id: string | null
   empresa_nome: string | null
   ativo: boolean
@@ -69,30 +64,59 @@ async function rpc(nome: string, args: Record<string, unknown>): Promise<Respost
   }
 }
 
-const COLUNAS_PARAMETROS =
-  'versao,vigente_desde,publicado_em,publicado_por_nome,km_sem_reboque_cent,km_com_reboque_cent,taxa_fixa_reboque_cent,retorno_trecho_unico_bp,hora_espera_cent,hospedagem_diaria_cent,diaria_motorista_cent,faixas_cancelamento,prazo_orcar_horas,validade_orcamento_horas,limiar_urgente_horas,limite_saldo_negativo_cent,alerta_saldo_baixo_cent,retencao_fotos_dias'
+/** Linha de `api.listar_contratos()`: a tabela modelo (empresa nula) ou uma empresa, com o vigente (se houver). */
+export interface ContratoListado {
+  empresa_id: string | null
+  empresa_nome: string | null
+  vigente: VersaoContrato | null
+  proxima_vigencia: string | null
+}
+
+export interface Configuracao {
+  retencao_fotos_dias: number
+  alterado_em: string
+}
+
+type LinhaListarContratos = Partial<VersaoContrato> & {
+  empresa_id: string | null
+  empresa_nome: string | null
+  versao: number | null
+  proxima_vigencia: string | null
+}
 
 export const api = {
-  permissoes: async () =>
-    exigir(await supabase.from('permissoes').select('chave,ativo,alterado_em').order('chave')) as Permissao[],
-
   empresas: async () => exigir(await supabase.from('empresas').select('id,nome,logo_caminho').order('nome')) as Empresa[],
 
-  /** Vigente (no máximo 1) e histórico completo, do mais novo para o mais antigo. */
-  parametros: async () => {
-    const [vigente, historico] = await Promise.all([
-      supabase.from('parametros_vigentes').select(COLUNAS_PARAMETROS).limit(1),
-      supabase.from('parametros_historico').select(COLUNAS_PARAMETROS).limit(200),
-    ])
-    return {
-      vigente: ((exigir(vigente) as unknown as VersaoParametros[])[0] ?? null) as VersaoParametros | null,
-      historico: exigir(historico) as unknown as VersaoParametros[],
-    }
-  },
+  /** ADM: tabela modelo (primeira) e cada empresa, com o contrato vigente e a próxima vigência. */
+  contratos: async (): Promise<ContratoListado[]> =>
+    (exigir(await supabase.rpc('listar_contratos')) as LinhaListarContratos[]).map(
+      ({ empresa_id, empresa_nome, proxima_vigencia, ...resto }) => ({
+        empresa_id,
+        empresa_nome,
+        proxima_vigencia: proxima_vigencia ?? null,
+        vigente: resto.versao === null || resto.versao === undefined ? null : (resto as VersaoContrato),
+      }),
+    ),
 
-  /** Existe alguma versão publicada (mesmo que ainda não vigente)? */
-  temParametros: async () =>
-    (exigir(await supabase.from('parametros_historico').select('versao').limit(1)) as unknown[]).length > 0,
+  /** ADM: todas as versões de uma empresa (`null` = tabela modelo), da vigência mais nova para a mais antiga. */
+  historicoContrato: async (empresa: string | null) =>
+    exigir(await supabase.rpc('historico_contrato', { p_empresa: empresa })) as VersaoContrato[],
+
+  /** ADM: publica uma versão (empresa `null` = tabela modelo). Sem atualização otimista. */
+  publicarContrato: (empresa: string | null, valores: ValoresContrato, vigenteDesde: Date) =>
+    rpc('publicar_contrato', { p_empresa: empresa, p: valores, p_vigente_desde: vigenteDesde.toISOString() }),
+
+  /** ADM: configuração global (retenção de fotos). */
+  configuracao: async () => (exigir(await supabase.rpc('ler_configuracao')) as Configuracao[])[0] ?? null,
+
+  definirRetencaoFotos: (dias: number) => rpc('definir_retencao_fotos', { p_dias: dias }),
+
+  /** Cliente: regras do contrato vigente da própria empresa (`null` = sem contrato vigente). */
+  regrasDoServico: async () => (exigir(await supabase.rpc('regras_do_servico')) as RegrasServico[])[0] ?? null,
+
+  /** Motorista: preços unitários e prazos do contrato vigente da empresa (`null` = sem contrato vigente). */
+  precosParaOrcar: async (empresa: string) =>
+    (exigir(await supabase.rpc('precos_para_orcar', { p_empresa: empresa })) as PrecosParaOrcar[])[0] ?? null,
 
   usuarios: async () => exigir(await supabase.rpc('listar_usuarios')) as Usuario[],
 
@@ -108,14 +132,8 @@ export const api = {
       }),
     ) as RegistroAuditoria[],
 
-  publicarParametros: (valores: ValoresParametros, vigenteDesde: Date) =>
-    rpc('publicar_parametros', { p: valores, p_vigente_desde: vigenteDesde.toISOString() }),
-
-  alterarPerfil: (usuario: string, nome: string, papel: Papel, empresa: string | null) =>
-    rpc('alterar_perfil', { p_usuario: usuario, p_nome: nome, p_papel: papel, p_empresa: empresa }),
-
-  definirPermissao: (chave: string, ativo: boolean, motivo: string) =>
-    rpc('definir_permissao', { p_chave: chave, p_ativo: ativo, p_motivo: motivo }),
+  alterarPerfil: (usuario: string, nome: string, papel: Papel, empresa: string | null, nivel: Nivel | null) =>
+    rpc('alterar_perfil', { p_usuario: usuario, p_nome: nome, p_papel: papel, p_empresa: empresa, p_nivel: nivel }),
 
   salvarEmpresa: (id: string | null, nome: string) => rpc('salvar_empresa', { p_id: id, p_nome: nome }),
 

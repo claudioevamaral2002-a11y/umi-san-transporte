@@ -1,41 +1,46 @@
 // Rótulos e regras de tela da administração (o banco continua decidindo tudo).
-import type { Papel } from './estadoSessao.ts'
+import type { Nivel, Papel, Perfil } from './estadoSessao.ts'
 
 export const PAPEIS: Record<Papel, string> = {
   ADM: 'Administrador',
+  GESTOR_FROTA: 'Gestor de frota',
   MOTORISTA: 'Motorista',
   CLIENTE: 'Cliente',
 }
 
-export interface DefinicaoPermissao {
-  chave: string
-  titulo: string
-  explicacao: string
+/** Níveis do cliente (Adendo A10). */
+export const NIVEIS: Record<Nivel, string> = {
+  1: 'Gestor da empresa (N1)',
+  2: 'Solicitante (N2)',
+  3: 'Visualizador (N3)',
 }
 
-/** As 3 chaves da matriz (especificação 2), na ordem da tela. */
-export const PERMISSOES: DefinicaoPermissao[] = [
-  {
-    chave: 'MOTORISTA_EDITA_PARAMETROS',
-    titulo: 'Motorista edita a tabela de preços',
-    explicacao: 'O motorista pode publicar novas versões da tabela de preços e regras, como o administrador.',
-  },
-  {
-    chave: 'MOTORISTA_LANCA_RECARGA',
-    titulo: 'Motorista lança recarga de saldo',
-    explicacao: 'O motorista pode registrar recargas (Pix recebido) no saldo da empresa cliente, com comprovante.',
-  },
-  {
-    chave: 'CLIENTE_ATUA_EM_PEDIDO_DE_OUTRO',
-    titulo: 'Cliente atua em pedido de colega',
-    explicacao:
-      'Um cliente pode aprovar, reprovar, pedir revisão ou cancelar pedidos criados por outra pessoa da mesma empresa.',
-  },
-]
+/** O que cada nível do cliente pode fazer (texto de ajuda no convite). */
+export const NIVEIS_AJUDA: Record<Nivel, string> = {
+  1: 'Cria, aprova e cancela todos os pedidos da empresa e convida colegas.',
+  2: 'Cria e acompanha só os próprios pedidos.',
+  3: 'Vê os pedidos e o saldo da empresa, sem agir.',
+}
+
+export const LISTA_NIVEIS: Nivel[] = [1, 2, 3]
+
+export const ehNivel = (n: unknown): n is Nivel => n === 1 || n === 2 || n === 3
+
+/** "Cliente · Solicitante (N2)", "Motorista"… */
+export function rotuloPerfil(papel: Papel, nivel: number | null | undefined): string {
+  return papel === 'CLIENTE' && ehNivel(nivel) ? `${PAPEIS.CLIENTE} · ${NIVEIS[nivel]}` : PAPEIS[papel]
+}
+
+/** Gestor da empresa (cliente N1): vê a tela Equipe. Só experiência; o banco decide de novo. */
+export function gereEquipe(perfil: Pick<Perfil, 'papel' | 'nivel'> | null | undefined): boolean {
+  return perfil?.papel === 'CLIENTE' && perfil.nivel === 1
+}
 
 /** Nomes das ações registradas na auditoria; ação desconhecida aparece com o código. */
 export const ACOES: Record<string, string> = {
   PUBLICAR_PARAMETROS: 'Publicar tabela de preços',
+  PUBLICAR_CONTRATO: 'Publicar contrato',
+  DEFINIR_RETENCAO_FOTOS: 'Alterar retenção de fotos',
   PREPARAR_CONVITE: 'Preparar convite',
   CONVIDAR_LINK: 'Gerar link de convite',
   GERAR_LINK: 'Gerar novo link',
@@ -45,7 +50,7 @@ export const ACOES: Record<string, string> = {
   REATIVAR_AUTH: 'Liberar acesso (Auth)',
   RESETAR_2FA: 'Resetar 2FA',
   AUTORIZAR_OPERACAO_USUARIO: 'Autorizar operação de usuário',
-  DEFINIR_PERMISSAO: 'Alterar permissão',
+  DEFINIR_PERMISSAO: 'Alterar permissão (matriz antiga)',
   SALVAR_EMPRESA: 'Salvar empresa',
   DEFINIR_LOGO_EMPRESA: 'Alterar logo da empresa',
   AUTORIZAR_DEFINIR_SENHA: 'Autorizar definição de senha',
@@ -78,7 +83,7 @@ export function filtrarUsuarios<T extends { nome: string; email: string; papel: 
   )
 }
 
-/** Motivo de desativação/reativação/permissão: 3 a 500 caracteres (igual ao banco). */
+/** Motivo de desativação/reativação: 3 a 500 caracteres (igual ao banco). */
 export function motivoValido(motivo: string): boolean {
   const n = motivo.trim().length
   return n >= 3 && n <= 500

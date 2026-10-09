@@ -1,17 +1,18 @@
--- Gestão de acesso (fase 1, Task 5): RPCs de usuários/matriz/empresas, leituras e RPCs de sistema.
+-- Gestão de acesso (fase 1, Task 5; matriz removida na fase 1B): RPCs de usuários/empresas, leituras e RPCs de sistema.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(170);
+select plan(155);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'), ('00000000-0000-0000-0000-0000000000e2', 'Empresa B');
-insert into app.convites (email, nome, papel, empresa_id) values
-  ('adm@teste.local',  'Admin Teste',     'ADM',       null),
-  ('mot@teste.local',  'Motorista Teste', 'MOTORISTA', null),
-  ('clia@teste.local', 'Cliente A',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e1'),
-  ('clib@teste.local', 'Cliente B',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e2'),
-  ('adm2@teste.local', 'Admin Dois',      'ADM',       null),
-  ('adm3@teste.local', 'Admin Tres',      'ADM',       null),
-  ('pend@teste.local', 'Pendente Teste',  'CLIENTE',   '00000000-0000-0000-0000-0000000000e1');
+-- Clientes N2 aqui (sem poderes de gestão); o gestor da empresa (N1) é coberto em 0009_papeis_niveis.
+insert into app.convites (email, nome, papel, empresa_id, nivel) values
+  ('adm@teste.local',  'Admin Teste',     'ADM',       null, null),
+  ('mot@teste.local',  'Motorista Teste', 'MOTORISTA', null, null),
+  ('clia@teste.local', 'Cliente A',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e1', 2),
+  ('clib@teste.local', 'Cliente B',       'CLIENTE',   '00000000-0000-0000-0000-0000000000e2', 2),
+  ('adm2@teste.local', 'Admin Dois',      'ADM',       null, null),
+  ('adm3@teste.local', 'Admin Tres',      'ADM',       null, null),
+  ('pend@teste.local', 'Pendente Teste',  'CLIENTE',   '00000000-0000-0000-0000-0000000000e1', 2);
 insert into auth.users (id, instance_id, aud, role, email) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'adm@teste.local'),
   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'mot@teste.local'),
@@ -158,37 +159,6 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select is(api.definir_ativo('00000000-0000-0000-0000-0000000000a4', true, 'Voltou à empresa') ->> 'ok', 'true', 'definir_ativo: reativa cliente');
 select is(api.definir_ativo('00000000-0000-0000-0000-0000000000a5', true, 'Fim do rodízio') ->> 'ok', 'true', 'definir_ativo: reativa ADM');
 
------------------------------------------------------------------- definir_permissao
-select is(api.definir_permissao('MOTORISTA_EDITA_PARAMETROS', true, 'Teste de delegação') ->> 'ok', 'true',
-  'definir_permissao: ADM liga a delegação');
-select is(api.definir_permissao('MOTORISTA_EDITA_PARAMETROS', false, ' ') ->> 'codigo', 'MOTIVO_OBRIGATORIO',
-  'definir_permissao: motivo em branco');
-select is(api.definir_permissao('NAO_EXISTE', true, 'Teste de chave') ->> 'codigo', 'CHAVE_INVALIDA', 'definir_permissao: chave inválida');
-select is(api.definir_permissao('MOTORISTA_EDITA_PARAMETROS', null, 'Teste de nulo') ->> 'codigo', 'CAMPOS_INVALIDOS',
-  'definir_permissao: ativo nulo');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal1"}', true);
-select is(api.definir_permissao('MOTORISTA_LANCA_RECARGA', true, 'ADM sem aal2') ->> 'codigo', 'SEM_PERMISSAO',
-  'definir_permissao: ADM sem aal2 negado');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","aal":"aal2"}', true);
-select is(api.definir_permissao('MOTORISTA_LANCA_RECARGA', true, 'Motorista tentando') ->> 'codigo', 'SEM_PERMISSAO',
-  'definir_permissao: motorista negado');
-reset role;
-select ok(exists (select 1 from app.permissoes_delegadas where chave = 'MOTORISTA_EDITA_PARAMETROS' and ativo
-                  and alterado_por = '00000000-0000-0000-0000-0000000000a1' and alterado_em is not null),
-  'definir_permissao: gravada com autor e data');
-select ok(not (select ativo from app.permissoes_delegadas where chave = 'MOTORISTA_LANCA_RECARGA'), 'definir_permissao: negada não alterou');
-select ok(exists (select 1 from app.auditoria where acao = 'DEFINIR_PERMISSAO' and resultado = 'OK'
-                  and alvo = 'permissao:MOTORISTA_EDITA_PARAMETROS' and detalhe ->> 'motivo' = 'Teste de delegação'),
-  'definir_permissao: sucesso auditado');
-select ok(
-  (select count(distinct codigo) from app.auditoria
-   where acao = 'DEFINIR_PERMISSAO' and resultado = 'NEGADO'
-     and codigo in ('MOTIVO_OBRIGATORIO', 'CHAVE_INVALIDA', 'CAMPOS_INVALIDOS', 'SEM_PERMISSAO')) = 4,
-  'definir_permissao: recusas auditadas');
-set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
-select is(api.definir_permissao('MOTORISTA_EDITA_PARAMETROS', false, 'Fim do teste') ->> 'ok', 'true', 'definir_permissao: ADM desliga a delegação');
-
 ------------------------------------------------------------------ salvar_empresa
 select ok(set_config('t.emp', api.salvar_empresa(null, '  Empresa C ') ->> 'id', true) is not null, 'salvar_empresa: cria e devolve o id');
 select is(api.salvar_empresa(current_setting('t.emp')::uuid, 'Empresa C2') ->> 'ok', 'true', 'salvar_empresa: renomeia');
@@ -287,12 +257,6 @@ select is((select count(*)::int from api.empresas), 1, 'empresas: cliente vê s�
 select is((select nome from api.empresas), 'Empresa A', 'empresas: a do cliente');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a9","role":"authenticated","aal":"aal2"}', true);
 select is_empty($$ select 1 from api.empresas $$, 'empresas: vazia sem perfil');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated","aal":"aal1"}', true);
-select is((select count(*)::int from api.permissoes), 3, 'permissoes: cliente lê as 3 chaves');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal1"}', true);
-select is_empty($$ select 1 from api.permissoes $$, 'permissoes: vazia para ADM sem aal2');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a9","role":"authenticated","aal":"aal2"}', true);
-select is_empty($$ select 1 from api.permissoes $$, 'permissoes: vazia sem perfil');
 reset role;
 -- 520 linhas de volume para provar o teto de 500 (ação constante de teste).
 insert into app.auditoria (usuario_id, acao, resultado) select '00000000-0000-0000-0000-0000000000a2', 'TESTE_VOLUME', 'OK' from generate_series(1, 520);
@@ -343,19 +307,18 @@ select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.
   'existem as 5 funções sistema_* esperadas');
 select is_empty($$
   select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-  where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo', 'definir_permissao',
+  where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo',
     'salvar_empresa', 'definir_logo_empresa', 'autorizar_operacao_usuario', 'meu_perfil', 'listar_usuarios', 'listar_auditoria')
     and has_function_privilege('service_role', p.oid, 'EXECUTE')
 $$, 'RPCs de gestão e leituras: service_role não executa');
 select is_empty($$
   select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-  where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo', 'definir_permissao',
+  where n.nspname = 'api' and p.proname in ('preparar_convite', 'alterar_perfil', 'definir_ativo',
     'salvar_empresa', 'definir_logo_empresa', 'autorizar_operacao_usuario', 'meu_perfil', 'listar_usuarios', 'listar_auditoria')
     and (has_function_privilege('anon', p.oid, 'EXECUTE') or not has_function_privilege('authenticated', p.oid, 'EXECUTE')
          or not p.prosecdef)
 $$, 'RPCs de gestão e leituras: authenticated sim, anon não, todas SECURITY DEFINER');
 select columns_are('api', 'empresas', array['id', 'nome', 'logo_caminho'], 'api.empresas: colunas explícitas');
-select columns_are('api', 'permissoes', array['chave', 'ativo', 'alterado_em'], 'api.permissoes: colunas explícitas');
 
 ------------------------------------------------------------------ sistema_* (service_role)
 set local role service_role;
@@ -431,7 +394,7 @@ select is_empty($$ select 1 from app.auditoria
 ------------------------------------------------------------------ nomes de ação são constantes
 select is_empty($$
   select distinct acao from app.auditoria
-  where acao not in ('PREPARAR_CONVITE', 'ALTERAR_PERFIL', 'DEFINIR_ATIVO', 'DEFINIR_PERMISSAO', 'SALVAR_EMPRESA',
+  where acao not in ('PREPARAR_CONVITE', 'ALTERAR_PERFIL', 'DEFINIR_ATIVO', 'SALVAR_EMPRESA',
     'DEFINIR_LOGO_EMPRESA', 'AUTORIZAR_OPERACAO_USUARIO', 'CONFIRMAR_SENHA', 'CONVITE_PRIMEIRO_ADM',
     'SISTEMA_REGISTRAR_INVALIDO', 'RESETAR_2FA', 'LINK_PRIMEIRO_ADM', 'TESTE_VOLUME')
 $$, 'auditoria: só nomes de ação constantes (nada de texto do chamador)');

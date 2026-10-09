@@ -1,5 +1,5 @@
-// Tabela de preços e regras (especificação 3; desenho §1). Tipos, rótulos, validação do formulário
-// e diferença entre versões. Dinheiro em centavos, percentuais em pontos-base, prazos em horas.
+// Contrato por empresa e tabela modelo (Adendo A10; desenho da fase 1B). Tipos, rótulos, validação do
+// formulário e diferença entre versões. Dinheiro em centavos, percentuais em pontos-base, prazos em horas.
 import type { Papel } from './estadoSessao.ts'
 import {
   bpParaTexto,
@@ -16,8 +16,8 @@ export interface Faixa {
   multa_bp: number
 }
 
-/** Os 14 campos enviados a `api.publicar_parametros` (nomes das colunas). */
-export interface ValoresParametros {
+/** Os 13 campos de um contrato (`api.publicar_contrato`). A retenção de fotos é configuração global. */
+export interface ValoresContrato {
   km_sem_reboque_cent: number
   km_com_reboque_cent: number
   taxa_fixa_reboque_cent: number
@@ -31,18 +31,29 @@ export interface ValoresParametros {
   limiar_urgente_horas: number
   limite_saldo_negativo_cent: number
   alerta_saldo_baixo_cent: number
-  retencao_fotos_dias: number
 }
 
-/** Linha de `api.parametros_vigentes` / `api.parametros_historico`. */
-export interface VersaoParametros extends ValoresParametros {
+/** Uma versão publicada (`api.listar_contratos` / `api.historico_contrato`): só o ADM lê. */
+export interface VersaoContrato extends ValoresContrato {
   versao: number
   vigente_desde: string
   publicado_em: string
   publicado_por_nome: string | null
 }
 
-export type CampoNumerico = Exclude<keyof ValoresParametros, 'faixas_cancelamento'>
+/** Regras que o cliente vê (`api.regras_do_servico`): sem preços, limites, versão ou autor. */
+export type RegrasServico = Pick<
+  ValoresContrato,
+  'faixas_cancelamento' | 'prazo_orcar_horas' | 'validade_orcamento_horas' | 'limiar_urgente_horas'
+>
+
+/** O que o motorista usa para orçar (`api.precos_para_orcar`): preços unitários e prazos. */
+export type PrecosParaOrcar = Omit<
+  ValoresContrato,
+  'faixas_cancelamento' | 'limite_saldo_negativo_cent' | 'alerta_saldo_baixo_cent'
+>
+
+export type CampoNumerico = Exclude<keyof ValoresContrato, 'faixas_cancelamento'>
 export type Tipo = 'dinheiro' | 'percentual' | 'horas' | 'dias'
 
 export interface DefinicaoCampo {
@@ -53,7 +64,7 @@ export interface DefinicaoCampo {
 }
 
 export interface Grupo {
-  id: 'proprio' | 'umi' | 'comuns'
+  id: 'proprio' | 'cliente' | 'regras' | 'credito'
   titulo: string
   descricao: string
   campos: DefinicaoCampo[]
@@ -61,47 +72,56 @@ export interface Grupo {
 
 const HOSPEDAGEM: DefinicaoCampo = { campo: 'hospedagem_diaria_cent', rotulo: 'Hospedagem (por diária)', tipo: 'dinheiro' }
 
-/** Ordem e rótulos da tela. A hospedagem é a mesma nas duas modalidades. */
+/** Modalidades: nunca com o nome de uma empresa (Adendo A10). A hospedagem é a mesma nas duas. */
+export const MODALIDADE_PROPRIO: Grupo = {
+  id: 'proprio',
+  titulo: 'Modalidade veículo próprio',
+  descricao: 'O motorista leva a carga no próprio veículo.',
+  campos: [
+    { campo: 'km_sem_reboque_cent', rotulo: 'Quilômetro sem reboque', tipo: 'dinheiro' },
+    { campo: 'km_com_reboque_cent', rotulo: 'Quilômetro com reboque', tipo: 'dinheiro' },
+    { campo: 'taxa_fixa_reboque_cent', rotulo: 'Taxa fixa de reboque', tipo: 'dinheiro' },
+    {
+      campo: 'retorno_trecho_unico_bp',
+      rotulo: 'Retorno em trecho único',
+      tipo: 'percentual',
+      ajuda: 'Sobre o valor da ida, quando o serviço é só de ida.',
+    },
+    { campo: 'hora_espera_cent', rotulo: 'Hora de espera', tipo: 'dinheiro' },
+    HOSPEDAGEM,
+  ],
+}
+
+export const MODALIDADE_CLIENTE: Grupo = {
+  id: 'cliente',
+  titulo: 'Modalidade veículo do cliente',
+  descricao: 'O motorista conduz o veículo do cliente (sem cobrança por km).',
+  campos: [{ campo: 'diaria_motorista_cent', rotulo: 'Diária do motorista', tipo: 'dinheiro' }, HOSPEDAGEM],
+}
+
+export const PRAZOS: DefinicaoCampo[] = [
+  { campo: 'prazo_orcar_horas', rotulo: 'Prazo para orçar', tipo: 'horas' },
+  { campo: 'validade_orcamento_horas', rotulo: 'Validade do orçamento', tipo: 'horas' },
+  { campo: 'limiar_urgente_horas', rotulo: 'Pedido urgente quando começa em menos de', tipo: 'horas' },
+]
+
+/** Ordem e rótulos dos cartões e do formulário do contrato (ADM). */
 export const GRUPOS: Grupo[] = [
+  MODALIDADE_PROPRIO,
+  MODALIDADE_CLIENTE,
   {
-    id: 'proprio',
-    titulo: 'Veículo próprio',
-    descricao: 'O motorista leva a carga no próprio veículo.',
-    campos: [
-      { campo: 'km_sem_reboque_cent', rotulo: 'Quilômetro sem reboque', tipo: 'dinheiro' },
-      { campo: 'km_com_reboque_cent', rotulo: 'Quilômetro com reboque', tipo: 'dinheiro' },
-      { campo: 'taxa_fixa_reboque_cent', rotulo: 'Taxa fixa de reboque', tipo: 'dinheiro' },
-      {
-        campo: 'retorno_trecho_unico_bp',
-        rotulo: 'Retorno em trecho único',
-        tipo: 'percentual',
-        ajuda: 'Sobre o valor da ida, quando o serviço é só de ida.',
-      },
-      { campo: 'hora_espera_cent', rotulo: 'Hora de espera', tipo: 'dinheiro' },
-      HOSPEDAGEM,
-    ],
-  },
-  {
-    id: 'umi',
-    titulo: 'Veículo da Umi San',
-    descricao: 'O motorista conduz o veículo do cliente (sem cobrança por km).',
-    campos: [{ campo: 'diaria_motorista_cent', rotulo: 'Diária do motorista', tipo: 'dinheiro' }, HOSPEDAGEM],
-  },
-  {
-    id: 'comuns',
-    titulo: 'Regras comuns',
+    id: 'regras',
+    titulo: 'Regras de cancelamento e prazos',
     descricao: 'Valem para as duas modalidades.',
+    campos: PRAZOS,
+  },
+  {
+    id: 'credito',
+    titulo: 'Crédito da empresa',
+    descricao: 'Saldo pré-pago da empresa: até quanto pode ficar negativo e quando avisar.',
     campos: [
-      { campo: 'prazo_orcar_horas', rotulo: 'Prazo para orçar', tipo: 'horas' },
-      { campo: 'validade_orcamento_horas', rotulo: 'Validade do orçamento', tipo: 'horas' },
-      {
-        campo: 'limiar_urgente_horas',
-        rotulo: 'Pedido urgente quando começa em menos de',
-        tipo: 'horas',
-      },
       { campo: 'limite_saldo_negativo_cent', rotulo: 'Limite de saldo negativo', tipo: 'dinheiro' },
       { campo: 'alerta_saldo_baixo_cent', rotulo: 'Alerta de saldo baixo', tipo: 'dinheiro' },
-      { campo: 'retencao_fotos_dias', rotulo: 'Fotos guardadas após a entrega', tipo: 'dias' },
     ],
   },
 ]
@@ -153,14 +173,20 @@ export function descreverFaixas(faixas: Faixa[]): string[] {
   })
 }
 
-/** Quem pode publicar: ADM, ou MOTORISTA com a delegação ligada (o banco confere de novo). */
-export function podeEditarParametros(
-  papel: Papel | null | undefined,
-  permissoes: ReadonlyArray<{ chave: string; ativo: boolean }>,
-): boolean {
-  if (papel === 'ADM') return true
-  if (papel !== 'MOTORISTA') return false
-  return permissoes.some((p) => p.chave === 'MOTORISTA_EDITA_PARAMETROS' && p.ativo === true)
+/**
+ * A faixa que vale num cancelamento, para a frase da multa: {6, 5000} nas faixas padrão →
+ * "50% — de 6 h a menos de 24 h antes". Sem as faixas (ou faixa fora delas): "50% — 6 h ou mais antes".
+ */
+export function faixaAplicada(faixas: readonly Faixa[] | null | undefined, faixa: Faixa): { percentual: string; quando: string } {
+  const i = faixas?.findIndex((f) => f.antecedencia_min_horas === faixa.antecedencia_min_horas && f.multa_bp === faixa.multa_bp) ?? -1
+  const frase =
+    faixas && i >= 0 ? descreverFaixas([...faixas])[i]!.split(':')[0]! : `${horas(faixa.antecedencia_min_horas)} ou mais antes`
+  return { percentual: formatarPercentual(faixa.multa_bp), quando: frase.charAt(0).toLowerCase() + frase.slice(1) }
+}
+
+/** Só o ADM publica contratos e a tabela modelo (Adendo A10; o banco confere de novo). */
+export function podeEditarContratos(papel: Papel | null | undefined): boolean {
+  return papel === 'ADM'
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -172,13 +198,13 @@ export interface FaixaTexto {
   multa: string
 }
 
-export interface FormularioParametros {
+export interface FormularioContrato {
   campos: Record<CampoNumerico, string>
   faixas: FaixaTexto[]
 }
 
 /** Texto inicial de cada campo a partir de uma versão (ou vazio). */
-export function formularioDe(versao: ValoresParametros | null): FormularioParametros {
+export function formularioDe(versao: ValoresContrato | null): FormularioContrato {
   const campos = {} as Record<CampoNumerico, string>
   for (const c of CAMPOS) {
     const v = versao?.[c.campo]
@@ -200,6 +226,12 @@ export function formularioDe(versao: ValoresParametros | null): FormularioParame
 
 export const MAX_FAIXAS = 20
 
+/** Prazo em linguagem simples: 1 hora, 12 horas, 2 dias, 36 horas. */
+export function prazoPorExtenso(horasTotal: number): string {
+  if (horasTotal >= 24 && horasTotal % 24 === 0) return dias(horasTotal / 24)
+  return horasTotal === 1 ? '1 hora' : `${horasTotal} horas`
+}
+
 const MENSAGEM_TIPO: Record<Tipo, string> = {
   dinheiro: 'Informe um valor em reais, por exemplo 1.234,56.',
   percentual: 'Informe um percentual entre 0 e 100, com até 2 casas.',
@@ -211,10 +243,10 @@ export type ErrosFormulario = Partial<Record<CampoNumerico | 'faixas', string>>
 
 /** Converte o formulário para o envio. Com qualquer erro, devolve só os erros (nada é enviado). */
 export function validarFormulario(
-  f: FormularioParametros,
-): { ok: true; valores: ValoresParametros } | { ok: false; erros: ErrosFormulario } {
+  f: FormularioContrato,
+): { ok: true; valores: ValoresContrato } | { ok: false; erros: ErrosFormulario } {
   const erros: ErrosFormulario = {}
-  const valores = {} as ValoresParametros
+  const valores = {} as ValoresContrato
   for (const c of CAMPOS) {
     const texto = f.campos[c.campo] ?? ''
     const v =
@@ -272,7 +304,7 @@ export interface Diferenca {
 const textoFaixas = (faixas: Faixa[]) => descreverFaixas(faixas).join('; ')
 
 /** Todos os campos, com o valor atual (ou `null` sem versão anterior) e o novo; `mudou` marca o que muda. */
-export function diferencas(atual: ValoresParametros | null, novo: ValoresParametros): Diferenca[] {
+export function diferencas(atual: ValoresContrato | null, novo: ValoresContrato): Diferenca[] {
   const lista: Diferenca[] = CAMPOS.map((c) => {
     const antes = atual ? atual[c.campo] : null
     return {
