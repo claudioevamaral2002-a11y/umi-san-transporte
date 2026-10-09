@@ -176,7 +176,8 @@ describe('Realtime Broadcast privado por pedido e por empresa (especificação 1
       for (const lista of recebidos.values()) {
         await expect.poll(() => lista.length, { timeout: 8_000 }).toBe(1)
         expect(lista[0]).toMatchObject({ empresa_id: empresaA })
-        expect(Object.keys(lista[0]!).sort()).toEqual(['em', 'empresa_id'])
+        // payload mínimo (sem valores): {empresa_id, em}, mais o id da mensagem que o Realtime acrescenta
+        expect(Object.keys(lista[0]!).filter((k) => k !== 'id').sort()).toEqual(['em', 'empresa_id'])
       }
     } finally {
       for (const p of pessoas) await p.cliente.removeAllChannels()
