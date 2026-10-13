@@ -23,7 +23,14 @@ const b64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base
 
 function jwt(aal: 'aal1' | 'aal2', metodo = 'password'): string {
   const agora = Math.floor(Date.now() / 1000)
-  const corpo = { sub: USUARIO, role: 'authenticated', aal, amr: [{ method: metodo, timestamp: agora }], exp: agora + 3600 }
+  const corpo = {
+    sub: USUARIO,
+    role: 'authenticated',
+    aal,
+    amr: [{ method: metodo, timestamp: agora }],
+    session_id: '00000000-0000-4000-8000-00000000005e',
+    exp: agora + 3600,
+  }
   return `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url(corpo)}.assinatura-falsa`
 }
 
@@ -55,7 +62,13 @@ export const json = (route: Route, corpo: unknown, status = 200) =>
 export async function comSessaoFalsa(
   page: Page,
   perfil: PerfilFalso,
-  opcoes: { aal?: 'aal1' | 'aal2'; /** Abre deslogado; a sessão nasce no login (POST /token?grant_type=password). */ semSessaoInicial?: boolean } = {},
+  opcoes: {
+    aal?: 'aal1' | 'aal2'
+    /** Abre deslogado; a sessão nasce no login (POST /token?grant_type=password). */
+    semSessaoInicial?: boolean
+    /** Nível que o "servidor" devolve ao renovar o token (padrão: o mesmo de `aal`). */
+    aalNaRenovacao?: 'aal1' | 'aal2'
+  } = {},
 ) {
   const tem2fa = perfil.tem_2fa ?? false
   const sessao = {
@@ -67,6 +80,14 @@ export async function comSessaoFalsa(
     user: usuario(tem2fa),
   }
   await page.route(`${URL_SUPABASE}/auth/v1/token?grant_type=password`, (route) => json(route, sessao))
+  await page.route(`${URL_SUPABASE}/auth/v1/token?grant_type=refresh_token`, (route) =>
+    json(route, {
+      ...sessao,
+      access_token: jwt(opcoes.aalNaRenovacao ?? opcoes.aal ?? 'aal1'),
+      refresh_token: `refresh-renovado-${Date.now()}`,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    }),
+  )
   if (!opcoes.semSessaoInicial) {
     await page.addInitScript(
       ([chave, valor]) => {

@@ -479,6 +479,20 @@ describe('segundo fator (aal2)', () => {
     }
   })
 
+  it('renovar o token (refresh) mantém aal2: o código não volta a ser exigido', async () => {
+    const adm = await criarPessoa({ papel: 'ADM' })
+    const antes = (await adm.cliente.auth.getSession()).data.session!
+    const renovado = await adm.cliente.auth.refreshSession()
+    expect(renovado.error).toBeNull()
+    expect(renovado.data.session!.access_token).not.toBe(antes.access_token)
+    const aal = JSON.parse(Buffer.from(renovado.data.session!.access_token.split('.')[1]!, 'base64url').toString()) as {
+      aal: string
+    }
+    expect(aal.aal).toBe('aal2')
+    expect((await adm.cliente.auth.mfa.getAuthenticatorAssuranceLevel()).data?.currentLevel).toBe('aal2')
+    expect(((await adm.cliente.rpc('listar_usuarios')).data as unknown[]).length).toBeGreaterThan(0)
+  })
+
   it('cliente não precisa de segundo fator', async () => {
     const cliente = await criarPessoa({ papel: 'CLIENTE' })
     const nivel = await cliente.cliente.auth.mfa.getAuthenticatorAssuranceLevel()

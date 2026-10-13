@@ -35,6 +35,21 @@ const link = lerLinkDeEntrada(typeof window === 'undefined' ? '' : window.locati
 // Aberto por link de convite/recuperação: vale até a senha ser definida ou a pessoa sair.
 let viaLink = link.definirSenha
 
+/** `session_id` do JWT de acesso (sem validar: só para não renovar duas vezes a mesma sessão). */
+function sessaoDoToken(jwt: string): string | null {
+  try {
+    const corpo = jwt.split('.')[1] ?? ''
+    const json = atob(corpo.replace(/-/g, '+').replace(/_/g, '/'))
+    const id = (JSON.parse(json) as { session_id?: unknown }).session_id
+    return typeof id === 'string' ? id : null
+  } catch {
+    return null
+  }
+}
+
+// Sessão (id) já renovada para conferir o 2FA no servidor nesta carga do app.
+let sessaoJaRenovada: string | null = null
+
 async function carregar(): Promise<Resultado | null> {
   const supabase = await cliente()
   const { data, error } = await supabase.auth.getSession()
@@ -47,17 +62,32 @@ async function carregar(): Promise<Resultado | null> {
     supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
   ])
   if (perfil.error || aal.error) return null
-  return {
-    estado: derivarEstado({
-      temSessao: true,
-      perfil: perfil.data,
-      aalAtual: aal.data.currentLevel,
-      aalProximo: aal.data.nextLevel,
-      viaLink,
-    }),
+  const entrada = {
+    temSessao: true,
     perfil: perfil.data,
-    email: sessao.user.email ?? null,
+    aalAtual: aal.data.currentLevel,
+    aalProximo: aal.data.nextLevel,
+    viaLink,
   }
+  let estado = derivarEstado(entrada)
+  // O nível (aal) que o app lê vem do token de ACESSO guardado no aparelho; o servidor guarda o nível da SESSÃO.
+  // Se o token guardado é anterior ao 2FA (resposta da verificação perdida ao trocar de app para copiar o código,
+  // app fechado no meio, outra aba/janela do app com o token antigo), o app pedia o código de novo mesmo com a
+  // sessão já verificada no servidor. Antes de pedir o código, renova uma vez: o servidor só devolve aal2 se a
+  // sessão já passou pelo 2FA (nada é liberado sem o código).
+  // Uma vez por sessão (a renovação dispara TOKEN_REFRESHED, que chama carregar de novo).
+  const idSessao = sessaoDoToken(sessao.access_token)
+  if (estado === 'verificar_2fa' && aal.data.currentLevel === 'aal1' && idSessao && idSessao !== sessaoJaRenovada) {
+    sessaoJaRenovada = idSessao
+    const renovada = await supabase.auth.refreshSession()
+    if (!renovada.error && renovada.data.session) {
+      const depois = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (!depois.error) {
+        estado = derivarEstado({ ...entrada, aalAtual: depois.data.currentLevel, aalProximo: depois.data.nextLevel })
+      }
+    }
+  }
+  return { estado, perfil: perfil.data, email: sessao.user.email ?? null }
 }
 
 const AVISO_LINK_INVALIDO = 'Este link expirou ou já foi usado. Peça um novo ao administrador.'

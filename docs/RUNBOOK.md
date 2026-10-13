@@ -278,3 +278,9 @@ As telas assinam **tópicos privados**; o banco decide quem pode assinar cada um
 | `saldo:<id da empresa>` | ADM e clientes da empresa (nunca motorista nem gestor de frota) | entrou um lançamento (cartão de saldo e extrato) |
 
 Se uma tela parecer parada, puxe para atualizar ou recarregue: nada depende só do tempo real.
+
+## 15. Quando o app pede o código do 2FA (e quando pede a senha)
+
+- **Código do autenticador:** só num **login novo** (senha digitada) de ADM, gestor de frota ou motorista. Recarregar, fechar e reabrir o app, abrir outra aba ou ficar horas sem usar **não** pede o código: depois do 2FA a sessão fica verificada (aal2) no servidor e cada renovação do token (a cada 15 min de uso) continua aal2.
+- Se o aparelho ficou com um token de antes do 2FA (por exemplo, o app foi fechado enquanto a pessoa copiava o código no autenticador), o app renova uma vez ao abrir e, se o servidor já tinha confirmado o código, vai direto ao Início.
+- **Senha de novo** (e depois o código): só quando a sessão acaba no Supabase, o que é do próprio Supabase e não do app: **Sair**, conta desativada, 2FA resetado, ou o mesmo token de renovação usado duas vezes com mais de 10 s de diferença (`refresh_token_reuse_interval`; acontece se duas cópias do app, como o app instalado e uma aba do navegador, renovarem ao mesmo tempo depois de muito tempo fechadas). Não há limite de duração nem de inatividade configurado (`[auth.sessions]` vazio no `supabase/config.toml`).
