@@ -14,6 +14,13 @@ export default defineConfig({
   use: { baseURL: URL_BASE, trace: 'retain-on-failure' },
   projects: [
     { name: 'celular', testIgnore: /[\\/]real[\\/]/, use: { ...devices['Pixel 7'] } },
+    // Toque no iPhone (viewport, user agent e touch do iPhone 15). Só o Chromium está instalado no CI: o motor é o
+    // Chromium com o perfil do aparelho (o WebKit de verdade fica para o teste manual no aparelho).
+    {
+      name: 'iphone',
+      testMatch: /toque-.*\.spec\.ts$/,
+      use: { ...devices['iPhone 15'], defaultBrowserType: 'chromium' },
+    },
     // Fluxos contra o Supabase real (CI): exigem E2E_BACKEND_REAL=1 e o .env.test; sem Docker local, ficam de fora.
     ...(process.env.E2E_BACKEND_REAL === '1'
       ? [{ name: 'real', testMatch: /[\\/]real[\\/].*\.spec\.ts$/, fullyParallel: false, use: { ...devices['Pixel 7'] } }]

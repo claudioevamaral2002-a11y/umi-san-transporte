@@ -115,7 +115,7 @@ export function Calendario({
                   grande ? 'h-12 md:h-20 md:items-start md:justify-start md:p-2' : 'h-12'
                 } ${
                   marcado
-                    ? 'bg-marinho text-papel sobre-marinho'
+                    ? 'bg-selecao text-selecao-texto'
                     : cheio
                       ? 'bg-borda/70 text-texto-suave line-through'
                       : passado
@@ -125,7 +125,7 @@ export function Calendario({
               >
                 <span>{Number(dia.slice(8))}</span>
                 <span aria-hidden="true" className="flex h-1.5 gap-0.5">
-                  {d && d.meus > 0 && <span className={`size-1.5 rounded-full ${marcado ? 'bg-papel' : 'bg-marinho-2'}`} />}
+                  {d && d.meus > 0 && <span className={`size-1.5 rounded-full ${marcado ? 'bg-selecao-texto' : 'bg-marinho-2'}`} />}
                   {d && d.aguardando_voce > 0 && <span className="size-1.5 rounded-full bg-[var(--cor-laranja)]" />}
                   {d?.ocupado && !cheio && <span className="size-1.5 rounded-full bg-cinza-azulado" />}
                 </span>

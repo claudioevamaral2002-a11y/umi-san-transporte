@@ -192,7 +192,7 @@ function PassoQuando({
                   aria-checked={marcado}
                   onClick={() => mudar({ inicio: new Date(h).toISOString() })}
                   className={`min-h-12 min-w-20 rounded-xl border-[1.5px] px-3 text-base font-bold tabular-nums transition-colors duration-150 motion-reduce:transition-none ${
-                    marcado ? 'border-marinho bg-marinho text-papel sobre-marinho' : 'border-borda bg-superficie hover:border-marinho-2'
+                    marcado ? 'border-selecao bg-selecao text-selecao-texto' : 'border-borda bg-superficie hover:border-marinho-2'
                   }`}
                 >
                   {horaDe(h)}

@@ -14,6 +14,8 @@
   --color-marinho-2: var(--cor-marinho-2);
   --color-cinza-azulado: var(--cor-cinza-azulado);
   --color-alerta-texto: var(--cor-alerta-texto);
+  --color-selecao: var(--cor-selecao);
+  --color-selecao-texto: var(--cor-selecao-texto);
   --font-sans: "Manrope Variable", system-ui, sans-serif;
   --radius-cartao: var(--raio);
 }

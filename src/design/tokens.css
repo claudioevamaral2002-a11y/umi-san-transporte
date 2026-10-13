@@ -17,6 +17,9 @@
   --cor-perigo-texto: #ffffff;
   --cor-alerta-texto: #c2410c; /* laranja legível como texto */
   --cor-foco: #1e4b7a;
+  /* Item escolhido (dia, horário, opção). No escuro a superfície já é marinho: inverte para papel. */
+  --cor-selecao: #0a2540;
+  --cor-selecao-texto: #f6f4ee;
 
   --status-solicitada: #5b6b80;
   --status-aguardando: #b45309;
@@ -43,6 +46,8 @@
     --cor-alerta-texto: #ff8a4c;
     --cor-foco: #ff8a4c;
     --cor-borda: #1e4b7a;
+    --cor-selecao: #f6f4ee;
+    --cor-selecao-texto: #0a2540;
     --status-solicitada: #9fb0c4;
     --status-aguardando: #fbbf24;
     --status-agendada: #7fb2e8;
