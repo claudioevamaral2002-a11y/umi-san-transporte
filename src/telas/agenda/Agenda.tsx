@@ -12,7 +12,7 @@ import { useSessao } from '../../lib/sessao.tsx'
 import { faixaHorario, hoje as hojeSp, intervaloDoDia, janelasLivres, mesDe, nomeDoDia, numeroPedido, type Janela } from '../../lib/tempo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
 import { topicoDoPerfil } from '../../lib/topicos.ts'
-import { podeCriarPedido } from '../pedidos/Pedidos.tsx'
+import { podeCriarPedido, usePedidoIndisponivel } from '../pedidos/Pedidos.tsx'
 import { Calendario } from './Calendario.tsx'
 
 type Item = { tipo: 'bloco'; bloco: Bloco } | { tipo: 'livre'; janela: Janela }
@@ -95,7 +95,9 @@ export function Agenda() {
   const [mes, setMes] = useState(() => mesDe(hoje))
   const [dia, setDia] = useState(hoje)
   const equipe = perfil?.papel !== 'CLIENTE'
-  const pedir = !!perfil && podeCriarPedido(perfil) && perfil.empresa_tem_contrato !== false
+  // Janela livre vira atalho de pedido só para quem pode pedir agora (com contrato e com crédito).
+  const indisponivel = usePedidoIndisponivel(perfil)
+  const pedir = !!perfil && podeCriarPedido(perfil) && !indisponivel
 
   const calendario = useConsulta(`agenda-mes-${mes}`, () => pedidos.diasDoMes(mes, 60))
   const doDia = useConsulta(`agenda-dia-${dia}`, async () => {
@@ -162,6 +164,11 @@ export function Agenda() {
           <h2 id="titulo-dia" className="ivo-h3">
             {nomeDoDia(dia)}
           </h2>
+          {perfil && podeCriarPedido(perfil) && indisponivel && (
+            <p className="ivo-legenda text-texto-suave" data-testid="agenda-pedido-indisponivel">
+              {indisponivel}
+            </p>
+          )}
           {doDia.erro && doDia.dados === undefined ? (
             <ErroDia recarregar={doDia.recarregar} />
           ) : doDia.dados === undefined ? (

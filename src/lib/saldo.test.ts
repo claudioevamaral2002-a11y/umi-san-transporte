@@ -8,6 +8,7 @@ import {
   resumoDispositivo,
   saldoAposAprovacao,
   saldoAposLancamento,
+  semCredito,
   semResposta,
 } from './saldoExibicao.ts'
 
@@ -123,5 +124,18 @@ describe('rótulos das divergências da reconciliação', () => {
   it('tipo desconhecido aparece como veio', () => {
     expect(rotuloDivergencia('RESERVA_SEM_PAR')).toBe('Reserva sem o lançamento de reserva/liberação correspondente')
     expect(rotuloDivergencia('NOVO_TIPO')).toBe('NOVO_TIPO')
+  })
+})
+
+describe('sem crédito (Novo pedido indisponível)', () => {
+  it('disponível + limite ≤ 0 → sem crédito', () => {
+    expect(semCredito({ disponivel_cent: 0, limite_cent: 0 })).toBe(true)
+    expect(semCredito({ disponivel_cent: -50000, limite_cent: 50000 })).toBe(true)
+    expect(semCredito({ disponivel_cent: -60000, limite_cent: 50000 })).toBe(true)
+  })
+  it('qualquer crédito (saldo ou limite) → pode pedir', () => {
+    expect(semCredito({ disponivel_cent: 0, limite_cent: 1 })).toBe(false)
+    expect(semCredito({ disponivel_cent: 1, limite_cent: 0 })).toBe(false)
+    expect(semCredito({ disponivel_cent: -49999, limite_cent: 50000 })).toBe(false)
   })
 })

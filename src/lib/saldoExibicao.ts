@@ -121,3 +121,11 @@ export const ROTULO_DIVERGENCIA = {
 export function rotuloDivergencia(tipo: string): string {
   return (ROTULO_DIVERGENCIA as Record<string, string>)[tipo] ?? tipo
 }
+
+/**
+ * Sem crédito nenhum: nem disponível nem limite para ficar negativo. O banco recusa o pedido novo (SEM_CREDITO) com a
+ * mesma conta; aqui é só para desabilitar o "Novo pedido" com explicação.
+ */
+export function semCredito(s: { disponivel_cent: number; limite_cent: number }): boolean {
+  return s.disponivel_cent + s.limite_cent <= 0
+}

@@ -4,6 +4,7 @@ import { Botao } from '../../design/componentes/Botao.tsx'
 import { AreaTexto, Campo } from '../../design/componentes/Campo.tsx'
 import { CarregandoPickup } from '../../design/componentes/CarregandoPickup.tsx'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
+import { Dinheiro } from '../../design/componentes/Dinheiro.tsx'
 import { Folha } from '../../design/componentes/Folha.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
@@ -27,6 +28,7 @@ import {
   type Passo,
 } from '../../lib/novoPedido.ts'
 import { pedidos } from '../../lib/pedidos.ts'
+import type { Saldo } from '../../lib/saldo.ts'
 import { useSessao } from '../../lib/sessao.tsx'
 import { ROTULO_CARGA, ROTULO_MODALIDADE, ROTULO_REBOQUE, rotuloTrajeto } from '../../lib/situacao.ts'
 import {
@@ -39,6 +41,7 @@ import {
   numeroPedido,
 } from '../../lib/tempo.ts'
 import { Calendario } from '../agenda/Calendario.tsx'
+import { useCreditoParaPedido } from './Pedidos.tsx'
 import { CaixaChip, Contador, Escolhas, Rota } from './componentes.tsx'
 
 const TITULOS = { 1: 'Quando?', 2: 'Onde?', 3: 'O que vamos levar?', 4: 'Confira o pedido' } as const
@@ -404,11 +407,14 @@ function PassoRevisar({
   irPara,
   prazoHoras,
   erroEnvio,
+  saldo,
 }: {
   f: FormPedido
   irPara: (p: Passo) => void
   prazoHoras: number | null | undefined
   erroEnvio: string | null
+  /** Saldo da empresa: abaixo do alerta do contrato, avisa (o pedido pode ser feito; a aprovação confere o valor). */
+  saldo: Saldo | null
 }) {
   const carga = [
     f.carga !== 'EQUIPAMENTO' ? (f.pessoasQtd === 1 ? '1 pessoa' : `${f.pessoasQtd} pessoas`) : null,
@@ -419,6 +425,20 @@ function PassoRevisar({
   return (
     <div className="space-y-4">
       {erroEnvio && <Mensagem tipo="erro">{erroEnvio}</Mensagem>}
+      {saldo?.abaixo_alerta && (
+        <div
+          className="flex gap-3 rounded-cartao border-[1.5px] border-[var(--cor-laranja)] bg-[var(--cor-laranja)]/10 p-4"
+          data-testid="aviso-saldo-baixo"
+          role="note"
+        >
+          <Icone nome="alerta" className="mt-0.5 shrink-0 text-alerta-texto" />
+          <p className="ivo-corpo">
+            <span className="font-bold">Saldo baixo.</span> Sua empresa tem{' '}
+            <Dinheiro centavos={saldo.disponivel_cent} className="font-bold" /> disponível. Você pode enviar o pedido;
+            para aprovar o orçamento, o crédito da empresa precisa cobrir o valor. Fale com a IVO Transportes para recarregar.
+          </p>
+        </div>
+      )}
       <Cartao className="py-1" data-testid="resumo-pedido">
         <LinhaResumo titulo="Quando" aoEditar={() => irPara(1)}>
           <p className="font-bold tabular-nums">
@@ -517,6 +537,7 @@ export function NovoPedido() {
   const titulo = useRef<HTMLHeadingElement>(null)
   const primeiraVez = useRef(true)
   const regras = useConsulta('novo-pedido-regras', api.regrasDoServico)
+  const credito = useCreditoParaPedido(perfil)
   const prazoHoras = regras.dados?.prazo_orcar_horas
 
   // A cada passo, o foco vai para o título (leitor de tela anuncia onde a pessoa está).
@@ -539,17 +560,20 @@ export function NovoPedido() {
 
   if (criado) return <Sucesso id={criado.id} numero={criado.numero} prazoHoras={prazoHoras} />
 
-  if (perfil?.empresa_tem_contrato === false) {
+  if (credito.indisponivel) {
     return (
       <div className="min-h-dvh bg-fundo">
         <Cabecalho passo={1} aoFechar={sair} aoVoltar={null} tituloRef={titulo} />
         <main className="mx-auto max-w-lg p-4">
-          <Cartao className="space-y-2" data-testid="novo-pedido-sem-contrato">
+          <Cartao
+            className="space-y-2"
+            data-testid={perfil?.empresa_tem_contrato === false ? 'novo-pedido-sem-contrato' : 'novo-pedido-sem-credito'}
+          >
             <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
               <Icone nome="alerta" tamanho={16} />
               Novo pedido indisponível
             </p>
-            <p className="ivo-corpo">{MENSAGENS.SEM_CONTRATO}</p>
+            <p className="ivo-corpo">{credito.indisponivel}</p>
           </Cartao>
         </main>
       </div>
@@ -618,7 +642,9 @@ export function NovoPedido() {
         {passo === 1 && <PassoQuando f={f} mudar={mudar} rodada={rodada} erro={erros.inicio} aviso={aviso} />}
         {passo === 2 && <PassoOnde f={f} mudar={mudar} erros={erros} />}
         {passo === 3 && <PassoOque f={f} mudar={mudar} erros={erros} />}
-        {passo === 4 && <PassoRevisar f={f} irPara={setPasso} prazoHoras={prazoHoras} erroEnvio={erroEnvio} />}
+        {passo === 4 && (
+          <PassoRevisar f={f} irPara={setPasso} prazoHoras={prazoHoras} erroEnvio={erroEnvio} saldo={credito.saldo} />
+        )}
         {enviando && <CarregandoPickup ativo rotulo="Enviando o pedido…" />}
       </main>
       <Rodape>
