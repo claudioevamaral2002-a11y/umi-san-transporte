@@ -52,7 +52,11 @@ export const json = (route: Route, corpo: unknown, status = 200) =>
   })
 
 /** Abre a página já "logada" no estado pedido. Devolve os corpos enviados às Edge Functions. */
-export async function comSessaoFalsa(page: Page, perfil: PerfilFalso, opcoes: { aal?: 'aal1' | 'aal2' } = {}) {
+export async function comSessaoFalsa(
+  page: Page,
+  perfil: PerfilFalso,
+  opcoes: { aal?: 'aal1' | 'aal2'; /** Abre deslogado; a sessão nasce no login (POST /token?grant_type=password). */ semSessaoInicial?: boolean } = {},
+) {
   const tem2fa = perfil.tem_2fa ?? false
   const sessao = {
     access_token: jwt(opcoes.aal ?? 'aal1'),
@@ -62,15 +66,18 @@ export async function comSessaoFalsa(page: Page, perfil: PerfilFalso, opcoes: { 
     expires_at: Math.floor(Date.now() / 1000) + 3600,
     user: usuario(tem2fa),
   }
-  await page.addInitScript(
-    ([chave, valor]) => {
-      if (!sessionStorage.getItem('sessao-falsa-gravada')) {
-        localStorage.setItem(chave, valor)
-        sessionStorage.setItem('sessao-falsa-gravada', '1')
-      }
-    },
-    [CHAVE_SESSAO, JSON.stringify(sessao)] as const,
-  )
+  await page.route(`${URL_SUPABASE}/auth/v1/token?grant_type=password`, (route) => json(route, sessao))
+  if (!opcoes.semSessaoInicial) {
+    await page.addInitScript(
+      ([chave, valor]) => {
+        if (!sessionStorage.getItem('sessao-falsa-gravada')) {
+          localStorage.setItem(chave, valor)
+          sessionStorage.setItem('sessao-falsa-gravada', '1')
+        }
+      },
+      [CHAVE_SESSAO, JSON.stringify(sessao)] as const,
+    )
+  }
 
   const enviados: Array<{ funcao: string; corpo: unknown }> = []
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/meu_perfil`, (route) =>

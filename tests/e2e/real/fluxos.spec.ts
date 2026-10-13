@@ -1,4 +1,5 @@
 import { devices, expect, test, type Browser } from '@playwright/test'
+import { esperarInicioComAviso } from '../apoio/areaIndisponivel.ts'
 import {
   CHAVE_PUBLICA,
   ORIGEM_APP,
@@ -152,11 +153,11 @@ test.describe('fluxos reais', () => {
     await expect(page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Equipe' })).toHaveCount(0)
     for (const rota of ['/parametros', '/adm/contratos', '/tabela', '/equipe']) {
       await page.goto(rota)
-      await expect(page.getByRole('heading', { name: 'Sem permissão' }), rota).toBeVisible()
+      await esperarInicioComAviso(page, rota)
     }
     // Cliente também não entra na administração.
     await page.goto('/adm/usuarios')
-    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await esperarInicioComAviso(page)
   })
 
   test('link curto: prévia não gasta; depois de usado, a segunda abertura avisa que expirou', async ({ page, browser }) => {
@@ -184,12 +185,12 @@ test.describe('fluxos reais', () => {
     }
   })
 
-  test('motorista que força /adm/usuarios vê "Sem permissão" e o banco recusa a lista', async ({ page, request }) => {
+  test('motorista que força /adm/usuarios volta ao Início com aviso e o banco recusa a lista', async ({ page, request }) => {
     const motorista = await criarPessoa({ papel: 'MOTORISTA', nome: 'Bruno Motorista' })
     await entrarComDoisFatores(page, motorista.email, motorista.senha, motorista.segredoTotp!)
 
     await page.goto('/adm/usuarios')
-    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await esperarInicioComAviso(page)
     await expect(page.getByTestId('lista-usuarios')).toHaveCount(0)
 
     // Mesma sessão do navegador chamando a RPC direto: sem GERIR_USUARIOS a lista vem vazia.

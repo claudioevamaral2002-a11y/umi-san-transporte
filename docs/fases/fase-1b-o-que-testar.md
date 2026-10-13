@@ -28,15 +28,15 @@ Marque cada item. Se algo falhar, pare e anote a tela e a mensagem (sem links ne
 11. **N1 convida N2 e N3.** Logado como esse N1, menu **Equipe** (https://umi-san-transporte.pages.dev/equipe), **Convidar colega**: convide um N2 (solicitante) e um N3 (visualizador). Repare que não há escolha de empresa nem de perfil (sempre cliente da Umi San). Abra cada link num perfil do navegador diferente e defina a senha.
 12. **O que cada um vê.**
     - **N1:** Início, **Regras do serviço**, **Equipe** (só pessoas da Umi San; nunca motorista, ADM ou outra empresa).
-    - **N2 e N3:** Início e **Regras do serviço**; sem **Equipe**. Forçando https://umi-san-transporte.pages.dev/equipe aparece **Sem permissão**.
-    - **Nenhum cliente** vê preços, limite de saldo, versão ou autor: **Regras do serviço** mostra só faixas de cancelamento, prazo para orçar, validade do orçamento e o que conta como urgente. Forçando https://umi-san-transporte.pages.dev/tabela ou `/adm/contratos` aparece **Sem permissão**.
+    - **N2 e N3:** Início e **Regras do serviço**; sem **Equipe**. Forçando https://umi-san-transporte.pages.dev/equipe volta ao **Início** com o aviso “Essa área não está disponível para o seu perfil”.
+    - **Nenhum cliente** vê preços, limite de saldo, versão ou autor: **Regras do serviço** mostra só faixas de cancelamento, prazo para orçar, validade do orçamento e o que conta como urgente. Forçando https://umi-san-transporte.pages.dev/tabela ou `/adm/contratos` volta ao **Início** com o aviso “Essa área não está disponível para o seu perfil”.
 13. **N1 gerencia a equipe.** Na **Equipe**, no N3: **Gerenciar**, **Gerar novo link** (funciona), **Desativar** com motivo (o N3 perde o acesso na hora), depois **Reativar** e gere novo link. O N1 não consegue desativar a si mesmo.
 14. **Auditoria.** Como ADM, em **Auditoria**, os convites, links e desativações feitos pelo N1 aparecem com o nome dele.
 
 ## E. Motorista
 15. **Convidar motorista** (ou usar o da fase 1): entra com senha + 2FA.
 16. **Tabela do motorista.** Menu **Tabela** (https://umi-san-transporte.pages.dev/tabela): aparecem **Modalidade veículo próprio** e **Modalidade veículo do cliente** com os preços e prazos do contrato da Umi San (inclusive o ajuste do item 5, se já vigente). **Não** aparecem limite de saldo, alerta de saldo, retenção de fotos, número de versão nem autor.
-17. Forçando `/adm/contratos`, `/equipe` ou `/regras`: **Sem permissão**.
+17. Forçando `/adm/contratos`, `/equipe` ou `/regras`: volta ao **Início** com o aviso “Essa área não está disponível para o seu perfil”.
 
 ## F. Fechamento
 18. **Gestor de frota (opcional).** Convidar com perfil **Gestor de frota** exige 2FA no primeiro acesso; ele ainda não tem telas próprias (fase 3) e não vê preços.

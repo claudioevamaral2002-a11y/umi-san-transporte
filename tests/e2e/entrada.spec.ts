@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { comSessaoFalsa, json, responderFuncoes, simularResgateDeLink, URL_SUPABASE } from './apoio/sessaoFalsa.ts'
+import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 test.describe('guardas', () => {
   test('anônimo em rota protegida vai para /entrar', async ({ page }) => {
@@ -199,7 +200,7 @@ test.describe('moldura autenticada', () => {
   test('motorista não vê Administração', async ({ page }) => {
     await comSessaoFalsa(page, { papel: 'MOTORISTA', tem_2fa: true }, { aal: 'aal2' })
     await page.goto('/adm/usuarios')
-    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await esperarInicioComAviso(page)
     await page.getByRole('button', { name: 'Menu' }).click()
     await expect(page.getByRole('dialog').getByText('Administração')).toHaveCount(0)
   })
