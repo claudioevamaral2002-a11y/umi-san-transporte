@@ -302,11 +302,14 @@ describe('aprovação: concorrência real e crédito', () => {
 
   it('limite negativo respeitado no centavo', async () => {
     const { empresa, cliente } = await cenario(0)
-    expect(await aprovar(cliente, await pedidoOrcado(cliente, slotLonge(), 50000))).toMatchObject({
+    // Os dois pedidos nascem antes: no fim do limite já não dá para criar pedido novo (SEM_CREDITO, Adendo A11).
+    const primeiro = await pedidoOrcado(cliente, slotLonge(), 50000)
+    const segundo = await pedidoOrcado(cliente, slotLonge(), 1)
+    expect(await aprovar(cliente, primeiro)).toMatchObject({
       ok: true,
       disponivel_cent: -50000,
     })
-    expect(await aprovar(cliente, await pedidoOrcado(cliente, slotLonge(), 1))).toMatchObject({
+    expect(await aprovar(cliente, segundo)).toMatchObject({
       ok: false,
       codigo: 'SALDO_INSUFICIENTE',
       falta_cent: 1,
