@@ -2,6 +2,7 @@ import { Icone } from '../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import type { DiaDoMes } from '../../lib/pedidos.ts'
 import { diaEMes, gradeDoMes, mesDe, nomeDoMes, somarMeses } from '../../lib/tempo.ts'
+import { LegendaCalendario, Marca, marcadoresDoDia, type TipoMarcador } from './marcadores.tsx'
 
 const SEMANA = [
   { curto: 'D', nome: 'Domingo' },
@@ -16,7 +17,7 @@ const SEMANA = [
 function descrever(dia: string, d: DiaDoMes | undefined, passado: boolean): string {
   const partes = [diaEMes(dia)]
   if (passado) partes.push('passado')
-  if (d?.dia_cheio) partes.push('dia cheio')
+  if (d?.dia_cheio) partes.push('sem horário livre')
   if (d && d.meus > 0) partes.push(d.meus === 1 ? '1 pedido seu' : `${d.meus} pedidos seus`)
   if (d && d.aguardando_voce > 0) partes.push('aguardando você')
   if (d?.ocupado) partes.push('com horário ocupado')
@@ -24,7 +25,8 @@ function descrever(dia: string, d: DiaDoMes | undefined, passado: boolean): stri
 }
 
 /**
- * Calendário do mês (A7): marcadores por dia (seu pedido, aguardando você, ocupado, dia cheio).
+ * Calendário do mês (A7): marcadores por dia (seu pedido, aguardando você, ocupado, dia sem horário), desenhados
+ * e legendados pela mesma fonte (`marcadores.tsx`).
  * `escolher` (novo pedido): dias passados e cheios não são selecionáveis e não volta para meses passados.
  */
 export function Calendario({
@@ -51,6 +53,10 @@ export function Calendario({
   const voltarBloqueado = modo === 'escolher' && mes <= mesDe(hoje)
   const celulas = gradeDoMes(mes)
   const nome = nomeDoMes(mes)
+  // Tipos de marcador presentes no mês: a legenda mostra exatamente estes.
+  const presentes = new Set<TipoMarcador>(
+    celulas.flatMap((dia) => (dia ? marcadoresDoDia(porDia.get(dia)) : [])),
+  )
 
   return (
     <section aria-label={`Calendário de ${nome}`} data-testid="calendario">
@@ -102,6 +108,7 @@ export function Calendario({
             const bloqueado = modo === 'escolher' && (passado || cheio)
             const marcado = dia === selecionado
             const ehHoje = dia === hoje
+            const marcas = marcadoresDoDia(d)
             return (
               <button
                 key={dia}
@@ -117,17 +124,20 @@ export function Calendario({
                   marcado
                     ? 'bg-selecao text-selecao-texto'
                     : cheio
-                      ? 'bg-borda/70 text-texto-suave line-through'
+                      ? 'text-texto-suave'
                       : passado
                         ? 'text-texto-suave/50'
                         : 'text-texto hover:bg-borda/60'
                 } ${ehHoje && !marcado ? 'ring-2 ring-marinho-2 ring-inset' : ''} disabled:cursor-not-allowed`}
               >
-                <span>{Number(dia.slice(8))}</span>
-                <span aria-hidden="true" className="flex h-1.5 gap-0.5">
-                  {d && d.meus > 0 && <span className={`size-1.5 rounded-full ${marcado ? 'bg-selecao-texto' : 'bg-marinho-2'}`} />}
-                  {d && d.aguardando_voce > 0 && <span className="size-1.5 rounded-full bg-[var(--cor-laranja)]" />}
-                  {d?.ocupado && !cheio && <span className="size-1.5 rounded-full bg-cinza-azulado" />}
+                <span
+                  className={cheio ? 'line-through decoration-2' : undefined}
+                  data-marcador={cheio ? 'sem_horario' : undefined}
+                >
+                  {Number(dia.slice(8))}
+                </span>
+                <span aria-hidden="true" className="flex h-2 items-center gap-0.5">
+                  {marcas.map((t) => (t === 'sem_horario' ? null : <Marca key={t} tipo={t} contorno={marcado} />))}
                 </span>
                 {grande && d && (
                   <span aria-hidden="true" className="hidden text-left text-[11px] leading-tight font-medium no-underline md:block">
@@ -140,24 +150,7 @@ export function Calendario({
         </div>
       )}
 
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 ivo-legenda text-texto-suave" aria-label="Legenda">
-        <li className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2 rounded-full bg-marinho-2" />
-          Seu pedido
-        </li>
-        <li className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2 rounded-full bg-[var(--cor-laranja)]" />
-          Aguardando você
-        </li>
-        <li className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2 rounded-full bg-cinza-azulado" />
-          Ocupado
-        </li>
-        <li className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="h-2 w-3 rounded-sm bg-borda" />
-          Dia cheio
-        </li>
-      </ul>
+      {dias !== undefined && <LegendaCalendario tipos={presentes} />}
     </section>
   )
 }

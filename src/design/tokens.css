@@ -20,6 +20,10 @@
   /* Item escolhido (dia, horário, opção). No escuro a superfície já é marinho: inverte para papel. */
   --cor-selecao: #0a2540;
   --cor-selecao-texto: #f6f4ee;
+  /* Marcadores do calendário (forma + cor): seu pedido, aguardando você, ocupado. */
+  --marcador-meu: #1e4b7a;
+  --marcador-aguardando: #c2410c;
+  --marcador-ocupado: #96a6bb;
 
   --status-solicitada: #5b6b80;
   --status-aguardando: #b45309;
@@ -48,6 +52,8 @@
     --cor-borda: #1e4b7a;
     --cor-selecao: #f6f4ee;
     --cor-selecao-texto: #0a2540;
+    --marcador-meu: #7fb2e8;
+    --marcador-aguardando: #ff8a4c;
     --status-solicitada: #9fb0c4;
     --status-aguardando: #fbbf24;
     --status-agendada: #7fb2e8;
