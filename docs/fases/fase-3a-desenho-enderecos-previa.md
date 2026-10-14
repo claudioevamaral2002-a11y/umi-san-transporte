@@ -52,7 +52,7 @@ PWA ──(JWT)──► Edge Function `enderecos` ──(chave de servidor)─�
    - `sessionToken` (UUIDv4 por sessão de busca);
    - `includedRegionCodes: ["br"]`, `languageCode: "pt-BR"`;
    - `locationBias` no estado de Santa Catarina.
-2. **Escolha:** a ação `detalhar` chama o Place Details (New) com o mesmo `sessionToken`, para o Google cobrar a sessão inteira e não cada letra, e com `fieldMask=id,displayName,formattedAddress,location`. Devolve `{ nome, endereco, lat, lng, place_id }`.
+2. **Escolha:** a ação `detalhar` chama o Place Details (New) com o mesmo `sessionToken`, para o Google cobrar a sessão inteira e não cada letra, e com `fieldMask=id,formattedAddress,location`, todos campos da faixa Essentials. O nome vem do texto principal da própria sugestão, porque pedir `displayName` jogaria a cobrança para a faixa Pro. Devolve `{ nome, endereco, lat, lng, place_id }`.
 3. **Marcar no mapa:** abre uma folha com o mapa centrado no último ponto buscado (ou em Itajaí) e um pino fixo no centro. A pessoa move o mapa, escreve um nome curto e confirma. O app guarda `{ nome, endereco: null, lat, lng, place_id: null }`.
 4. **Distância:** com os dois pontos escolhidos, a ação `rota` chama o Routes `computeRoutes` com:
    - `travelMode: DRIVE`;
@@ -117,6 +117,27 @@ O mapa oficial do Google para web (Maps JavaScript API) injeta `<style>` na pág
   - a resposta não ecoa a chave nem cabeçalhos do Google;
   - erros genéricos ao usuário e detalhe no log, sem dados pessoais.
 - **Custo:** session tokens no autocompletar, field mask mínimo e locais da empresa antes do Google. A rota é recalculada só quando origem ou destino mudam.
+
+## 6.1 Custo esperado (preços oficiais conferidos em 14/10/2026)
+
+Cada serviço do Google tem uma cota gratuita mensal própria, somada por conta de faturamento.
+
+| Serviço | Grátis por mês | Acima disso, a cada 1.000 |
+|---|---|---|
+| Autocomplete (New) | 10.000 | US$ 2,83 |
+| Place Details Essentials | 10.000 | US$ 5,00 |
+| Compute Routes Essentials | 10.000 | US$ 5,00 |
+| Map Tiles 2D | 100.000 | US$ 0,60 |
+
+Detalhes da cobrança:
+- **Sessão concluída:** quando termina num Place Details, a partir da 13ª consulta de autocompletar da sessão o Google não cobra mais.
+- **Sessão abandonada:** cada consulta é cobrada separadamente.
+- **Estimativa (nossa):** com 300 pedidos por mês, o uso fica dentro das cotas. O primeiro limite a ser passado é o do autocompletar, por volta de 1.000 a 1.200 pedidos por mês.
+- **Freio:** o teto diário por empresa (§6) e o alerta de orçamento no Google Cloud (§9) evitam conta surpresa.
+
+Fontes:
+- https://developers.google.com/maps/billing-and-pricing/pricing
+- https://developers.google.com/maps/documentation/places/web-service/preview-billing
 
 ## 7. Telas
 
