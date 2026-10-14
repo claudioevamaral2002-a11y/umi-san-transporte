@@ -51,10 +51,11 @@ test.describe('pedido e orçamento (fase 2A)', () => {
     await page.getByLabel('Origem').fill('Porto de Itajaí, berço 3')
     await page.getByLabel('Destino').fill('Base Navegantes')
     // Fase 3A: sem chave do Google no CI, a função `enderecos` devolve MAPAS_INDISPONIVEL e o campo segue como texto
-    // livre, com aviso; o pedido é criado normalmente, sem km nem prévia.
+    // livre, com aviso; o pedido é criado normalmente, sem km nem prévia. (Só o Destino busca: ao sair da Origem logo
+    // depois de digitar, a busca pendente dela é cancelada.)
     await expect(
       page.getByText('Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.'),
-    ).toHaveCount(2, { timeout: 20_000 })
+    ).toHaveCount(1, { timeout: 20_000 })
     await page.getByRole('checkbox', { name: 'Levar' }).check()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('button', { name: 'Revisar' }).click()
@@ -200,7 +201,7 @@ test.describe('saldo, aprovação e cancelamento com multa (fase 2B)', () => {
       await page.getByLabel('Destino').fill('Base Navegantes')
       await expect(
         page.getByText('Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.'),
-      ).toHaveCount(2, { timeout: 20_000 })
+      ).toHaveCount(1, { timeout: 20_000 })
       await page.getByRole('checkbox', { name: 'Levar' }).check()
       await page.getByRole('button', { name: 'Continuar' }).click()
       await page.getByRole('button', { name: 'Revisar' }).click()
