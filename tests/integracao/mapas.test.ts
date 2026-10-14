@@ -1,0 +1,59 @@
+import { describe, expect, it } from 'vitest'
+import { comBanco, criarPessoa, empresaComContrato, motoristaUnico, rpc } from './ajuda.ts'
+
+/**
+ * Fase 3A contra o banco real: a prévia do cliente dá o mesmo total que o orçamento do motorista para os mesmos km, e o
+ * pedido com coordenadas grava o km estimado, que o motorista recebe no detalhe.
+ */
+describe('prévia do orçamento e km estimado', () => {
+  it('a prévia do N2 dá o mesmo total que o orçamento do motorista; o detalhe traz o km estimado', async () => {
+    const empresa = await empresaComContrato()
+    const n2 = await criarPessoa({ papel: 'CLIENTE', nivel: 2, empresa })
+    const motorista = await motoristaUnico()
+    const inicio = new Date(Date.now() + 5 * 86_400_000)
+    inicio.setUTCMinutes(0, 0, 0)
+    inicio.setUTCHours(14)
+    const criado = await rpc(n2, 'criar_pedido', {
+      p: {
+        inicio: inicio.toISOString(),
+        duracao_min: 120,
+        origem: 'Porto de Itajaí',
+        destino: 'Estaleiro Navegantes',
+        levar: true,
+        trazer: false,
+        carga: 'PESSOAS',
+        pessoas_qtd: 1,
+        modalidade: 'VEICULO_PROPRIO',
+        reboque: 'SIM',
+        origem_lat: -26.9078,
+        origem_lng: -48.6619,
+        destino_lat: -26.8986,
+        destino_lng: -48.6542,
+        destino_place_id: 'ChIJdef',
+        km_estimado: 38.2,
+        minutos_estimados: 45,
+      },
+    })
+    expect(criado).toMatchObject({ ok: true })
+
+    const previa = await rpc(n2, 'previa_orcamento', {
+      p: { km: 38.2, usa_reboque: true, levar: true, trazer: false, modalidade: 'VEICULO_PROPRIO' },
+    })
+    const orcamento = await rpc(motorista, 'calcular_orcamento', { p_atividade: criado.id, p: { km: 38.2, usa_reboque: true } })
+    expect(previa.ok).toBe(true)
+    expect(orcamento.ok).toBe(true)
+    expect(previa.total_cent).toBe(orcamento.total_cent)
+
+    const detalhe = await rpc(motorista, 'pedido', { p_id: criado.id })
+    expect(detalhe.pedido).toMatchObject({ km_estimado: 38.2, minutos_estimados: 45, destino_place_id: 'ChIJdef' })
+
+    const locais = await rpc(n2, 'locais_da_empresa', { p_texto: 'estaleiro' })
+    expect(locais).toMatchObject({ ok: true, locais: [{ nome: 'Estaleiro Navegantes', place_id: 'ChIJdef' }] })
+
+    // A prévia nunca grava orçamento.
+    const n = await comBanco((db) =>
+      db.query<{ n: number }>('select count(*)::int as n from app.orcamentos where atividade_id = $1', [criado.id]),
+    )
+    expect(n.rows[0]!.n).toBe(0)
+  })
+})
