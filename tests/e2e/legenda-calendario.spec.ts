@@ -81,7 +81,7 @@ test.describe('legenda = marcadores', () => {
     const esperado = {
       meu: { dia: diaSp(5), forma: 'circle', cor: 'rgb(30, 75, 122)' },
       aguardando: { dia: diaSp(6), forma: 'path', cor: 'rgb(194, 65, 12)' },
-      ocupado: { dia: diaSp(7), forma: 'circle', cor: 'rgb(150, 166, 187)' },
+      ocupado: { dia: diaSp(7), forma: 'circle', cor: 'rgb(116, 133, 156)' }, // #74859C: 3,4:1 sobre o papel (o #96A6BB antigo dava 2,3:1)
     }
     for (const [tipo, e] of Object.entries(esperado)) {
       const celula = await irAoDia(page, e.dia)

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
+import { Campo } from '../design/componentes/Campo.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
 import { CarregandoPickup } from '../design/componentes/CarregandoPickup.tsx'
 import { Dinheiro } from '../design/componentes/Dinheiro.tsx'
+import { Segmentado } from '../design/componentes/Segmentado.tsx'
 import { Skeleton } from '../design/componentes/Skeleton.tsx'
 import { StatusBadge, type Status } from '../design/componentes/StatusBadge.tsx'
 
@@ -17,6 +19,7 @@ function alternarContraste() {
 
 export function Vitrine() {
   const [carregando, setCarregando] = useState(false)
+  const [visao, setVisao] = useState<'dia' | 'tres' | 'mes'>('dia')
   const temporizador = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   function simular(ms: number) {
     clearTimeout(temporizador.current)
@@ -28,9 +31,9 @@ export function Vitrine() {
     <main className="mx-auto max-w-md space-y-4 p-4">
       <h1 className="ivo-h1">Design system</h1>
 
-      <Cartao className="space-y-2">
+      <Cartao className="space-y-2" data-testid="vitrine-cartao">
         <h2 className="ivo-h3">Status</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" data-testid="vitrine-status">
           {STATUS.map((s) => <StatusBadge key={s} status={s} />)}
         </div>
       </Cartao>
@@ -43,9 +46,24 @@ export function Vitrine() {
 
       <Cartao className="space-y-3">
         <h2 className="ivo-h3">Botões</h2>
-        <Botao variante="principal" className="w-full">Ação principal</Botao>
+        <Botao variante="principal" className="w-full" data-testid="vitrine-botao">Ação principal</Botao>
         <Botao className="w-full" onClick={alternarContraste}>Alternar alto contraste</Botao>
         <Botao variante="perigo" className="w-full">Cancelar</Botao>
+      </Cartao>
+
+      <Cartao className="space-y-3">
+        <h2 className="ivo-h3">Seleção e campos</h2>
+        <Segmentado
+          rotulo="Visualização"
+          valor={visao}
+          aoMudar={setVisao}
+          opcoes={[
+            { valor: 'dia', rotulo: 'Dia' },
+            { valor: 'tres', rotulo: '3 dias' },
+            { valor: 'mes', rotulo: 'Mês' },
+          ]}
+        />
+        <Campo rotulo="Origem" placeholder="Porto de Itajaí" data-testid="vitrine-campo" />
       </Cartao>
 
       <Cartao className="space-y-3">

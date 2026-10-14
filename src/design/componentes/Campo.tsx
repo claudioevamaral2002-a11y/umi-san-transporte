@@ -2,7 +2,7 @@ import { useId, useState, type InputHTMLAttributes, type ReactNode, type SelectH
 import { Icone, type NomeIcone } from './Icone.tsx'
 
 const CAIXA =
-  'w-full rounded-xl border border-borda bg-superficie text-base text-texto outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-texto-suave/70 focus:border-acao focus:shadow-[0_0_0_3px_rgb(255_106_0/0.25)] aria-[invalid=true]:border-[var(--status-cancelada)] motion-reduce:transition-none'
+  'w-full rounded-campo border-[1.5px] border-borda bg-superficie text-base text-texto outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-texto-suave/70 focus:border-acao focus:shadow-[0_0_0_3px_rgb(255_106_0/0.25)] aria-[invalid=true]:border-[var(--status-cancelada)] motion-reduce:transition-none'
 
 function Rotulo({ id, children }: { id: string; children: ReactNode }) {
   return (

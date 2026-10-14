@@ -36,6 +36,12 @@ const CAMINHOS = {
   setaDireitaPequena: 'M9 6l6 6-6 6',
   dinheiro: 'M3 7h18v12H3z M3 7l3-3h12l3 3 M12 15.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M6.5 13h.01 M17.5 13h.01',
   grafico: 'M4 20h16 M7 16v-5 M12 16V7 M17 16v-8',
+  play: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M10 8.5v7l5.5-3.5z',
+  checkCirculo: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M8 12.5l2.7 2.7L16 9.8',
+  ampulheta: 'M7 3.5h10 M7 20.5h10 M8 3.5c0 5 8 5 8 8.5s-8 3.5-8 8.5 M16 3.5c0 5-8 5-8 8.5',
+  setaCima: 'M12 19V6 M6.5 11.5L12 6l5.5 5.5',
+  setaParaBaixo: 'M12 5v13 M6.5 12.5L12 18l5.5-5.5',
+  desfazer: 'M9 7L4.5 11.5 9 16 M5 11.5h9a5 5 0 0 1 0 10h-2',
 } as const
 
 export type NomeIcone = keyof typeof CAMINHOS
