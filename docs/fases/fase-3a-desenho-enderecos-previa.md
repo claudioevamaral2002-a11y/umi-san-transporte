@@ -59,7 +59,7 @@ PWA ──(JWT)──► Edge Function `enderecos` ──(chave de servidor)─�
    - `fieldMask=routes.distanceMeters,routes.duration`.
 
    Devolve `{ km, minutos }`. Se falhar ou não houver rota, devolve `{ km: null }`, e a prévia não aparece.
-5. **Prévia:** `api.previa_orcamento(p jsonb)` lê o contrato vigente da empresa de quem chama, na data do pedido, e chama `interno.calcular_linhas`:
+5. **Prévia:** `api.previa_orcamento(p jsonb)` lê o contrato vigente **agora** da empresa de quem chama (`interno.contrato_vigente`), a mesma regra de `api.calcular_orcamento`, para a prévia bater com o orçamento do motorista, e chama `interno.calcular_linhas`:
    - com `{ km, usa_reboque }` e as demais quantidades zeradas;
    - levar/trazer e modalidade vêm do formulário.
 
