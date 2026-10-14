@@ -195,6 +195,8 @@ Fontes:
 
 - **Custo variável do Google:** controlado com session tokens, cache de locais, limites e alerta de orçamento.
 - **Estimativa diferente do real:** a rota do Google não considera rampa, balsa ou acesso restrito de porto. Por isso a prévia é só estimativa, e o motorista ajusta.
+- **Locais da empresa gravados pelo cliente** (achado da revisão de segurança, 14/10): nome e ponto do local vêm do pedido. O primeiro registro de um `place_id` vale (outro pedido só soma uso), então ninguém reescreve um local já usado. Um usuário mal-intencionado da própria empresa ainda pode ser o primeiro a gravar um nome ou ponto errado; o efeito fica na mesma empresa e não mexe em dinheiro. Mitigação futura, se preciso: o servidor assinar o resultado do "detalhar".
+- **Esgotar o teto da empresa:** além do teto diário por empresa, cada pessoa tem 500 chamadas por dia.
 - **Mapa por blocos:** com a Map Tiles API e o Leaflet não há o mapa interativo completo do Google (Street View, camadas), e não precisamos disso.
 
 ## 11. Referência pública (Uber), aplicada aqui

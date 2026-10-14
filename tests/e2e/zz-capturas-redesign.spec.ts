@@ -13,6 +13,7 @@ import {
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
+import { simularBlocosDoMapa, simularMapas, simularPrevia } from './apoio/mapasFalsos.ts'
 
 const PASTA = process.env.PASTA_CAPTURAS ?? 'test-results/capturas-redesign'
 const CLIENTE = { papel: 'CLIENTE' as const, nivel: 2 as const, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
@@ -114,6 +115,56 @@ for (const tema of ['light', 'dark'] as const) {
       await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
       await expect(page.getByTestId('frase-quando')).toBeVisible()
       await foto(page, '05-novo-pedido-quando')
+    })
+
+    test('fase 3A: endereços, mapa, prévia e orçar com km', async ({ page }) => {
+      await comSessaoFalsa(page, CLIENTE)
+      await simularApi(page)
+      await simularPedidos(page)
+      await simularMapas(page)
+      await simularPrevia(page)
+      await simularBlocosDoMapa(page)
+      await page.goto('/pedidos/novo')
+      await escolherDiaNoPedido(page, DIA_PEDIDO)
+      await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
+      await page.getByRole('button', { name: 'Continuar' }).click()
+      const origem = page.getByRole('combobox', { name: 'Origem' })
+      await origem.fill('porto')
+      await page.getByRole('option', { name: /Porto de Itajaí/ }).click()
+      const destino = page.getByRole('combobox', { name: 'Destino' })
+      await destino.fill('estaleiro nav')
+      await expect(page.getByRole('option', { name: /Estaleiro Navship/ })).toBeVisible()
+      await foto(page, '20-onde-sugestoes')
+      await page.getByRole('option', { name: 'Não achou? Marcar no mapa' }).click()
+      const folha = page.getByRole('dialog', { name: 'Marcar no mapa' })
+      await expect(folha.getByTestId('mapa')).toHaveAttribute('data-pronto', 'sim')
+      await folha.getByLabel('Nome do local').fill('Marina Itajaí, rampa 2')
+      await page.screenshot({ path: `${PASTA}/21-marcar-no-mapa-${sufixo}.png` })
+      await folha.getByRole('button', { name: 'Fechar' }).click()
+      await destino.fill('estaleiro nav')
+      await page.getByRole('option', { name: /Estaleiro Navegantes/ }).click()
+      await expect(page.getByTestId('rota-estimada')).toBeVisible()
+      await page.getByRole('checkbox', { name: 'Levar' }).check()
+      await foto(page, '22-onde-rota')
+      await page.getByRole('button', { name: 'Continuar' }).click()
+      await page.getByRole('radio', { name: 'Sim' }).click()
+      await page.getByRole('button', { name: 'Revisar' }).click()
+      await expect(page.getByTestId('previa-orcamento')).toBeVisible()
+      await foto(page, '23-confira-previa')
+      await page.getByRole('button', { name: 'Editar modalidade' }).click()
+      await page.getByRole('radio', { name: 'Não sei' }).click()
+      await page.getByRole('button', { name: 'Revisar' }).click()
+      await expect(page.getByTestId('previa-com-reboque')).toBeVisible()
+      await foto(page, '24-confira-previa-nao-sei')
+    })
+
+    test('fase 3A: orçar com km da rota', async ({ page }) => {
+      await comSessaoFalsa(page, { papel: 'MOTORISTA', nome: 'Bruno Lima', tem_2fa: true }, { aal: 'aal2' })
+      await simularApi(page)
+      await simularPedidos(page, { detalhes: [pedidoSolicitadoMotorista({ km_estimado: 38.2, minutos_estimados: 45 })] })
+      await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
+      await expect(page.getByTestId('km-estimado')).toBeVisible()
+      await foto(page, '25-orcar-km-estimado')
     })
 
     test('agenda', async ({ page }) => {

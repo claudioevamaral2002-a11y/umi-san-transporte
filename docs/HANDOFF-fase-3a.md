@@ -7,8 +7,9 @@ Estado em **14/10/2026**. Este documento passa o projeto de um chat (ou pessoa) 
 | Item | Estado |
 |---|---|
 | **PR #24** (5 correções mobile) | **Na `main` e em produção** desde 14/10 (deploy verde). |
-| **PR #25** (`redesign-mobile` → `main`) | **Aberto, sem merge.** Redesign mobile completo, mais duas correções: o fim do "pisca" ao trocar de tela ou selecionar (transições e memória de consultas) e a falha de segurança do cache entre contas. O CI estava sendo refeito após a correção dos fluxos reais. **O merge é do dono.** A correção automática do CI está ligada para esse PR na sessão anterior. |
-| **Branch `fase-3a`** (local, sem push) | Criada a partir de `redesign-mobile`. Tem a especificação, os mockups e o plano da fase 3A, todos aprovados pelo dono. **Nenhum código da 3A foi escrito ainda.** |
+| **PR #25** (`redesign-mobile` → `main`) | **Na `main`** desde 14/10. Atenção: as duas correções finais (fim do "pisca" e o cache entre contas) **não entraram** nesse merge, porque nunca tinham sido enviadas ao GitHub. Elas seguem na branch `fase-3a`. |
+| **Branch `fase-3a`** (no GitHub) | Rebaseada na `main`. **Fase 3A implementada** (12 tarefas, CI verde) e PR aberto para a `main`, sem merge. Leva junto as duas correções acima. Atualização em 14/10. |
+| **Chaves do Google** | **Pendentes, com o dono:** [RUNBOOK](RUNBOOK.md) item 16. Sem elas o app funciona em texto livre. Roteiro de produção: [`fases/fase-3a-o-que-testar.md`](fases/fase-3a-o-que-testar.md). |
 
 Quando o PR #25 entrar na `main`, rode `git rebase main` na `fase-3a`, ou abra o PR da 3A já com base na `main`.
 

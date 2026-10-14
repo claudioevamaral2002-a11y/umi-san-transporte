@@ -39,6 +39,7 @@ GitHub Actions: CI (pgTAP + integração + e2e real) → Deploy (config push →
 | 1 | Convite por **link curto** imune a pré-visualização (`/c/<código>`), senha forte + HIBP, 2FA, perfis, auditoria imutável, rate limit, Auth como código |
 | 1B | **Contrato por empresa**, publicado só pelo ADM a partir de uma tabela modelo; papéis **ADM / Gestor de frota / Motorista**; cliente **N1 (gestor da empresa) / N2 (solicitante) / N3 (visualizador)**; visibilidade por perfil |
 | 2A | **Novo pedido** em 4 passos com calendário e horários livres; pré-reserva com bloqueio de conflito no banco; **orçamento-calculadora** do motorista (quantidades × preço travado do contrato); revisão, reprovação, recusa, cancelamento; agenda mês/dia; pendências; tempo real |
+| 3A (PR aberto) | **Endereços reais** (Google Places New, pela função `enderecos`, chave só no servidor), **locais da empresa** primeiro, **marcar no mapa** (Leaflet + Map Tiles, sem afrouxar a CSP), **km e tempo da rota**, **prévia do orçamento** para N1/N2 e **km preenchidos no Orçar**. Teto diário por empresa em Configurações |
 | 2B | **Motor de saldo**: recarga, ajuste e estorno (só ADM), reserva, **aprovação** com limite de crédito, **cancelamento de agendado com multa** pelas faixas do snapshot (valor travado entre prévia e confirmação), extrato (CSV/PDF), **painel do ADM**, reconciliação diária |
 
 Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~200 de unidade e ~95 e2e (simulados e contra o banco real). Antes de cada publicação, o CI também aplica as migrations sobre uma cópia do estado de produção.
@@ -65,7 +66,8 @@ Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~2
 | Desenho e decisões de cada fase | `docs/fases/fase-*-desenho*.md` (cada um com desvios e riscos aceitos) |
 | Operação: primeiro ADM, links, 2FA, saldo, divergência, horário preso | `docs/RUNBOOK.md` |
 | Marca, logos e tipografia | `docs/marca/` |
-| Banco | `supabase/migrations/` (25 arquivos, em ordem) e `supabase/tests/` (pgTAP) |
+| Banco | `supabase/migrations/` (em ordem) e `supabase/tests/` (pgTAP) |
+| Google Maps (chaves, teto, troca) | `docs/RUNBOOK.md`, item 16 |
 | Funções de servidor | `supabase/functions/` |
 | Automações | `.github/workflows/`: `ci`, `deploy`, `criar-primeiro-adm`, `resetar-2fa-adm` |
 | Segredos | GitHub → Settings → Environments → **producao**. Os valores nunca vão para o código nem para o chat |

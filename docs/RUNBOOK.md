@@ -76,6 +76,8 @@ Local: GitHub, Settings, Environments, **producao** (https://github.com/claudioe
 | `TURNSTILE_SECRET_KEY` | segredo | ambiente `producao` | segredo do CAPTCHA (vai para o Auth via `config push`) |
 | `SUPABASE_PROJECT_REF` | variável | ambiente `producao` | identificador do projeto Supabase |
 | `CLOUDFLARE_ACCOUNT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY` | variáveis | ambiente `producao` | públicas (vão no front) |
+| `GOOGLE_MAPS_CHAVE_SERVIDOR` | segredo | ambiente `producao` (o Deploy copia para o Supabase) | busca de endereços e rota (fase 3A). Ver item 16 |
+| `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` | variável | ambiente `producao` | blocos do mapa no "Marcar no mapa" (fase 3A; restrita ao domínio). Ver item 16 |
 
 **Mover para o ambiente `producao`:** `SUPABASE_ACCESS_TOKEN` e `SUPABASE_DB_PASSWORD` devem ficar só no ambiente `producao` (assim só os workflows que usam esse ambiente os enxergam). O dono faz assim: em Settings, Environments, **producao**, seção *Environment secrets*, **Add environment secret**, cole o valor com o mesmo nome; depois, em Settings, Secrets and variables, Actions, apague o segredo de mesmo nome do nível do repositório. Rode o workflow Deploy de novo para confirmar.
 
@@ -102,6 +104,7 @@ Detalhes em [docs/fases/fase-1-desenho.md](fases/fase-1-desenho.md), seção 7. 
 - O gestor da empresa (cliente N1) gera link de senha para colegas da própria empresa, o que equivale a assumir a conta deles; e pode reativar um colega da própria empresa que o ADM tenha desativado. Tudo auditado; o ADM pode desativar o próprio N1 (ver [fase-1b-desenho-e-plano.md](fases/fase-1b-desenho-e-plano.md), "Revisão de segurança").
 - Se o serviço de senhas vazadas (HIBP) estiver fora do ar, definir senha fica bloqueado até voltar.
 - A configuração de Auth só muda pelo código (`config.toml`); mudanças feitas no painel seriam sobrescritas no próximo deploy.
+- Endereços (fase 3A): os locais da empresa são gravados a partir dos pedidos; quem cria o pedido informa nome e ponto, e o primeiro registro de um local vale para a empresa toda. Um usuário mal-intencionado da própria empresa poderia gravar primeiro um nome ou ponto errado para um local; o efeito fica na mesma empresa e não mexe em dinheiro (a prévia é estimativa e o motorista confere os km). O custo do Google tem teto diário por empresa e por pessoa (item 16.4).
 - Pedidos (fase 2A): um cliente pode pré-reservar horários do motorista (até 20 pedidos por hora) mesmo sem intenção real; o motorista recusa e o horário volta. Quem trabalha na IVO (ADM, gestor de frota, motorista) recebe em tempo real o número interno e o status de todos os pedidos, sem detalhes. Ver [fase-2a-desenho-e-plano.md](fases/fase-2a-desenho-e-plano.md), "Revisão de segurança e concorrência".
 
 ---
@@ -284,3 +287,72 @@ Se uma tela parecer parada, puxe para atualizar ou recarregue: nada depende só 
 - **Código do autenticador:** só num **login novo** (senha digitada) de ADM, gestor de frota ou motorista. Recarregar, fechar e reabrir o app, abrir outra aba ou ficar horas sem usar **não** pede o código: depois do 2FA a sessão fica verificada (aal2) no servidor e cada renovação do token (a cada 15 min de uso) continua aal2.
 - Se o aparelho ficou com um token de antes do 2FA (por exemplo, o app foi fechado enquanto a pessoa copiava o código no autenticador), o app renova uma vez ao abrir e, se o servidor já tinha confirmado o código, vai direto ao Início.
 - **Senha de novo** (e depois o código): só quando a sessão acaba no Supabase, o que é do próprio Supabase e não do app: **Sair**, conta desativada, 2FA resetado, ou o mesmo token de renovação usado duas vezes com mais de 10 s de diferença (`refresh_token_reuse_interval`; acontece se duas cópias do app, como o app instalado e uma aba do navegador, renovarem ao mesmo tempo depois de muito tempo fechadas). Não há limite de duração nem de inatividade configurado (`[auth.sessions]` vazio no `supabase/config.toml`).
+
+---
+
+## 16. Google Maps (fase 3A: endereços, distância e mapa)
+
+O app usa o Google para três coisas: **sugerir endereços** (Places API New), **calcular os km da rota** (Routes API) e **mostrar o mapa** do "Marcar no mapa" (Map Tiles API). São **duas chaves**:
+
+| Chave | Onde fica | Pode o quê |
+| --- | --- | --- |
+| **Chave de servidor** | segredo `GOOGLE_MAPS_CHAVE_SERVIDOR` do ambiente `producao` (o Deploy copia para o Supabase) | só Places API (New) e Routes API. Nunca vai para o navegador |
+| **Chave de navegador** | variável `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` do ambiente `producao` | só Map Tiles API, e só a partir de `https://umi-san-transporte.pages.dev/*`. Vai no app (é pública por natureza; a restrição é o que a protege) |
+
+**Nunca cole uma chave no chat, em e-mail ou no código.** Sem as chaves o app continua funcionando: os campos de origem e destino aceitam texto livre, com o aviso "Não foi possível buscar endereços agora…", e o motorista informa os km como sempre.
+
+### 16.1 Criar o projeto e o faturamento (uma vez)
+
+1. Entre em https://console.cloud.google.com com a conta do negócio.
+2. No topo, clique no seletor de projeto, depois **Novo projeto**. Nome: `ivo-transportes-mapas`. Clique em **Criar** e, quando terminar, selecione esse projeto no seletor.
+3. Menu (☰), **Faturamento**. Vincule uma conta de faturamento (cartão da empresa). O Google pede o faturamento mesmo dentro da cota gratuita.
+4. Ainda em **Faturamento**, **Orçamentos e alertas**, **Criar orçamento**:
+   - Escopo: o projeto `ivo-transportes-mapas`;
+   - Valor: **R$ 50** por mês;
+   - Alertas em 50%, 90% e 100%, por e-mail para os administradores.
+
+   O alerta avisa; quem freia de verdade é o teto diário por empresa do app (16.4).
+
+### 16.2 Ativar as três APIs
+
+Menu (☰), **APIs e serviços**, **Biblioteca**. Procure e clique em **Ativar** em cada uma:
+1. **Places API (New)** (atenção: a "New", não a antiga "Places API");
+2. **Routes API**;
+3. **Map Tiles API**.
+
+### 16.3 Criar as chaves e cadastrar no GitHub
+
+**Chave de servidor**
+1. **APIs e serviços**, **Credenciais**, **Criar credenciais**, **Chave de API**. Copie a chave **só para a área de transferência** (não salve em arquivo).
+2. Clique em **Editar chave** (ou no nome dela). Nome: `servidor-enderecos`.
+3. **Restrições de aplicativo:** *Nenhuma* (quem chama é o servidor do Supabase, sem endereço fixo).
+4. **Restrições de API:** *Restringir chave*, marque **Places API (New)** e **Routes API**. **Salvar**.
+5. No GitHub: https://github.com/claudioevamaral2002-a11y/umi-san-transporte/settings/environments, **producao**, seção *Environment secrets*, **Add environment secret**. Nome: `GOOGLE_MAPS_CHAVE_SERVIDOR`. Cole a chave. **Add secret**.
+
+**Chave de navegador**
+1. **Credenciais**, **Criar credenciais**, **Chave de API**. Copie.
+2. **Editar chave**. Nome: `navegador-mapa`.
+3. **Restrições de aplicativo:** *Sites (referenciadores HTTP)*, adicione `https://umi-san-transporte.pages.dev/*`.
+4. **Restrições de API:** *Restringir chave*, marque só **Map Tiles API**. **Salvar**.
+5. No GitHub, ambiente **producao**, seção *Environment variables*, **Add environment variable**. Nome: `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR`. Cole a chave. **Add variable**.
+
+**Publicar:** GitHub, **Actions**, workflow **Deploy**, última execução da `main`, **Re-run all jobs**. No log do passo *Configuração do Auth, migrations e Edge Functions*, confira que o comando `supabase secrets set --env-file` rodou sem erro (a chave de servidor foi para o Supabase). Se aparecer "GOOGLE_MAPS_CHAVE_SERVIDOR ausente", o segredo não foi achado: confira o nome e se está no ambiente `producao`.
+
+**Conferir:** no app, um N2 abre **Novo pedido**, passo **Onde?**, e digita "porto itaj": aparecem sugestões do Google. Escolha origem e destino: aparece "NN km pela rota". Em **Não achou? Marcar no mapa** o mapa aparece com o pino.
+
+### 16.4 Teto diário por empresa
+
+Configurações (ADM), cartão **Busca de endereços**: quantas chamadas ao Google cada empresa pode fazer por dia (padrão **2.000**). Cada pessoa também tem um limite próprio de 500 por dia e de 60 sugestões por minuto. Acima disso, o campo cai no texto livre até o dia seguinte (fuso de São Paulo). Custo esperado e cotas gratuitas: [fase-3a-desenho-enderecos-previa.md](fases/fase-3a-desenho-enderecos-previa.md), §6.1.
+
+### 16.5 Trocar uma chave (vazou ou foi exposta)
+
+1. Crie uma chave nova com as **mesmas restrições** (16.3).
+2. Atualize o segredo ou a variável no GitHub (mesmo nome) e rode o **Deploy** (Re-run).
+3. Confira no app (16.3, "Conferir").
+4. Só então, no Google Cloud, **Credenciais**, apague a chave antiga.
+
+### 16.6 Problemas comuns
+
+- **Sugestões nunca aparecem, sempre o aviso:** chave de servidor ausente ou com a API errada (precisa ser a *Places API (New)*), faturamento desativado, ou teto diário atingido (veja o cartão em Configurações e a Auditoria, ação `USO_MAPAS`).
+- **Sugestões aparecem, mas não os km:** a Routes API não está ativada ou não está na restrição da chave de servidor.
+- **"O mapa não está disponível agora":** a variável `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` falta (precisa de novo Deploy depois de criar), a Map Tiles API não está ativada, ou o referenciador não é exatamente `https://umi-san-transporte.pages.dev/*`.
