@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
 import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
-import { simularBlocosDoMapa, simularMapas } from './apoio/mapasFalsos.ts'
+import { simularBlocosDoMapa, simularMapas, simularPrevia } from './apoio/mapasFalsos.ts'
 import { DIA_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
@@ -63,6 +63,27 @@ for (const tema of ['light', 'dark'] as const) {
       await expect(folha).toBeHidden()
       await expect(destino).toHaveValue('Marina Itajaí, rampa 2')
       expect(csp).toEqual([])
+    })
+
+    test('prévia do orçamento no Confira, por toque', async ({ page }) => {
+      await abrirOnde(page)
+      await simularPrevia(page)
+      const origem = page.getByRole('combobox', { name: 'Origem' })
+      await origem.tap()
+      await origem.fill('porto')
+      await page.getByRole('option', { name: /Porto de Itajaí/ }).tap()
+      const destino = page.getByRole('combobox', { name: 'Destino' })
+      await destino.tap()
+      await page.getByRole('option', { name: /Estaleiro Navegantes/ }).tap()
+      await expect(page.getByTestId('rota-estimada')).toContainText('38 km pela rota')
+      await page.getByRole('checkbox', { name: 'Levar' }).tap()
+      await page.getByRole('button', { name: 'Continuar' }).tap()
+      await page.getByRole('radio', { name: 'Sim' }).tap()
+      await page.getByRole('button', { name: 'Revisar' }).tap()
+      const previa = page.getByTestId('previa-orcamento')
+      await expect(previa).toContainText(/R\$\s?423,60/)
+      await previa.getByRole('button', { name: 'Ocultar as linhas' }).tap()
+      await expect(previa.getByRole('button', { name: 'Ver as linhas' })).toBeVisible()
     })
   })
 }

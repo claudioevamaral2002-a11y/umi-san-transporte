@@ -86,3 +86,32 @@ export async function simularBlocosDoMapa(page: Page) {
   })
   return pedidos
 }
+
+const linhaPrevia = (codigo: string, descricao: string, quantidade: number | null, unitario: number | null, valor: number) => ({
+  codigo,
+  descricao,
+  quantidade,
+  unitario_cent: unitario,
+  percentual_bp: null,
+  base_cent: null,
+  valor_cent: valor,
+})
+
+/** Prévia simulada: 38 km com reboque = R$ 423,60; sem reboque = R$ 199,50. Devolve as entradas recebidas. */
+export async function simularPrevia(page: Page, resposta?: Record<string, unknown>) {
+  const entradas: Array<Record<string, unknown>> = []
+  await page.route(`${URL_SUPABASE}/rest/v1/rpc/previa_orcamento`, (route: Route) => {
+    const p = ((route.request().postDataJSON() as { p?: Record<string, unknown> })?.p ?? {}) as Record<string, unknown>
+    entradas.push(p)
+    if (resposta) return json(route, resposta)
+    const linhas = p.usa_reboque
+      ? [
+          linhaPrevia('KM_COM_REBOQUE', 'Km rodados', 38, 480, 18240),
+          linhaPrevia('RETORNO', 'Retorno (50%)', null, null, 9120),
+          linhaPrevia('REBOQUE', 'Taxa fixa do reboque', 1, 15000, 15000),
+        ]
+      : [linhaPrevia('KM', 'Km rodados', 38, 350, 13300), linhaPrevia('RETORNO', 'Retorno (50%)', null, null, 6650)]
+    return json(route, { ok: true, modalidade: 'VEICULO_PROPRIO', linhas, total_cent: linhas.reduce((s, l) => s + l.valor_cent, 0) })
+  })
+  return entradas
+}

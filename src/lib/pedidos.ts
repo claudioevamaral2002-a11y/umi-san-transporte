@@ -176,6 +176,14 @@ export interface Pendencias {
   proximos: ItemPendencia[]
 }
 
+export interface EntradaPrevia {
+  km: number
+  usa_reboque: boolean
+  levar: boolean
+  trazer: boolean
+  modalidade: Modalidade
+}
+
 export interface Previa {
   modalidade: Modalidade
   linhas: LinhaOrcamento[]
@@ -224,6 +232,9 @@ export const pedidos = {
     (await ler<{ dias: DiaDoMes[] }>('dias_do_mes', { p_mes: mes, p_duracao_min: duracaoMin })).dias,
 
   pendencias: () => ler<Pendencias>('pendencias', {}),
+
+  /** Fase 3A: prévia do orçamento pela tabela do contrato (N1/N2; nunca grava orçamento). */
+  previaOrcamento: (p: EntradaPrevia) => ler<{ linhas: LinhaOrcamento[]; total_cent: number }>('previa_orcamento', { p }),
 
   // Ações (todas confirmadas pelo servidor).
   criar: (p: Record<string, unknown>) => chamar('criar_pedido', { p }),

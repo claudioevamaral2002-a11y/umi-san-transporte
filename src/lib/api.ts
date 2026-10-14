@@ -75,6 +75,8 @@ export interface ContratoListado {
 export interface Configuracao {
   retencao_fotos_dias: number
   alterado_em: string
+  /** Fase 3A: teto diário de buscas de endereço (chamadas ao Google) por empresa. */
+  mapas_teto_diario_empresa: number
 }
 
 type LinhaListarContratos = Partial<VersaoContrato> & {
@@ -110,6 +112,8 @@ export const api = {
   configuracao: async () => (exigir(await supabase.rpc('ler_configuracao')) as Configuracao[])[0] ?? null,
 
   definirRetencaoFotos: (dias: number) => rpc('definir_retencao_fotos', { p_dias: dias }),
+
+  definirTetoMapas: (valor: number) => rpc('definir_teto_mapas', { p_valor: valor }),
 
   /** Cliente: regras do contrato vigente da própria empresa (`null` = sem contrato vigente). */
   regrasDoServico: async () => (exigir(await supabase.rpc('regras_do_servico')) as RegrasServico[])[0] ?? null,

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
 import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
-import { simularMapas, type MapasFalsos } from './apoio/mapasFalsos.ts'
+import { simularMapas, simularPrevia, type MapasFalsos } from './apoio/mapasFalsos.ts'
 import { DIA_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
@@ -115,4 +115,96 @@ test.describe('endereços no novo pedido', () => {
     await expect(lista).toHaveCount(0)
     await expect(destino).toHaveValue('estaleiro')
   })
+
+  test('com os dois pontos: rota no Onde e prévia no Confira (N2), com reboque Sim e Não sei; o pedido leva o km', async ({ page }) => {
+    const csp = await vigiarCsp(page)
+    const { chamadas, pedidos } = await irParaOnde(page)
+    const previas = await simularPrevia(page)
+    await escolherPontos(page)
+    const rota = page.getByTestId('rota-estimada')
+    await expect(rota).toContainText('38 km pela rota')
+    await expect(rota).toContainText('cerca de 45 min')
+    expect(chamadas.filter((c) => c.acao === 'rota')).toHaveLength(1)
+    await page.getByRole('checkbox', { name: 'Levar' }).check()
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await page.getByRole('radio', { name: 'Sim' }).click()
+    await page.getByRole('button', { name: 'Revisar' }).click()
+
+    const previa = page.getByTestId('previa-orcamento')
+    await expect(previa.getByRole('heading', { name: 'Prévia do orçamento' })).toBeVisible()
+    await expect(previa).toContainText(/R\$\s?423,60/)
+    await expect(previa).toContainText('Estimativa pela tabela do contrato. O valor final vem no orçamento do motorista.')
+    await expect(previa.getByText('Taxa fixa do reboque')).toBeVisible()
+    await previa.getByRole('button', { name: 'Ocultar as linhas' }).click()
+    await expect(previa.getByText('Taxa fixa do reboque')).toHaveCount(0)
+    expect(previas.at(-1)).toEqual({ km: 38.2, usa_reboque: true, levar: true, trazer: false, modalidade: 'VEICULO_PROPRIO' })
+    await expect(page.getByTestId('resumo-pedido')).toContainText('38 km pela rota, cerca de 45 min')
+
+    // "Não sei": os dois valores lado a lado.
+    await page.getByRole('button', { name: 'Editar modalidade' }).click()
+    await page.getByRole('radio', { name: 'Não sei' }).click()
+    await page.getByRole('button', { name: 'Revisar' }).click()
+    await expect(previa.getByTestId('previa-sem-reboque')).toContainText(/Sem reboque\s*R\$\s?199,50/)
+    await expect(previa.getByTestId('previa-com-reboque')).toContainText(/Com reboque\s*R\$\s?423,60/)
+
+    await page.getByRole('button', { name: 'Enviar pedido' }).click()
+    await expect(page.getByTestId('pedido-enviado')).toBeVisible()
+    const criar = pedidos.find((c) => c.rpc === 'criar_pedido')!.corpo.p as Record<string, unknown>
+    expect(criar).toMatchObject({
+      origem: 'Porto de Itajaí',
+      origem_place_id: 'ChIJpor',
+      destino: 'Estaleiro Navship',
+      destino_place_id: 'ChIJnav',
+      km_estimado: 38.2,
+      minutos_estimados: 45,
+    })
+    expect(csp).toEqual([])
+  })
+
+  test('sem rota de carro (mesmo ponto, ilha): sem km nem prévia, e o pedido segue', async ({ page }) => {
+    const { pedidos } = await irParaOnde(page, { semRota: true })
+    const previas = await simularPrevia(page)
+    await escolherPontos(page)
+    await page.getByRole('checkbox', { name: 'Levar' }).check()
+    await expect(page.getByTestId('rota-estimada')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await page.getByRole('button', { name: 'Revisar' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Confira o pedido' })).toBeVisible()
+    await expect(page.getByTestId('previa-orcamento')).toHaveCount(0)
+    expect(previas).toHaveLength(0)
+    await page.getByRole('button', { name: 'Enviar pedido' }).click()
+    await expect(page.getByTestId('pedido-enviado')).toBeVisible()
+    expect(pedidos.find((c) => c.rpc === 'criar_pedido')!.corpo.p).not.toHaveProperty('km_estimado')
+  })
+
+  test('empresa sem contrato ou veículo do cliente: sem prévia', async ({ page }) => {
+    await irParaOnde(page)
+    const previas = await simularPrevia(page, { ok: false, codigo: 'SEM_CONTRATO' })
+    await escolherPontos(page)
+    await page.getByRole('checkbox', { name: 'Levar' }).check()
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await page.getByRole('button', { name: 'Revisar' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Confira o pedido' })).toBeVisible()
+    await expect.poll(() => previas.length).toBeGreaterThan(0)
+    await expect(page.getByTestId('previa-orcamento')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Editar modalidade' }).click()
+    await page.getByRole('radio', { name: 'Veículo do cliente' }).click()
+    const antes = previas.length
+    await page.getByRole('button', { name: 'Revisar' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Confira o pedido' })).toBeVisible()
+    await expect(page.getByTestId('previa-orcamento')).toHaveCount(0)
+    expect(previas.length).toBe(antes)
+  })
 })
+
+/** Origem e destino escolhidos pelo Google (com coordenadas). */
+async function escolherPontos(page: Page) {
+  const origem = page.getByRole('combobox', { name: 'Origem' })
+  await origem.fill('porto')
+  await page.getByRole('listbox', { name: 'Sugestões para Origem' }).getByRole('option', { name: /Porto de Itajaí/ }).click()
+  await expect(page.getByTestId('endereco-origem')).toBeVisible()
+  const destino = page.getByRole('combobox', { name: 'Destino' })
+  await destino.fill('estaleiro navs')
+  await page.getByRole('listbox', { name: 'Sugestões para Destino' }).getByRole('option', { name: /Estaleiro Navship/ }).click()
+  await expect(page.getByTestId('endereco-destino')).toBeVisible()
+}
