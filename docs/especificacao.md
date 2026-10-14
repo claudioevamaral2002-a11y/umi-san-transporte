@@ -562,3 +562,8 @@ Prevalece sobre as seções 2, 3, 4.2 e Adendo A1 onde conflitar.
 
 **Operação**
 - Várias contas no mesmo navegador: uma sessão por site; para testar perfis em paralelo, usar perfis distintos do navegador ou janelas anônimas.
+
+### A11. Crédito na criação do pedido (decisão de 2026-10-13)
+- **Sem crédito nenhum** (disponível + limite de saldo negativo do contrato vigente ≤ 0): `api.criar_pedido` devolve `SEM_CREDITO` (auditado, sem abortar; A2) e nada é criado. O app desabilita **Novo pedido** com a explicação "Sua empresa está sem crédito. Fale com a IVO Transportes para recarregar." no Início, em Pedidos, na Agenda (janelas livres sem atalho) e em `/pedidos/novo`.
+- **Abaixo do alerta de saldo baixo** (mas com crédito): o pedido é criado normalmente; a revisão (passo 4) mostra um aviso com o disponível atual.
+- A **aprovação do orçamento** continua sendo a checagem dura de valor (`SALDO_INSUFICIENTE`).

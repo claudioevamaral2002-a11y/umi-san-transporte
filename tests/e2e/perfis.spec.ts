@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { EMPRESA_UMI, EQUIPE, simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
 import { comSessaoFalsa, responderFuncoes } from './apoio/sessaoFalsa.ts'
+import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const AAL2 = { aal: 'aal2' as const }
 const LINK = 'http://127.0.0.1:8788/c/K7M2QX9PRT'
@@ -40,7 +41,7 @@ test.describe('cliente', () => {
     // Equipe, Tabela e Contratos não abrem.
     for (const rota of ['/equipe', '/tabela', '/adm/contratos', '/parametros']) {
       await page.goto(rota)
-      await expect(page.getByRole('heading', { name: 'Sem permissão' }), rota).toBeVisible()
+      await esperarInicioComAviso(page, rota)
     }
   })
 
@@ -150,7 +151,7 @@ test.describe('motorista', () => {
 
     for (const rota of ['/adm/contratos', '/regras', '/equipe', '/parametros']) {
       await page.goto(rota)
-      await expect(page.getByRole('heading', { name: 'Sem permissão' }), rota).toBeVisible()
+      await esperarInicioComAviso(page, rota)
     }
   })
 
@@ -182,7 +183,7 @@ test.describe('gestor de frota', () => {
     await page.keyboard.press('Escape')
     for (const rota of ['/tabela', '/regras', '/adm/contratos', '/parametros', '/equipe']) {
       await page.goto(rota)
-      await expect(page.getByRole('heading', { name: 'Sem permissão' }), rota).toBeVisible()
+      await esperarInicioComAviso(page, rota)
     }
     const lidas = chamadas.map((c) => c.rpc)
     for (const rpc of ['precos_para_orcar', 'listar_contratos', 'historico_contrato', 'regras_do_servico']) {

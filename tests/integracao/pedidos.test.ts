@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
@@ -223,5 +224,39 @@ describe('orçamento: concorrência real', () => {
       { versao: 1, status: 'SUBSTITUIDO' },
       { versao: 2, status: 'REPROVADO' },
     ])
+  })
+})
+
+describe('crédito ao criar pedido (sem crédito → SEM_CREDITO; a aprovação continua a checagem dura)', () => {
+  it('fim do limite: SEM_CREDITO auditado e nada criado; com R$ 0,01 de crédito volta a criar', async () => {
+    const empresa = await empresaComContrato()
+    const cliente = await criarPessoa({ papel: 'CLIENTE', empresa, nivel: 2 })
+    const limite = 50000
+    expect(
+      await rpc(adm, 'lancar_ajuste', { p_empresa: empresa, p_valor_cent: -limite, p_motivo: 'Consumo antigo', p_chave: randomUUID() }),
+    ).toMatchObject({ ok: true })
+    const saldo = await rpc(cliente, 'saldo_empresa')
+    expect(Number(saldo.disponivel_cent) + Number(saldo.limite_cent)).toBe(0)
+
+    const antes = await comBanco(async (db) => (await db.query('select count(*)::int as n from app.atividades where empresa_id = $1', [empresa])).rows[0].n)
+    expect(await criar(cliente, horario(40))).toEqual({ ok: false, codigo: 'SEM_CREDITO' })
+    const depois = await comBanco(async (db) => (await db.query('select count(*)::int as n from app.atividades where empresa_id = $1', [empresa])).rows[0].n)
+    expect(depois).toBe(antes)
+    const auditado = await comBanco(async (db) =>
+      (
+        await db.query(
+          `select detalhe from app.auditoria where acao = 'CRIAR_PEDIDO' and codigo = 'SEM_CREDITO' and usuario_id = $1`,
+          [cliente.id],
+        )
+      ).rows,
+    )
+    expect(auditado).toEqual([{ detalhe: { disponivel_cent: -limite, limite_cent: limite } }])
+
+    // Recarga e criação em paralelo: depois da recarga confirmada, a criação passa.
+    await Promise.all([
+      rpc(outroCliente(adm), 'lancar_recarga', { p_empresa: empresa, p_valor_cent: 1, p_motivo: 'Pix', p_comprovante: null, p_chave: randomUUID() }),
+      criar(outroCliente(cliente), horario(41)),
+    ])
+    expect(await criar(cliente, horario(42))).toMatchObject({ ok: true })
   })
 })

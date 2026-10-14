@@ -10,6 +10,7 @@ import {
 } from './apoio/dinheiroFalso.ts'
 import { ID_PEDIDO, pedidoOrcadoCliente, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
+import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 // Fase 2B (mocks): saldo no Início, aprovação com recibo, cancelamento de agendado com multa, extrato (filtros, CSV,
 // PDF) e, para o ADM, créditos por cliente (recarga, ajuste, estorno) e painel. Nenhuma ação de dinheiro é otimista:
@@ -503,7 +504,7 @@ test.describe('ADM: clientes e crédito', () => {
     await simularApi(page)
     for (const rota of ['/adm/creditos', '/adm/painel', `/adm/creditos/${EMPRESA_UMI.id}`]) {
       await page.goto(rota)
-      await expect(page.getByRole('heading', { name: 'Sem permissão' }), rota).toBeVisible()
+      await esperarInicioComAviso(page, rota)
     }
   })
 })

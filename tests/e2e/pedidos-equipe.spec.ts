@@ -10,6 +10,7 @@ import {
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
+import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const AAL2 = { aal: 'aal2' as const }
 const MOTORISTA = { papel: 'MOTORISTA' as const, nome: 'Bruno Lima', tem_2fa: true }
@@ -222,7 +223,7 @@ test.describe('motorista', () => {
       await comSessaoFalsa(cliente, { papel: 'CLIENTE', nivel: 1 })
       await simularApi(cliente)
       await cliente.goto(`/pedidos/${ID_PEDIDO}/orcar`)
-      await expect(cliente.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+      await esperarInicioComAviso(cliente)
     } finally {
       await contexto.close()
     }

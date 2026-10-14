@@ -52,7 +52,7 @@ Marque cada item. Se algo falhar, **pare**, anote a tela e a mensagem (print sem
 22. **Convidar.** Cliente N1 → **Equipe** → **Convidar colega**: um colega como **N2 — Solicitante** e outro como **N3 — Visualizador** (e-mails reais dos colegas ou endereços seus com `+`, ex.: `seunome+n2@gmail.com`). Copie cada link e abra em outro perfil do navegador (perfis 4 e 5): **Continuar** → criar senha → entra (cliente não usa 2FA).
 23. **O que cada um vê.**
     - **N2:** **Novo pedido** disponível; em **Pedidos** só os **próprios** (não vê o pedido do item 11); na **Agenda**, pedidos de colegas aparecem só como **Ocupado**; vê o saldo, o limite e o **Extrato** da empresa (as linhas do pedido do N1 aparecem, mas o pedido não abre); sem **Equipe**.
-    - **N3:** **sem Novo pedido** (abrir https://umi-san-transporte.pages.dev/pedidos/novo mostra **Sem permissão**); vê **todos** os pedidos da empresa, sem botões de ação; vê saldo, limite e extrato; sem **Equipe**.
+    - **N3:** **sem Novo pedido** (abrir https://umi-san-transporte.pages.dev/pedidos/novo volta ao **Início** com o aviso “Essa área não está disponível para o seu perfil”); vê **todos** os pedidos da empresa, sem botões de ação; vê saldo, limite e extrato; sem **Equipe**.
     - **N1:** vê tudo da empresa e, em **Equipe**, os dois colegas (pode gerar novo link e desativar/reativar com motivo).
 24. **Tempo real com o N2.** Com o **Início** do motorista aberto, o N2 cria um pedido: a pendência aparece no motorista sem recarregar. Cancele esse pedido com o N2 (sem custo, ainda não aprovado).
 

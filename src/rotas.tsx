@@ -98,7 +98,7 @@ export const roteador = createBrowserRouter([
               { path: 'pedidos/:id', lazy: async () => ({ Component: (await import('./telas/pedidos/Pedido.tsx')).Pedido }) },
               { path: 'agenda', lazy: async () => ({ Component: (await import('./telas/agenda/Agenda.tsx')).Agenda }) },
               {
-                // Endereço antigo da tabela de preços (fase 1): o ADM vai para Contratos; os demais, "Sem permissão".
+                // Endereço antigo da tabela de preços (fase 1): o ADM vai para Contratos; os demais voltam ao Início com aviso.
                 element: <GuardaPapel papeis={['ADM']} />,
                 children: [{ path: 'parametros', element: <Navigate to="/adm/contratos" replace /> }],
               },

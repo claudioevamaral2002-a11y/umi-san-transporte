@@ -42,7 +42,7 @@ export function Escolhas<T extends string>({
               onClick={() => aoMudar(o.valor)}
               className={`min-h-12 rounded-full border-[1.5px] px-4 font-semibold transition-colors duration-150 motion-reduce:transition-none ${
                 tamanho === 'largo' ? 'flex-1' : ''
-              } ${marcado ? 'border-marinho bg-marinho text-papel sobre-marinho' : 'border-borda bg-superficie text-texto hover:border-marinho-2'}`}
+              } ${marcado ? 'border-selecao bg-selecao text-selecao-texto' : 'border-borda bg-superficie text-texto hover:border-marinho-2'}`}
             >
               {o.rotulo}
             </button>
@@ -58,7 +58,7 @@ export function CaixaChip({ rotulo, marcado, aoMudar }: { rotulo: string; marcad
   return (
     <label
       className={`relative flex min-h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border-[1.5px] px-4 font-semibold transition-colors duration-150 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--cor-foco)] motion-reduce:transition-none ${
-        marcado ? 'border-marinho bg-marinho text-papel' : 'border-borda bg-superficie text-texto'
+        marcado ? 'border-selecao bg-selecao text-selecao-texto' : 'border-borda bg-superficie text-texto'
       }`}
     >
       <input

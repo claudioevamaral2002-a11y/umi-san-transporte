@@ -50,6 +50,7 @@ export const MENSAGENS = {
 
   // Saldo, aprovação e cancelamento de agendado (fase 2B)
   SALDO_INSUFICIENTE: 'Saldo insuficiente para aprovar este orçamento.',
+  SEM_CREDITO: 'Sua empresa está sem crédito. Fale com a IVO Transportes para recarregar.',
   ORCAMENTO_VENCIDO: 'A validade deste orçamento venceu. Peça um novo pedido.',
   ORCAMENTO_ALTERADO: 'Este orçamento mudou desde que você abriu. Atualize a página e confira antes de aprovar.',
   JA_PROCESSADO: 'Esta operação já foi feita. Atualize a página.',

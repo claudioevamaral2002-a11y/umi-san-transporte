@@ -16,7 +16,7 @@ Aplicativo: https://umi-san-transporte.pages.dev. Como funciona cada perfil: [RU
 
 ## B. Cliente cria o pedido
 3. **Sem contrato.** O N1 da empresa de teste **sem** contrato (ou antes de publicar) vê **Novo pedido** indisponível com a explicação. Depois de publicar o contrato, o botão funciona.
-4. **N3 não cria.** O N3 da Umi San não vê **Novo pedido**; forçando `/pedidos/novo` aparece **Sem permissão**.
+4. **N3 não cria.** O N3 da Umi San não vê **Novo pedido**; forçando `/pedidos/novo` volta ao **Início** com o aviso “Essa área não está disponível para o seu perfil”.
 5. **Novo pedido em 4 passos (N2-a).** **Quando?**: o calendário esmaece os dias cheios e mostra chips de horários livres (de 30 em 30 min, 05:00–22:00) para a duração escolhida. **Onde?**: origem, destino, **Levar** e/ou **Trazer** (ao menos um; os dois = ida e volta) e contato opcional. **O quê?**: pessoas/equipamento/ambos, modalidade, reboque, observações. **Revisar**: resumo e "o motorista orça em até X horas" (X = prazo do contrato). **Enviar pedido** → tela de sucesso com o número (#00NN).
 6. **Texto não vira código.** Num pedido de teste, escreva nas observações `<b>teste</b>`: no detalhe aparece literalmente `<b>teste</b>` (sem negrito).
 7. **Horário ocupado.** Com o N2-b, tente pedir **o mesmo horário** do item 5: o horário não aparece mais como livre. (Se duas pessoas enviarem ao mesmo tempo, só uma entra; a outra vê "Esse horário acabou de ser ocupado. Escolha outro.")

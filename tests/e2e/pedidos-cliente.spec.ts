@@ -10,6 +10,7 @@ import {
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
+import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const CLIENTE_N2 = { papel: 'CLIENTE' as const, nivel: 2 as const, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
 
@@ -193,7 +194,7 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Pedidos' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Novo pedido' })).toHaveCount(0)
     await page.goto('/pedidos/novo')
-    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await esperarInicioComAviso(page)
     expect(chamadas.map((c) => c.rpc)).not.toContain('criar_pedido')
     await page.goto('/agenda')
     await escolherDia(page, DIA_PEDIDO)

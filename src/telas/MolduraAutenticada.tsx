@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { Icone, type NomeIcone } from '../design/componentes/Icone.tsx'
 import { LogoIvo } from '../design/componentes/LogoIvo.tsx'
 import { gereEquipe } from '../lib/administracao.ts'
@@ -130,6 +130,36 @@ function ListaMenu({ grupos, aoNavegar }: { grupos: Grupo[]; aoNavegar?: () => v
   )
 }
 
+/** Aviso deixado por uma guarda (`state.avisoGuarda`) na navegação (ex.: área fora do perfil): some sozinho em 5 s. */
+function AvisoDaNavegacao() {
+  const local = useLocation()
+  const navegar = useNavigate()
+  const aviso = (local.state as { avisoGuarda?: unknown } | null)?.avisoGuarda
+  const texto = typeof aviso === 'string' ? aviso : null
+  useEffect(() => {
+    if (!texto) return
+    const t = setTimeout(() => navegar(`${local.pathname}${local.search}`, { replace: true, state: null }), 5000)
+    return () => clearTimeout(t)
+  }, [texto, navegar, local.pathname, local.search])
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="nao-imprimir pointer-events-none fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 flex justify-center px-4 md:bottom-6"
+    >
+      {texto && (
+        <p
+          data-testid="aviso-navegacao"
+          className="pointer-events-auto flex max-w-md items-center gap-2 rounded-xl border border-cinza-azulado/40 bg-marinho px-4 py-3 text-sm font-semibold text-papel shadow-[var(--sombra)] sobre-marinho"
+        >
+          <Icone nome="alerta" tamanho={18} />
+          {texto}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function MolduraAutenticada() {
   const { perfil, email, sair } = useSessao()
   const grupos = gruposDo(perfil)
@@ -170,6 +200,7 @@ export function MolduraAutenticada() {
       <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
         <Outlet />
       </div>
+      <AvisoDaNavegacao />
 
       <nav
         aria-label="Navegação"
