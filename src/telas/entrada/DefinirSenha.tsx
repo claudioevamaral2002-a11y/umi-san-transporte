@@ -139,7 +139,6 @@ export function DefinirSenha() {
           disabled={!avaliacao.valida || !confere || enviando}
         >
           {enviando ? 'Salvando…' : 'Criar senha'}
-          {!enviando && <Icone nome="setaDireita" tamanho={20} />}
         </Botao>
       </form>
     </main>

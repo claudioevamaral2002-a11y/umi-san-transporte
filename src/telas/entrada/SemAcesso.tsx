@@ -13,7 +13,7 @@ export function SemAcesso() {
       </div>
       <div className="mx-auto w-full max-w-md p-4">
         <Cartao className="space-y-3">
-          <p className="ivo-sobretitulo text-alerta-texto">Acesso indisponível</p>
+          <p className="ivo-legenda font-semibold text-alerta-texto">Acesso indisponível</p>
           <h1 className="ivo-h2">Sua conta não está ativa</h1>
           <p className="ivo-corpo text-texto-suave">
             Fale com o administrador da IVO Transportes. Quando o acesso for liberado, entre de novo.

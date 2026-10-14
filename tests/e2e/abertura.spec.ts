@@ -34,7 +34,7 @@ test.describe('abrir o app num endereço fora do perfil', () => {
       await simularPedidos(page)
       // Abrir pela raiz: Início, sem aviso.
       await page.goto('/')
-      await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Ana$/ })).toBeVisible()
       await expect(page.getByTestId('aviso-navegacao')).toHaveCount(0)
       for (const rota of caso.proibidas) {
         await page.goto(rota)
@@ -51,7 +51,7 @@ test.describe('abrir o app num endereço fora do perfil', () => {
     await esperarInicioComAviso(page)
     await expect(page.getByTestId('aviso-navegacao')).toHaveCount(0, { timeout: 8_000 })
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Ana$/ })).toBeVisible()
     await expect(page.getByText(AVISO_AREA_INDISPONIVEL)).toHaveCount(0)
   })
 })
@@ -69,7 +69,7 @@ test.describe('entrar sempre leva ao Início', () => {
     const entrar = page.getByRole('button', { name: 'Entrar', exact: true })
     await expect(entrar).toBeEnabled({ timeout: 20_000 }) // token do Turnstile (chave de teste)
     await entrar.click()
-    await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Ana$/ })).toBeVisible()
     await expect(page).toHaveURL(/:\/\/[^/]+\/$/)
     await expect(page.getByTestId('aviso-navegacao')).toHaveCount(0)
   })

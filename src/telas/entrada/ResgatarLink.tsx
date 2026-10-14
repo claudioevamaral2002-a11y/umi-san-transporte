@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { normalizarCodigo } from '../../../supabase/functions/_compartilhado/links.ts'
 import { Botao } from '../../design/componentes/Botao.tsx'
-import { Icone } from '../../design/componentes/Icone.tsx'
 import { LogoIvo } from '../../design/componentes/LogoIvo.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
@@ -60,7 +59,7 @@ export function ResgatarLink() {
         </div>
       </div>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-6 pt-8 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
-        <p className="ivo-sobretitulo text-texto-suave">Primeiro acesso</p>
+        <p className="ivo-legenda font-semibold text-texto-suave">Primeiro acesso</p>
         <div className="space-y-2">
           <h1 className="ivo-h1">Crie sua senha</h1>
           <p className="ivo-corpo text-texto-suave">Toque em Continuar para validar seu link de acesso.</p>
@@ -84,7 +83,6 @@ export function ResgatarLink() {
             onClick={() => void continuar()}
           >
             {enviando ? 'Validando…' : 'Continuar'}
-            {!enviando && <Icone nome="setaDireita" tamanho={20} />}
           </Botao>
         )}
       </div>

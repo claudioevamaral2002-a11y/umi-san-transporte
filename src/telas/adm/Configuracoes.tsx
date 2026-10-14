@@ -44,7 +44,7 @@ function RetencaoFotos({ atual, onSalvo }: { atual: Configuracao; onSalvo: (text
   return (
     <Cartao className="space-y-3" data-testid="cartao-retencao-fotos">
       <div className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fundo text-marinho-2">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fundo text-link">
           <Icone nome="imagem" />
         </span>
         <div className="min-w-0 space-y-0.5">

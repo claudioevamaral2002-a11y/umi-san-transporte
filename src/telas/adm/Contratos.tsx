@@ -34,7 +34,7 @@ function ItemContrato({ c }: { c: ContratoListado }) {
       >
         <span
           className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
-            modelo ? 'bg-marinho text-papel' : 'bg-fundo text-marinho-2'
+            modelo ? 'bg-marinho text-papel' : 'bg-fundo text-link'
           }`}
         >
           <Icone nome={modelo ? 'tabela' : 'predio'} />
@@ -213,9 +213,9 @@ export function ContratoDetalhe() {
           {vigente ? (
             <>
               <p className="ivo-legenda text-texto-suave" data-testid="versao-vigente">
-                Versão <span className="font-bold text-texto tabular-nums">{vigente.versao}</span> · vigente desde{' '}
+                Versão <span className="font-bold text-texto tabular-nums">{vigente.versao}</span>, vigente desde{' '}
                 <span className="font-bold text-texto tabular-nums">{formatarDataHora(vigente.vigente_desde)}</span>
-                {vigente.publicado_por_nome && <> · publicada por {vigente.publicado_por_nome}</>}
+                {vigente.publicado_por_nome && <>, publicada por {vigente.publicado_por_nome}</>}
               </p>
               {proxima && (
                 <Mensagem tipo="info">

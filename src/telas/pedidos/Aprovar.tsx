@@ -313,7 +313,7 @@ export function CartaoAgendado({ pedido, aprovacao }: { pedido: DetalhePedido; a
           <Icone nome="check" />
         </span>
         <div className="min-w-0">
-          <p className="ivo-sobretitulo text-texto-suave">Pedido {numeroPedido(pedido.numero)}</p>
+          <p className="ivo-legenda font-semibold text-texto-suave">Pedido {numeroPedido(pedido.numero)}</p>
           <h2 id="titulo-agendado" ref={titulo} tabIndex={-1} className="ivo-h3 outline-none">
             Agendado
           </h2>

@@ -1,55 +1,23 @@
 // Novo pedido no celular, por TOQUE (hasTouch + tap), em Pixel e iPhone, nos temas claro e escuro.
 // Bug de produção: o toque mudava a seleção, mas no tema escuro o dia/horário escolhido ficava com a mesma cor
 // da superfície (marinho sobre marinho) — parecia que nada tinha sido selecionado.
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+import { contraste, esperarDestacado, fundo } from './apoio/contraste.ts'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { DIA_PEDIDO, diaSp, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
-
-/** Luminância relativa (WCAG) de "rgb(r, g, b)" / "rgba(r, g, b, a)" (alfa ignorado: os fundos aqui são opacos). */
-function luminancia(cor: string): number {
-  const [r, g, b] = (cor.match(/[\d.]+/g) ?? []).slice(0, 3).map((v) => {
-    const c = Number(v) / 255
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-  }) as [number, number, number]
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-function contraste(a: string, b: string): number {
-  const [x, y] = [luminancia(a), luminancia(b)].sort((m, n) => n - m) as [number, number]
-  return (x + 0.05) / (y + 0.05)
-}
-const fundo = (l: Locator) => l.evaluate((e) => getComputedStyle(e).backgroundColor)
-/** Fundo efetivo atrás do elemento (primeiro ancestral com fundo não transparente). */
-const fundoAtras = (l: Locator) =>
-  l.evaluate((e) => {
-    for (let p = e.parentElement; p; p = p.parentElement) {
-      const c = getComputedStyle(p).backgroundColor
-      if (c && c !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(c)) return c
-    }
-    return getComputedStyle(document.body).backgroundColor
-  })
-
-/** O item escolhido precisa se destacar do que está atrás dele (≥ 3:1, WCAG 1.4.11). */
-async function esperarDestacado(item: Locator) {
-  await expect.poll(async () => contraste(await fundo(item), await fundoAtras(item))).toBeGreaterThanOrEqual(3)
-}
 
 async function abrir(page: Page) {
   await comSessaoFalsa(page, { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' })
   await simularApi(page)
   const chamadas = await simularPedidos(page)
   await page.goto('/pedidos/novo')
-  await expect(page.getByTestId('calendario').locator('[data-dia]').first()).toBeVisible()
+  await expect(page.getByTestId('faixa-dias').locator('[data-dia]').first()).toBeVisible()
   return chamadas
 }
 
-async function tocarDia(page: Page, dia: string) {
-  const calendario = page.getByTestId('calendario')
-  const botao = calendario.locator(`[data-dia="${dia}"]`)
-  if ((await botao.count()) === 0) await calendario.getByRole('button', { name: 'Próximo mês' }).tap()
-  await botao.tap()
-  return botao
-}
+const tocarDia = (page: Page, dia: string) => escolherDiaNoPedido(page, dia, 'tap')
 
 for (const tema of ['light', 'dark'] as const) {
   test.describe(`tema ${tema === 'light' ? 'claro' : 'escuro'}`, () => {
@@ -64,7 +32,7 @@ for (const tema of ['light', 'dark'] as const) {
       await esperarDestacado(dia)
       const outroDia = await tocarDia(page, diaSp(4))
       await expect(outroDia).toHaveAttribute('aria-pressed', 'true')
-      await expect(page.getByTestId('calendario').locator(`[data-dia="${DIA_PEDIDO}"]`)).toHaveAttribute('aria-pressed', 'false')
+      await expect(page.getByTestId('faixa-dias').locator(`[data-dia="${DIA_PEDIDO}"]`)).toHaveAttribute('aria-pressed', 'false')
       await esperarDestacado(outroDia)
 
       // Horário: toque marca, outro toque troca; só um marcado, e ele se destaca dos demais.
@@ -93,6 +61,24 @@ for (const tema of ['light', 'dark'] as const) {
       // Segue para o passo 2 com a escolha feita.
       await page.getByRole('button', { name: 'Continuar' }).tap()
       await expect(page.getByRole('heading', { level: 1, name: 'Onde?' })).toBeVisible()
+    })
+
+    test('escolhido usa contorno laranja e nenhum ✓; ocupado aparece riscado; frase confirma', async ({ page }) => {
+      await abrir(page)
+      await tocarDia(page, DIA_PEDIDO)
+      const horarios = page.getByTestId('horarios-livres')
+      const marcado = horarios.getByRole('radio', { name: '10:00' })
+      await marcado.tap()
+      await expect(marcado).toHaveAttribute('aria-checked', 'true')
+      expect(await marcado.evaluate((e) => getComputedStyle(e).boxShadow)).toContain('rgb(255, 106, 0)')
+      await expect(page.getByTestId('passo-quando')).not.toContainText('✓')
+      // 11:30 fica entre livres (11:00 e 16:00): ocupado, riscado e não escolhível.
+      const ocupado = horarios.getByRole('radio', { name: '11:30, ocupado' })
+      await expect(ocupado).toHaveAttribute('aria-disabled', 'true')
+      expect(await ocupado.evaluate((e) => getComputedStyle(e).textDecorationLine)).toBe('line-through')
+      await ocupado.tap({ force: true })
+      await expect(marcado).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByTestId('frase-quando')).toHaveText(/, das 10:00 às 12:00$/)
     })
 
     test('opções do passo 3 (tipo, modalidade) e Levar/Trazer se destacam ao toque', async ({ page }) => {

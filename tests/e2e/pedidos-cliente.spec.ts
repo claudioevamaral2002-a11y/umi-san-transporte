@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
 import {
   DIA_PEDIDO,
@@ -9,21 +9,13 @@ import {
   pendenciaFalsa,
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
+import { escolherDiaNaAgenda, escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const CLIENTE_N2 = { papel: 'CLIENTE' as const, nivel: 2 as const, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
 
 /** Abre o mês do dia (avança se for o mês seguinte) e toca no dia. */
-async function escolherDia(page: Page, dia: string) {
-  const calendario = page.getByTestId('calendario')
-  const botao = calendario.locator(`[data-dia="${dia}"]`)
-  await expect(calendario.locator('[data-dia]').first()).toBeVisible()
-  if ((await botao.count()) === 0) await calendario.getByRole('button', { name: 'Próximo mês' }).click()
-  await botao.click()
-  await expect(botao).toHaveAttribute('aria-pressed', 'true')
-}
-
 test.describe('cliente: novo pedido', () => {
   test('4 passos com Levar/Trazer, máscara de telefone, revisão e HORARIO_OCUPADO → novo horário → enviado', async ({ page }) => {
     const csp = await vigiarCsp(page)
@@ -40,15 +32,13 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByText('Passo 1 de 4')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Voltar ao passo anterior' })).toHaveCount(0)
     // Dia cheio e dias passados não são selecionáveis.
-    const cheio = page.getByTestId('calendario').locator(`[data-dia="${diaSp(3)}"]`)
-    if ((await cheio.count()) > 0) await expect(cheio).toBeDisabled()
-    if (diaSp(-1).slice(0, 7) === diaSp(0).slice(0, 7)) {
-      await expect(page.getByTestId('calendario').locator(`[data-dia="${diaSp(-1)}"]`)).toBeDisabled()
-    }
+    // Dia cheio fica riscado e desabilitado na faixa; a faixa começa hoje (dias passados nem aparecem).
+    await expect(page.getByTestId('faixa-dias').locator(`[data-dia="${diaSp(3)}"]`)).toBeDisabled()
+    await expect(page.getByTestId('faixa-dias').locator(`[data-dia="${diaSp(-1)}"]`)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continuar' }).click()
     await expect(page.getByRole('alert').filter({ hasText: 'Escolha o dia e um dos horários livres.' })).toBeVisible()
 
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     const horarios = page.getByTestId('horarios-livres')
     await horarios.getByRole('radio', { name: '10:00' }).click()
     await expect(horarios.getByRole('radio', { name: '10:00' })).toHaveAttribute('aria-checked', 'true')
@@ -157,7 +147,7 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Pedidos' })).toBeVisible()
 
     await page.getByRole('link', { name: 'Novo pedido' }).click()
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     await page.getByTestId('horarios-livres').getByRole('radio', { name: '16:00' }).click()
     await page.getByRole('button', { name: 'Fechar o novo pedido' }).click()
     const folha = page.getByRole('dialog', { name: 'Descartar este pedido?' })
@@ -180,7 +170,7 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByRole('link', { name: 'Novo pedido' })).toHaveCount(0)
     await page.goto('/pedidos/novo')
     await expect(page.getByTestId('novo-pedido-sem-contrato')).toContainText('Novo pedido indisponível')
-    await expect(page.getByTestId('calendario')).toHaveCount(0)
+    await expect(page.getByTestId('faixa-dias')).toHaveCount(0)
   })
 
   test('N3 (visualizador) não cria pedido: sem botão, rota recusada e janelas livres sem ação', async ({ page }) => {
@@ -188,7 +178,7 @@ test.describe('cliente: novo pedido', () => {
     await simularApi(page)
     const chamadas = await simularPedidos(page)
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Olá, Elisa' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Elisa$/ })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Novo pedido' })).toHaveCount(0)
     await page.goto('/pedidos')
     await expect(page.getByRole('heading', { level: 1, name: 'Pedidos' })).toBeVisible()
@@ -197,7 +187,7 @@ test.describe('cliente: novo pedido', () => {
     await esperarInicioComAviso(page)
     expect(chamadas.map((c) => c.rpc)).not.toContain('criar_pedido')
     await page.goto('/agenda')
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNaAgenda(page, DIA_PEDIDO)
     await expect(page.getByTestId('janela-livre').first()).toBeVisible()
     await expect(page.getByTestId('agenda-dia').getByRole('link', { name: /fazer pedido/ })).toHaveCount(0)
   })
@@ -221,7 +211,7 @@ test.describe('cliente: pedidos e orçamento recebido', () => {
     await expect(aprovar.getByTestId('pendencia-aprovar')).toContainText(/R\$\s710,00/)
     await expect(aprovar.getByTestId('contagem')).toHaveText(/^Aprovar em até (19|20) h/)
     const andamento = page.getByTestId('grupo-acompanhar')
-    await expect(andamento.getByTestId('pendencia-acompanhar')).toContainText('URGENTE')
+    await expect(andamento.getByTestId('pendencia-acompanhar')).toContainText('Urgente')
     await expect(andamento.getByTestId('contagem')).toHaveText(/^Orçamento em até (4|5) h/)
 
     await page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Pedidos' }).click()
@@ -326,19 +316,20 @@ test.describe('cliente: agenda', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Agenda' })).toBeVisible()
     expect(chamadas.find((c) => c.rpc === 'dias_do_mes')?.corpo.p_duracao_min).toBe(60)
 
-    await escolherDia(page, DIA_PEDIDO)
-    const botaoDia = page.getByTestId('calendario').locator(`[data-dia="${DIA_PEDIDO}"]`)
+    const botaoDia = await escolherDiaNaAgenda(page, DIA_PEDIDO)
     await expect(botaoDia).toHaveAccessibleName(/1 pedido seu.*ocupado/)
     const dia = page.getByTestId('agenda-dia')
     const proprio = dia.getByTestId('bloco-proprio')
     await expect(proprio).toContainText('08:00–10:00')
     await expect(proprio).toContainText('Pedido #0042')
-    await expect(proprio).toContainText('Porto de Itajaí → Base Navegantes')
+    await expect(proprio).toContainText('Porto de Itajaí')
+    await expect(proprio).toContainText('Base Navegantes')
+    await expect(proprio).not.toContainText('→')
     const ocupado = dia.getByTestId('bloco-ocupado')
     await expect(ocupado).toContainText('12:00–14:00')
     await expect(ocupado).toContainText('Ocupado')
     await expect(ocupado).not.toContainText('#')
-    await expect(dia.getByTestId('janela-livre')).toHaveText([/Livre · 10:00–11:30/, /Livre · 16:00–18:00/])
+    await expect(dia.getByTestId('janela-livre')).toHaveText([/Livre, 10:00–11:30/, /Livre, 16:00–18:00/])
 
     // Janela livre inicia o pedido com dia e horário preenchidos.
     await dia.getByRole('link', { name: /Livre das 16:00 às 18:00/ }).click()
@@ -349,7 +340,7 @@ test.describe('cliente: agenda', () => {
 
     // O próprio bloco abre o pedido.
     await expect(page.getByRole('heading', { level: 1, name: 'Agenda' })).toBeVisible()
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNaAgenda(page, DIA_PEDIDO)
     await page.getByTestId('agenda-dia').getByTestId('bloco-proprio').click()
     await expect(page.getByRole('heading', { level: 1, name: 'Pedido #0042' })).toBeVisible()
     expect(csp).toEqual([])

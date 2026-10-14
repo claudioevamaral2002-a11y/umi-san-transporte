@@ -309,10 +309,10 @@ function ConteudoLancamento({
           {TITULO[op.tipo]} {formatarComSinal(pronto.efeito)}
         </LinhaConfirma>
         <LinhaConfirma rotulo="Disponível" testid="confirmar-disponivel">
-          <Dinheiro centavos={saldo.disponivel_cent} /> → <Dinheiro centavos={depois.disponivel_depois_cent} />
+          <Dinheiro centavos={saldo.disponivel_cent} /> para <Dinheiro centavos={depois.disponivel_depois_cent} />
         </LinhaConfirma>
         <LinhaConfirma rotulo="Total contábil">
-          <Dinheiro centavos={saldo.saldo_contabil_cent} /> → <Dinheiro centavos={depois.contabil_depois_cent} />
+          <Dinheiro centavos={saldo.saldo_contabil_cent} /> para <Dinheiro centavos={depois.contabil_depois_cent} />
         </LinhaConfirma>
         <LinhaConfirma rotulo="Motivo">
           <span className="font-semibold break-words">{pronto.motivo}</span>
@@ -364,7 +364,7 @@ export function CreditoEmpresa() {
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
       <div className="nao-imprimir space-y-1">
-        <Link to="/adm/creditos" viewTransition className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-xl px-2 font-semibold text-marinho-2">
+        <Link to="/adm/creditos" viewTransition className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-xl px-2 font-semibold text-link">
           <Icone nome="setaEsquerda" tamanho={20} />
           Clientes e crédito
         </Link>

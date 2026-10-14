@@ -123,7 +123,7 @@ export function CodigoSeisDigitos({
           onChange={(e) => mudar(i, e.target.value)}
           onKeyDown={(e) => teclar(i, e)}
           onPaste={(e) => colar(i, e)}
-          className={`h-14 w-full min-w-0 max-w-14 rounded-xl border-2 bg-superficie text-center text-2xl font-bold tabular-nums text-texto caret-[var(--cor-acao)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-acao focus:shadow-[0_0_0_3px_rgb(255_106_0/0.3)] disabled:opacity-60 motion-reduce:transition-none ${
+          className={`h-14 w-full min-w-0 max-w-14 rounded-campo border-2 bg-superficie text-center text-2xl font-bold tabular-nums text-texto caret-[var(--cor-acao)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-acao focus:shadow-[0_0_0_3px_rgb(255_106_0/0.3)] disabled:opacity-60 motion-reduce:transition-none ${
             invalido ? 'border-[var(--status-cancelada)]' : d ? 'border-texto' : 'border-borda'
           }`}
         />

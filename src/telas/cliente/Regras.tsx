@@ -14,7 +14,7 @@ const SEM_CONTRATO = 'Sua empresa ainda não tem contrato vigente. Fale com a IV
 function Regra({ icone, titulo, children }: { icone: NomeIcone; titulo: string; children: ReactNode }) {
   return (
     <li className="flex items-start gap-3 border-b border-borda py-3 last:border-b-0">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-fundo text-marinho-2">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-fundo text-link">
         <Icone nome={icone} tamanho={20} />
       </span>
       <div className="min-w-0">

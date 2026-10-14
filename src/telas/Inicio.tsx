@@ -10,10 +10,9 @@ import { podeEditarContratos } from '../lib/contratos.ts'
 import type { Papel, Perfil } from '../lib/estadoSessao.ts'
 import { pedidos, type ItemPendencia, type Pendencias } from '../lib/pedidos.ts'
 import { useSessao } from '../lib/sessao.tsx'
-import { formatarDuracao, formatarQuando, numeroPedido } from '../lib/tempo.ts'
+import { formatarDuracao, formatarQuando, numeroPedido, saudacao } from '../lib/tempo.ts'
 import { useTempoReal } from '../lib/tempoReal.ts'
 import { topicoDoPerfil } from '../lib/topicos.ts'
-import { formatarDataLonga } from '../lib/valores.ts'
 import { PainelResumo } from './adm/Painel.tsx'
 import { Contagem, Rota } from './pedidos/componentes.tsx'
 import { BotaoNovoPedido, podeCriarPedido } from './pedidos/Pedidos.tsx'
@@ -97,21 +96,11 @@ export function Inicio() {
 
   return (
     <main>
-      <section className="sobre-marinho bg-marinho px-4 pt-4 pb-10 text-papel">
-        <div className="mx-auto max-w-3xl">
-          <p className="ivo-sobretitulo text-cinza-azulado">{formatarDataLonga(new Date())}</p>
-          <h1 className="mt-1 ivo-h1">{primeiroNome ? `Olá, ${primeiroNome}` : 'Olá'}</h1>
-          {perfil?.papel === 'CLIENTE' && perfil.empresa_nome && (
-            <p className="mt-1 ivo-corpo text-cinza-azulado">{perfil.empresa_nome}</p>
-          )}
-          <span aria-hidden="true" className="mt-4 block h-[3px] w-[34px] rounded-full bg-[var(--cor-laranja)]" />
-        </div>
-      </section>
-
-      <div className="mx-auto -mt-6 max-w-3xl space-y-4 px-4 pb-6">
+      <div className="mx-auto max-w-3xl space-y-4 px-4 pt-1 pb-6">
+        <h1 className="ivo-h2">{primeiroNome ? `${saudacao()}, ${primeiroNome}` : saudacao()}</h1>
         {semModelo && (
-          <Cartao className="space-y-3 border-[var(--cor-laranja)]" data-testid="chamada-primeira-tabela">
-            <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+          <Cartao className="space-y-3 border-2 border-laranja" data-testid="chamada-primeira-tabela">
+            <p className="flex items-center gap-2 ivo-legenda font-bold text-alerta-texto">
               <Icone nome="alerta" tamanho={16} />
               Ação necessária
             </p>
@@ -121,17 +110,16 @@ export function Inicio() {
             </p>
             <Link
               to="/adm/contratos/modelo?publicar=1"
-              className="inline-flex min-h-12 items-center gap-2 rounded-cartao bg-acao px-5 ivo-botao text-acao-texto"
+              className="inline-flex min-h-12 items-center gap-2 rounded-botao bg-acao px-5 ivo-botao text-acao-texto"
             >
               Publicar tabela modelo
-              <Icone nome="setaDireita" tamanho={20} />
             </Link>
           </Cartao>
         )}
 
         {perfil?.papel === 'CLIENTE' && perfil.empresa_tem_contrato === false && (
-          <Cartao className="space-y-2 border-[var(--cor-laranja)]" data-testid="aviso-sem-contrato">
-            <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+          <Cartao className="space-y-2 border-2 border-laranja" data-testid="aviso-sem-contrato">
+            <p className="flex items-center gap-2 ivo-legenda font-bold text-alerta-texto">
               <Icone nome="alerta" tamanho={16} />
               Sem contrato vigente
             </p>
@@ -147,9 +135,9 @@ export function Inicio() {
             to="/agenda"
             viewTransition
             data-testid="atalho-agenda"
-            className="flex min-h-16 items-center gap-3 rounded-cartao border-[1.5px] border-borda bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2"
+            className="flex min-h-16 items-center gap-3 rounded-cartao bg-superficie p-4 shadow-[var(--sombra)]"
           >
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-marinho text-papel">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-campo bg-selecao-suave text-texto">
               <Icone nome="calendario" />
             </span>
             <span className="min-w-0 flex-1">
@@ -160,7 +148,7 @@ export function Inicio() {
           </Link>
         )}
 
-        {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande />}
+        {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande soDesktop />}
 
         {perfil && <PendenciasDoPerfil perfil={perfil} />}
 
@@ -168,7 +156,7 @@ export function Inicio() {
 
         {atalhos.length > 0 && (
           <section aria-labelledby="titulo-atalhos" className="space-y-2">
-            <h2 id="titulo-atalhos" className="px-1 ivo-sobretitulo text-texto-suave">
+            <h2 id="titulo-atalhos" className="px-1 ivo-h3">
               Atalhos
             </h2>
             <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -177,9 +165,9 @@ export function Inicio() {
                   <Link
                     to={a.para}
                     viewTransition
-                    className="flex min-h-16 items-center gap-3 rounded-cartao border-[1.5px] border-borda bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2"
+                    className="flex min-h-16 items-center gap-3 rounded-cartao bg-superficie p-4 shadow-[var(--sombra)]"
                   >
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-marinho text-papel">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-campo bg-selecao-suave text-texto">
                       <Icone nome={a.icone} />
                     </span>
                     <span className="min-w-0">
@@ -206,36 +194,46 @@ const PREFIXO: Record<Tipo, string> = {
   proximo: '',
 }
 
-function CartaoPendencia({ item, tipo, mostrarEmpresa }: { item: ItemPendencia; tipo: Tipo; mostrarEmpresa: boolean }) {
+function CartaoPendencia({
+  item,
+  tipo,
+  mostrarEmpresa,
+  aguardaVoce,
+}: {
+  item: ItemPendencia
+  tipo: Tipo
+  mostrarEmpresa: boolean
+  /** O pedido espera uma ação desta pessoa: única borda laranja da tela. */
+  aguardaVoce: boolean
+}) {
   const destino = tipo === 'orcar' ? `/pedidos/${item.id}/orcar` : `/pedidos/${item.id}`
   const total = item.total_cent ?? null
   return (
     <Link
       to={destino}
       viewTransition
-      className={`block rounded-cartao border-[1.5px] bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2 ${
-        item.urgente ? 'border-[var(--cor-laranja)]' : 'border-borda'
-      }`}
+      className={`block rounded-cartao bg-superficie p-4 shadow-[var(--sombra)] ${aguardaVoce ? 'border-2 border-laranja' : ''}`}
       data-testid={`pendencia-${tipo}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="ivo-sobretitulo text-texto-suave">
+          <p className="font-bold tabular-nums">
             Pedido {numeroPedido(item.numero)}
-            {mostrarEmpresa && item.empresa_nome ? ` · ${item.empresa_nome}` : ''}
+            {mostrarEmpresa && item.empresa_nome ? `, ${item.empresa_nome}` : ''}
           </p>
-          <p className="mt-0.5 font-bold tabular-nums">
-            {formatarQuando(item.inicio)} · {formatarDuracao(item.duracao_min)}
+          <p className="mt-0.5 ivo-legenda text-texto-suave tabular-nums">
+            {formatarQuando(item.inicio)}, {formatarDuracao(item.duracao_min)}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {item.urgente && (
-            <span className="rounded-full bg-[var(--cor-laranja)] px-2.5 py-0.5 text-xs font-extrabold tracking-wider text-marinho">
-              URGENTE
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cor-laranja)]/15 px-2.5 py-0.5 text-xs font-bold text-alerta-texto">
+              <Icone nome="alerta" tamanho={12} />
+              Urgente
             </span>
           )}
           {item.revisao && (
-            <span className="rounded-full border border-marinho-2 px-2.5 py-0.5 text-xs font-bold text-marinho-2">Revisão</span>
+            <span className="rounded-full border border-marinho-2 px-2.5 py-0.5 text-xs font-bold text-link">Revisão</span>
           )}
         </div>
       </div>
@@ -264,12 +262,14 @@ function GrupoPendencias({
   itens,
   tipo,
   mostrarEmpresa,
+  aguardaVoce = false,
   vazio,
 }: {
   titulo: string
   itens: ItemPendencia[]
   tipo: Tipo
   mostrarEmpresa: boolean
+  aguardaVoce?: boolean
   vazio?: string
 }) {
   const id = `pend-${tipo}`
@@ -287,7 +287,7 @@ function GrupoPendencias({
         <ul className="grid gap-3 md:grid-cols-2">
           {itens.map((i) => (
             <li key={i.id}>
-              <CartaoPendencia item={i} tipo={tipo} mostrarEmpresa={mostrarEmpresa} />
+              <CartaoPendencia item={i} tipo={tipo} mostrarEmpresa={mostrarEmpresa} aguardaVoce={aguardaVoce} />
             </li>
           ))}
         </ul>
@@ -299,7 +299,7 @@ function GrupoPendencias({
 function NadaPendente() {
   return (
     <Cartao className="space-y-2" data-testid="nada-pendente">
-      <h2 className="ivo-sobretitulo text-texto-suave">Pendências</h2>
+      <h2 className="sr-only">Pendências</h2>
       <div className="flex items-center gap-3 py-2">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-fundo text-[var(--status-concluida)]">
           <Icone nome="check" />
@@ -364,12 +364,14 @@ function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
   }
   if (!dados) return null
   const grupos = gruposDe(perfil, dados).filter((g) => g.itens.length > 0 || g.vazio)
+  const aguardaVoce = (tipo: Tipo) =>
+    (perfil.papel === 'CLIENTE' && tipo === 'aprovar') || (perfil.papel === 'MOTORISTA' && tipo === 'orcar')
   if (grupos.every((g) => g.itens.length === 0)) {
     return (
       <>
         <NadaPendente />
         {grupos.map((g) => (
-          <GrupoPendencias key={g.tipo} {...g} mostrarEmpresa={perfil.papel !== 'CLIENTE'} />
+          <GrupoPendencias key={g.tipo} {...g} mostrarEmpresa={perfil.papel !== 'CLIENTE'} aguardaVoce={aguardaVoce(g.tipo)} />
         ))}
       </>
     )
@@ -377,7 +379,7 @@ function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
   return (
     <div className="space-y-5" data-testid="pendencias">
       {grupos.map((g) => (
-        <GrupoPendencias key={g.tipo} {...g} mostrarEmpresa={perfil.papel !== 'CLIENTE'} />
+        <GrupoPendencias key={g.tipo} {...g} mostrarEmpresa={perfil.papel !== 'CLIENTE'} aguardaVoce={aguardaVoce(g.tipo)} />
       ))}
     </div>
   )

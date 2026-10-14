@@ -16,8 +16,25 @@
   --color-alerta-texto: var(--cor-alerta-texto);
   --color-selecao: var(--cor-selecao);
   --color-selecao-texto: var(--cor-selecao-texto);
+  --color-ocupado: var(--cor-ocupado);
+  --color-livre: var(--cor-livre);
+  --color-livre-fundo: var(--cor-livre-fundo);
+  --color-bloco: var(--cor-bloco);
+  --color-bloco-texto: var(--cor-bloco-texto);
+  --color-bloco-suave: var(--cor-bloco-suave);
+  --color-bloco-alerta: var(--cor-bloco-alerta);
+  --color-bloco-reservado: var(--cor-bloco-reservado);
+  --color-comando: var(--cor-comando);
+  --color-comando-texto: var(--cor-comando-texto);
+  --color-selecao-suave: var(--cor-selecao-suave);
+  --color-barra: var(--cor-barra);
+  --color-link: var(--cor-link);
+  --color-laranja: var(--cor-laranja);
   --font-sans: "Manrope Variable", system-ui, sans-serif;
-  --radius-cartao: var(--raio);
+  --radius-folha: var(--raio-folha);
+  --radius-cartao: var(--raio-cartao);
+  --radius-botao: var(--raio-botao);
+  --radius-campo: var(--raio-campo);
 }
 
 @layer base {
@@ -33,7 +50,11 @@
   button, a { touch-action: manipulation; }
   /* Foco sempre visível (teclado e leitores de tela). Sobre o azul do topo, contorno claro. */
   :focus-visible { outline: 3px solid var(--cor-foco); outline-offset: 2px; }
-  .sobre-marinho { --cor-foco: var(--cor-papel); }
+}
+
+/* Sobre fundo marinho, o contorno de foco fica claro. Utilitário (e não classe base) para valer também em md:. */
+@utility sobre-marinho {
+  --cor-foco: var(--cor-papel);
 }
 
 /* Escala tipográfica IVO (docs/marca/TIPOGRAFIA.md). Valores financeiros: tabular-nums. */
@@ -58,9 +79,25 @@
 
 /* Em @layer components para que utilitários (motion-reduce:animate-none) prevaleçam. */
 @layer components {
-  .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 600ms linear infinite; }
-  .pickup-balanco { animation: pickup-balancar 450ms ease-in-out infinite; }
-  .pickup-estrada { animation: estrada-andar 400ms linear infinite; }
+  /* Escolhido (dia, horário, opção, aba do seletor): cor cheia + contorno laranja afastado, sem ✓. */
+  .ivo-escolhido {
+    background: var(--cor-selecao);
+    color: var(--cor-selecao-texto);
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--cor-fundo), 0 0 0 4px var(--cor-laranja);
+  }
+  /* Bloco "Ocupado" da agenda: hachurado (horário de outra empresa, sem detalhes). */
+  .bloco-ocupado {
+    background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cor-ocupado) 22%, transparent) 0 6px, transparent 6px 12px);
+    border: 1px solid color-mix(in srgb, var(--cor-ocupado) 45%, transparent);
+  }
+  /* Carrinho (CarregandoPickup): rodas giram, estrada passa, pickup balança e o reboque vem um pouco atrás. */
+  .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 700ms linear infinite; }
+  .pickup-corpo { animation: pickup-balancar 900ms ease-in-out infinite alternate; }
+  .pickup-reboque { animation: pickup-balancar 900ms ease-in-out 220ms infinite alternate; }
+  .pickup-estrada { animation: estrada-andar 700ms linear infinite; }
+  .pickup-onda { animation: pickup-onda 1.4s ease-in infinite; }
+  .pickup-onda + .pickup-onda { animation-delay: 700ms; }
   /* Check de sucesso (pedido enviado): círculo cresce e o traço é desenhado uma vez. */
   .check-circulo { transform-box: fill-box; transform-origin: center; animation: check-crescer 320ms var(--curva) both; }
   .check-traco { stroke-dasharray: 70; stroke-dashoffset: 70; animation: check-desenhar 360ms 220ms var(--curva) forwards; }
@@ -74,8 +111,9 @@
 }
 
 @keyframes pickup-girar { to { transform: rotate(360deg); } }
-@keyframes pickup-balancar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
-@keyframes estrada-andar { to { stroke-dashoffset: 30; } }
+@keyframes pickup-balancar { from { transform: translateY(0); } to { transform: translateY(-1.6px); } }
+@keyframes estrada-andar { to { stroke-dashoffset: 40; } }
+@keyframes pickup-onda { 0% { transform: translateX(8px); opacity: 0; } 30% { opacity: 0.55; } 100% { transform: translateX(-26px); opacity: 0; } }
 @keyframes check-crescer { from { transform: scale(0.6); opacity: 0; } }
 @keyframes check-desenhar { to { stroke-dashoffset: 0; } }
 @keyframes check-sair { to { transform: scale(0.7); opacity: 0; } }

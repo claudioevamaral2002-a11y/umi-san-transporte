@@ -270,7 +270,7 @@ function ItemAcao({ onClick, icone, titulo, texto }: { onClick: () => void; icon
         onClick={onClick}
         className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-fundo"
       >
-        <Icone nome={icone} className="text-marinho-2" />
+        <Icone nome={icone} className="text-link" />
         <span className="min-w-0 flex-1">
           <span className="block font-semibold">{titulo}</span>
           <span className="block ivo-legenda text-texto-suave">{texto}</span>
@@ -492,8 +492,8 @@ function Gerenciar({
         <p className="ivo-legenda text-texto-suave">{u.email}</p>
         <p className="ivo-legenda">
           {equipe && u.nivel ? NIVEIS[u.nivel] : PAPEIS[u.papel]}
-          {!equipe && u.empresa_nome ? ` · ${u.empresa_nome}` : ''}
-          {!equipe && u.papel === 'CLIENTE' && u.nivel ? ` · ${NIVEIS[u.nivel]}` : ''}
+          {!equipe && u.empresa_nome ? `, ${u.empresa_nome}` : ''}
+          {!equipe && u.papel === 'CLIENTE' && u.nivel ? `, ${NIVEIS[u.nivel]}` : ''}
         </p>
         <Situacao u={u} />
       </div>
@@ -531,7 +531,7 @@ function Detalhe({ u }: { u: Usuario }) {
   return (
     <>
       {u.empresa_nome}
-      {u.papel === 'CLIENTE' && u.nivel && <> · {NIVEIS[u.nivel]}</>}
+      {u.papel === 'CLIENTE' && u.nivel && <>, {NIVEIS[u.nivel]}</>}
     </>
   )
 }

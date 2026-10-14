@@ -33,7 +33,7 @@ test.describe('administração', () => {
     const lista = page.getByTestId('lista-usuarios')
     await expect(lista.getByRole('listitem')).toHaveCount(3)
     const carla = lista.getByRole('listitem').filter({ hasText: 'Carla Dias' })
-    await expect(carla).toContainText('Umi San · Gestor da empresa (N1)')
+    await expect(carla).toContainText('Umi San, Gestor da empresa (N1)')
     await expect(carla).toContainText('Inativo')
     await expect(carla).toContainText('Senha pendente')
     await expect(lista.getByRole('listitem').filter({ hasText: 'Bruno Lima' })).toContainText('2FA ok')

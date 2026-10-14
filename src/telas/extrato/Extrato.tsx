@@ -62,7 +62,7 @@ function NumeroPedido({ item }: { item: ItemExtrato }) {
   if (item.numero === null) return <span className="text-texto-suave">—</span>
   // Detalhe só para quem pode ver o pedido (privacidade do extrato, especificação 2); os demais veem o número.
   return item.pode_abrir && item.atividade_id ? (
-    <Link to={`/pedidos/${item.atividade_id}`} className="font-semibold text-marinho-2 underline underline-offset-2">
+    <Link to={`/pedidos/${item.atividade_id}`} className="font-semibold text-link underline underline-offset-2">
       Pedido {numeroPedido(item.numero)}
     </Link>
   ) : (
@@ -85,8 +85,8 @@ function DetalhesAdm({ item }: { item: ItemExtrato }) {
   return (
     <p className="ivo-legenda break-words text-texto-suave">
       {item.motivo && <>Motivo: {item.motivo}</>}
-      {item.comprovante && <> · Comprovante: {item.comprovante}</>}
-      {item.criado_por_nome && <> · Por {item.criado_por_nome}</>}
+      {item.comprovante && <>, Comprovante: {item.comprovante}</>}
+      {item.criado_por_nome && <>, Por {item.criado_por_nome}</>}
     </p>
   )
 }
@@ -212,7 +212,7 @@ export function ExtratoEmpresa({ empresa, empresaIdTopico, empresaNome, adm = fa
                 {(i.numero !== null || i.solicitante_nome) && (
                   <p className="ivo-legenda">
                     <NumeroPedido item={i} />
-                    {i.solicitante_nome && <span className="text-texto-suave"> · {i.solicitante_nome}</span>}
+                    {i.solicitante_nome && <span className="text-texto-suave">, {i.solicitante_nome}</span>}
                   </p>
                 )}
                 <DetalhesAdm item={i} />
@@ -277,7 +277,7 @@ function TabelaExtrato({
                 <td className="max-w-xs px-3 py-2.5 break-words text-texto-suave">
                   {[i.motivo, i.comprovante && `Comprovante: ${i.comprovante}`, i.criado_por_nome && `Por ${i.criado_por_nome}`]
                     .filter(Boolean)
-                    .join(' · ') || '—'}
+                    .join(', ') || '—'}
                 </td>
               )}
               <td className="px-3 py-2.5 text-right">
@@ -312,7 +312,7 @@ function CabecalhoImpressao({ empresa, periodo, tipo }: { empresa: string; perio
       <p className="text-xl font-bold">IVO Transportes — Extrato de {empresa}</p>
       <p>
         Período: {diaBr(periodo.diaDe)} a {diaBr(periodo.diaAte)}
-        {tipo ? ` · Tipo: ${ROTULO_TIPO[tipo]}` : ''}
+        {tipo ? `, Tipo: ${ROTULO_TIPO[tipo]}` : ''}
       </p>
       <p>Emitido em {formatarDataHora(new Date())}</p>
     </div>

@@ -20,7 +20,7 @@ export function CabecalhoEntrada({
       >
         <Icone nome="setaEsquerda" />
       </button>
-      <p className="ivo-sobretitulo text-texto-suave">{passo}</p>
+      <p className="ivo-legenda font-semibold text-texto-suave">{passo}</p>
     </div>
   )
 }

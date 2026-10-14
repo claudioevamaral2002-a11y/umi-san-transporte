@@ -63,6 +63,8 @@ test.describe('legenda = marcadores', () => {
     await simularPedidos(page)
     await mesComTodosOsMarcadores(page, ['meu', 'aguardando', 'ocupado', 'sem_horario'])
     await page.goto('/pedidos/novo')
+    // No redesign o mês inteiro abre numa folha a partir da faixa de dias.
+    await page.getByRole('button', { name: 'Ver mês inteiro' }).click()
     // Os dias +5…+8 podem cair no mês seguinte: confere os dois meses.
     const vistos = new Set<string>()
     for (let i = 0; i < 2; i++) {
@@ -81,7 +83,7 @@ test.describe('legenda = marcadores', () => {
     const esperado = {
       meu: { dia: diaSp(5), forma: 'circle', cor: 'rgb(30, 75, 122)' },
       aguardando: { dia: diaSp(6), forma: 'path', cor: 'rgb(194, 65, 12)' },
-      ocupado: { dia: diaSp(7), forma: 'circle', cor: 'rgb(150, 166, 187)' },
+      ocupado: { dia: diaSp(7), forma: 'circle', cor: 'rgb(116, 133, 156)' }, // #74859C: 3,4:1 sobre o papel (o #96A6BB antigo dava 2,3:1)
     }
     for (const [tipo, e] of Object.entries(esperado)) {
       const celula = await irAoDia(page, e.dia)
@@ -102,6 +104,8 @@ test.describe('legenda = marcadores', () => {
     await simularPedidos(page)
     await mesComTodosOsMarcadores(page, [])
     await page.goto('/pedidos/novo')
+    // No redesign o mês inteiro abre numa folha a partir da faixa de dias.
+    await page.getByRole('button', { name: 'Ver mês inteiro' }).click()
     const { marcadores } = await conferirLegenda(page)
     expect(marcadores).toEqual([])
     await expect(page.getByTestId('legenda-calendario')).toHaveCount(0)
@@ -117,6 +121,7 @@ test.describe('legenda = marcadores', () => {
       await simularPedidos(page)
       await mesComTodosOsMarcadores(page, ['aguardando'])
       await page.goto('/agenda')
+      await page.getByRole('radiogroup', { name: 'Visualização' }).getByRole('radio', { name: 'Mês' }).click()
       const { marcadores } = await conferirLegenda(page)
       // aguardando também é "meu" (o pedido é visível ao perfil) — ou nada, se +6 cair no mês seguinte.
       if (marcadores.length) expect(marcadores).toEqual(['aguardando', 'meu'])

@@ -328,7 +328,7 @@ test.describe('cliente: extrato', () => {
     await expect(itens.nth(4)).toContainText('Crédito')
     // Pedido que a pessoa pode ver: link; pedido do colega: só o número (e o solicitante).
     await expect(itens.nth(0).getByRole('link', { name: 'Pedido #0042' })).toHaveAttribute('href', `/pedidos/${ID_PEDIDO}`)
-    await expect(itens.nth(3)).toContainText('Pedido #0039 · Elisa Prado')
+    await expect(itens.nth(3)).toContainText('Pedido #0039, Elisa Prado')
     await expect(itens.nth(3).getByRole('link')).toHaveCount(0)
     // Sem campos do ADM para o cliente.
     await expect(page.getByTestId('extrato')).not.toContainText('Pix de outubro')
@@ -427,8 +427,8 @@ test.describe('ADM: clientes e crédito', () => {
     await folha.getByRole('button', { name: 'Revisar' }).click()
     const confirmar = folha.getByTestId('confirmar-lancamento')
     await expect(confirmar.getByTestId('confirmar-valor')).toHaveText(/Recarga \+ R\$\s1\.500,00/)
-    await expect(confirmar.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s2\.490,00 → R\$\s3\.990,00/)
-    await expect(confirmar).toContainText(/R\$\s3\.200,00 → R\$\s4\.700,00/)
+    await expect(confirmar.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s2\.490,00 para R\$\s3\.990,00/)
+    await expect(confirmar).toContainText(/R\$\s3\.200,00 para R\$\s4\.700,00/)
     expect(chamadas.map((c) => c.rpc)).not.toContain('lancar_recarga')
 
     await confirmar.getByRole('button', { name: 'Confirmar recarga' }).click()
@@ -469,7 +469,7 @@ test.describe('ADM: clientes e crédito', () => {
     await ajuste.getByLabel('Motivo').fill('Correção de pedágio')
     await ajuste.getByRole('button', { name: 'Revisar' }).click()
     await expect(ajuste.getByTestId('confirmar-valor')).toHaveText(/Ajuste de saldo − R\$\s25,50/)
-    await expect(ajuste.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s2\.490,00 → R\$\s2\.464,50/)
+    await expect(ajuste.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s2\.490,00 para R\$\s2\.464,50/)
     await ajuste.getByRole('button', { name: 'Confirmar ajuste' }).click()
     await expect(ajuste).toBeHidden()
     expect(chamadas.find((c) => c.rpc === 'lancar_ajuste')?.corpo).toMatchObject({
@@ -480,7 +480,7 @@ test.describe('ADM: clientes e crédito', () => {
 
     // Extrato do ADM: motivo, comprovante e autor; só lançamentos financeiros têm "Estornar".
     const itens = page.getByTestId('lista-extrato').getByTestId('item-extrato')
-    await expect(itens.nth(4)).toContainText('Motivo: Pix de outubro · Comprovante: E2E-PIX-123 · Por Ana Souza')
+    await expect(itens.nth(4)).toContainText('Motivo: Pix de outubro, Comprovante: E2E-PIX-123, Por Ana Souza')
     await expect(itens.nth(0).getByRole('button', { name: 'Estornar' })).toBeVisible()
     await expect(itens.nth(1).getByRole('button', { name: 'Estornar' })).toHaveCount(0)
     await expect(itens.nth(2).getByRole('button', { name: 'Estornar' })).toHaveCount(0)
@@ -490,7 +490,7 @@ test.describe('ADM: clientes e crédito', () => {
     await estorno.getByLabel('Motivo').fill('Pix devolvido')
     await estorno.getByRole('button', { name: 'Revisar' }).click()
     await expect(estorno.getByTestId('confirmar-valor')).toHaveText(/Estorno − R\$\s5\.000,00/)
-    await expect(estorno.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s2\.490,00 → −R\$\s2\.510,00|R\$\s2\.490,00 → -R\$\s2\.510,00/)
+    await expect(estorno.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s2\.490,00 para −R\$\s2\.510,00|R\$\s2\.490,00 para -R\$\s2\.510,00/)
     await estorno.getByRole('button', { name: 'Confirmar estorno' }).click()
     await expect(estorno).toBeHidden()
     const corpo = chamadas.find((c) => c.rpc === 'estornar_lancamento')!.corpo

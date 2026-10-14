@@ -14,7 +14,7 @@ export function ErroGeral() {
   return (
     <main className="mx-auto min-h-dvh max-w-md p-4" data-testid="erro-geral">
       <Cartao className="space-y-3">
-        <p className="ivo-sobretitulo text-texto-suave">IVO Transportes</p>
+        <p className="ivo-legenda font-semibold text-texto-suave">IVO Transportes</p>
         <h1 className="ivo-h2">Algo deu errado</h1>
         <p className="ivo-corpo text-texto-suave">
           Não foi possível abrir esta tela. Recarregue para buscar a versão mais recente do aplicativo.

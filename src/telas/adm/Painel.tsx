@@ -46,11 +46,11 @@ function ListaCredito({ dados, limite }: { dados: DadosPainel; limite?: number }
     <ul className="divide-y divide-borda" data-testid="painel-lista-credito">
       {mostradas.map((e) => (
         <li key={e.empresa_id}>
-          <Link to={`/adm/creditos/${e.empresa_id}`} className="flex min-h-14 items-center justify-between gap-3 py-2 hover:text-marinho-2">
+          <Link to={`/adm/creditos/${e.empresa_id}`} className="flex min-h-14 items-center justify-between gap-3 py-2 hover:text-link">
             <span className="min-w-0">
               <span className="block truncate font-bold">{e.empresa_nome}</span>
               <span className="block ivo-legenda text-texto-suave tabular-nums">
-                Reservado <Dinheiro centavos={e.reservado_cent} /> · limite <Dinheiro centavos={e.limite_cent} />
+                Reservado <Dinheiro centavos={e.reservado_cent} />, limite <Dinheiro centavos={e.limite_cent} />
               </span>
             </span>
             <span className="flex shrink-0 flex-col items-end gap-1">
@@ -80,7 +80,7 @@ function Reconciliacao({ dados }: { dados: DadosPainel }) {
         {r.ok ? 'Tudo confere' : `${r.divergencias_qtd} divergência${r.divergencias_qtd === 1 ? '' : 's'}`}
       </p>
       <p className="ivo-legenda text-texto-suave tabular-nums">
-        {formatarDataHora(r.em)} · {r.empresas} empresa{r.empresas === 1 ? '' : 's'} conferida{r.empresas === 1 ? '' : 's'}
+        {formatarDataHora(r.em)}, {r.empresas} empresa{r.empresas === 1 ? '' : 's'} conferida{r.empresas === 1 ? '' : 's'}
       </p>
       {!r.ok && (
         <ul className="space-y-1.5" data-testid="lista-divergencias">
@@ -91,8 +91,8 @@ function Reconciliacao({ dados }: { dados: DadosPainel }) {
                 {d.empresa_id ? (nomes.get(d.empresa_id) ?? 'Empresa') : 'Empresa'}
                 {d.atividade_id && (
                   <>
-                    {' · '}
-                    <Link to={`/pedidos/${d.atividade_id}`} className="font-semibold text-marinho-2 underline">
+                    {', '}
+                    <Link to={`/pedidos/${d.atividade_id}`} className="font-semibold text-link underline">
                       ver pedido
                     </Link>
                   </>
@@ -113,7 +113,7 @@ function Blocos({ dados, resumo = false }: { dados: DadosPainel; resumo?: boolea
         titulo="Crédito por cliente"
         testid="painel-credito"
         acao={
-          <Link to="/adm/creditos" className="min-h-10 font-semibold text-marinho-2 underline-offset-4 hover:underline">
+          <Link to="/adm/creditos" className="min-h-10 font-semibold text-link underline-offset-4 hover:underline">
             Ver todos
           </Link>
         }
@@ -204,9 +204,8 @@ export function PainelResumo() {
         <h2 id="titulo-painel-resumo" className="ivo-sobretitulo text-texto-suave">
           Painel
         </h2>
-        <Link to="/adm/painel" viewTransition className="inline-flex min-h-12 items-center gap-1 font-semibold text-marinho-2">
+        <Link to="/adm/painel" viewTransition className="inline-flex min-h-12 items-center gap-1 font-semibold text-link">
           Abrir painel
-          <Icone nome="setaDireitaPequena" tamanho={18} />
         </Link>
       </div>
       <Blocos dados={dados} resumo />

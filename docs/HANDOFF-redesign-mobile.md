@@ -13,6 +13,16 @@ Estado em **13/10/2026**. Leia antes o [`HANDOFF.md`](../HANDOFF.md), com as reg
   5. **Código do autenticador pedido ao reabrir.** Antes de pedir o código, o app agora renova o token uma vez, porque um token antigo anterior ao 2FA causava o pedido indevido (`src/lib/sessao.tsx`). O teste com o banco real mostra a sessão mantendo aal2 em recarga, nova aba, token expirado e renovação. **Pendente:** se o dono ainda vir o código depois de publicar, perguntar se foi no app instalado ou numa aba do navegador, e se a senha também foi pedida. Isso indicaria uma sessão encerrada por reuso do refresh token (RUNBOOK §15).
 - **Decisão sobre a publicação:** combinar com o dono se essas correções vão para produção antes do redesign (são correções de bugs) ou junto com ele. O dono costuma preferir publicar fluxos completos.
 
+## 1.1 Atualização em 14/10/2026
+
+- **PR #24** (`melhorias-mobile` → `main`) aberto com as 5 correções, para publicar antes do redesign (decisão do dono). Merge com o dono.
+- **Redesign implementado na branch `redesign-mobile`** (a partir de `melhorias-mobile`), seguindo `docs/redesign/plano-implementacao.md` e os mockups aprovados em `docs/redesign/mockups-mobile.html` (carrinho opção A, barco).
+  - Tokens novos com teste AA de todos os pares nos modos claro, escuro e alto contraste (`src/design/tokens.test.ts`). Corrigidos: cinza do ocupado (2,3:1), alto contraste no celular escuro (seleção off-white sobre branco), azul dos links no escuro (`--cor-link`).
+  - Agenda estilo Lark (Dia, 3 dias, Mês) com a linha do agora e o triângulo; Novo pedido com faixa de dias, horários em grade e frase de confirmação; moldura com abas em pílula e botão "+"; Início com saldo em bloco marinho; carrinho novo.
+  - Guarda `scripts/varrer-estilo.ts`: o teste falha se uma tela voltar a usar " · " ou "→".
+  - Capturas para o dono: `CAPTURAS=1 npx playwright test zz-capturas-redesign.spec.ts --project=celular` (saem em `test-results/capturas-redesign/`).
+- **Fica para depois (decisões registradas):** Extrato, Créditos e Painel foram só restilizados pelos tokens (sem o seletor em pílula, ícones por lançamento e gráfico do mockup); "ocupado" no passo Quando também cobre horários que não cabem na duração escolhida; ver a lista de pendências menores no PR do redesign.
+
 ## 2. O pedido de redesign (palavras do dono)
 
 > "Aplicativo com bom funcionamento, focando no app de celular, gostaria que a gente melhorasse o front conforme tipografia e system design informado." · "Aba calendário ser similar a do Lark." · "Preciso de um design melhor até para o carrinho da tela de carregamento."

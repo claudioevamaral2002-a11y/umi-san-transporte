@@ -23,7 +23,7 @@ const aalDo = (jwt: string) =>
   (JSON.parse(Buffer.from(jwt.split('.')[1]!, 'base64url').toString()) as { aal?: string }).aal ?? null
 
 async function esperarInicioSemCodigo(page: Page, nome: string) {
-  await expect(page.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('heading', { name: new RegExp(`^(Bom dia|Boa tarde|Boa noite), ${nome}$`) })).toBeVisible({ timeout: 30_000 })
   await expect(page).toHaveURL(/:\/\/[^/]+\/$/)
   await expect(page.getByRole('heading', { name: 'Digite o código' })).toHaveCount(0)
 }

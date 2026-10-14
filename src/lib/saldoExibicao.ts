@@ -98,7 +98,7 @@ export function resumoDispositivo(ua: string): string {
             : /Safari\//.test(ua)
               ? 'Safari'
               : 'Outro navegador'
-  return `${sistema} · ${navegador} · app IVO`
+  return `${sistema} · ${navegador} · app IVO` // varrer-estilo: permitido (dado de auditoria, não texto de tela)
 }
 
 /**

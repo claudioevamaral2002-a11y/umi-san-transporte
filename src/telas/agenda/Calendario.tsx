@@ -14,7 +14,8 @@ const SEMANA = [
   { curto: 'S', nome: 'Sábado' },
 ]
 
-function descrever(dia: string, d: DiaDoMes | undefined, passado: boolean): string {
+/** Nome acessível do dia (mesmo texto no mês e na faixa da semana da Agenda). */
+export function descrever(dia: string, d: DiaDoMes | undefined, passado: boolean): string {
   const partes = [diaEMes(dia)]
   if (passado) partes.push('passado')
   if (d?.dia_cheio) partes.push('sem horário livre')
@@ -122,13 +123,15 @@ export function Calendario({
                   grande ? 'h-12 md:h-20 md:items-start md:justify-start md:p-2' : 'h-12'
                 } ${
                   marcado
-                    ? 'bg-selecao text-selecao-texto'
+                    ? 'ivo-escolhido'
                     : cheio
                       ? 'text-texto-suave'
-                      : passado
-                        ? 'text-texto-suave/50'
-                        : 'text-texto hover:bg-borda/60'
-                } ${ehHoje && !marcado ? 'ring-2 ring-marinho-2 ring-inset' : ''} disabled:cursor-not-allowed`}
+                      : ehHoje
+                        ? 'font-extrabold text-alerta-texto hover:bg-borda/60'
+                        : passado
+                          ? 'text-texto-suave/50'
+                          : 'text-texto hover:bg-borda/60'
+                } disabled:cursor-not-allowed`}
               >
                 <span
                   className={cheio ? 'line-through decoration-2' : undefined}

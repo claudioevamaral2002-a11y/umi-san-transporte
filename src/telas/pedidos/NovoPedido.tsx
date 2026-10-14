@@ -38,9 +38,13 @@ import {
   horaDe,
   mesDe,
   nomeDoDia,
+  nomeDoMes,
   numeroPedido,
+  somarDias,
 } from '../../lib/tempo.ts'
+import { fraseQuando, horariosDoDia } from '../../lib/horariosDoDia.ts'
 import { Calendario } from '../agenda/Calendario.tsx'
+import { FaixaDias } from './FaixaDias.tsx'
 import { useCreditoParaPedido } from './Pedidos.tsx'
 import { CaixaChip, Contador, Escolhas, Rota } from './componentes.tsx'
 
@@ -68,7 +72,7 @@ function Cabecalho({
   tituloRef: RefObject<HTMLHeadingElement | null>
 }) {
   return (
-    <header className="sobre-marinho bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-5 text-papel">
+    <header className="sobre-marinho border-b border-borda bg-comando px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-5 text-comando-texto">
       <div className="mx-auto max-w-lg">
         <div className="flex items-center justify-between">
           {aoVoltar ? (
@@ -92,7 +96,7 @@ function Cabecalho({
             <Icone nome="fechar" />
           </button>
         </div>
-        <p className="ivo-sobretitulo text-cinza-azulado">Passo {passo} de 4</p>
+        <p className="text-[13px] font-medium text-bloco-suave">Passo {passo} de 4</p>
         <h1 ref={tituloRef} tabIndex={-1} className="mt-1 ivo-h1 outline-none">
           {TITULOS[passo]}
         </h1>
@@ -107,7 +111,7 @@ function Cabecalho({
           {[1, 2, 3, 4].map((n) => (
             <span
               key={n}
-              className={`h-1.5 rounded-full transition-colors duration-300 motion-reduce:transition-none ${
+              className={`h-1 rounded-full transition-colors duration-300 motion-reduce:transition-none ${
                 n < passo ? 'bg-[var(--cor-laranja)]' : n === passo ? 'bg-papel' : 'bg-white/20'
               }`}
             />
@@ -126,6 +130,9 @@ function Rodape({ children }: { children: ReactNode }) {
   )
 }
 
+/** Dias da faixa do passo "Quando" (14 a partir de hoje, ou a partir do dia escolhido no mês, se ficar depois). */
+const DIAS_NA_FAIXA = 14
+
 function PassoQuando({
   f,
   mudar,
@@ -140,71 +147,104 @@ function PassoQuando({
   aviso: string | null
 }) {
   const hoje = hojeSp()
+  const inicioFaixa = f.dia && f.dia > somarDias(hoje, DIAS_NA_FAIXA - 1) ? f.dia : hoje
+  const [mesAberto, setMesAberto] = useState(false)
   const [mes, setMes] = useState(() => mesDe(f.dia ?? hoje))
-  const calendario = useConsulta(`novo-mes-${mes}-${f.duracaoMin}-${rodada}`, () => pedidos.diasDoMes(mes, f.duracaoMin))
+  const mesesDaFaixa = [...new Set([mesDe(inicioFaixa), mesDe(somarDias(inicioFaixa, DIAS_NA_FAIXA - 1))])]
+  const faixa = useConsulta(`novo-faixa-${inicioFaixa}-${f.duracaoMin}-${rodada}`, async () =>
+    (await Promise.all(mesesDaFaixa.map((m) => pedidos.diasDoMes(m, f.duracaoMin)))).flat(),
+  )
+  const calendario = useConsulta(`novo-mes-${mes}-${f.duracaoMin}-${rodada}-${mesAberto}`, () =>
+    mesAberto ? pedidos.diasDoMes(mes, f.duracaoMin) : Promise.resolve(undefined),
+  )
   const livres = useConsulta(`novo-livres-${f.dia ?? '-'}-${f.duracaoMin}-${rodada}`, async () =>
     f.dia ? pedidos.horariosLivres(f.dia, f.duracaoMin) : null,
   )
   const horarios = livres.dados?.horarios ?? []
+  const grade = horariosDoDia(horarios)
+  const escolhaValida = horarios.some((h) => mesmoInstante(h, f.inicio))
+  const escolherDia = (dia: string) => mudar({ dia, inicio: mesmoDia(f.inicio, dia) ? f.inicio : null })
+  const nomeMes = nomeDoMes(mesDe(f.dia ?? inicioFaixa)).split(' de ')[0]
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6" data-testid="passo-quando">
       {aviso && <Mensagem tipo="erro">{aviso}</Mensagem>}
-      <Cartao>
-        <Calendario
-          mes={mes}
-          dias={calendario.dados}
-          selecionado={f.dia}
-          hoje={hoje}
-          modo="escolher"
-          aoSelecionar={(dia) => mudar({ dia, inicio: mesmoDia(f.inicio, dia) ? f.inicio : null })}
-          aoMudarMes={setMes}
-        />
-        {calendario.erro && calendario.dados === undefined && (
-          <div className="pt-3">
-            <Mensagem tipo="erro">Não foi possível carregar o calendário. Verifique a conexão.</Mensagem>
-          </div>
+      <section aria-label="Dia">
+        <div className="flex items-baseline justify-between gap-3 pb-1">
+          <h2 className="ivo-h3">{nomeMes}</h2>
+          <button
+            type="button"
+            onClick={() => {
+              setMes(mesDe(f.dia ?? hoje))
+              setMesAberto(true)
+            }}
+            className="min-h-11 text-sm font-semibold underline underline-offset-4"
+          >
+            Ver mês inteiro
+          </button>
+        </div>
+        <FaixaDias inicio={inicioFaixa} quantos={DIAS_NA_FAIXA} selecionado={f.dia} dias={faixa.dados} aoSelecionar={escolherDia} />
+        {faixa.erro && faixa.dados === undefined && (
+          <Mensagem tipo="erro">Não foi possível carregar os dias. Verifique a conexão.</Mensagem>
         )}
-      </Cartao>
+      </section>
 
       <section aria-labelledby="titulo-horarios" className="space-y-2">
-        <h2 id="titulo-horarios" className="ivo-sobretitulo text-texto-suave">
-          Horários livres{f.dia ? ` · ${nomeDoDia(f.dia)}` : ''}
-        </h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="titulo-horarios" className="font-semibold">
+            Início
+          </h2>
+          {grade.some((h) => !h.livre) && <span className="ivo-legenda text-texto-suave">riscado = ocupado</span>}
+        </div>
         {!f.dia ? (
-          <p className="ivo-corpo text-texto-suave">Escolha um dia no calendário.</p>
+          <p className="ivo-corpo text-texto-suave">Escolha um dia para ver os horários livres.</p>
         ) : livres.carregando && livres.dados === undefined ? (
-          <div className="flex flex-wrap gap-2" aria-busy="true" aria-label="Carregando os horários">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-12 w-20" />
+          <div className="grid grid-cols-4 gap-2" aria-busy="true" aria-label="Carregando os horários">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="h-11 rounded-campo" />
             ))}
           </div>
         ) : livres.erro && livres.dados === undefined ? (
           <Mensagem tipo="erro">Não foi possível carregar os horários. Verifique a conexão.</Mensagem>
-        ) : horarios.length === 0 ? (
+        ) : grade.length === 0 ? (
           <p className="ivo-corpo text-texto-suave">Nenhum horário livre neste dia para essa duração. Tente outro dia.</p>
         ) : (
-          <div role="radiogroup" aria-labelledby="titulo-horarios" className="flex flex-wrap gap-2" data-testid="horarios-livres">
-            {horarios.map((h) => {
-              const marcado = mesmoInstante(h, f.inicio)
+          <div role="radiogroup" aria-labelledby="titulo-horarios" className="grid grid-cols-4 gap-2" data-testid="horarios-livres">
+            {grade.map((h) => {
+              if (!h.livre) {
+                return (
+                  <button
+                    key={h.inicio}
+                    type="button"
+                    role="radio"
+                    aria-checked={false}
+                    aria-disabled="true"
+                    aria-label={`${horaDe(h.inicio)}, ocupado`}
+                    className="h-11 cursor-not-allowed rounded-campo border-[1.5px] border-dashed border-borda text-[15px] font-semibold text-texto-suave tabular-nums line-through"
+                  >
+                    {horaDe(h.inicio)}
+                  </button>
+                )
+              }
+              const marcado = mesmoInstante(h.inicio, f.inicio)
               return (
                 <button
-                  key={h}
+                  key={h.inicio}
                   type="button"
                   role="radio"
                   aria-checked={marcado}
-                  onClick={() => mudar({ inicio: new Date(h).toISOString() })}
-                  className={`min-h-12 min-w-20 rounded-xl border-[1.5px] px-3 text-base font-bold tabular-nums transition-colors duration-150 motion-reduce:transition-none ${
-                    marcado ? 'border-selecao bg-selecao text-selecao-texto' : 'border-borda bg-superficie hover:border-marinho-2'
+                  onClick={() => mudar({ inicio: new Date(h.inicio).toISOString() })}
+                  className={`h-11 rounded-campo border-[1.5px] text-[15px] font-semibold tabular-nums transition-colors duration-150 motion-reduce:transition-none ${
+                    marcado ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
                   }`}
                 >
-                  {horaDe(h)}
+                  {horaDe(h.inicio)}
                 </button>
               )
             })}
           </div>
         )}
-        {f.inicio && livres.dados && !horarios.some((h) => mesmoInstante(h, f.inicio)) && (
+        {f.inicio && livres.dados && !escolhaValida && (
           <p className="ivo-legenda font-semibold text-alerta-texto">
             O horário {horaDe(f.inicio)} não está livre com essa duração. Escolha outro.
           </p>
@@ -216,18 +256,37 @@ function PassoQuando({
         )}
       </section>
 
-      <Cartao>
-        <Contador
-          rotulo="Duração estimada"
-          valor={f.duracaoMin}
-          min={DURACAO_MIN}
-          max={DURACAO_MAX}
-          passo={PASSO_DURACAO}
-          aoMudar={(duracaoMin) => mudar({ duracaoMin })}
-          formatar={formatarDuracao}
-          detalhe="O motorista confirma no orçamento."
+      <Contador
+        rotulo="Duração estimada"
+        valor={f.duracaoMin}
+        min={DURACAO_MIN}
+        max={DURACAO_MAX}
+        passo={PASSO_DURACAO}
+        aoMudar={(duracaoMin) => mudar({ duracaoMin })}
+        formatar={formatarDuracao}
+        detalhe="O motorista confirma no orçamento."
+      />
+
+      {f.dia && f.inicio && escolhaValida && (
+        <p data-testid="frase-quando" aria-live="polite" className="rounded-campo bg-selecao-suave px-3.5 py-3 leading-snug font-semibold">
+          {fraseQuando(f.dia, f.inicio, f.duracaoMin)}
+        </p>
+      )}
+
+      <Folha aberta={mesAberto} titulo="Escolha o dia" onFechar={() => setMesAberto(false)}>
+        <Calendario
+          mes={mes}
+          dias={calendario.dados}
+          selecionado={f.dia}
+          hoje={hoje}
+          modo="escolher"
+          aoSelecionar={(dia) => {
+            escolherDia(dia)
+            setMesAberto(false)
+          }}
+          aoMudarMes={setMes}
         />
-      </Cartao>
+      </Folha>
     </div>
   )
 }
@@ -387,14 +446,14 @@ function LinhaResumo({ titulo, aoEditar, children }: { titulo: string; aoEditar:
   return (
     <div className="flex items-start justify-between gap-3 border-b border-borda py-3 last:border-b-0">
       <div className="min-w-0">
-        <p className="ivo-sobretitulo text-texto-suave">{titulo}</p>
+        <p className="ivo-legenda font-semibold text-texto-suave">{titulo}</p>
         <div className="mt-1">{children}</div>
       </div>
       <button
         type="button"
         onClick={aoEditar}
         aria-label={`Editar ${titulo.toLowerCase()}`}
-        className="-mr-2 min-h-12 shrink-0 rounded-xl px-3 font-semibold text-marinho-2 hover:bg-borda/60"
+        className="-mr-2 min-h-12 shrink-0 rounded-xl px-3 font-semibold text-link hover:bg-borda/60"
       >
         Editar
       </button>
@@ -442,7 +501,7 @@ function PassoRevisar({
       <Cartao className="py-1" data-testid="resumo-pedido">
         <LinhaResumo titulo="Quando" aoEditar={() => irPara(1)}>
           <p className="font-bold tabular-nums">
-            {f.dia ? nomeDoDia(f.dia) : ''} · {f.inicio ? horaDe(f.inicio) : ''}
+            {f.dia ? nomeDoDia(f.dia) : ''}, {f.inicio ? horaDe(f.inicio) : ''}
           </p>
           <p className="ivo-legenda text-texto-suave">Duração estimada: {formatarDuracao(f.duracaoMin)}</p>
         </LinhaResumo>
@@ -451,7 +510,7 @@ function PassoRevisar({
           <p className="mt-1 ivo-legenda text-texto-suave">{rotuloTrajeto(f.levar, f.trazer)}</p>
           {(f.contatoNome || f.contatoTelefone) && (
             <p className="ivo-legenda text-texto-suave">
-              Contato: {[f.contatoNome.trim(), f.contatoTelefone].filter(Boolean).join(' · ')}
+              Contato: {[f.contatoNome.trim(), f.contatoTelefone].filter(Boolean).join(', ')}
             </p>
           )}
         </LinhaResumo>
@@ -465,7 +524,7 @@ function PassoRevisar({
         </LinhaResumo>
       </Cartao>
       <div className="flex gap-3 rounded-cartao border-[1.5px] border-marinho-2/40 bg-marinho-2/10 p-4" data-testid="aviso-prazo">
-        <Icone nome="relogio" className="mt-0.5 text-marinho-2" />
+        <Icone nome="relogio" className="mt-0.5 text-link" />
         <p className="ivo-corpo">
           {prazoHoras
             ? `O motorista envia o orçamento em até ${prazoPorExtenso(prazoHoras)}; o horário fica pré-reservado até lá.`
@@ -493,7 +552,7 @@ function Sucesso({ id, numero, prazoHoras }: { id: string; numero: number; prazo
           className="check-traco motion-reduce:animate-none"
         />
       </svg>
-      <p className="ivo-sobretitulo text-texto-suave">Pedido {numeroPedido(numero)}</p>
+      <p className="ivo-legenda font-semibold text-texto-suave">Pedido {numeroPedido(numero)}</p>
       <h1 ref={titulo} tabIndex={-1} className="ivo-h1 outline-none">
         Pedido enviado
       </h1>
@@ -506,12 +565,11 @@ function Sucesso({ id, numero, prazoHoras }: { id: string; numero: number; prazo
         <Link
           to={`/pedidos/${id}`}
           replace
-          className="flex min-h-12 items-center justify-center gap-2 rounded-cartao bg-acao px-5 ivo-botao text-acao-texto"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-botao bg-acao px-5 ivo-botao text-acao-texto"
         >
           Acompanhar pedido
-          <Icone nome="setaDireita" tamanho={20} />
         </Link>
-        <Link to="/" replace className="flex min-h-12 items-center justify-center rounded-cartao px-5 ivo-botao text-texto">
+        <Link to="/" replace className="flex min-h-12 items-center justify-center rounded-botao px-5 ivo-botao text-texto">
           Voltar ao início
         </Link>
       </div>
@@ -569,7 +627,7 @@ export function NovoPedido() {
             className="space-y-2"
             data-testid={perfil?.empresa_tem_contrato === false ? 'novo-pedido-sem-contrato' : 'novo-pedido-sem-credito'}
           >
-            <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+            <p className="flex items-center gap-2 ivo-legenda font-semibold text-alerta-texto">
               <Icone nome="alerta" tamanho={16} />
               Novo pedido indisponível
             </p>
@@ -650,7 +708,6 @@ export function NovoPedido() {
       <Rodape>
         <Botao variante="principal" className="flex w-full items-center justify-center gap-2" onClick={() => void avancar()} disabled={enviando}>
           {enviando ? 'Enviando…' : rotuloBotao}
-          {!enviando && passo < 4 && <Icone nome="setaDireita" tamanho={20} />}
         </Botao>
       </Rodape>
 

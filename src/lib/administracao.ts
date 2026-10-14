@@ -28,7 +28,7 @@ export const ehNivel = (n: unknown): n is Nivel => n === 1 || n === 2 || n === 3
 
 /** "Cliente · Solicitante (N2)", "Motorista"… */
 export function rotuloPerfil(papel: Papel, nivel: number | null | undefined): string {
-  return papel === 'CLIENTE' && ehNivel(nivel) ? `${PAPEIS.CLIENTE} · ${NIVEIS[nivel]}` : PAPEIS[papel]
+  return papel === 'CLIENTE' && ehNivel(nivel) ? `${PAPEIS.CLIENTE}, ${NIVEIS[nivel]}` : PAPEIS[papel]
 }
 
 /** Gestor da empresa (cliente N1): vê a tela Equipe. Só experiência; o banco decide de novo. */

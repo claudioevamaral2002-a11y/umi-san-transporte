@@ -50,8 +50,8 @@ describe('administração', () => {
 
   it('perfis: gestor de frota e níveis do cliente', () => {
     expect(rotuloPerfil('GESTOR_FROTA', null)).toBe('Gestor de frota')
-    expect(rotuloPerfil('CLIENTE', 1)).toBe('Cliente · Gestor da empresa (N1)')
-    expect(rotuloPerfil('CLIENTE', 3)).toBe('Cliente · Visualizador (N3)')
+    expect(rotuloPerfil('CLIENTE', 1)).toBe('Cliente, Gestor da empresa (N1)')
+    expect(rotuloPerfil('CLIENTE', 3)).toBe('Cliente, Visualizador (N3)')
     expect(rotuloPerfil('CLIENTE', null)).toBe('Cliente')
     expect(gereEquipe({ papel: 'CLIENTE', nivel: 1 })).toBe(true)
     expect(gereEquipe({ papel: 'CLIENTE', nivel: 2 })).toBe(false)

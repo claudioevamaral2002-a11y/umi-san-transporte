@@ -62,13 +62,13 @@ export function Folha({
       onClick={(e) => {
         if (e.target === e.currentTarget) e.currentTarget.close()
       }}
-      className={`m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-[22px] border-[1.5px] border-borda bg-superficie p-0 text-texto backdrop:bg-marinho/60 md:m-auto md:rounded-[18px] ${largura}`}
+      className={`m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-folha border-[1.5px] border-borda bg-superficie p-0 text-texto backdrop:bg-marinho/60 md:m-auto md:rounded-folha ${largura}`}
     >
       {aberta && (
         <div className="space-y-4 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 pt-1">
-              {sobretitulo && <p className="ivo-sobretitulo text-texto-suave">{sobretitulo}</p>}
+              {sobretitulo && <p className="ivo-legenda font-semibold text-texto-suave">{sobretitulo}</p>}
               <h2 id={`${id}-titulo`} className="ivo-h3">
                 {titulo}
               </h2>

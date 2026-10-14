@@ -3,7 +3,7 @@
 :root {
   --cor-marinho: #0a2540;
   --cor-marinho-2: #1e4b7a;
-  --cor-cinza-azulado: #96a6bb;
+  --cor-cinza-azulado: #74859c; /* era #96a6bb (2,3:1 sobre o papel): ocupado precisa de 3:1 */
   --cor-papel: #f6f4ee;
   --cor-laranja: #ff6a00;
 
@@ -23,7 +23,22 @@
   /* Marcadores do calendário (forma + cor): seu pedido, aguardando você, ocupado. */
   --marcador-meu: #1e4b7a;
   --marcador-aguardando: #c2410c;
-  --marcador-ocupado: #96a6bb;
+  --marcador-ocupado: var(--cor-ocupado);
+  --cor-ocupado: #74859c;
+  --cor-livre: #15803d;
+  --cor-livre-fundo: #ecf7ef;
+  /* Bloco do saldo (Início) e barra de comando (Novo pedido, Orçar). */
+  --cor-bloco: #0a2540;
+  --cor-bloco-texto: #f6f4ee;
+  --cor-bloco-suave: #a9b8cc;
+  --cor-bloco-alerta: #ff8a4c; /* aviso sobre o bloco marinho do saldo */
+  --cor-bloco-reservado: #7fb2e8; /* parte reservada da barra do saldo */
+  --cor-comando: #0a2540;
+  --cor-comando-texto: #f6f4ee;
+  /* Seleção suave (Maré clara): frase de confirmação, avatar, saldo do extrato. */
+  --cor-selecao-suave: #e6edf5;
+  --cor-barra: #ffffff;
+  --cor-link: #1e4b7a; /* links e textos em azul Maré */
 
   --status-solicitada: #5b6b80;
   --status-aguardando: #b45309;
@@ -32,9 +47,14 @@
   --status-concluida: #15803d;
   --status-cancelada: #b91c1c;
 
-  --raio: 14px;
+  /* Hierarquia de raios: folhas 24, cartões 16, botões 14, campos 12, pílulas 999. */
+  --raio-folha: 24px;
+  --raio-cartao: 16px;
+  --raio-botao: 14px;
+  --raio-campo: 12px;
+  --raio: var(--raio-cartao);
   --raio-pequeno: 8px;
-  --sombra: 0 1px 2px rgb(10 37 64 / 0.08), 0 4px 16px rgb(10 37 64 / 0.06);
+  --sombra: 0 1px 2px rgb(10 37 64 / 0.06), 0 6px 20px rgb(10 37 64 / 0.07);
   --duracao: 240ms;
   --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
   color-scheme: light;
@@ -43,13 +63,27 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
     --cor-fundo: #061a30;
-    --cor-superficie: #0a2540;
+    --cor-superficie: #0c2a49; /* separa o cartão do fundo #061a30 */
     --cor-texto: #f6f4ee;
     --cor-texto-suave: #a9b8cc;
     --cor-perigo-texto: #0a2540;
     --cor-alerta-texto: #ff8a4c;
     --cor-foco: #ff8a4c;
-    --cor-borda: #1e4b7a;
+    --cor-borda: #1b3d63;
+    --cor-ocupado: #8094ad;
+    --cor-livre: #4ade80;
+    --cor-livre-fundo: #0d3326;
+    --cor-bloco: #10365f;
+    --cor-bloco-texto: #f6f4ee;
+    --cor-bloco-suave: #b8c6d8;
+    --cor-bloco-alerta: #ff8a4c;
+    --cor-bloco-reservado: #7fb2e8;
+    --cor-comando: #0c2a49;
+    --cor-comando-texto: #f6f4ee;
+    --cor-selecao-suave: #173f68;
+    --cor-barra: #0a2540;
+    --cor-link: #7fb2e8;
+    --sombra: 0 0 0 1px #1b3d63;
     --cor-selecao: #f6f4ee;
     --cor-selecao-texto: #0a2540;
     --marcador-meu: #7fb2e8;
@@ -81,5 +115,24 @@
   --status-andamento: #9a3412;
   --status-concluida: #14532d;
   --status-cancelada: #7f1d1d;
+  /* O alto contraste também vence o escuro na seleção e nos marcadores (antes: off-white sobre branco). */
+  --cor-selecao: #000000;
+  --cor-selecao-texto: #ffffff;
+  --cor-selecao-suave: #e5e7eb;
+  --cor-ocupado: #374151;
+  --cor-livre: #14532d;
+  --cor-livre-fundo: #ffffff;
+  --cor-bloco: #000000;
+  --cor-bloco-texto: #ffffff;
+  --cor-bloco-suave: #ffffff;
+  --cor-bloco-alerta: #ffffff;
+  --cor-bloco-reservado: #9ca3af;
+  --cor-comando: #000000;
+  --cor-comando-texto: #ffffff;
+  --cor-barra: #ffffff;
+  --cor-link: #1e3a8a;
+  --marcador-meu: #1e3a8a;
+  --marcador-aguardando: #9a3412;
+  --sombra: 0 0 0 1.5px #000000;
   color-scheme: light;
 }

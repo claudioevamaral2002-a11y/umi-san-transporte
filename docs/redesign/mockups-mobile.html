@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IVO Transportes — mockups do redesign mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---------- Página de apresentação (fora dos celulares) ---------- */
+:root { --pg-fundo:#e9e6de; --pg-texto:#0a2540; --pg-suave:#4b5b70; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--pg-fundo); color:var(--pg-texto); font-family:Manrope, Inter, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+.pg { max-width:1480px; margin:0 auto; padding:32px 16px 96px; }
+.pg-topo { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:16px; margin-bottom:8px; }
+.pg h1 { font-size:30px; line-height:1.18; letter-spacing:-0.035em; margin:0; font-weight:700; }
+.pg-intro { max-width:68ch; color:var(--pg-suave); font-size:16px; line-height:1.55; margin:8px 0 0; }
+.pg h2 { font-size:24px; letter-spacing:-0.025em; margin:56px 0 4px; }
+.pg h2 + p { margin:0 0 20px; color:var(--pg-suave); max-width:72ch; line-height:1.55; }
+.chave { display:inline-flex; background:#fff; border-radius:999px; padding:4px; gap:4px; box-shadow:0 1px 2px rgb(10 37 64/.1); }
+.chave button { font:600 15px Manrope; border:0; background:none; color:var(--pg-texto); padding:10px 18px; border-radius:999px; cursor:pointer; }
+.chave button[aria-pressed=true] { background:#0a2540; color:#f6f4ee; }
+.fileira { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; }
+.peca { display:flex; flex-direction:column; gap:10px; }
+.peca > figcaption { font-size:13px; font-weight:500; color:var(--pg-suave); max-width:360px; line-height:1.4; }
+.peca > figcaption b { color:var(--pg-texto); font-weight:700; }
+figure { margin:0; }
+
+/* ---------- Tokens dentro do celular ---------- */
+.tel {
+  --fundo:#f6f4ee; --folha:#ffffff; --texto:#0a2540; --suave:#4b5b70; --linha:#e1e6ed;
+  --marinho:#0a2540; --mare:#1e4b7a; --laranja:#ff6a00; --laranja-texto:#c2410c; --nevoa:#e1e6ed;
+  --bloco:#0a2540; --bloco-texto:#f6f4ee; --bloco-suave:#a9b8cc;
+  --sel:#0a2540; --sel-texto:#f6f4ee; --sel-suave:#dde6f1;
+  --suave-sel:#e6edf5; /* seleção suave (Maré clara) */
+  --livre:#15803d; --livre-fundo:#ecf7ef;
+  --ocupado:#74859c;
+  --st-sol:#5b6b80; --st-agu:#b45309; --st-age:#1e4b7a; --st-and:#c2410c; --st-con:#15803d; --st-can:#b91c1c;
+  --barra:#ffffff; --sombra:0 1px 2px rgb(10 37 64/.06), 0 6px 20px rgb(10 37 64/.07);
+  width:360px; height:760px; border-radius:44px; padding:10px; background:#11161d; flex-shrink:0;
+  box-shadow:0 30px 60px -20px rgb(10 37 64/.35);
+}
+.tel[data-tema=escuro], body[data-tema=escuro] .tel:not([data-tema=claro]) {
+  --fundo:#061a30; --folha:#0c2a49; --texto:#f6f4ee; --suave:#a9b8cc; --linha:#1b3d63;
+  --bloco:#10365f; --bloco-texto:#f6f4ee; --bloco-suave:#b8c6d8;
+  --sel:#f6f4ee; --sel-texto:#0a2540; --sel-suave:#3a4d64;
+  --suave-sel:#173f68;
+  --laranja-texto:#ff8a4c; --livre:#4ade80; --livre-fundo:#0d3326; --ocupado:#8094ad;
+  --st-sol:#9fb0c4; --st-agu:#fbbf24; --st-age:#7fb2e8; --st-and:#ff8a4c; --st-con:#4ade80; --st-can:#f87171;
+  --barra:#0a2540; --sombra:0 0 0 1px #1b3d63;
+}
+.tela { position:relative; width:100%; height:100%; border-radius:34px; overflow:hidden; background:var(--fundo); color:var(--texto);
+  font-size:16px; line-height:1.55; display:flex; flex-direction:column; }
+.tela * { font-variant-numeric:tabular-nums; }
+.sb { height:38px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center; padding:0 26px; font-size:14px; font-weight:700; }
+.sb .ilha { width:96px; height:26px; background:#000; border-radius:20px; }
+.rolo { flex:1; overflow:hidden; padding:4px 16px 0; position:relative; }
+.sobre-marinho .sb, .sb.claro { color:#f6f4ee; }
+
+/* tipografia (TIPOGRAFIA.md) */
+.h1 { font-size:30px; font-weight:700; line-height:1.18; letter-spacing:-0.035em; margin:0; }
+.h2 { font-size:24px; font-weight:700; line-height:1.25; letter-spacing:-0.025em; margin:0; }
+.h3 { font-size:18px; font-weight:700; line-height:1.35; letter-spacing:-0.015em; margin:0; }
+.leg { font-size:13px; font-weight:500; line-height:1.4; color:var(--suave); }
+.grupo { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--suave); margin:20px 0 8px; }
+.valor { font-size:30px; font-weight:700; line-height:1.15; letter-spacing:-0.025em; }
+.forte { font-weight:600; }
+
+/* superfícies: hierarquia de raios 24 / 16 / 12 / 999 */
+.folha { background:var(--folha); border-radius:24px; }
+.cartao { background:var(--folha); border-radius:16px; padding:14px 16px; box-shadow:var(--sombra); }
+.campo { border:1.5px solid var(--linha); background:var(--folha); border-radius:12px; padding:10px 14px; min-height:52px; }
+.campo .r { font-size:13px; font-weight:500; color:var(--suave); display:block; line-height:1.3; }
+.campo .v { font-weight:600; }
+.pilula { border-radius:999px; }
+
+/* botões */
+.btn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; border-radius:14px; font:600 16px Manrope; border:0; width:100%; }
+.btn-acao { background:var(--laranja); color:#0a2540; }
+.btn-sec { background:transparent; color:var(--texto); border:1.5px solid var(--linha); }
+.btn-txt { background:none; color:var(--texto); min-height:44px; text-decoration:underline; text-underline-offset:3px; }
+
+/* status: ícone + texto, nunca só cor */
+.st { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; line-height:1; padding:6px 10px 6px 8px; border-radius:999px;
+  background:color-mix(in srgb, currentColor 12%, transparent); }
+.st svg { width:14px; height:14px; }
+.st.sol{color:var(--st-sol)} .st.agu{color:var(--st-agu)} .st.age{color:var(--st-age)} .st.and{color:var(--st-and)} .st.con{color:var(--st-con)} .st.can{color:var(--st-can)}
+
+/* rota: círculo → triângulo da marca */
+.rota { display:grid; grid-template-columns:18px 1fr; column-gap:10px; }
+.rota .trilho { display:flex; flex-direction:column; align-items:center; padding-top:6px; }
+.rota .ini { width:12px; height:12px; border-radius:50%; border:2.5px solid var(--mare); }
+.tel[data-tema=escuro] .rota .ini, body[data-tema=escuro] .tel:not([data-tema=claro]) .rota .ini { border-color:#7fb2e8; }
+.rota .via { width:2px; flex:1; min-height:22px; background:repeating-linear-gradient(var(--suave) 0 3px, transparent 3px 7px); opacity:.6; margin:3px 0; }
+.rota .fim { width:14px; height:12px; }
+.rota p { margin:0; }
+.rota .lugar { font-weight:600; line-height:1.35; }
+.rota .quando { font-size:13px; color:var(--suave); font-weight:500; margin-bottom:10px; }
+
+/* barra inferior + botão flutuante */
+.abas { flex-shrink:0; background:var(--barra); display:flex; justify-content:space-around; padding:8px 8px 22px; border-top:1px solid var(--linha); }
+.aba { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; font-weight:600; color:var(--suave); width:64px; }
+.aba .ic { width:52px; height:30px; display:grid; place-items:center; border-radius:999px; }
+.aba svg { width:22px; height:22px; }
+.aba.ativa { color:var(--texto); }
+.aba.ativa .ic { background:var(--sel); color:var(--sel-texto); }
+.fab { position:absolute; right:18px; bottom:96px; width:60px; height:60px; border-radius:20px; background:var(--laranja); color:#0a2540;
+  display:grid; place-items:center; box-shadow:0 8px 20px -6px rgb(255 106 0/.55); }
+.fab svg { width:28px; height:28px; }
+
+/* topo das telas principais */
+.topo { display:flex; align-items:center; justify-content:space-between; padding:6px 0 14px; }
+.empresa { height:36px; padding:0 14px; display:flex; align-items:center; border-radius:999px; background:var(--folha); font-weight:700; font-size:14px; box-shadow:var(--sombra); }
+.avatar { width:36px; height:36px; border-radius:50%; background:var(--suave-sel); color:var(--texto); display:grid; place-items:center; font-weight:700; font-size:14px; }
+
+/* barra de comando marinho (novo pedido, orçar) */
+.cmd { background:#0a2540; color:#f6f4ee; padding:0 16px 16px; flex-shrink:0; }
+.tel[data-tema=escuro] .cmd, body[data-tema=escuro] .tel:not([data-tema=claro]) .cmd { background:#0c2a49; border-bottom:1px solid #1b3d63; }
+.cmd .linha1 { display:flex; justify-content:space-between; align-items:center; height:44px; }
+.cmd .icb { width:44px; height:44px; display:grid; place-items:center; margin-left:-10px; }
+.cmd .passo { font-size:13px; font-weight:500; color:#a9b8cc; margin:4px 0 2px; }
+.cmd .h1 { color:#f6f4ee; }
+.prog { display:flex; gap:6px; margin-top:12px; }
+.prog i { flex:1; height:4px; border-radius:4px; background:rgb(255 255 255/.18); }
+.prog i.feito { background:var(--laranja); } .prog i.atual { background:#f6f4ee; }
+.rodape { flex-shrink:0; padding:12px 16px 26px; background:var(--fundo); border-top:1px solid var(--linha); }
+
+/* seleção (dia, horário, segmentos): cheio + contorno laranja, sem ✓ */
+.escolhido { background:var(--sel) !important; color:var(--sel-texto) !important; box-shadow:0 0 0 2px var(--fundo), 0 0 0 4px var(--laranja); border-color:transparent !important; }
+
+/* faixa de dias */
+.dias { display:flex; gap:8px; margin:0 -16px; padding:4px 16px 8px; overflow:hidden; }
+.dia { flex-shrink:0; width:52px; height:68px; border-radius:16px; background:var(--folha); border:1.5px solid var(--linha); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; }
+.dia .ds { font-size:12px; font-weight:600; color:var(--suave); line-height:1.2; }
+.dia .dn { font-size:20px; font-weight:700; letter-spacing:-0.02em; line-height:1.25; }
+.dia.escolhido .ds { color:inherit; opacity:.8; }
+.dia.cheio .dn { text-decoration:line-through; color:var(--suave); }
+
+/* horários em 4 colunas */
+.horas { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.hora { height:44px; border-radius:12px; display:grid; place-items:center; font-weight:600; font-size:15px; background:var(--folha); border:1.5px solid var(--linha); }
+.hora.ocup { background:transparent; color:var(--suave); text-decoration:line-through; border-style:dashed; }
+
+.stepper { display:flex; align-items:center; justify-content:space-between; }
+.stepper .ctl { display:flex; align-items:center; gap:0; border:1.5px solid var(--linha); border-radius:12px; background:var(--folha); }
+.stepper .ctl span { width:46px; height:44px; display:grid; place-items:center; font-size:22px; font-weight:600; }
+.stepper .ctl b { min-width:64px; text-align:center; font-size:16px; }
+.confirma { background:var(--suave-sel); border-radius:12px; padding:12px 14px; font-weight:600; line-height:1.4; margin-top:16px; }
+
+/* segmentado */
+.seg { display:flex; background:var(--folha); border:1.5px solid var(--linha); border-radius:999px; padding:4px; gap:4px; }
+.seg span { flex:1; text-align:center; font-size:14px; font-weight:600; padding:7px 0; border-radius:999px; color:var(--suave); }
+.seg span.escolhido { box-shadow:0 0 0 2px var(--laranja); }
+
+/* opções (cartões selecionáveis) */
+.ops { display:grid; gap:8px; }
+.op { display:flex; align-items:center; gap:12px; border:1.5px solid var(--linha); background:var(--folha); border-radius:12px; padding:12px 14px; font-weight:600; }
+.op svg { width:22px; height:22px; flex-shrink:0; }
+
+/* agenda Lark */
+.ag-topo { display:flex; justify-content:space-between; align-items:center; padding:2px 0 10px; }
+.mes { display:flex; align-items:center; gap:4px; }
+.mes svg { width:18px; height:18px; }
+.hoje { height:36px; padding:0 14px; border-radius:999px; border:1.5px solid var(--linha); font-weight:600; font-size:14px; display:grid; place-items:center; background:var(--folha); }
+.semana { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; margin:10px 0 6px; }
+.semana .d { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.semana .l { font-size:12px; font-weight:600; color:var(--suave); }
+.semana .n { width:36px; height:36px; display:grid; place-items:center; border-radius:12px; font-weight:700; font-size:15px; position:relative; }
+.semana .n i { position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); }
+.grade { position:relative; margin:0 -16px; border-top:1px solid var(--linha); padding-top:10px; }
+.hr { height:56px; display:grid; grid-template-columns:52px 1fr; }
+.hr .t { font-size:12px; font-weight:500; color:var(--suave); text-align:right; padding-right:8px; transform:translateY(-8px); }
+.hr .c { border-top:1px solid var(--linha); }
+.hr:first-child .c { border-top:0; }
+.bl { position:absolute; left:60px; right:12px; border-radius:10px; padding:6px 10px; font-size:13px; line-height:1.3; overflow:hidden; }
+.bl b { display:block; font-size:14px; }
+.bl.meu { background:color-mix(in srgb, var(--st-age) 12%, var(--folha)); border-left:3px solid var(--st-age); }
+.bl.agu { background:color-mix(in srgb, var(--st-agu) 13%, var(--folha)); border-left:3px solid var(--st-agu); }
+.bl.ocup { background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--ocupado) 22%, transparent) 0 6px, transparent 6px 12px); color:var(--suave); display:flex; align-items:center; gap:6px; font-weight:600; border:1px solid color-mix(in srgb, var(--ocupado) 40%, transparent); }
+.bl.livre { border:1.5px dashed var(--livre); color:var(--livre); background:var(--livre-fundo); font-weight:700; display:flex; align-items:center; justify-content:space-between; }
+.agora { position:absolute; left:46px; right:0; height:2px; background:var(--laranja); z-index:3; }
+.agora svg { position:absolute; left:-2px; top:-11px; width:14px; height:12px; }
+.agora .hh { position:absolute; left:-44px; top:-9px; font-size:11px; font-weight:700; color:var(--laranja-texto); background:var(--fundo); padding:0 2px; }
+
+/* mês */
+.cal { display:grid; grid-template-columns:repeat(7,1fr); row-gap:6px; text-align:center; }
+.cal .l { font-size:12px; font-weight:600; color:var(--suave); padding-bottom:4px; }
+.cal .c { height:44px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:4px; border-radius:12px; font-weight:600; font-size:15px; gap:3px; }
+.cal .c.fora { color:var(--suave); opacity:.45; }
+.cal .c.cheio { text-decoration:line-through; color:var(--suave); }
+.cal .c .mk { display:flex; gap:3px; height:8px; }
+.cal .c.hj { color:var(--laranja-texto); font-weight:800; }
+.legenda { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:13px; font-weight:500; color:var(--suave); margin:10px 0 14px; padding:10px 0; border-top:1px solid var(--linha); border-bottom:1px solid var(--linha); }
+.legenda span { display:flex; align-items:center; gap:6px; }
+
+/* saldo */
+.saldo { background:var(--bloco); color:var(--bloco-texto); border-radius:24px; padding:18px 18px 16px; }
+.saldo .leg { color:var(--bloco-suave); }
+.saldo .barra { height:8px; border-radius:8px; background:rgb(255 255 255/.14); margin:14px 0 12px; overflow:hidden; display:flex; }
+.saldo .barra i { display:block; height:100%; }
+.saldo .pes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.saldo .pes b { display:block; font-size:16px; }
+.aguardando { border:2px solid var(--laranja); }
+.lst { display:grid; gap:10px; }
+.item-ped { display:grid; gap:8px; }
+.item-ped .lin { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.mini-rota { display:flex; align-items:center; gap:8px; font-weight:600; font-size:15px; line-height:1.3; }
+.mini-rota .o { width:8px; height:8px; border:2px solid var(--mare); border-radius:50%; flex-shrink:0; }
+.mini-rota svg { width:10px; height:9px; flex-shrink:0; }
+
+/* extrato */
+.mov { display:grid; grid-template-columns:36px 1fr auto; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--linha); }
+.mov .ic { width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:var(--suave-sel); }
+.mov .ic svg { width:18px; height:18px; }
+.mov .vl { text-align:right; font-weight:700; }
+.mov .vl small { display:block; font-weight:500; font-size:12px; color:var(--suave); }
+
+/* código 2FA */
+.cod { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.cod span { height:58px; border-radius:12px; border:1.5px solid var(--linha); background:var(--folha); display:grid; place-items:center; font-size:26px; font-weight:700; }
+.cod span.atual { border-color:var(--texto); border-width:2px; }
+
+/* carrinho */
+.palco { width:360px; height:220px; border-radius:24px; display:grid; place-items:center; position:relative; overflow:hidden; }
+.palco.claro { background:#f6f4ee; color:#0a2540; }
+.palco.escuro { background:#061a30; color:#f6f4ee; }
+.palco .leg { position:absolute; bottom:18px; left:0; right:0; text-align:center; font-size:14px; font-weight:500; }
+.palco.claro .leg { color:#4b5b70; } .palco.escuro .leg { color:#a9b8cc; }
+.carro { width:300px; height:auto; overflow:visible; }
+.carro .roda { transform-box:fill-box; transform-origin:center; animation:girar .7s linear infinite; }
+.carro .corpo { animation:balanco .9s ease-in-out infinite alternate; }
+.carro .reboque { animation:balanco .9s ease-in-out .22s infinite alternate; }
+.carro .estrada { animation:estrada .7s linear infinite; }
+.carro .onda { animation:onda 1.4s ease-in infinite; }
+.carro .onda.b { animation-delay:.7s; }
+@keyframes girar { to { transform:rotate(360deg); } }
+@keyframes balanco { from { transform:translateY(0); } to { transform:translateY(-1.6px); } }
+@keyframes estrada { to { stroke-dashoffset:40; } }
+@keyframes onda { 0% { transform:translateX(8px); opacity:0; } 30% { opacity:.55; } 100% { transform:translateX(-26px); opacity:0; } }
+.parado .carro * { animation:none !important; }
+.splash { background:#0a2540; color:#f6f4ee; align-items:center; justify-content:center; gap:28px; }
+@media (prefers-reduced-motion:reduce) { .carro * { animation:none !important; } }
+
+.notas { background:#fff; border-radius:16px; padding:18px 20px; max-width:760px; line-height:1.55; }
+.notas ul { margin:6px 0 0; padding-left:20px; }
+.notas li { margin:4px 0; }
+.pares { border-collapse:collapse; font-size:14px; background:#fff; border-radius:16px; overflow:hidden; }
+.pares th, .pares td { padding:8px 14px; text-align:left; border-bottom:1px solid #e1e6ed; }
+.pares td.ok { color:#15803d; font-weight:700; }
+.amostra { display:inline-block; width:18px; height:18px; border-radius:5px; vertical-align:-4px; margin-right:6px; border:1px solid rgb(0 0 0/.1); }
+</style>
+</head>
+<body>
+<!-- Ícones e símbolos reutilizados -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="tri" viewBox="0 0 14 12"><path d="M0 0H14L7 12Z" fill="#FF6A00"/></symbol>
+    <symbol id="ivo" viewBox="0 0 172 148"><g fill="currentColor"><path d="M3 35 C22 34 37 45 49 64 C63 85 70 107 89 117 C97 121 107 123 114 126 C106 138 96 144 84 144 C64 144 53 133 43 114 Z"/><path d="M30 36 C45 37 58 53 71 71 C90 96 105 93 119 93 L134 93 L119 116 C101 116 85 106 70 87 C52 64 44 44 30 36 Z"/><path d="M96 73 C110 53 127 36 150 33 C156 32 163 34 169 35 L139 84 C124 86 110 80 96 73 Z"/></g><path fill="#FF6A00" d="M45 10 L124 10 L84.5 48 Z"/></symbol>
+    <symbol id="i-casa" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-tabela" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 9.5h17M10 9.5v10" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-usu" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5M16 5.5a3.2 3.2 0 0 1 0 6.2M18 14.8c1.9.7 3.1 2.5 3.5 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-volta" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-baixo" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m8 12.5 2.7 2.7L16 9.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal-st" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M4 10h16" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></symbol>
+    <symbol id="i-mais-c" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-menos-c" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pessoas" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.7-3.6 3.4-6 7-6s6.3 2.4 7 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-caixa" viewBox="0 0 24 24"><path d="M4 8 12 4l8 4v8.5L12 20l-8-3.5z M4 8l8 4 8-4M12 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-dinheiro" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-seta-baixo" viewBox="0 0 24 24"><path d="M12 5v13M6.5 12.5 12 18l5.5-5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-seta-cima" viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-desfaz" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-volante" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M3.8 10.5c5.4-1.3 11-1.3 16.4 0M12 14v6.5" stroke="currentColor" stroke-width="2"/></symbol>
+    <!-- pickup com reboque (carregamento) -->
+    <symbol id="carro-sym" viewBox="0 0 320 120" overflow="visible">
+    </symbol>
+  </defs>
+</svg>
+
+<div class="pg">
+  <div class="pg-topo">
+    <div>
+      <h1>Redesign mobile da IVO Transportes</h1>
+      <p class="pg-intro">Mockups de todas as telas do celular, para você aprovar antes da implementação. Os textos e valores são de exemplo. Use a chave para ver as telas no modo escuro. As telas de seleção, agenda e carregamento já aparecem nos dois modos, lado a lado.</p>
+    </div>
+    <div class="chave" role="group" aria-label="Modo das telas">
+      <button type="button" aria-pressed="true" data-t="claro">Modo claro</button>
+      <button type="button" aria-pressed="false" data-t="escuro">Modo escuro</button>
+    </div>
+  </div>
+
+  <!-- ============ 1. CARRINHO ============ -->
+  <h2>1. Carrinho da tela de carregamento</h2>
+  <p>Pickup com reboque desenhada com as curvas do V da marca. O triângulo laranja aparece como selo na porta, e as ondas do O saem atrás do reboque. Tem rodas girando, estrada tracejada e balanço leve, com o reboque um pouco atrasado em relação à pickup. O SVG fica abaixo de 5 KB, sem nenhuma dependência nova. Com o movimento reduzido ligado, o desenho fica parado. Ele só aparece em carregamentos acima de 400 ms. Há duas opções de carga no reboque. Qual você prefere?</p>
+  <div class="fileira" id="carrinhos"></div>
+
+  <!-- ============ 2. ENTRADA ============ -->
+  <h2>2. Entrada</h2>
+  <p>A entrada usa o logotipo completo em SVG, uma ação laranja por tela e campos com cantos de 12 px.</p>
+  <div class="fileira">
+    <figure class="peca"><div class="tel"><div class="tela">
+      <div class="sb"><span>9:41</span><span class="ilha"></span><span>5G</span></div>
+      <div class="rolo" style="padding-top:40px">
+        <img class="logo-claro" src="../marca/svg/ivo-logotipo-azul.svg" alt="IVO Transportes" style="height:92px">
+        <img class="logo-escuro" src="../marca/svg/ivo-logotipo-branco.svg" alt="IVO Transportes" style="height:92px">
+        <h1 class="h1" style="margin-top:36px">Entrar</h1>
+        <p class="leg" style="margin:4px 0 20px;font-size:15px">Use o e-mail do seu convite.</p>
+        <div style="display:grid;gap:12px">
+          <div class="campo"><span class="r">E-mail</span><span class="v">mariana@umisan.com.br</span></div>
+          <div class="campo"><span class="r">Senha</span><span class="v">••••••••••••</span></div>
+        </div>
+        <div style="margin:16px 0;height:64px;border-radius:12px;border:1.5px solid var(--linha);display:flex;align-items:center;gap:10px;padding:0 14px;font-size:14px;font-weight:500;color:var(--suave)">
+          <span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--livre);display:grid;place-items:center;color:var(--livre)"><svg width="12" height="12"><use href="#i-ok"/></svg></span>Verificação concluída
+        </div>
+        <div class="btn btn-acao">Entrar</div>
+        <div class="btn btn-txt" style="margin-top:6px">Esqueci a senha</div>
+      </div>
+    </div></div><figcaption><b>Entrar.</b> O logotipo azul vira branco no modo escuro.</figcaption></figure>
+
+    <figure class="peca"><div class="tel"><div class="tela">
+      <div class="sb"><span>9:41</span><span class="ilha"></span><span>5G</span></div>
+      <div class="rolo" style="padding-top:28px">
+        <svg width="52" height="45" style="color:var(--texto)"><use href="#ivo"/></svg>
+        <h1 class="h1" style="margin-top:28px">Código do autenticador</h1>
+        <p style="margin:8px 0 24px;color:var(--suave)">Abra o app autenticador e digite os 6 números que aparecem para IVO Transportes.</p>
+        <div class="cod"><span>4</span><span>8</span><span>1</span><span class="atual"></span><span></span><span></span></div>
+        <p class="leg" style="margin:12px 0 0">O código muda a cada 30 segundos.</p>
+      </div>
+      <div class="rodape"><div class="btn btn-acao" style="opacity:.45">Confirmar código</div></div>
+    </div></div><figcaption><b>Segundo fator (2FA).</b> Seis casas grandes com números tabulares. O botão só fica ativo com os 6 dígitos.</figcaption></figure>
+
+    <figure class="peca"><div class="tel"><div class="tela splash">
+      <svg width="132" height="114" style="color:#f6f4ee"><use href="#ivo"/></svg>
+      <div id="carro-splash" style="width:240px"></div>
+      <span style="font-size:14px;font-weight:500;color:#a9b8cc">Preparando sua agenda</span>
+    </div></div><figcaption><b>Splash</b> (abertura do app instalado), sempre em marinho, com o símbolo e o carrinho em off-white.</figcaption></figure>
+  </div>
+
+  <!-- ============ 3. INÍCIO ============ -->
+  <h2>3. Início, por perfil</h2>
+  <p>O saldo fica num bloco marinho único. "Aguardando você" é o único elemento com borda laranja. O botão "+" laranja abre o Novo pedido e só aparece para quem pode criar pedidos. Na barra inferior branca, a aba ativa fica numa pílula.</p>
+  <div class="fileira" id="inicios"></div>
+
+  <!-- ============ 4. PEDIDOS ============ -->
+  <h2>4. Pedidos e detalhe</h2>
+  <p>O status sempre aparece com ícone e texto. Na linha do tempo do pedido, o triângulo laranja marca a etapa atual.</p>
+  <div class="fileira" id="pedidos"></div>
+
+  <!-- ============ 5. NOVO PEDIDO ============ -->
+  <h2>5. Novo pedido, em 4 passos</h2>
+  <p>A barra de comando marinho mostra o progresso: laranja para os passos feitos e off-white para o atual. No passo "Quando", o horário escolhido fica em cor cheia com contorno laranja e sem ✓. Os horários ocupados ficam riscados.</p>
+  <div class="fileira" id="novo"></div>
+
+  <!-- ============ 6. SELEÇÃO NO ESCURO ============ -->
+  <h2>6. Seleção no modo noturno</h2>
+  <p>No modo noturno, o escolhido vira off-white cheio, com texto marinho e contorno laranja. O mesmo vale para dias, horários, abas e o seletor Dia, 3 dias e Mês. A tabela confere o contraste AA de cada par.</p>
+  <div class="fileira" id="selecao"></div>
+
+  <!-- ============ 7. AGENDA ============ -->
+  <h2>7. Agenda no estilo Lark</h2>
+  <p>No topo ficam o mês, que abre o calendário ao toque, e o botão "Hoje". Abaixo vêm o seletor Dia, 3 dias e Mês, a faixa da semana e a grade de horas. A linha laranja marca o "agora", com o triângulo da marca. Tocar num bloco "Livre" abre o Novo pedido já com aquele horário.</p>
+  <div class="fileira" id="agenda"></div>
+
+  <!-- ============ 8. ORÇAR + EXTRATO ============ -->
+  <h2>8. Orçar, extrato e administração</h2>
+  <p>Valores com números tabulares e débito e crédito marcados pelo sinal e pelo ícone, não só pela cor. O total do orçamento fica fixo no rodapé.</p>
+  <div class="fileira" id="outros"></div>
+
+  <h2>9. Contraste dos pares de cor</h2>
+  <p>Calculados pela fórmula da WCAG: 4,5:1 para texto e 3:1 para marcadores e contornos. Dois pares do app atual falhavam e já estão corrigidos aqui.</p>
+  <table class="pares">
+    <thead><tr><th>Par</th><th>Modo</th><th>Contraste</th><th></th></tr></thead>
+    <tbody>
+      <tr><td><span class="amostra" style="background:#0a2540"></span>Escolhido: off-white sobre marinho</td><td>Claro</td><td>14,1:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#f6f4ee"></span>Escolhido: marinho sobre off-white</td><td>Escuro</td><td>14,1:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#ff6a00"></span>Contorno laranja sobre o fundo #061A30</td><td>Escuro</td><td>6,1:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#ff6a00"></span>Contorno laranja sobre o fundo off-white</td><td>Claro</td><td>2,6:1. Reforço só; quem identifica a seleção é o preenchimento marinho (14,1:1)</td><td class="ok">AA pelo preenchimento</td></tr>
+      <tr><td><span class="amostra" style="background:#ff6a00"></span>Marinho sobre laranja (botão principal e +)</td><td>Ambos</td><td>5,4:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#c2410c"></span>Texto laranja #C2410C sobre off-white</td><td>Claro</td><td>4,7:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#ff8a4c"></span>Texto laranja #FF8A4C sobre #0C2A49</td><td>Escuro</td><td>6,2:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#4b5b70"></span>Texto suave #4B5B70 sobre off-white</td><td>Claro</td><td>6,3:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#a9b8cc"></span>Texto suave #A9B8CC sobre #0C2A49</td><td>Escuro</td><td>7,2:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#15803d"></span>Livre #15803D sobre #ECF7EF</td><td>Claro</td><td>4,6:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#4ade80"></span>Livre #4ADE80 sobre #0D3326</td><td>Escuro</td><td>7,9:1</td><td class="ok">AA</td></tr>
+      <tr><td><span class="amostra" style="background:#74859c"></span>Marcador ocupado: era #96A6BB (2,3:1), passa a #74859C</td><td>Claro</td><td>3,4:1</td><td class="ok">AA (gráfico)</td></tr>
+      <tr><td><span class="amostra" style="background:#8094ad"></span>Marcador ocupado: era #6F819A, passa a #8094AD</td><td>Escuro</td><td>5,6:1</td><td class="ok">AA (gráfico)</td></tr>
+    </tbody>
+  </table>
+  <p class="leg" style="margin-top:10px;max-width:72ch">Na implementação, cada par entra num teste automático de contraste, para não regredir.</p>
+</div>
+
+<script>
+/* ---------- utilidades para montar os mockups ---------- */
+const ic = (id, s = 22) => `<svg width="${s}" height="${s}"><use href="#${id}"/></svg>`
+const tri = (w = 14, h = 12) => `<svg width="${w}" height="${h}" viewBox="0 0 14 12"><path d="M0 0H14L7 12Z" fill="#FF6A00"/></svg>`
+const sb = (claro) => `<div class="sb${claro ? ' claro' : ''}"><span>10:20</span><span class="ilha"></span><span>5G</span></div>`
+const ST = {
+  sol: ['sol', 'i-relogio', 'Aguardando orçamento'],
+  agu: ['agu', 'i-relogio', 'Aguardando aprovação'],
+  age: ['age', 'i-cal-st', 'Agendado'],
+  and: ['and', 'i-play', 'Em andamento'],
+  con: ['con', 'i-ok', 'Concluído'],
+  can: ['can', 'i-x', 'Cancelado'],
+}
+const st = (k) => `<span class="st ${ST[k][0]}">${ic(ST[k][1], 14)}${ST[k][2]}</span>`
+const ABAS = {
+  cliente: [['i-casa', 'Início'], ['i-lista', 'Pedidos'], ['i-cal', 'Agenda'], ['i-escudo', 'Regras']],
+  motorista: [['i-casa', 'Início'], ['i-lista', 'Pedidos'], ['i-cal', 'Agenda'], ['i-tabela', 'Tabela']],
+  adm: [['i-casa', 'Início'], ['i-lista', 'Pedidos'], ['i-cal', 'Agenda'], ['i-tabela', 'Contratos'], ['i-usu', 'Admin']],
+}
+const abas = (perfil, ativa) =>
+  `<nav class="abas">${ABAS[perfil].map(([i, r]) => `<div class="aba${r === ativa ? ' ativa' : ''}"><span class="ic">${ic(i)}</span>${r}</div>`).join('')}</nav>`
+const fab = `<div class="fab" aria-label="Novo pedido">${ic('i-mais')}</div>`
+const rota = (a, qa, b, qb) => `<div class="rota">
+  <div class="trilho"><span class="ini"></span><span class="via"></span>${tri()}</div>
+  <div><p class="lugar">${a}</p><p class="quando">${qa}</p><p class="lugar">${b}</p><p class="quando" style="margin:0">${qb}</p></div></div>`
+const miniRota = (a, b) => `<div class="mini-rota"><span class="o"></span>${a}</div><div class="mini-rota" style="margin-top:-4px">${tri(10, 9)}${b}</div>`
+const tel = (miolo, legenda, tema) =>
+  `<figure class="peca"><div class="tel"${tema ? ` data-tema="${tema}"` : ''}><div class="tela">${miolo}</div></div><figcaption>${legenda}</figcaption></figure>`
+const topo = (nome, ini) => `<div class="topo">
+  <svg width="40" height="34" style="color:var(--texto)"><use href="#ivo"/></svg>
+  <div style="display:flex;gap:8px;align-items:center">${nome ? `<span class="empresa">${nome}</span>` : ''}<span class="avatar">${ini}</span></div></div>`
+
+/* ---------- 1. carrinho ---------- */
+function carrinho(variante) {
+  // Pickup com a linha do teto em curva (o V da marca), selo triangular laranja na porta.
+  const carga = variante === 'barco'
+    ? `<path d="M30 66 C52 70 86 72 124 60 C126 59 128 60 127 62 L119 78 C92 84 60 84 40 80 C34 79 30 74 30 66Z" fill="var(--mare-c)"/>
+       <path d="M44 66 C70 68 96 66 116 60" stroke="var(--fundo-c)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9"/>
+       <path d="M78 66 L84 46 L86 66" fill="currentColor" opacity=".9"/>`
+    : `<rect x="34" y="46" width="88" height="34" rx="6" fill="var(--mare-c)"/>
+       <path d="M42 66 C54 58 64 58 76 64 C88 70 100 70 114 60" stroke="var(--fundo-c)" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".85"/>
+       <path d="M42 74 C54 66 64 66 76 72 C88 78 100 78 114 68" stroke="var(--fundo-c)" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".5"/>`
+  return `<svg class="carro" viewBox="0 0 320 120" aria-hidden="true">
+    <g class="onda"><path d="M6 70 C14 64 20 64 28 70" stroke="var(--mare-c)" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+    <g class="onda b"><path d="M2 82 C10 76 16 76 24 82" stroke="var(--mare-c)" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+    <g class="reboque">
+      ${carga}
+      <rect x="30" y="80" width="100" height="7" rx="3" fill="currentColor"/>
+      <path d="M128 84 H152" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+      <rect x="31" y="74" width="5" height="8" rx="1.5" fill="#FF6A00"/>
+    </g>
+    <g class="roda"><circle cx="80" cy="92" r="11" fill="currentColor"/><circle cx="80" cy="92" r="4.5" fill="var(--fundo-c)"/><path d="M80 82.5v5M80 96.5v5M70.5 92h5M84.5 92h5" stroke="var(--fundo-c)" stroke-width="2.4" stroke-linecap="round"/></g>
+    <g class="corpo">
+      <path d="M150 90 V60 Q150 56 154 56 H218 V36 Q218 29 225 29 H252 C259 29 263 32 267 38 L279 54 L303 57 Q313 58.5 313 68 V84 Q313 90 307 90 Z" fill="currentColor"/>
+      <path d="M154 60 H216" stroke="var(--fundo-c)" stroke-width="2" opacity=".35"/>
+      <rect x="217" y="56" width="2.4" height="30" fill="var(--fundo-c)" opacity=".9"/>
+      <path d="M225 36 H251 C255 36 258 38 260 41 L268 53 H225 Z" fill="var(--fundo-c)" opacity=".92"/>
+      <rect x="243" y="36" width="3" height="17" fill="currentColor"/>
+      <path d="M232 62 H248 L240 71 Z" fill="#FF6A00"/>
+      <rect x="305" y="63" width="8" height="5" rx="2" fill="var(--fundo-c)" opacity=".9"/>
+      <rect x="150" y="61" width="5" height="9" rx="1.5" fill="#FF6A00"/>
+    </g>
+    <g class="roda"><circle cx="180" cy="92" r="13" fill="currentColor" stroke="var(--fundo-c)" stroke-width="3"/><circle cx="180" cy="92" r="5" fill="var(--fundo-c)"/><path d="M180 81v5M180 98v5M169 92h5M186 92h5" stroke="var(--fundo-c)" stroke-width="2.6" stroke-linecap="round"/></g>
+    <g class="roda"><circle cx="286" cy="92" r="13" fill="currentColor" stroke="var(--fundo-c)" stroke-width="3"/><circle cx="286" cy="92" r="5" fill="var(--fundo-c)"/><path d="M286 81v5M286 98v5M275 92h5M292 92h5" stroke="var(--fundo-c)" stroke-width="2.6" stroke-linecap="round"/></g>
+    <line class="estrada" x1="-20" y1="111" x2="340" y2="111" stroke="currentColor" stroke-width="3" stroke-dasharray="24 16" stroke-linecap="round" opacity=".3"/>
+  </svg>`
+}
+const palco = (v, tema, parado, leg) => `<div class="palco ${tema}${parado ? ' parado' : ''}" style="--mare-c:${tema === 'claro' ? '#1E4B7A' : '#7FB2E8'};--fundo-c:${tema === 'claro' ? '#F6F4EE' : '#061A30'}">${carrinho(v)}<span class="leg">${leg}</span></div>`
+document.getElementById('carrinhos').innerHTML = [
+  `<figure class="peca">${palco('barco', 'claro', false, 'Carregando sua agenda')}<figcaption><b>Opção A: barco no reboque.</b> O casco usa a curva do V, conversa com o nome Umi San ("mar") e com a direção marítima da especificação.</figcaption></figure>`,
+  `<figure class="peca">${palco('barco', 'escuro', false, 'Carregando sua agenda')}<figcaption><b>Opção A no modo escuro.</b></figcaption></figure>`,
+  `<figure class="peca">${palco('carga', 'claro', false, 'Carregando sua agenda')}<figcaption><b>Opção B: caixa de carga</b> com as duas ondas do O. É mais neutra e serve para pessoas e equipamentos.</figcaption></figure>`,
+  `<figure class="peca">${palco('barco', 'claro', true, 'Carregando sua agenda')}<figcaption><b>Movimento reduzido:</b> o mesmo desenho, parado. Só o texto informa o carregamento.</figcaption></figure>`,
+].join('')
+document.getElementById('carro-splash').innerHTML =
+  `<div style="--mare-c:#7FB2E8;--fundo-c:#0A2540;color:#F6F4EE">${carrinho('barco').replace('class="carro"', 'class="carro" style="width:240px"')}</div>`
+
+/* ---------- 3. início ---------- */
+const saldo = `<div class="saldo">
+  <span class="leg">Disponível para novos pedidos</span>
+  <div class="valor" style="margin-top:2px">R$ 18.420,00</div>
+  <div class="barra"><i style="width:62%;background:#f6f4ee"></i><i style="width:13%;background:#7fb2e8"></i></div>
+  <div class="pes"><div><span class="leg">Reservado</span><b>R$ 3.200,00</b></div><div><span class="leg">Limite de crédito</span><b>R$ 5.000,00</b></div></div>
+</div>`
+const inicioCliente = sb() + `<div class="rolo">${topo('Umi San', 'MA')}
+  <h1 class="h2" style="margin-bottom:14px">Bom dia, Mariana</h1>
+  ${saldo}
+  <div class="cartao aguardando" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="h3">Aguardando você</span><span class="st agu">${ic('i-relogio', 14)}1 orçamento</span></div>
+    <p style="margin:6px 0 10px;color:var(--suave)">Pedido 1042, Porto de Itajaí até Estaleiro Navegantes</p>
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:20px;font-weight:700">R$ 1.850,00</span><span class="forte" style="text-decoration:underline;text-underline-offset:3px">Revisar orçamento</span></div>
+  </div>
+  <div class="cartao" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="h3">Próximo serviço</span>${st('age')}</div>
+    ${rota('Porto de Itajaí', 'Quinta, 15 de outubro, 07:30', 'Estaleiro Navegantes', 'Previsão de chegada 09:10')}
+  </div>
+</div>${fab}${abas('cliente', 'Início')}`
+
+const inicioMotorista = sb() + `<div class="rolo">${topo('', 'JR')}
+  <h1 class="h2">Bom dia, João</h1>
+  <p class="leg" style="font-size:15px;margin:2px 0 14px">Você tem 2 serviços hoje.</p>
+  <div class="cartao aguardando">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="h3">Aguardando seu orçamento</span><span class="st sol">${ic('i-relogio', 14)}2</span></div>
+    <p style="margin:6px 0 10px;color:var(--suave)">Pedido 1047 da Umi San, para sexta, 16 de outubro</p>
+    <span class="forte" style="text-decoration:underline;text-underline-offset:3px">Fazer orçamento</span>
+  </div>
+  <div class="grupo">Hoje</div>
+  <div class="lst">
+    <div class="cartao item-ped"><div class="lin"><b>13:00</b>${st('age')}</div>${miniRota('Porto de Itajaí', 'Marina Itajaí')}<span class="leg">Umi San, 2 pessoas e equipamento, com reboque</span></div>
+    <div class="cartao item-ped"><div class="lin"><b>16:30</b>${st('age')}</div>${miniRota('Estaleiro Navegantes', 'Porto de Itajaí')}<span class="leg">Umi San, só levar</span></div>
+  </div>
+</div>${abas('motorista', 'Início')}`
+
+const inicioAdm = sb() + `<div class="rolo">${topo('', 'CE')}
+  <h1 class="h2" style="margin-bottom:14px">Bom dia, Claudio</h1>
+  <div class="saldo" style="padding:16px 18px">
+    <span class="leg">Aprovado em outubro</span>
+    <div class="valor" style="margin-top:2px">R$ 42.760,00</div>
+    <div class="pes" style="margin-top:12px"><div><span class="leg">Reconciliação 03:00</span><b style="display:flex;align-items:center;gap:6px">${ic('i-ok', 16)}Sem divergência</b></div><div><span class="leg">Pedidos no mês</span><b>31</b></div></div>
+  </div>
+  <div class="grupo">Pendências</div>
+  <div class="lst">
+    <div class="cartao aguardando item-ped"><div class="lin"><span class="h3">Contrato da Porto Sul</span><span class="st sol">${ic('i-relogio', 14)}Rascunho</span></div><span style="color:var(--suave)">Falta publicar para liberar pedidos.</span></div>
+    <div class="cartao item-ped"><div class="lin"><span class="forte">Crédito baixo</span><span class="leg">2 empresas</span></div><span style="color:var(--suave)">Umi San e Marina Sul abaixo do alerta.</span></div>
+    <div class="cartao item-ped"><div class="lin"><span class="forte">Convites expirando</span><span class="leg">amanhã</span></div><span style="color:var(--suave)">3 links de convite vencem em 24 horas.</span></div>
+  </div>
+</div>${abas('adm', 'Início')}`
+
+document.getElementById('inicios').innerHTML = [
+  tel(inicioCliente, '<b>Cliente gestor (N1) e solicitante (N2).</b> O visualizador (N3) vê a mesma tela, mas sem o + e sem "Revisar orçamento".'),
+  tel(inicioMotorista, '<b>Motorista.</b> Mostra o dia dele e os orçamentos pendentes, sem saldo nem limites. O alto contraste para o sol continua disponível.'),
+  tel(inicioAdm, '<b>ADM.</b> Mostra o aprovado no período, o estado da reconciliação e as pendências. O gestor de frota vê a mesma tela, sem valores.'),
+].join('')
+
+/* ---------- 4. pedidos + detalhe ---------- */
+const pedidos = sb() + `<div class="rolo">
+  <div class="topo" style="padding-bottom:8px"><h1 class="h1">Pedidos</h1><span class="avatar">${ic('i-busca', 20)}</span></div>
+  <div class="seg" style="margin-bottom:14px"><span class="escolhido">Abertos</span><span>Agendados</span><span>Histórico</span></div>
+  <div class="lst">
+    <div class="cartao item-ped aguardando"><div class="lin"><b>Pedido 1042</b>${st('agu')}</div>${miniRota('Porto de Itajaí', 'Estaleiro Navegantes')}<div class="lin"><span class="leg">Quinta, 15 out, 07:30</span><b>R$ 1.850,00</b></div></div>
+    <div class="cartao item-ped"><div class="lin"><b>Pedido 1047</b>${st('sol')}</div>${miniRota('Marina Itajaí', 'Porto de Itajaí')}<div class="lin"><span class="leg">Sexta, 16 out, 13:00</span><span class="leg">sem valor ainda</span></div></div>
+    <div class="cartao item-ped"><div class="lin"><b>Pedido 1039</b>${st('and')}</div>${miniRota('Estaleiro Navegantes', 'Balneário Camboriú')}<div class="lin"><span class="leg">Hoje, 09:00</span><b>R$ 2.340,00</b></div></div>
+  </div>
+</div>${fab}${abas('cliente', 'Pedidos')}`
+
+const passoLinha = (txt, q, estado) => `<div style="display:grid;grid-template-columns:18px 1fr;gap:10px">
+  <div style="display:flex;flex-direction:column;align-items:center;padding-top:5px">${
+    estado === 'atual' ? tri() : `<span style="width:10px;height:10px;border-radius:50%;${estado === 'feito' ? 'background:var(--texto)' : 'border:2px solid var(--linha)'}"></span>`
+  }<span style="width:2px;flex:1;background:var(--linha);margin-top:4px;min-height:14px"></span></div>
+  <div style="padding-bottom:10px"><p style="margin:0;font-weight:${estado === 'atual' ? 700 : 600};${estado === 'depois' ? 'color:var(--suave)' : ''}">${txt}</p><p class="leg" style="margin:0">${q}</p></div></div>`
+const detalhe = sb() + `<div class="rolo">
+  <div class="topo" style="padding-bottom:4px"><span style="display:flex;align-items:center;gap:2px;font-weight:600;margin-left:-6px">${ic('i-volta')}Pedidos</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><h1 class="h1">Pedido 1042</h1></div>
+  <div style="margin:8px 0 14px">${st('agu')}</div>
+  <div class="cartao">${rota('Porto de Itajaí', 'Quinta, 15 de outubro, 07:30', 'Estaleiro Navegantes', 'Até 09:30, ida e volta')}</div>
+  <div class="cartao" style="margin-top:12px;display:grid;gap:6px">
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--suave)">Orçamento</span><b>R$ 1.850,00</b></div>
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--suave)">Reserva no saldo</span><b>R$ 1.850,00</b></div>
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--suave)">Disponível depois</span><b>R$ 16.570,00</b></div>
+  </div>
+  <div class="grupo">Andamento</div>
+  ${passoLinha('Pedido enviado', 'Terça, 13 out, 08:12', 'feito')}
+  ${passoLinha('Orçamento enviado pelo motorista', 'Terça, 13 out, 09:40', 'feito')}
+  ${passoLinha('Sua aprovação', 'Vence quarta, 14 out, 09:40', 'atual')}
+  ${passoLinha('Serviço', 'Quinta, 15 out', 'depois')}
+</div>
+<div class="rodape" style="display:grid;grid-template-columns:1fr 1.6fr;gap:10px"><div class="btn btn-sec">Pedir revisão</div><div class="btn btn-acao">Aprovar R$ 1.850,00</div></div>`
+
+document.getElementById('pedidos').innerHTML = [
+  tel(pedidos, '<b>Pedidos.</b> O seletor fica em pílula. O pedido que espera você é o único com borda laranja.'),
+  tel(detalhe, '<b>Detalhe.</b> O triângulo marca a etapa atual. O botão principal diz o valor que será reservado.'),
+].join('')
+
+/* ---------- 5. novo pedido ---------- */
+const cmd = (n, titulo) => `<div class="cmd">${sb(true)}
+  <div class="linha1"><span class="icb">${n > 1 ? ic('i-volta') : ''}</span><span class="icb" style="margin:0 -10px 0 0">${ic('i-x')}</span></div>
+  <p class="passo">Passo ${n} de 4</p><h1 class="h1">${titulo}</h1>
+  <div class="prog">${[1, 2, 3, 4].map((i) => `<i class="${i < n ? 'feito' : i === n ? 'atual' : ''}"></i>`).join('')}</div></div>`
+const SEMANA = [['Ter', 13], ['Qua', 14], ['Qui', 15], ['Sex', 16], ['Sáb', 17], ['Seg', 19]]
+const faixaDias = (esc = 13) => `<div class="dias">${SEMANA.map(([d, n]) => `<div class="dia${n === esc ? ' escolhido' : ''}${n === 17 ? ' cheio' : ''}"><span class="ds">${d}</span><span class="dn">${n}</span></div>`).join('')}</div>`
+const HORAS = ['06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '13:00', '13:30', '14:00', '14:30']
+const OCUP = new Set(['06:00', '06:30', '10:30', '11:00', '11:30'])
+const grade = (esc = '07:30') => `<div class="horas">${HORAS.map((h) => `<div class="hora${h === esc ? ' escolhido' : ''}${OCUP.has(h) ? ' ocup' : ''}">${h}</div>`).join('')}</div>`
+const quando = cmd(1, 'Quando?') + `<div class="rolo" style="padding-top:14px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="h3">Outubro</span><span class="forte" style="font-size:14px;text-decoration:underline;text-underline-offset:3px">Ver mês inteiro</span></div>
+  ${faixaDias()}
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 8px"><span class="forte">Início</span><span class="leg">riscado = ocupado</span></div>
+  ${grade()}
+  <div class="stepper" style="margin-top:16px"><span class="forte">Duração estimada</span><span class="ctl"><span>−</span><b>2 h</b><span>+</span></span></div>
+  <div class="confirma">Terça, 13 de outubro, das 07:30 às 09:30</div>
+</div><div class="rodape"><div class="btn btn-acao">Continuar</div></div>`
+
+const onde = cmd(2, 'Onde?') + `<div class="rolo" style="padding-top:16px">
+  <div class="forte" style="margin-bottom:8px">Trajeto</div>
+  <div class="ops" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
+    <div class="op" style="justify-content:center;padding:10px 4px;font-size:14px">Só levar</div>
+    <div class="op" style="justify-content:center;padding:10px 4px;font-size:14px">Só trazer</div>
+    <div class="op escolhido" style="justify-content:center;padding:10px 4px;font-size:14px">Ida e volta</div>
+  </div>
+  <div style="display:grid;grid-template-columns:18px 1fr;gap:10px;margin-top:18px">
+    <div style="display:flex;flex-direction:column;align-items:center;padding-top:22px"><span class="rota"><span class="ini" style="display:block"></span></span><span style="width:2px;flex:1;margin:6px 0;background:repeating-linear-gradient(var(--suave) 0 3px,transparent 3px 7px);opacity:.6"></span><span style="margin-bottom:22px">${tri()}</span></div>
+    <div style="display:grid;gap:12px">
+      <div class="campo"><span class="r">Origem</span><span class="v">Porto de Itajaí, portão 3</span></div>
+      <div class="campo"><span class="r">Destino</span><span class="v">Estaleiro Navegantes</span></div>
+    </div>
+  </div>
+  <div class="forte" style="margin:20px 0 8px">Contato no local</div>
+  <div style="display:grid;gap:12px">
+    <div class="campo"><span class="r">Nome do contato</span><span class="v">Rafael Souza</span></div>
+    <div class="campo"><span class="r">Telefone do contato</span><span class="v">(47) 99812-3344</span></div>
+  </div>
+</div><div class="rodape"><div class="btn btn-acao">Continuar</div></div>`
+
+const oque = cmd(3, 'O que vamos levar?') + `<div class="rolo" style="padding-top:16px">
+  <div class="ops" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
+    <div class="op" style="flex-direction:column;gap:4px;padding:12px 4px;font-size:14px">${ic('i-pessoas')}Pessoas</div>
+    <div class="op" style="flex-direction:column;gap:4px;padding:12px 4px;font-size:14px">${ic('i-caixa')}Equipamento</div>
+    <div class="op escolhido" style="flex-direction:column;gap:4px;padding:12px 4px;font-size:14px">${ic('i-pessoas')}Ambos</div>
+  </div>
+  <div class="stepper" style="margin-top:18px"><span class="forte">Pessoas</span><span class="ctl"><span>−</span><b>3</b><span>+</span></span></div>
+  <div class="campo" style="margin-top:14px"><span class="r">Equipamento</span><span class="v">Motor de popa e 2 caixas de ferramentas</span></div>
+  <div class="forte" style="margin:18px 0 8px">Usa reboque?</div>
+  <div class="seg"><span class="escolhido">Sim</span><span>Não</span><span>Não sei</span></div>
+  <div class="campo" style="margin-top:14px;min-height:76px"><span class="r">Observações (opcional)</span><span class="v" style="font-weight:400">Carregar pela rampa lateral.</span></div>
+</div><div class="rodape"><div class="btn btn-acao">Continuar</div></div>`
+
+const revisar = cmd(4, 'Confira o pedido') + `<div class="rolo" style="padding-top:16px">
+  <div class="cartao" style="display:grid;gap:12px">
+    <div style="display:flex;justify-content:space-between;gap:8px"><div><span class="leg">Quando</span><p style="margin:0" class="forte">Terça, 13 de outubro, das 07:30 às 09:30</p></div><span class="forte" style="font-size:14px;text-decoration:underline;text-underline-offset:3px">Alterar</span></div>
+    <div style="border-top:1px solid var(--linha)"></div>
+    ${rota('Porto de Itajaí, portão 3', 'Contato: Rafael Souza', 'Estaleiro Navegantes', 'Ida e volta')}
+    <div style="border-top:1px solid var(--linha)"></div>
+    <div style="display:flex;justify-content:space-between;gap:8px"><div><span class="leg">Carga</span><p style="margin:0" class="forte">3 pessoas e equipamento, com reboque</p></div><span class="forte" style="font-size:14px;text-decoration:underline;text-underline-offset:3px">Alterar</span></div>
+  </div>
+  <div style="margin-top:14px;border-radius:12px;padding:12px 14px;background:color-mix(in srgb,var(--st-agu) 12%,var(--folha));display:flex;gap:10px">
+    <span style="color:var(--st-agu)">${ic('i-relogio', 20)}</span>
+    <p style="margin:0;font-size:15px;line-height:1.45">O motorista envia o orçamento em até 24 horas. Nada é reservado no saldo até você aprovar.</p>
+  </div>
+</div><div class="rodape"><div class="btn btn-acao">Enviar pedido</div></div>`
+
+document.getElementById('novo').innerHTML = [
+  tel(quando, '<b>Passo 1, Quando.</b> Mostra a faixa de dias, os horários em 4 colunas, a duração e a frase de confirmação. O sábado está riscado porque não tem horário.'),
+  tel(onde, '<b>Passo 2, Onde.</b> Os campos de origem e destino seguem o mesmo trilho da rota, do círculo ao triângulo.'),
+  tel(oque, '<b>Passo 3, O quê.</b> As opções escolhidas usam a mesma regra de seleção dos horários.'),
+  tel(revisar, '<b>Passo 4, Confira.</b> Cada bloco tem "Alterar". Se o saldo estiver abaixo do alerta, o aviso aparece aqui em âmbar.'),
+].join('')
+
+/* ---------- 6. seleção nos dois modos ---------- */
+const quandoMini = (t) => tel(quando, t === 'claro' ? '<b>Claro:</b> marinho cheio, texto off-white, contorno laranja.' : '<b>Escuro:</b> off-white cheio, texto marinho, contorno laranja.', t)
+document.getElementById('selecao').innerHTML = quandoMini('claro') + quandoMini('escuro')
+
+/* ---------- 7. agenda ---------- */
+const semana = (esc) => `<div class="semana">${[['D', 11], ['S', 12], ['T', 13], ['Q', 14], ['Q', 15], ['S', 16], ['S', 17]].map(([l, n]) =>
+  `<div class="d"><span class="l">${l}</span><span class="n${n === esc ? ' escolhido' : ''}" style="${n === 13 && esc !== 13 ? 'color:var(--laranja-texto)' : ''}">${n}${[15, 16].includes(n) ? `<i><svg width="5" height="5"><circle cx="2.5" cy="2.5" r="2.5" fill="var(--st-age)"/></svg></i>` : ''}</span></div>`).join('')}</div>`
+const agTopo = (vis) => `<div class="ag-topo"><span class="mes h2">Outubro ${ic('i-baixo', 18)}</span><span class="hoje">Hoje</span></div>
+  <div class="seg">${['Dia', '3 dias', 'Mês'].map((v) => `<span class="${v === vis ? 'escolhido' : ''}">${v}</span>`).join('')}</div>`
+const horasGrade = (de, ate) => Array.from({ length: ate - de }, (_, i) => `<div class="hr"><span class="t">${String(de + i).padStart(2, '0')}:00</span><span class="c"></span></div>`).join('')
+const y = (h) => 10 + (h - 7) * 56 // 07:00 é o topo (10 px de respiro)
+const agDia = sb() + `<div class="rolo" style="padding-bottom:0">${agTopo('Dia')}${semana(13)}
+  <div class="grade">${horasGrade(7, 15)}
+    <div class="bl meu" style="top:${y(7.5)}px;height:${2 * 56 - 4}px"><b>Pedido 1036</b>07:30 às 09:30<br>Porto de Itajaí, ida e volta</div>
+    <div class="bl ocup" style="top:${y(10.5) + 2}px;height:${1.5 * 56 - 4}px">${ic('i-cadeado', 16)}Ocupado</div>
+    <div class="bl livre" style="top:${y(12) + 2}px;height:${2 * 56 - 4}px"><span>Livre, 12:00 às 14:00</span><span style="display:flex;align-items:center;gap:4px">${ic('i-mais-c', 16)}Pedir</span></div>
+    <div class="agora" style="top:${y(10 + 20 / 60)}px">${tri()}<span class="hh">10:20</span></div>
+  </div>
+</div>${fab}${abas('cliente', 'Agenda')}`
+
+const col3 = (x, w) => `left:${x}px;right:auto;width:${w}px`
+const ag3 = sb() + `<div class="rolo" style="padding-bottom:0">${agTopo('3 dias')}
+  <div style="display:grid;grid-template-columns:52px repeat(3,1fr);margin:12px -16px 6px 0;text-align:center">
+    <span></span>
+    <div class="d"><span class="leg" style="display:block">Ter</span><span class="escolhido" style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:12px;font-weight:700">13</span></div>
+    <div><span class="leg" style="display:block">Qua</span><span style="display:inline-grid;place-items:center;width:34px;height:34px;font-weight:700">14</span></div>
+    <div><span class="leg" style="display:block">Qui</span><span style="display:inline-grid;place-items:center;width:34px;height:34px;font-weight:700">15</span></div>
+  </div>
+  <div class="grade">${horasGrade(7, 15)}
+    <div style="position:absolute;top:0;bottom:0;left:${52 + 98}px;border-left:1px solid var(--linha)"></div>
+    <div style="position:absolute;top:0;bottom:0;left:${52 + 196}px;border-left:1px solid var(--linha)"></div>
+    <div class="bl meu" style="top:${y(7.5)}px;height:${2 * 56 - 4}px;${col3(56, 90)}"><b>1036</b>07:30</div>
+    <div class="bl ocup" style="top:${y(10.5) + 2}px;height:${1.5 * 56 - 4}px;${col3(56, 90)}">${ic('i-cadeado', 14)}</div>
+    <div class="bl agu" style="top:${y(9)}px;height:${2 * 56 - 4}px;${col3(154, 90)}"><b>1042</b>Aguarda você</div>
+    <div class="bl meu" style="top:${y(7.5)}px;height:${2 * 56 - 4}px;${col3(252, 90)}"><b>1045</b>07:30</div>
+    <div class="bl livre" style="top:${y(12) + 2}px;height:${2 * 56 - 4}px;${col3(56, 90)};font-size:13px">Livre</div>
+    <div class="bl ocup" style="top:${y(13)}px;height:${56 - 4}px;${col3(154, 90)}">${ic('i-cadeado', 14)}</div>
+    <div class="agora" style="top:${y(10 + 20 / 60)}px;right:auto;width:${98 + 6}px">${tri()}<span class="hh">10:20</span></div>
+  </div>
+</div>${fab}${abas('cliente', 'Agenda')}`
+
+const mk = (t) => t === 'meu' ? `<svg width="7" height="7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--st-age)"/></svg>`
+  : t === 'agu' ? `<svg width="8" height="7" viewBox="0 0 8 7"><path d="M4 0 8 7H0z" fill="var(--laranja-texto)"/></svg>`
+  : `<svg width="7" height="7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--ocupado)"/></svg>`
+const DIAS_MK = { 2: ['meu'], 6: ['ocup'], 8: ['meu', 'ocup'], 13: ['meu', 'ocup'], 14: ['agu'], 15: ['meu'], 16: ['meu'], 20: ['ocup'], 22: ['meu'], 27: ['ocup'], 29: ['meu'] }
+const CHEIOS = new Set([17, 24])
+let cel = ''
+for (let i = 0; i < 4; i++) cel += `<div class="c fora">${27 + i}</div>` // 1º/10/2026 é quinta
+for (let d = 1; d <= 31; d++) cel += `<div class="c${d === 13 ? ' hj' : ''}${d === 15 ? ' escolhido' : ''}${CHEIOS.has(d) ? ' cheio' : ''}">${d}<span class="mk">${(DIAS_MK[d] || []).map(mk).join('')}</span></div>`
+const agMes = sb() + `<div class="rolo">${agTopo('Mês')}
+  <div class="cal" style="margin-top:14px">${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l) => `<span class="l">${l}</span>`).join('')}${cel}</div>
+  <div class="legenda"><span>${mk('meu')}Seu pedido</span><span>${mk('agu')}Aguardando você</span><span>${mk('ocup')}Ocupado</span><span><s>17</s> Dia sem horário</span></div>
+  <div class="forte" style="margin-bottom:8px">Quinta, 15 de outubro</div>
+  <div class="cartao item-ped"><div class="lin"><b>07:30 às 09:30</b>${st('age')}</div>${miniRota('Porto de Itajaí', 'Estaleiro Navegantes')}</div>
+</div>${fab}${abas('cliente', 'Agenda')}`
+
+document.getElementById('agenda').innerHTML = [
+  tel(agDia, '<b>Dia.</b> Seu pedido tem borda de 3 px na cor do status. "Ocupado" é hachurado, com cadeado. "Livre" é tracejado em verde. Às 10:20, a linha do agora com o triângulo.', 'claro'),
+  tel(agDia, '<b>Dia, no modo escuro.</b> Hoje e o dia escolhido usam off-white cheio com contorno laranja.', 'escuro'),
+  tel(ag3, '<b>3 dias.</b> As colunas deslizam para os lados. "Aguardando você" aparece em âmbar e o agora fica só na coluna de hoje.', 'claro'),
+  tel(agMes, '<b>Mês.</b> Marcadores de <code>marcadores.tsx</code>, com a legenda fixa logo abaixo e o resumo do dia tocado. Hoje fica em laranja-texto.', 'claro'),
+  tel(agMes, '<b>Mês, no modo escuro.</b>', 'escuro'),
+].join('')
+
+/* ---------- 8. orçar, extrato, ADM ---------- */
+const linhaOrc = (nome, preco, qtd, unid, tot) => `<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--linha);align-items:center">
+  <div><p style="margin:0" class="forte">${nome}</p><span class="leg">${preco}</span></div>
+  <span class="ctl" style="display:flex;align-items:center;border:1.5px solid var(--linha);border-radius:12px;background:var(--folha)"><span style="width:38px;height:40px;display:grid;place-items:center;font-size:20px">−</span><b style="min-width:52px;text-align:center">${qtd} ${unid}</b><span style="width:38px;height:40px;display:grid;place-items:center;font-size:20px">+</span></span>
+  <span></span><b style="text-align:right">${tot}</b></div>`
+const orcar = `<div class="cmd">${sb(true)}<div class="linha1"><span class="icb">${ic('i-volta')}</span></div><p class="passo">Pedido 1047, Umi San</p><h1 class="h1">Orçamento</h1></div>
+<div class="rolo" style="padding-top:8px">
+  ${linhaOrc('Km rodados', 'R$ 4,80 por km', 86, 'km', 'R$ 412,80')}
+  ${linhaOrc('Espera', 'R$ 60,00 por hora', 2, 'h', 'R$ 120,00')}
+  ${linhaOrc('Diárias do motorista', 'R$ 350,00 por diária', 1, '', 'R$ 350,00')}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--linha)"><span class="forte">Usa reboque</span><span style="width:52px;height:32px;border-radius:999px;background:var(--sel);position:relative"><i style="position:absolute;right:4px;top:4px;width:24px;height:24px;border-radius:50%;background:var(--sel-texto)"></i></span></div>
+  <p class="leg" style="margin-top:10px">Preços travados no contrato publicado em 01/10/2026.</p>
+</div>
+<div class="rodape"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span style="color:var(--suave)">Total do orçamento</span><span class="valor" style="font-size:26px">R$ 1.162,80</span></div><div class="btn btn-acao">Enviar orçamento</div></div>`
+
+const mov = (icn, tit, sub, val, saldo, neg) => `<div class="mov"><span class="ic" style="${neg ? '' : 'color:var(--st-con)'}">${ic(icn, 18)}</span><div><p style="margin:0;font-weight:600;line-height:1.35">${tit}</p><span class="leg">${sub}</span></div><div class="vl">${val}<small>${saldo}</small></div></div>`
+const extrato = sb() + `<div class="rolo">
+  <div class="topo" style="padding-bottom:6px"><h1 class="h1">Extrato</h1><span class="forte" style="font-size:14px;text-decoration:underline;text-underline-offset:3px">Exportar</span></div>
+  <div class="seg" style="margin-bottom:12px"><span>7 dias</span><span class="escolhido">Outubro</span><span>Período</span></div>
+  <div style="display:flex;justify-content:space-between;padding:12px 14px;border-radius:12px;background:var(--suave-sel)"><span class="forte">Saldo em 13/10</span><b>R$ 21.620,00</b></div>
+  ${mov('i-seta-cima', 'Recarga', 'Hoje, 08:05, PIX', '+ R$ 10.000,00', 'saldo R$ 21.620,00', false)}
+  ${mov('i-seta-baixo', 'Pedido 1039', 'Hoje, 09:00, saída do motorista', '− R$ 2.340,00', 'saldo R$ 11.620,00', true)}
+  ${mov('i-desfaz', 'Estorno do pedido 1031', '10/10, cancelado sem multa', '+ R$ 980,00', 'saldo R$ 13.960,00', false)}
+  ${mov('i-seta-baixo', 'Multa do pedido 1028', '08/10, cancelamento com 12 h', '− R$ 245,00', 'saldo R$ 12.980,00', true)}
+</div>${fab}${abas('cliente', 'Início')}`
+
+const empresa = (nome, disp, lim, pct, alerta) => `<div class="cartao item-ped${alerta ? ' aguardando' : ''}">
+  <div class="lin"><span class="h3">${nome}</span>${alerta ? `<span class="st and">${ic('i-relogio', 14)}Abaixo do alerta</span>` : ''}</div>
+  <div class="lin"><span class="leg">Disponível</span><b>${disp}</b></div>
+  <div style="height:6px;border-radius:6px;background:var(--linha);overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:var(--st-age)"></i></div>
+  <div class="lin"><span class="leg">Limite ${lim}</span><span class="forte" style="font-size:14px;text-decoration:underline;text-underline-offset:3px">Lançar</span></div></div>`
+const creditos = sb() + `<div class="rolo">
+  <div class="topo" style="padding-bottom:6px"><h1 class="h1">Créditos</h1><span class="avatar">${ic('i-busca', 20)}</span></div>
+  <p style="margin:0 0 14px;color:var(--suave)">Recarga, ajuste e estorno, sempre com motivo.</p>
+  <div class="lst">
+    ${empresa('Umi San', 'R$ 1.420,00', 'R$ 5.000,00', 14, true)}
+    ${empresa('Marina Sul', 'R$ 8.900,00', 'R$ 2.000,00', 58, false)}
+    ${empresa('Porto Sul', 'R$ 0,00', 'R$ 0,00', 0, false)}
+  </div>
+</div>${abas('adm', 'Admin')}`
+
+const kpi = (r, v) => `<div class="cartao" style="padding:12px 14px"><span class="leg">${r}</span><div style="font-size:22px;font-weight:700;letter-spacing:-0.02em">${v}</div></div>`
+const painel = sb() + `<div class="rolo">
+  <div class="topo" style="padding-bottom:6px"><h1 class="h1">Painel</h1></div>
+  <div class="seg" style="margin-bottom:14px"><span>Semana</span><span class="escolhido">Outubro</span><span>Ano</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${kpi('Aprovado no período', 'R$ 42.760')}${kpi('Corridas', '31')}${kpi('Multas', 'R$ 1.225')}${kpi('Estornos', 'R$ 980')}</div>
+  <div class="cartao" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="h3">Reconciliação</span>${st('con').replace('Concluído', 'Sem divergência')}</div>
+    <p class="leg" style="margin:6px 0 0">Última verificação hoje às 03:00. Saldos de 3 empresas conferidos com o livro-razão.</p>
+  </div>
+  <div class="grupo">Aprovado por semana</div>
+  <div style="display:flex;align-items:flex-end;gap:10px;height:96px;padding:0 4px">${[42, 70, 55, 88, 30].map((h, i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><i style="width:100%;height:${h}px;border-radius:6px 6px 2px 2px;background:${i === 4 ? 'var(--laranja)' : 'var(--st-age)'}"></i><span class="leg" style="font-size:12px">S${i + 1}</span></div>`).join('')}</div>
+</div>${abas('adm', 'Admin')}`
+
+document.getElementById('outros').innerHTML = [
+  tel(orcar, '<b>Orçar (motorista).</b> Uma calculadora de quantidade × preço travado do contrato, com o total fixo no rodapé.'),
+  tel(extrato, '<b>Extrato.</b> Sinal e ícone indicam débito e crédito. O saldo corrente aparece em cada linha. Exporta CSV e PDF.'),
+  tel(creditos, '<b>Créditos (ADM).</b> Disponível e limite por empresa. A que está abaixo do alerta fica com borda laranja.'),
+  tel(painel, '<b>Painel (ADM).</b> Indicadores e reconciliação. Na barra da semana atual, o laranja marca o "agora".'),
+].join('')
+
+/* ---------- chave claro/escuro ---------- */
+document.querySelectorAll('.chave button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.chave button').forEach((x) => x.setAttribute('aria-pressed', x === b))
+  document.body.dataset.tema = b.dataset.t
+  trocarLogos()
+}))
+function trocarLogos() {
+  document.querySelectorAll('.tel').forEach((t) => {
+    const escuro = t.dataset.tema === 'escuro' || (!t.dataset.tema && document.body.dataset.tema === 'escuro')
+    t.querySelectorAll('.logo-claro').forEach((i) => (i.style.display = escuro ? 'none' : ''))
+    t.querySelectorAll('.logo-escuro').forEach((i) => (i.style.display = escuro ? '' : 'none'))
+  })
+}
+trocarLogos()
+</script>
+</body>
+</html>
