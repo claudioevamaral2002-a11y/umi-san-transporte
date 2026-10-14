@@ -19,9 +19,24 @@ interface Opcoes {
  * ali o valor mostrado vem sempre do servidor. Limpa ao entrar ou sair da conta (outra pessoa no mesmo aparelho).
  */
 const memoria = new Map<string, unknown>()
+/** Muda a cada limpeza: resposta de uma busca iniciada antes de trocar de conta não entra na memória da nova conta. */
+let geracao = 0
 
 export function limparConsultas() {
   memoria.clear()
+  geracao += 1
+}
+
+export function geracaoDaMemoria(): number {
+  return geracao
+}
+
+export function guardarNaMemoria(chave: string, dados: unknown, geracaoDaBusca: number) {
+  if (geracaoDaBusca === geracao) memoria.set(chave, dados)
+}
+
+export function lerDaMemoria<T>(chave: string): { tem: boolean; dados: T | undefined } {
+  return memoria.has(chave) ? { tem: true, dados: memoria.get(chave) as T } : { tem: false, dados: undefined }
 }
 
 /**
@@ -40,9 +55,10 @@ export function useConsulta<T>(chave: string, buscar: () => Promise<T>, opcoes: 
 
   useEffect(() => {
     let ativo = true
+    const daBusca = geracao
     funcao.current().then(
       (dados) => {
-        if (guardar) memoria.set(chave, dados)
+        if (guardar) guardarNaMemoria(chave, dados, daBusca)
         if (ativo) setEstado({ chave, rodada, dados, erro: false })
       },
       () => {
@@ -59,8 +75,8 @@ export function useConsulta<T>(chave: string, buscar: () => Promise<T>, opcoes: 
   // A resposta da própria chave vale mesmo quando é `null` (ex.: "sem contrato", "não encontrado").
   const dados = mesma
     ? estado.dados
-    : guardar && memoria.has(chave)
-      ? (memoria.get(chave) as T)
+    : guardar && lerDaMemoria<T>(chave).tem
+      ? lerDaMemoria<T>(chave).dados
       : opcoes.manterAnterior && estado
         ? estado.dados
         : undefined
