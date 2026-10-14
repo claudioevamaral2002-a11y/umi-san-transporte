@@ -4,6 +4,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { DIA_PEDIDO, diaSp, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
 /** Luminância relativa (WCAG) de "rgb(r, g, b)" / "rgba(r, g, b, a)" (alfa ignorado: os fundos aqui são opacos). */
@@ -39,17 +40,11 @@ async function abrir(page: Page) {
   await simularApi(page)
   const chamadas = await simularPedidos(page)
   await page.goto('/pedidos/novo')
-  await expect(page.getByTestId('calendario').locator('[data-dia]').first()).toBeVisible()
+  await expect(page.getByTestId('faixa-dias').locator('[data-dia]').first()).toBeVisible()
   return chamadas
 }
 
-async function tocarDia(page: Page, dia: string) {
-  const calendario = page.getByTestId('calendario')
-  const botao = calendario.locator(`[data-dia="${dia}"]`)
-  if ((await botao.count()) === 0) await calendario.getByRole('button', { name: 'Próximo mês' }).tap()
-  await botao.tap()
-  return botao
-}
+const tocarDia = (page: Page, dia: string) => escolherDiaNoPedido(page, dia, 'tap')
 
 for (const tema of ['light', 'dark'] as const) {
   test.describe(`tema ${tema === 'light' ? 'claro' : 'escuro'}`, () => {
@@ -64,7 +59,7 @@ for (const tema of ['light', 'dark'] as const) {
       await esperarDestacado(dia)
       const outroDia = await tocarDia(page, diaSp(4))
       await expect(outroDia).toHaveAttribute('aria-pressed', 'true')
-      await expect(page.getByTestId('calendario').locator(`[data-dia="${DIA_PEDIDO}"]`)).toHaveAttribute('aria-pressed', 'false')
+      await expect(page.getByTestId('faixa-dias').locator(`[data-dia="${DIA_PEDIDO}"]`)).toHaveAttribute('aria-pressed', 'false')
       await esperarDestacado(outroDia)
 
       // Horário: toque marca, outro toque troca; só um marcado, e ele se destaca dos demais.
@@ -93,6 +88,24 @@ for (const tema of ['light', 'dark'] as const) {
       // Segue para o passo 2 com a escolha feita.
       await page.getByRole('button', { name: 'Continuar' }).tap()
       await expect(page.getByRole('heading', { level: 1, name: 'Onde?' })).toBeVisible()
+    })
+
+    test('escolhido usa contorno laranja e nenhum ✓; ocupado aparece riscado; frase confirma', async ({ page }) => {
+      await abrir(page)
+      await tocarDia(page, DIA_PEDIDO)
+      const horarios = page.getByTestId('horarios-livres')
+      const marcado = horarios.getByRole('radio', { name: '10:00' })
+      await marcado.tap()
+      await expect(marcado).toHaveAttribute('aria-checked', 'true')
+      expect(await marcado.evaluate((e) => getComputedStyle(e).boxShadow)).toContain('rgb(255, 106, 0)')
+      await expect(page.getByTestId('passo-quando')).not.toContainText('✓')
+      // 11:30 fica entre livres (11:00 e 16:00): ocupado, riscado e não escolhível.
+      const ocupado = horarios.getByRole('radio', { name: '11:30, ocupado' })
+      await expect(ocupado).toHaveAttribute('aria-disabled', 'true')
+      expect(await ocupado.evaluate((e) => getComputedStyle(e).textDecorationLine)).toBe('line-through')
+      await ocupado.tap({ force: true })
+      await expect(marcado).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByTestId('frase-quando')).toHaveText(/, das 10:00 às 12:00$/)
     })
 
     test('opções do passo 3 (tipo, modalidade) e Levar/Trazer se destacam ao toque', async ({ page }) => {

@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { saldoFalso } from './apoio/dinheiroFalso.ts'
 import { DIA_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa, json, URL_SUPABASE } from './apoio/sessaoFalsa.ts'
 
 const CLIENTE_N2 = { papel: 'CLIENTE' as const, nivel: 2 as const, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
@@ -47,7 +48,7 @@ test.describe('crédito ao criar pedido', () => {
 
     await page.goto('/pedidos/novo')
     await expect(page.getByTestId('novo-pedido-sem-credito')).toContainText(SEM_CREDITO)
-    await expect(page.getByTestId('calendario')).toHaveCount(0)
+    await expect(page.getByTestId('faixa-dias')).toHaveCount(0)
     expect(chamadas.map((c) => c.rpc)).not.toContain('criar_pedido')
   })
 
@@ -59,7 +60,7 @@ test.describe('crédito ao criar pedido', () => {
 
     await page.goto('/')
     await page.getByRole('link', { name: 'Novo pedido' }).first().click()
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByLabel('Origem').fill('Porto de Itajaí')
@@ -82,7 +83,7 @@ test.describe('crédito ao criar pedido', () => {
     await simularApi(page)
     await simularPedidos(page)
     await page.goto('/pedidos/novo')
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByLabel('Origem').fill('Porto de Itajaí')
@@ -99,7 +100,7 @@ test.describe('crédito ao criar pedido', () => {
     await simularApi(page)
     await simularPedidos(page, { respostas: { criar_pedido: [{ ok: false, codigo: 'SEM_CREDITO' }] } })
     await page.goto('/pedidos/novo')
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByLabel('Origem').fill('Porto de Itajaí')

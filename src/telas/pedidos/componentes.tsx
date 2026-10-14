@@ -27,7 +27,7 @@ export function Escolhas<T extends string>({
   const id = useId()
   return (
     <div>
-      <p id={id} className="mb-2 ivo-sobretitulo text-texto-suave">
+      <p id={id} className="mb-2 font-semibold">
         {rotulo}
       </p>
       <div role="radiogroup" aria-labelledby={id} className="flex flex-wrap gap-2">
@@ -42,7 +42,7 @@ export function Escolhas<T extends string>({
               onClick={() => aoMudar(o.valor)}
               className={`min-h-12 rounded-full border-[1.5px] px-4 font-semibold transition-colors duration-150 motion-reduce:transition-none ${
                 tamanho === 'largo' ? 'flex-1' : ''
-              } ${marcado ? 'border-selecao bg-selecao text-selecao-texto' : 'border-borda bg-superficie text-texto hover:border-marinho-2'}`}
+              } ${marcado ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto hover:border-marinho-2'}`}
             >
               {o.rotulo}
             </button>
@@ -58,7 +58,7 @@ export function CaixaChip({ rotulo, marcado, aoMudar }: { rotulo: string; marcad
   return (
     <label
       className={`relative flex min-h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border-[1.5px] px-4 font-semibold transition-colors duration-150 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--cor-foco)] motion-reduce:transition-none ${
-        marcado ? 'border-selecao bg-selecao text-selecao-texto' : 'border-borda bg-superficie text-texto'
+        marcado ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
       }`}
     >
       <input
@@ -67,14 +67,6 @@ export function CaixaChip({ rotulo, marcado, aoMudar }: { rotulo: string; marcad
         onChange={(e) => aoMudar(e.target.checked)}
         className="absolute inset-0 m-0 size-full cursor-pointer appearance-none rounded-full opacity-0"
       />
-      <span
-        aria-hidden="true"
-        className={`flex size-5 items-center justify-center rounded-md border-2 ${
-          marcado ? 'border-[var(--cor-laranja)] bg-[var(--cor-laranja)] text-marinho' : 'border-borda'
-        }`}
-      >
-        {marcado && <Icone nome="check" tamanho={14} />}
-      </span>
       {rotulo}
     </label>
   )
@@ -118,7 +110,7 @@ export function Contador({
           onClick={() => aoMudar(Math.max(min, valor - passo))}
           disabled={valor <= min}
           aria-label={`Diminuir ${rotulo.toLowerCase()}`}
-          className="flex size-12 items-center justify-center rounded-xl border-[1.5px] border-borda bg-superficie text-texto active:scale-95 disabled:opacity-40 motion-reduce:active:scale-100"
+          className="flex size-12 items-center justify-center rounded-campo border-[1.5px] border-borda bg-superficie text-texto active:scale-95 disabled:opacity-40 motion-reduce:active:scale-100"
         >
           <Icone nome="menos" />
         </button>
@@ -132,7 +124,7 @@ export function Contador({
           onClick={() => aoMudar(Math.min(max, valor + passo))}
           disabled={valor >= max}
           aria-label={`Aumentar ${rotulo.toLowerCase()}`}
-          className="flex size-12 items-center justify-center rounded-xl border-[1.5px] border-borda bg-superficie text-texto active:scale-95 disabled:opacity-40 motion-reduce:active:scale-100"
+          className="flex size-12 items-center justify-center rounded-campo border-[1.5px] border-borda bg-superficie text-texto active:scale-95 disabled:opacity-40 motion-reduce:active:scale-100"
         >
           <Icone nome="mais" />
         </button>

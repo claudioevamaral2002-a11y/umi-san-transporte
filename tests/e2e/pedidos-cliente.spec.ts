@@ -9,6 +9,7 @@ import {
   pendenciaFalsa,
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
+import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
@@ -40,15 +41,13 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByText('Passo 1 de 4')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Voltar ao passo anterior' })).toHaveCount(0)
     // Dia cheio e dias passados não são selecionáveis.
-    const cheio = page.getByTestId('calendario').locator(`[data-dia="${diaSp(3)}"]`)
-    if ((await cheio.count()) > 0) await expect(cheio).toBeDisabled()
-    if (diaSp(-1).slice(0, 7) === diaSp(0).slice(0, 7)) {
-      await expect(page.getByTestId('calendario').locator(`[data-dia="${diaSp(-1)}"]`)).toBeDisabled()
-    }
+    // Dia cheio fica riscado e desabilitado na faixa; a faixa começa hoje (dias passados nem aparecem).
+    await expect(page.getByTestId('faixa-dias').locator(`[data-dia="${diaSp(3)}"]`)).toBeDisabled()
+    await expect(page.getByTestId('faixa-dias').locator(`[data-dia="${diaSp(-1)}"]`)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continuar' }).click()
     await expect(page.getByRole('alert').filter({ hasText: 'Escolha o dia e um dos horários livres.' })).toBeVisible()
 
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     const horarios = page.getByTestId('horarios-livres')
     await horarios.getByRole('radio', { name: '10:00' }).click()
     await expect(horarios.getByRole('radio', { name: '10:00' })).toHaveAttribute('aria-checked', 'true')
@@ -157,7 +156,7 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Pedidos' })).toBeVisible()
 
     await page.getByRole('link', { name: 'Novo pedido' }).click()
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
     await page.getByTestId('horarios-livres').getByRole('radio', { name: '16:00' }).click()
     await page.getByRole('button', { name: 'Fechar o novo pedido' }).click()
     const folha = page.getByRole('dialog', { name: 'Descartar este pedido?' })
@@ -180,7 +179,7 @@ test.describe('cliente: novo pedido', () => {
     await expect(page.getByRole('link', { name: 'Novo pedido' })).toHaveCount(0)
     await page.goto('/pedidos/novo')
     await expect(page.getByTestId('novo-pedido-sem-contrato')).toContainText('Novo pedido indisponível')
-    await expect(page.getByTestId('calendario')).toHaveCount(0)
+    await expect(page.getByTestId('faixa-dias')).toHaveCount(0)
   })
 
   test('N3 (visualizador) não cria pedido: sem botão, rota recusada e janelas livres sem ação', async ({ page }) => {

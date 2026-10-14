@@ -63,6 +63,8 @@ test.describe('legenda = marcadores', () => {
     await simularPedidos(page)
     await mesComTodosOsMarcadores(page, ['meu', 'aguardando', 'ocupado', 'sem_horario'])
     await page.goto('/pedidos/novo')
+    // No redesign o mês inteiro abre numa folha a partir da faixa de dias.
+    await page.getByRole('button', { name: 'Ver mês inteiro' }).click()
     // Os dias +5…+8 podem cair no mês seguinte: confere os dois meses.
     const vistos = new Set<string>()
     for (let i = 0; i < 2; i++) {
@@ -102,6 +104,8 @@ test.describe('legenda = marcadores', () => {
     await simularPedidos(page)
     await mesComTodosOsMarcadores(page, [])
     await page.goto('/pedidos/novo')
+    // No redesign o mês inteiro abre numa folha a partir da faixa de dias.
+    await page.getByRole('button', { name: 'Ver mês inteiro' }).click()
     const { marcadores } = await conferirLegenda(page)
     expect(marcadores).toEqual([])
     await expect(page.getByTestId('legenda-calendario')).toHaveCount(0)
