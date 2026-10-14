@@ -107,9 +107,24 @@ const meuPerfil = async (cliente: ReturnType<typeof clientePublico>) => {
   return (r.data as Array<Record<string, unknown>>)[0]
 }
 
+describe('enderecos (fase 3A)', () => {
+  it('sobe, autentica e, sem chave do Google no CI, devolve MAPAS_INDISPONIVEL; entrada ruim nem chega ao Google', async () => {
+    const cliente = await criarPessoa({ papel: 'CLIENTE', nivel: 2 })
+    const sessao = randomUUID()
+    expect((await chamar('enderecos', cliente.token, { acao: 'sugerir', texto: 'porto', sessao }, { origem: ORIGEM_APP })).corpo).toEqual({
+      ok: false,
+      codigo: 'MAPAS_INDISPONIVEL',
+    })
+    expect((await chamar('enderecos', cliente.token, { acao: 'sugerir', texto: 'po', sessao }, { origem: ORIGEM_APP })).corpo).toEqual({
+      ok: false,
+      codigo: 'CAMPOS_INVALIDOS',
+    })
+  })
+})
+
 describe('protocolo das funções', () => {
   it('só POST; exige Bearer válido; origem de navegador só a configurada', async () => {
-    for (const funcao of ['definir-senha', 'convidar', 'gerir-usuario']) {
+    for (const funcao of ['definir-senha', 'convidar', 'gerir-usuario', 'enderecos']) {
       expect((await chamar(funcao, null, {})).status, `${funcao} sem token`).toBe(401)
       expect((await chamar(funcao, 'lixo.sem.valor', {})).status, `${funcao} token inválido`).toBe(401)
       expect((await chamar(funcao, null, {}, { metodo: 'GET' })).status, `${funcao} GET`).toBe(405)

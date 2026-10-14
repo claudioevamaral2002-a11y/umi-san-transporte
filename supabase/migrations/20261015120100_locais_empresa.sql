@@ -14,7 +14,7 @@ create table app.locais_empresa (
   endereco text check (char_length(endereco) <= 300),
   lat numeric(9,6) not null check (lat between -90 and 90),
   lng numeric(9,6) not null check (lng between -180 and 180),
-  place_id text check (place_id ~ '^[A-Za-z0-9_-]{1,300}$'),
+  place_id text check ((place_id ~ '^[A-Za-z0-9_-]+$' and char_length(place_id) <= 300)),
   -- place_id; sem ele (ponto marcado no mapa), nome em minúsculas + lat/lng com 5 casas.
   chave text not null check (char_length(chave) <= 400),
   usos int not null default 1 check (usos > 0),
@@ -38,10 +38,10 @@ begin
   insert into app.locais_empresa (empresa_id, nome, endereco, lat, lng, place_id, chave)
   values (p_empresa, left(p_nome, 200), p_endereco, p_lat, p_lng, p_place,
           coalesce(p_place, left(lower(p_nome), 200) || '@' || round(p_lat, 5) || ',' || round(p_lng, 5)))
+  -- O primeiro registro vale: outro pedido com o mesmo place_id só soma uso (nome e ponto vêm do cliente e não podem
+  -- reescrever o local que o resto da empresa usa).
   on conflict (empresa_id, chave) do update
-    set usos = app.locais_empresa.usos + 1, ultimo_uso = now(),
-        nome = excluded.nome, endereco = coalesce(excluded.endereco, app.locais_empresa.endereco),
-        lat = excluded.lat, lng = excluded.lng;
+    set usos = app.locais_empresa.usos + 1, ultimo_uso = now();
 end $$;
 
 -- Sem acento e sem caixa. O dicionário vai explícito porque, com search_path vazio, unaccent(text) não o acha.

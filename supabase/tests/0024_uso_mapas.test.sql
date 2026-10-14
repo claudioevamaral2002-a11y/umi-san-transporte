@@ -56,7 +56,8 @@ select is(api.registrar_uso_mapas('ROTA') ->> 'codigo', 'LIMITE_EXCEDIDO', 'a 21
 reset role;
 insert into interno.limites (usuario_id, acao, janela_inicio, contagem)
 values ('00000000-0000-0000-0000-0000000000a8', 'MAPAS_DIA',
-        date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo', 500);
+        date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo', 500)
+on conflict (usuario_id, acao, janela_inicio) do update set contagem = 500;
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca8'), true);
 select is(api.registrar_uso_mapas('SUGERIR') ->> 'codigo', 'LIMITE_EXCEDIDO', 'acima de 500 chamadas no dia pela mesma pessoa');

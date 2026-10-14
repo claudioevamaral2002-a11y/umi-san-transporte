@@ -1,6 +1,6 @@
 -- Fase 3A (docs/fases/fase-3a-desenho-enderecos-previa.md §6): cada chamada ao Google feita pela função `enderecos`
 -- passa antes por api.registrar_uso_mapas, com o JWT de quem usa:
---   limite por usuário: SUGERIR 60/min, DETALHAR 30/min, ROTA 20/min;
+--   limite por usuário: SUGERIR 60/min, DETALHAR 30/min, ROTA 20/min e 500 por dia;
 --   teto por empresa e por dia (America/Sao_Paulo): app.configuracao.mapas_teto_diario_empresa (padrão 2.000), que o ADM
 --   ajusta em Configurações. A equipe da IVO (sem empresa) conta no teto 'IVO'.
 -- Acima do teto, a função devolve TETO_DIARIO e o app cai no texto livre.
@@ -72,6 +72,10 @@ begin
   end if;
   if not interno.checar_limite('MAPAS_' || p_tipo, maximo, interval '1 minute') then
     return interno.negar('USO_MAPAS', 'mapas:' || p_tipo, 'LIMITE_EXCEDIDO');
+  end if;
+  -- Uma pessoa sozinha não esgota o teto da empresa.
+  if not interno.checar_limite('MAPAS_DIA', 500, interval '1 day') then
+    return interno.negar('USO_MAPAS', 'mapas:dia', 'LIMITE_EXCEDIDO');
   end if;
   k := case when v.papel = 'CLIENTE' then v.empresa_id::text else 'IVO' end;
   teto := coalesce((select c.mapas_teto_diario_empresa from app.configuracao c where c.id), 2000);

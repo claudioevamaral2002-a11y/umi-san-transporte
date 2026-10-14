@@ -19,8 +19,8 @@ alter table app.atividades
   add constraint atividades_km_est check (km_estimado between 0 and 5000),
   add constraint atividades_min_est check (minutos_estimados between 0 and 10000),
   add constraint atividades_enderecos check (char_length(origem_endereco) <= 300 and char_length(destino_endereco) <= 300),
-  add constraint atividades_place check (origem_place_id ~ '^[A-Za-z0-9_-]{1,300}$'
-                                         and destino_place_id ~ '^[A-Za-z0-9_-]{1,300}$');
+  add constraint atividades_place check ((origem_place_id ~ '^[A-Za-z0-9_-]+$' and char_length(origem_place_id) <= 300)
+                                         and (destino_place_id ~ '^[A-Za-z0-9_-]+$' and char_length(destino_place_id) <= 300));
 
 ------------------------------------------------------------------------------------------------
 -- 2. Validação (corpo de 20261009130000_pedidos_agenda.sql com as chaves novas).
@@ -171,11 +171,13 @@ begin
     inv := array_append(inv, 'destino_endereco');
   end if;
   if coalesce(jsonb_typeof(p -> 'origem_place_id'), 'null') <> 'null'
-     and not (jsonb_typeof(p -> 'origem_place_id') = 'string' and (p ->> 'origem_place_id') ~ '^[A-Za-z0-9_-]{1,300}$') then
+     and not (jsonb_typeof(p -> 'origem_place_id') = 'string' and (p ->> 'origem_place_id') ~ '^[A-Za-z0-9_-]+$'
+                  and length(p ->> 'origem_place_id') <= 300) then
     inv := array_append(inv, 'origem_place_id');
   end if;
   if coalesce(jsonb_typeof(p -> 'destino_place_id'), 'null') <> 'null'
-     and not (jsonb_typeof(p -> 'destino_place_id') = 'string' and (p ->> 'destino_place_id') ~ '^[A-Za-z0-9_-]{1,300}$') then
+     and not (jsonb_typeof(p -> 'destino_place_id') = 'string' and (p ->> 'destino_place_id') ~ '^[A-Za-z0-9_-]+$'
+                  and length(p ->> 'destino_place_id') <= 300) then
     inv := array_append(inv, 'destino_place_id');
   end if;
   if coalesce(jsonb_typeof(p -> 'km_estimado'), 'null') <> 'null'

@@ -413,6 +413,10 @@ verify_jwt = false
 [functions.resgatar-link]
 verify_jwt = false
 
+# Fase 3A: endereços e rota (Google). O JWT é conferido pela casca comum (criarServidor), como nas outras.
+[functions.enderecos]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
