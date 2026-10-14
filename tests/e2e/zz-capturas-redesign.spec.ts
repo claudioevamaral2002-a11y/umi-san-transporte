@@ -161,7 +161,7 @@ for (const tema of ['light', 'dark'] as const) {
     test('fase 3A: orçar com km da rota', async ({ page }) => {
       await comSessaoFalsa(page, { papel: 'MOTORISTA', nome: 'Bruno Lima', tem_2fa: true }, { aal: 'aal2' })
       await simularApi(page)
-      await simularPedidos(page, { detalhes: [pedidoSolicitadoMotorista({ km_estimado: 38.2, minutos_estimados: 45 })] })
+      await simularPedidos(page, { detalhes: [pedidoSolicitadoMotorista({ km_estimado: 38.2, km_para_orcar: 38.2, minutos_estimados: 45 })] })
       await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
       await expect(page.getByTestId('km-estimado')).toBeVisible()
       await foto(page, '25-orcar-km-estimado')
