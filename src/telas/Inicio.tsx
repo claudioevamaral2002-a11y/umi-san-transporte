@@ -352,7 +352,7 @@ function gruposDe(perfil: Perfil, p: Pendencias): DefGrupo[] {
 }
 
 function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
-  const { dados, erro, carregando, recarregar } = useConsulta(`inicio-pendencias-${perfil.papel}`, pedidos.pendencias)
+  const { dados, erro, carregando, recarregar } = useConsulta(`inicio-pendencias-${perfil.papel}`, pedidos.pendencias, { cache: true })
   useTempoReal(topicoDoPerfil(perfil), recarregar)
   if (erro && dados === undefined) return null
   if (carregando && dados === undefined) {

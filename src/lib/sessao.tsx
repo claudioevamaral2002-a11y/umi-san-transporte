@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { limparConsultas } from './consulta.ts'
 import { derivarEstado, type EstadoSessao, type Perfil } from './estadoSessao.ts'
 import { lerLinkDeEntrada } from './linkDeEntrada.ts'
 
@@ -128,6 +129,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         const { data } = supabase.auth.onAuthStateChange((evento) => {
           if (evento === 'PASSWORD_RECOVERY') viaLink = true
           if (evento === 'SIGNED_OUT') viaLink = false
+          // Outra conta pode entrar no mesmo aparelho: nada da anterior fica na memória das telas.
+          if (evento === 'SIGNED_OUT' || evento === 'SIGNED_IN') limparConsultas()
           setTimeout(atualizar, 0)
         })
         cancelar = () => data.subscription.unsubscribe()
