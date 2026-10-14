@@ -64,6 +64,14 @@ export function nomeDoDia(dia: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
+const SEMANA_CURTA = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'short' })
+
+/** "Ter", "Sáb" (faixas de dias e colunas da agenda). */
+export function diaDaSemanaCurto(dia: string): string {
+  const t = SEMANA_CURTA.format(meioDia(dia)).replace('.', '')
+  return t.charAt(0).toUpperCase() + t.slice(1, 3)
+}
+
 /** "9 de outubro". */
 export function diaEMes(dia: string): string {
   return DIA_MES.format(meioDia(dia))

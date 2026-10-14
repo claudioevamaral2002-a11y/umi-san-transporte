@@ -20,3 +20,13 @@ export async function escolherDiaNoPedido(page: Page, dia: string, acao: Acao = 
   await expect(botao).toHaveAttribute('aria-pressed', 'true')
   return botao
 }
+
+/** Agenda (redesign): o dia se escolhe na faixa da semana (esta e a próxima semana, de domingo a sábado). */
+export async function escolherDiaNaAgenda(page: Page, dia: string, acao: Acao = 'click'): Promise<Locator> {
+  const faixa = page.getByTestId('faixa-semana')
+  await expect(faixa.locator('[data-dia]').first()).toBeVisible()
+  const botao = faixa.locator(`[data-dia="${dia}"]`)
+  await botao[acao]()
+  await expect(botao).toHaveAttribute('aria-pressed', 'true')
+  return botao
+}

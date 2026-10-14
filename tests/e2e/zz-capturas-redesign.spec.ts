@@ -1,7 +1,7 @@
 // Capturas do redesign mobile (claro e escuro) para o dono conferir. Só roda com CAPTURAS=1.
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
-import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
+import { escolherDiaNaAgenda, escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { DIA_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
@@ -27,6 +27,25 @@ for (const tema of ['light', 'dark'] as const) {
       await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
       await expect(page.getByTestId('frase-quando')).toBeVisible()
       await foto(page, '05-novo-pedido-quando')
+    })
+
+    test('agenda', async ({ page }) => {
+      await comSessaoFalsa(page, CLIENTE)
+      await simularApi(page)
+      await simularPedidos(page)
+      await page.goto('/agenda')
+      await expect(page.getByTestId('linha-agora')).toBeVisible()
+      await foto(page, '08-agenda-dia-hoje')
+      await escolherDiaNaAgenda(page, DIA_PEDIDO)
+      await expect(page.getByTestId('bloco-proprio')).toBeVisible()
+      await foto(page, '08-agenda-dia')
+      const visao = page.getByRole('radiogroup', { name: 'Visualização' })
+      await visao.getByRole('radio', { name: '3 dias' }).click()
+      await expect(page.getByTestId('grade-horas').locator('[data-coluna-dia]')).toHaveCount(3)
+      await foto(page, '09-agenda-3-dias')
+      await visao.getByRole('radio', { name: 'Mês' }).click()
+      await expect(page.getByTestId('resumo-dia')).toContainText('Pedido')
+      await foto(page, '10-agenda-mes')
     })
   })
 }

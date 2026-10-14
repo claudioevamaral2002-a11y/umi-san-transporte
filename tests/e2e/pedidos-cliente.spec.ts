@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
 import {
   DIA_PEDIDO,
@@ -9,22 +9,13 @@ import {
   pendenciaFalsa,
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
-import { escolherDiaNoPedido } from './apoio/escolherDia.ts'
+import { escolherDiaNaAgenda, escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const CLIENTE_N2 = { papel: 'CLIENTE' as const, nivel: 2 as const, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
 
 /** Abre o mês do dia (avança se for o mês seguinte) e toca no dia. */
-async function escolherDia(page: Page, dia: string) {
-  const calendario = page.getByTestId('calendario')
-  const botao = calendario.locator(`[data-dia="${dia}"]`)
-  await expect(calendario.locator('[data-dia]').first()).toBeVisible()
-  if ((await botao.count()) === 0) await calendario.getByRole('button', { name: 'Próximo mês' }).click()
-  await botao.click()
-  await expect(botao).toHaveAttribute('aria-pressed', 'true')
-}
-
 test.describe('cliente: novo pedido', () => {
   test('4 passos com Levar/Trazer, máscara de telefone, revisão e HORARIO_OCUPADO → novo horário → enviado', async ({ page }) => {
     const csp = await vigiarCsp(page)
@@ -196,7 +187,7 @@ test.describe('cliente: novo pedido', () => {
     await esperarInicioComAviso(page)
     expect(chamadas.map((c) => c.rpc)).not.toContain('criar_pedido')
     await page.goto('/agenda')
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNaAgenda(page, DIA_PEDIDO)
     await expect(page.getByTestId('janela-livre').first()).toBeVisible()
     await expect(page.getByTestId('agenda-dia').getByRole('link', { name: /fazer pedido/ })).toHaveCount(0)
   })
@@ -325,19 +316,20 @@ test.describe('cliente: agenda', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Agenda' })).toBeVisible()
     expect(chamadas.find((c) => c.rpc === 'dias_do_mes')?.corpo.p_duracao_min).toBe(60)
 
-    await escolherDia(page, DIA_PEDIDO)
-    const botaoDia = page.getByTestId('calendario').locator(`[data-dia="${DIA_PEDIDO}"]`)
+    const botaoDia = await escolherDiaNaAgenda(page, DIA_PEDIDO)
     await expect(botaoDia).toHaveAccessibleName(/1 pedido seu.*ocupado/)
     const dia = page.getByTestId('agenda-dia')
     const proprio = dia.getByTestId('bloco-proprio')
     await expect(proprio).toContainText('08:00–10:00')
     await expect(proprio).toContainText('Pedido #0042')
-    await expect(proprio).toContainText('Porto de Itajaí → Base Navegantes')
+    await expect(proprio).toContainText('Porto de Itajaí')
+    await expect(proprio).toContainText('Base Navegantes')
+    await expect(proprio).not.toContainText('→')
     const ocupado = dia.getByTestId('bloco-ocupado')
     await expect(ocupado).toContainText('12:00–14:00')
     await expect(ocupado).toContainText('Ocupado')
     await expect(ocupado).not.toContainText('#')
-    await expect(dia.getByTestId('janela-livre')).toHaveText([/Livre · 10:00–11:30/, /Livre · 16:00–18:00/])
+    await expect(dia.getByTestId('janela-livre')).toHaveText([/Livre, 10:00–11:30/, /Livre, 16:00–18:00/])
 
     // Janela livre inicia o pedido com dia e horário preenchidos.
     await dia.getByRole('link', { name: /Livre das 16:00 às 18:00/ }).click()
@@ -348,7 +340,7 @@ test.describe('cliente: agenda', () => {
 
     // O próprio bloco abre o pedido.
     await expect(page.getByRole('heading', { level: 1, name: 'Agenda' })).toBeVisible()
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNaAgenda(page, DIA_PEDIDO)
     await page.getByTestId('agenda-dia').getByTestId('bloco-proprio').click()
     await expect(page.getByRole('heading', { level: 1, name: 'Pedido #0042' })).toBeVisible()
     expect(csp).toEqual([])

@@ -121,6 +121,7 @@ test.describe('legenda = marcadores', () => {
       await simularPedidos(page)
       await mesComTodosOsMarcadores(page, ['aguardando'])
       await page.goto('/agenda')
+      await page.getByRole('radiogroup', { name: 'Visualização' }).getByRole('radio', { name: 'Mês' }).click()
       const { marcadores } = await conferirLegenda(page)
       // aguardando também é "meu" (o pedido é visível ao perfil) — ou nada, se +6 cair no mês seguinte.
       if (marcadores.length) expect(marcadores).toEqual(['aguardando', 'meu'])

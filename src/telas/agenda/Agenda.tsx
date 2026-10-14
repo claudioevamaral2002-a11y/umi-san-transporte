@@ -1,204 +1,259 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
-import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
+import { Segmentado } from '../../design/componentes/Segmentado.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { StatusBadge } from '../../design/componentes/StatusBadge.tsx'
-import { CabecalhoTela } from '../../design/componentes/Tela.tsx'
 import { useConsulta } from '../../lib/consulta.ts'
+import { tipoDoBloco, type EntradaGrade } from '../../lib/gradeAgenda.ts'
 import { pedidos, type Bloco } from '../../lib/pedidos.ts'
 import { useSessao } from '../../lib/sessao.tsx'
-import { faixaHorario, hoje as hojeSp, intervaloDoDia, janelasLivres, mesDe, nomeDoDia, numeroPedido, type Janela } from '../../lib/tempo.ts'
+import {
+  faixaHorario,
+  hoje as hojeSp,
+  intervaloDoDia,
+  janelasLivres,
+  mesDe,
+  nomeDoDia,
+  nomeDoMes,
+  numeroPedido,
+  somarDias,
+} from '../../lib/tempo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
 import { topicoDoPerfil } from '../../lib/topicos.ts'
 import { podeCriarPedido, usePedidoIndisponivel } from '../pedidos/Pedidos.tsx'
+import { Rota } from '../pedidos/componentes.tsx'
 import { Calendario } from './Calendario.tsx'
+import { domingoDe, FaixaSemana } from './FaixaSemana.tsx'
+import { GradeHoras } from './GradeHoras.tsx'
 
-type Item = { tipo: 'bloco'; bloco: Bloco } | { tipo: 'livre'; janela: Janela }
+type Visao = 'dia' | 'tres' | 'mes'
+const VISOES: ReadonlyArray<{ valor: Visao; rotulo: string }> = [
+  { valor: 'dia', rotulo: 'Dia' },
+  { valor: 'tres', rotulo: '3 dias' },
+  { valor: 'mes', rotulo: 'Mês' },
+]
+const CHAVE_VISAO = 'agenda-visao'
 
-function BlocoAgenda({ b, equipe }: { b: Bloco; equipe: boolean }) {
-  const horario = <span className="font-bold tabular-nums">{faixaHorario(b.inicio, b.fim)}</span>
-  if (b.atividade_id === undefined) {
-    return (
-      <div className="flex items-center gap-3 rounded-cartao border-[1.5px] border-borda bg-borda/50 p-3.5 text-texto-suave" data-testid="bloco-ocupado">
-        <Icone nome="cadeado" tamanho={20} />
-        <div>
-          {horario}
-          <p className="font-semibold">Ocupado</p>
-        </div>
-      </div>
-    )
+function visaoGuardada(): Visao {
+  try {
+    const v = localStorage.getItem(CHAVE_VISAO)
+    return v === 'tres' || v === 'mes' ? v : 'dia'
+  } catch {
+    return 'dia'
   }
-  const conteudo = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {horario}
-          <p className="font-semibold">
-            Pedido {b.numero !== undefined ? numeroPedido(b.numero) : ''}
-            {equipe && b.empresa_nome ? ` · ${b.empresa_nome}` : ''}
-          </p>
-        </div>
-        {b.status && <StatusBadge status={b.status} />}
-      </div>
-      <p className="mt-1 truncate ivo-legenda text-texto-suave">
-        {b.origem} → {b.destino}
-      </p>
-      {b.tipo === 'PRE_RESERVA' && <p className="ivo-legenda text-texto-suave">Pré-reserva até o orçamento ser decidido</p>}
-    </>
-  )
-  const classe = 'block rounded-cartao border-[1.5px] border-l-4 border-borda border-l-marinho-2 bg-superficie p-3.5 shadow-[var(--sombra)]'
-  return b.pode_abrir ? (
-    <Link to={`/pedidos/${b.atividade_id}`} viewTransition className={`${classe} hover:border-marinho-2`} data-testid="bloco-proprio">
-      {conteudo}
-    </Link>
-  ) : (
-    <div className={classe} data-testid="bloco-proprio">
-      {conteudo}
-    </div>
-  )
 }
 
-function JanelaLivre({ j, pedir }: { j: Janela; pedir: boolean }) {
-  const texto = (
-    <>
-      <span className="font-bold">Livre</span> · <span className="tabular-nums">{faixaHorario(j.inicio, j.fim)}</span>
-    </>
-  )
-  const classe =
-    'flex min-h-12 items-center justify-between gap-2 rounded-cartao border-2 border-dashed border-[var(--status-concluida)] px-3.5 py-2.5 text-[var(--status-concluida)]'
-  return pedir ? (
-    <Link
-      to={`/pedidos/novo?inicio=${encodeURIComponent(j.inicio)}`}
-      className={`${classe} hover:bg-[var(--status-concluida)]/10`}
-      data-testid="janela-livre"
-      aria-label={`Livre das ${faixaHorario(j.inicio, j.fim).replace('–', ' às ')}: fazer pedido neste horário`}
-    >
-      <span>{texto}</span>
-      <span className="flex items-center gap-1 text-sm font-bold">
-        Pedir
-        <Icone nome="mais" tamanho={18} />
-      </span>
-    </Link>
-  ) : (
-    <div className={classe} data-testid="janela-livre">
-      <span>{texto}</span>
-    </div>
-  )
+function guardarVisao(v: Visao) {
+  try {
+    localStorage.setItem(CHAVE_VISAO, v)
+  } catch {
+    // Sem armazenamento (aba privada): a visão só não é lembrada.
+  }
 }
 
-/** Agenda (A7): mês com marcadores e o dia selecionado com blocos e janelas livres. Todos os perfis. */
+/** Blocos e janelas livres de cada dia, já no formato da grade de horas. */
+async function carregarDias(dias: string[], hoje: string, cliente: boolean) {
+  const porDia = await Promise.all(
+    dias.map(async (dia) => {
+      const { de, ate } = intervaloDoDia(dia)
+      const [blocos, livres] = await Promise.all([
+        pedidos.agenda(de, ate),
+        dia >= hoje ? pedidos.horariosLivres(dia, 30) : Promise.resolve({ horarios: [] as string[], dia_cheio: false }),
+      ])
+      const itens: EntradaGrade[] = [
+        ...blocos.map((bloco, i) => ({
+          chave: `b-${bloco.inicio}-${bloco.atividade_id ?? i}`,
+          tipo: tipoDoBloco(bloco, cliente),
+          inicio: bloco.inicio,
+          fim: bloco.fim,
+          bloco,
+        })),
+        ...janelasLivres(livres.horarios, 30).map((janela) => ({
+          chave: `l-${janela.inicio}`,
+          tipo: 'livre' as const,
+          inicio: janela.inicio,
+          fim: janela.fim,
+          janela,
+        })),
+      ]
+      return [dia, { blocos, itens }] as const
+    }),
+  )
+  return Object.fromEntries(porDia)
+}
+
+/** Agenda estilo Lark (A7 + redesign): Dia, 3 dias e Mês; todos os perfis. */
 export function Agenda() {
   const { perfil } = useSessao()
   const hoje = hojeSp()
-  const [mes, setMes] = useState(() => mesDe(hoje))
+  const [visao, setVisao] = useState<Visao>(visaoGuardada)
   const [dia, setDia] = useState(hoje)
+  const [mes, setMes] = useState(() => mesDe(hoje))
   const equipe = perfil?.papel !== 'CLIENTE'
   // Janela livre vira atalho de pedido só para quem pode pedir agora (com contrato e com crédito).
   const indisponivel = usePedidoIndisponivel(perfil)
   const pedir = !!perfil && podeCriarPedido(perfil) && !indisponivel
 
-  const calendario = useConsulta(`agenda-mes-${mes}`, () => pedidos.diasDoMes(mes, 60))
-  const doDia = useConsulta(`agenda-dia-${dia}`, async () => {
-    const { de, ate } = intervaloDoDia(dia)
-    const [blocos, livres] = await Promise.all([
-      pedidos.agenda(de, ate),
-      dia >= hoje ? pedidos.horariosLivres(dia, 30) : Promise.resolve({ horarios: [] as string[], dia_cheio: false }),
-    ])
-    return { blocos, janelas: janelasLivres(livres.horarios, 30) }
-  })
+  const dias = visao === 'tres' ? [dia, somarDias(dia, 1), somarDias(dia, 2)] : [dia]
+  const domingo = domingoDe(dia)
+  const mesesDaFaixa = [...new Set([mesDe(domingo), mesDe(somarDias(domingo, 13))])]
+  const faixa = useConsulta(`agenda-faixa-${domingo}`, async () =>
+    (await Promise.all(mesesDaFaixa.map((m) => pedidos.diasDoMes(m, 60)))).flat(),
+  )
+  const calendario = useConsulta(`agenda-mes-${mes}-${visao === 'mes'}`, () =>
+    visao === 'mes' ? pedidos.diasDoMes(mes, 60) : Promise.resolve(undefined),
+  )
+  const doDia = useConsulta(`agenda-dias-${dias.join(',')}`, () => carregarDias(dias, hoje, !equipe))
   const recarregar = () => {
+    faixa.recarregar()
     calendario.recarregar()
     doDia.recarregar()
   }
   useTempoReal(topicoDoPerfil(perfil), recarregar)
 
-  const itens: Item[] = doDia.dados
-    ? [
-        ...doDia.dados.blocos.map((bloco) => ({ tipo: 'bloco' as const, bloco })),
-        ...doDia.dados.janelas.map((janela) => ({ tipo: 'livre' as const, janela })),
-      ].sort((a, b) => {
-        const ia = a.tipo === 'bloco' ? a.bloco.inicio : a.janela.inicio
-        const ib = b.tipo === 'bloco' ? b.bloco.inicio : b.janela.inicio
-        return new Date(ia).getTime() - new Date(ib).getTime()
-      })
-    : []
-
-  const erroMes = calendario.erro && calendario.dados === undefined
+  const mudarVisao = (v: Visao) => {
+    setVisao(v)
+    guardarVisao(v)
+    if (v === 'mes') setMes(mesDe(dia))
+  }
+  const irParaHoje = () => {
+    setDia(hoje)
+    setMes(mesDe(hoje))
+  }
+  const mesMostrado = visao === 'mes' ? mes : mesDe(dia)
+  const itensPorDia = doDia.dados ? Object.fromEntries(Object.entries(doDia.dados).map(([d, v]) => [d, v.itens])) : {}
 
   return (
-    <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
-      <CabecalhoTela
-        sobretitulo={perfil?.papel === 'CLIENTE' ? (perfil.empresa_nome ?? 'Sua empresa') : 'IVO Transportes'}
-        titulo="Agenda"
-        descricao={
-          equipe
-            ? 'Todos os pedidos e pré-reservas da agenda do motorista.'
-            : 'Seus pedidos e os horários livres. Horários de outras empresas aparecem só como ocupados.'
-        }
-      />
-      <div className="grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] md:items-start">
-        <Cartao>
+    <main className="mx-auto max-w-3xl space-y-3 p-4 md:p-6">
+      <h1 className="sr-only">Agenda</h1>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => mudarVisao('mes')}
+          aria-label={`${nomeDoMes(mesMostrado)}: ver o mês`}
+          className="flex min-h-11 items-center gap-1 ivo-h2"
+        >
+          {nomeDoMes(mesMostrado).split(' de ')[0]}
+          <Icone nome="setaBaixo" tamanho={20} />
+        </button>
+        <button
+          type="button"
+          onClick={irParaHoje}
+          className="min-h-10 rounded-full border-[1.5px] border-borda bg-superficie px-4 text-sm font-semibold"
+        >
+          Hoje
+        </button>
+      </div>
+      {perfil && podeCriarPedido(perfil) && indisponivel && (
+        <p className="ivo-legenda text-texto-suave" data-testid="agenda-pedido-indisponivel">
+          {indisponivel}
+        </p>
+      )}
+      <Segmentado rotulo="Visualização" opcoes={VISOES} valor={visao} aoMudar={mudarVisao} />
+
+      {visao === 'mes' ? (
+        <>
           <Calendario
             mes={mes}
-            dias={erroMes ? [] : calendario.dados}
+            dias={calendario.erro && calendario.dados === undefined ? [] : calendario.dados}
             selecionado={dia}
             hoje={hoje}
             modo="agenda"
-            grande
             aoSelecionar={setDia}
             aoMudarMes={(m) => {
               setMes(m)
               setDia(m === mesDe(hoje) ? hoje : m)
             }}
           />
-          {erroMes && (
-            <div className="pt-3">
-              <Mensagem tipo="erro">Não foi possível carregar o calendário. Verifique a conexão.</Mensagem>
-            </div>
+          {calendario.erro && calendario.dados === undefined && (
+            <Mensagem tipo="erro">Não foi possível carregar o calendário. Verifique a conexão.</Mensagem>
           )}
-        </Cartao>
-
-        <section aria-labelledby="titulo-dia" className="space-y-3" data-testid="agenda-dia">
-          <h2 id="titulo-dia" className="ivo-h3">
-            {nomeDoDia(dia)}
-          </h2>
-          {perfil && podeCriarPedido(perfil) && indisponivel && (
-            <p className="ivo-legenda text-texto-suave" data-testid="agenda-pedido-indisponivel">
-              {indisponivel}
-            </p>
-          )}
-          {doDia.erro && doDia.dados === undefined ? (
-            <ErroDia recarregar={doDia.recarregar} />
-          ) : doDia.dados === undefined ? (
-            <div className="space-y-2" aria-busy="true" aria-label="Carregando o dia">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-12" />
-              <Skeleton className="h-16" />
-            </div>
-          ) : itens.length === 0 ? (
-            <p className="ivo-corpo text-texto-suave">
-              {dia < hoje ? 'Nada registrado neste dia.' : 'Nenhum horário livre neste dia.'}
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {itens.map((it) => (
-                <li key={it.tipo === 'bloco' ? `b-${it.bloco.inicio}-${it.bloco.atividade_id ?? ''}` : `l-${it.janela.inicio}`}>
-                  {it.tipo === 'bloco' ? <BlocoAgenda b={it.bloco} equipe={equipe} /> : <JanelaLivre j={it.janela} pedir={pedir} />}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+          <ResumoDoDia
+            dia={dia}
+            blocos={doDia.dados?.[dia]?.blocos}
+            erro={!!doDia.erro && doDia.dados === undefined}
+            recarregar={doDia.recarregar}
+            abrir={() => mudarVisao('dia')}
+          />
+        </>
+      ) : (
+        <>
+          <FaixaSemana inicio={dia} selecionado={dia} hoje={hoje} dias={faixa.dados} aoSelecionar={setDia} />
+          <section aria-label={nomeDoDia(dia)} data-testid="agenda-dia">
+            {doDia.erro && doDia.dados === undefined ? (
+              <ErroDia recarregar={doDia.recarregar} />
+            ) : doDia.dados === undefined ? (
+              <div className="space-y-2 pt-3" aria-busy="true" aria-label="Carregando o dia">
+                <Skeleton className="h-24" />
+                <Skeleton className="h-14" />
+                <Skeleton className="h-24" />
+              </div>
+            ) : (
+              <GradeHoras dias={dias} itensPorDia={itensPorDia} hoje={hoje} pedir={pedir} equipe={equipe} />
+            )}
+          </section>
+        </>
+      )}
     </main>
+  )
+}
+
+function ResumoDoDia({
+  dia,
+  blocos,
+  erro,
+  recarregar,
+  abrir,
+}: {
+  dia: string
+  blocos: Bloco[] | undefined
+  erro: boolean
+  recarregar: () => void
+  abrir: () => void
+}) {
+  const proprios = (blocos ?? []).filter((b) => b.atividade_id !== undefined)
+  const ocupados = (blocos ?? []).length - proprios.length
+  return (
+    <section data-testid="resumo-dia" aria-labelledby="titulo-resumo" className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="titulo-resumo" className="font-semibold">
+          {nomeDoDia(dia)}
+        </h2>
+        <button type="button" onClick={abrir} className="min-h-11 text-sm font-semibold underline underline-offset-4">
+          Abrir o dia
+        </button>
+      </div>
+      {erro ? (
+        <ErroDia recarregar={recarregar} />
+      ) : blocos === undefined ? (
+        <Skeleton className="h-20" />
+      ) : proprios.length === 0 ? (
+        <p className="ivo-corpo text-texto-suave">
+          {ocupados > 0 ? 'Nenhum pedido seu neste dia. Há horários ocupados.' : 'Nenhum pedido neste dia.'}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {proprios.map((b) => (
+            <li key={`${b.inicio}-${b.atividade_id}`} className="space-y-2 rounded-cartao bg-superficie p-3.5 shadow-[var(--sombra)]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold tabular-nums">
+                  Pedido {b.numero !== undefined ? numeroPedido(b.numero) : ''}, {faixaHorario(b.inicio, b.fim)}
+                </span>
+                {b.status && <StatusBadge status={b.status} />}
+              </div>
+              {b.origem && b.destino && <Rota origem={b.origem} destino={b.destino} compacta />}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
 function ErroDia({ recarregar }: { recarregar: () => void }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 pt-3">
       <Mensagem tipo="erro">Não foi possível carregar este dia. Verifique a conexão.</Mensagem>
       <button type="button" onClick={recarregar} className="min-h-12 rounded-xl px-3 font-semibold text-marinho-2 underline">
         Tentar de novo

@@ -1,14 +1,6 @@
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import type { DiaDoMes } from '../../lib/pedidos.ts'
-import { nomeDoDia, somarDias } from '../../lib/tempo.ts'
-
-const SEMANA_CURTA = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'short' })
-
-/** "2026-10-13" → "Ter". */
-function semanaCurta(dia: string): string {
-  const t = SEMANA_CURTA.format(new Date(`${dia}T12:00:00Z`)).replace('.', '')
-  return t.charAt(0).toUpperCase() + t.slice(1, 3)
-}
+import { diaDaSemanaCurto, nomeDoDia, somarDias } from '../../lib/tempo.ts'
 
 /**
  * Faixa de dias deslizável do passo "Quando" (a partir de `inicio`, `quantos` dias). Dia sem horário fica riscado e
@@ -52,7 +44,7 @@ export function FaixaDias({
               marcado ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
             }`}
           >
-            <span className={`text-xs font-semibold ${marcado ? 'opacity-80' : 'text-texto-suave'}`}>{semanaCurta(dia)}</span>
+            <span className={`text-xs font-semibold ${marcado ? 'opacity-80' : 'text-texto-suave'}`}>{diaDaSemanaCurto(dia)}</span>
             <span className={`text-xl leading-tight font-bold tracking-tight ${cheio ? 'text-texto-suave line-through' : ''}`}>
               {Number(dia.slice(8))}
             </span>

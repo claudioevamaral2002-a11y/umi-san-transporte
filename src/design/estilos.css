@@ -79,6 +79,11 @@
     border-color: transparent;
     box-shadow: 0 0 0 2px var(--cor-fundo), 0 0 0 4px var(--cor-laranja);
   }
+  /* Bloco "Ocupado" da agenda: hachurado (horário de outra empresa, sem detalhes). */
+  .bloco-ocupado {
+    background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cor-ocupado) 22%, transparent) 0 6px, transparent 6px 12px);
+    border: 1px solid color-mix(in srgb, var(--cor-ocupado) 45%, transparent);
+  }
   /* Carrinho (CarregandoPickup): rodas giram, estrada passa, pickup balança e o reboque vem um pouco atrás. */
   .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 700ms linear infinite; }
   .pickup-corpo { animation: pickup-balancar 900ms ease-in-out infinite alternate; }

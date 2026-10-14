@@ -117,3 +117,12 @@ describe('janelasLivres', () => {
     ])
   })
 })
+
+describe('diaDaSemanaCurto', () => {
+  it('três letras, maiúscula, sem ponto', async () => {
+    const { diaDaSemanaCurto } = await import('./tempo.ts')
+    expect(diaDaSemanaCurto('2026-10-13')).toBe('Ter')
+    expect(diaDaSemanaCurto('2026-10-17')).toBe('Sáb')
+    expect(diaDaSemanaCurto('2026-10-18')).toBe('Dom')
+  })
+})

@@ -17,6 +17,9 @@ const MAPA: Record<Status, { rotulo: string; cor: string; icone: NomeIcone; puls
   REPROVADA: { rotulo: 'Reprovada', cor: 'var(--status-cancelada)', icone: 'fechar' },
 }
 
+/** Cor do status (borda dos blocos da agenda, selos). */
+export const corDoStatus = (status: Status): string => MAPA[status].cor
+
 export function StatusBadge({ status }: { status: Status }) {
   const s = MAPA[status]
   return (

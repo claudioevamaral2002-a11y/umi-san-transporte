@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { EMPRESA_UMI, simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
 import {
   DIA_PEDIDO,
@@ -9,19 +9,12 @@ import {
   pendenciaFalsa,
   simularPedidos,
 } from './apoio/pedidosFalsos.ts'
+import { escolherDiaNaAgenda } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const AAL2 = { aal: 'aal2' as const }
 const MOTORISTA = { papel: 'MOTORISTA' as const, nome: 'Bruno Lima', tem_2fa: true }
-
-async function escolherDia(page: Page, dia: string) {
-  const calendario = page.getByTestId('calendario')
-  await expect(calendario.locator('[data-dia]').first()).toBeVisible()
-  const botao = calendario.locator(`[data-dia="${dia}"]`)
-  if ((await botao.count()) === 0) await calendario.getByRole('button', { name: 'Próximo mês' }).click()
-  await botao.click()
-}
 
 test.describe('motorista', () => {
   test('início: aguardando seu orçamento (contagem, URGENTE, Revisão), próximos vazio e atalho da agenda', async ({ page }) => {
@@ -49,7 +42,7 @@ test.describe('motorista', () => {
     const cartoes = grupo.getByTestId('pendencia-orcar')
     await expect(cartoes).toHaveCount(2)
     await expect(cartoes.nth(0)).toContainText('URGENTE')
-    await expect(cartoes.nth(0)).toContainText('Pedido #0042 · Umi San')
+    await expect(cartoes.nth(0)).toContainText(/Pedido #0042.*Umi San/)
     await expect(cartoes.nth(0).getByTestId('contagem')).toHaveText(/^Responder em (4|5) h/)
     await expect(cartoes.nth(1)).toContainText('Revisão')
     await expect(cartoes.nth(1).getByTestId('contagem')).toHaveText(/^Responder em 1 dia/)
@@ -235,11 +228,11 @@ test.describe('motorista', () => {
     await simularApi(page)
     await simularPedidos(page, { equipe: true })
     await page.goto('/agenda')
-    await escolherDia(page, DIA_PEDIDO)
+    await escolherDiaNaAgenda(page, DIA_PEDIDO)
     const dia = page.getByTestId('agenda-dia')
     await expect(dia.getByTestId('bloco-proprio')).toHaveCount(2)
-    await expect(dia.getByTestId('bloco-proprio').nth(0)).toContainText('Pedido #0042 · Umi San')
-    await expect(dia.getByTestId('bloco-proprio').nth(1)).toContainText('Pedido #0007 · Porto Azul')
+    await expect(dia.getByTestId('bloco-proprio').nth(0)).toContainText(/Pedido #0042.*Umi San/)
+    await expect(dia.getByTestId('bloco-proprio').nth(1)).toContainText(/Pedido #0007.*Porto Azul/)
     await expect(dia.getByTestId('bloco-ocupado')).toHaveCount(0)
     // Janelas livres aparecem, mas só o cliente pede por elas.
     await expect(dia.getByTestId('janela-livre').first()).toBeVisible()
