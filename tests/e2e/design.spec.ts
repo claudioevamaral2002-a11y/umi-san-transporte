@@ -64,3 +64,15 @@ test('status usa ícone SVG e texto', async ({ page }) => {
   const selo = page.getByTestId('vitrine-status').getByText('Agendada')
   await expect(selo.locator('svg')).toHaveCount(1)
 })
+
+test('carrinho novo: pickup com reboque e barco, 3 rodas, triângulo da marca, SVG pequeno', async ({ page }) => {
+  await page.goto('/vitrine')
+  await page.getByRole('button', { name: 'Simular 1500 ms' }).click()
+  const carrinho = page.getByTestId('carregando-pickup')
+  await expect(carrinho).toBeVisible()
+  await expect(carrinho.getByTestId('pickup-roda')).toHaveCount(3)
+  await expect(carrinho.locator('[data-parte="barco"]')).toHaveCount(1)
+  await expect(carrinho.locator('[data-parte="selo"]')).toHaveAttribute('fill', 'var(--cor-laranja)')
+  const bytes = await carrinho.locator('svg').evaluate((e) => new Blob([e.outerHTML]).size)
+  expect(bytes).toBeLessThan(50 * 1024)
+})
