@@ -43,6 +43,7 @@ const CODIGOS_CONHECIDOS = [
   'NAO_ESTORNAVEL',
   'MULTA_ALTERADA',
   'DIVERGENCIA_SALDO',
+  'TETO_DIARIO',
   // Edge Functions
   'ERRO_AUTH',
   'ERRO_INESPERADO',
@@ -53,6 +54,7 @@ const CODIGOS_CONHECIDOS = [
   'SENHA_LONGA',
   'SENHA_VAZADA',
   'VERIFICACAO_INDISPONIVEL',
+  'MAPAS_INDISPONIVEL',
 ] as const
 
 function arquivos(pasta: string, extensao: string): string[] {

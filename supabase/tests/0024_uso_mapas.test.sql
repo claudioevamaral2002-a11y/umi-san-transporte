@@ -2,7 +2,7 @@
 -- (limite por usuário e teto diário por empresa, ajustável pelo ADM em app.configuracao).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(15);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -51,6 +51,15 @@ select api.definir_teto_mapas(1000);
 select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select api.registrar_uso_mapas('ROTA') from generate_series(1, 19);
 select is(api.registrar_uso_mapas('ROTA') ->> 'codigo', 'LIMITE_EXCEDIDO', 'a 21ª rota no minuto é recusada');
+
+-- Teto diário por usuário (500): uma pessoa sozinha não esgota o teto da empresa.
+reset role;
+insert into interno.limites (usuario_id, acao, janela_inicio, contagem)
+values ('00000000-0000-0000-0000-0000000000a8', 'MAPAS_DIA',
+        date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo', 500);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca8'), true);
+select is(api.registrar_uso_mapas('SUGERIR') ->> 'codigo', 'LIMITE_EXCEDIDO', 'acima de 500 chamadas no dia pela mesma pessoa');
 
 reset role;
 select ok((select count(*) from app.auditoria where acao = 'USO_MAPAS' and resultado = 'NEGADO') >= 2, 'recusas auditadas');

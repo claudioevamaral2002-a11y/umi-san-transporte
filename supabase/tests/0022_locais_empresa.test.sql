@@ -2,7 +2,7 @@
 -- criar_pedido e aparecem primeiro na busca (api.locais_da_empresa), só para a própria empresa.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(12);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -49,11 +49,17 @@ select api.criar_pedido(current_setting('t.ped')::jsonb - array['destino_place_i
   || jsonb_build_object('inicio', current_setting('t.d3'), 'destino', 'Marina Itajaí, rampa 2',
                         'destino_lat', -26.91, 'destino_lng', -48.65));
 
+-- Outro pedido com o mesmo place_id mas nome e ponto diferentes não reescreve o local guardado.
+select api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d4'),
+  'destino', 'Lugar Falso', 'destino_lat', -10.0, 'destino_lng', -40.0));
+
 select is(api.locais_da_empresa('ESTAL') -> 'locais' -> 0 ->> 'nome', 'Estaleiro Navegantes',
   'A encontra o local pelo nome, sem caixa');
 select is(api.locais_da_empresa('itajai') -> 'locais' -> 0 ->> 'nome', 'Porto de Itajaí',
-  'busca sem acento acha o nome com acento (usado 3 vezes, vem primeiro)');
+  'busca sem acento acha o nome com acento (usado 4 vezes, vem primeiro)');
 select is(api.locais_da_empresa('estal') -> 'locais' -> 0 ->> 'place_id', 'ChIJdef', 'devolve o place_id');
+select is((api.locais_da_empresa('estal') -> 'locais' -> 0 ->> 'lat')::numeric, -26.8986,
+  'o primeiro registro do place_id vale (sem envenenar o local da empresa)');
 select is(jsonb_array_length(api.locais_da_empresa('') -> 'locais'), 3, 'texto vazio: os mais usados');
 select is(api.locais_da_empresa('rampa') -> 'locais' -> 0, '{"nome": "Marina Itajaí, rampa 2", "endereco": null,
   "lat": -26.910000, "lng": -48.650000, "place_id": null}'::jsonb, 'o ponto marcado no mapa também fica guardado');
@@ -69,7 +75,7 @@ select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is(api.locais_da_empresa('estal') ->> 'codigo', 'SEM_PERMISSAO', 'a equipe da IVO não usa essa busca');
 
 reset role;
-select is((select usos from app.locais_empresa where place_id = 'ChIJabc'), 3, 'cada pedido soma um uso');
+select is((select usos from app.locais_empresa where place_id = 'ChIJabc'), 4, 'cada pedido soma um uso');
 set local role authenticated;
 select throws_ok($$ insert into app.locais_empresa (empresa_id, nome, lat, lng, chave)
                     values ('00000000-0000-0000-0000-0000000000e1', 'x', 0, 0, 'x') $$,

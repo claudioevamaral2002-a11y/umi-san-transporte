@@ -58,6 +58,10 @@ export const MENSAGENS = {
   NAO_ESTORNAVEL: 'Este lançamento não pode ser estornado.',
   MULTA_ALTERADA: 'A multa mudou: o horário do cancelamento passou para outra faixa. Confira o novo valor e confirme de novo.',
   DIVERGENCIA_SALDO: 'A conferência de saldo encontrou divergência. Veja o painel.',
+
+  // Endereços e mapas (fase 3A)
+  TETO_DIARIO: 'A busca de endereços chegou ao limite de hoje. Escreva o local; o motorista confere os km.',
+  MAPAS_INDISPONIVEL: 'Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
