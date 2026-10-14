@@ -62,8 +62,7 @@ jobs:
           # Fase 3A: chave de servidor do Google (Places New e Routes). Sem ela, a função `enderecos` devolve
           # MAPAS_INDISPONIVEL e o app cai no texto livre (RUNBOOK §Google Maps).
           if [ -n "${GOOGLE_MAPS_CHAVE_SERVIDOR:-}" ]; then
-            printf 'GOOGLE_MAPS_CHAVE_SERVIDOR=%s
-' "$GOOGLE_MAPS_CHAVE_SERVIDOR" > "$RUNNER_TEMP/segredos-mapas.env"
+            printf 'GOOGLE_MAPS_CHAVE_SERVIDOR=%s\n' "$GOOGLE_MAPS_CHAVE_SERVIDOR" > "$RUNNER_TEMP/segredos-mapas.env"
             npx supabase secrets set --env-file "$RUNNER_TEMP/segredos-mapas.env" --project-ref "$REF"
             rm -f "$RUNNER_TEMP/segredos-mapas.env"
           else
