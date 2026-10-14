@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { Folha } from '../../design/componentes/Folha.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
@@ -43,7 +45,7 @@ export function useCreditoParaPedido(perfil: Perfil | null): { indisponivel: str
 }
 
 /** "+ Novo pedido": indisponível (com explicação) sem contrato vigente ou sem crédito nenhum. */
-export function BotaoNovoPedido({ perfil, grande = false }: { perfil: Perfil; grande?: boolean }) {
+export function BotaoNovoPedido({ perfil, grande = false, soDesktop = false }: { perfil: Perfil; grande?: boolean; soDesktop?: boolean }) {
   const motivo = usePedidoIndisponivel(perfil)
   const classe = `flex items-center justify-center gap-2 rounded-cartao bg-acao px-5 ivo-botao text-acao-texto ${
     grande ? 'min-h-14 w-full text-lg' : 'min-h-12'
@@ -62,9 +64,39 @@ export function BotaoNovoPedido({ perfil, grande = false }: { perfil: Perfil; gr
     )
   }
   return (
-    <Link to="/pedidos/novo" viewTransition className={classe}>
+    // No celular o "+" flutuante faz esse papel (soDesktop); o motivo de indisponibilidade aparece nos dois.
+    <Link to="/pedidos/novo" viewTransition className={`${classe} ${soDesktop ? 'max-md:hidden' : ''}`}>
       <Icone nome="mais" />
       Novo pedido
+    </Link>
+  )
+}
+
+/**
+ * "+" laranja do celular (telas principais), só para quem cria pedido. Indisponível (sem contrato ou sem crédito),
+ * abre uma folha com o motivo em vez de levar ao Novo pedido.
+ */
+export function BotaoFlutuanteNovoPedido({ perfil }: { perfil: Perfil }) {
+  const motivo = usePedidoIndisponivel(perfil)
+  const [explicando, setExplicando] = useState(false)
+  if (!podeCriarPedido(perfil)) return null
+  const classe =
+    'nao-imprimir fixed right-[18px] bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-[60px] items-center justify-center rounded-[20px] bg-acao text-acao-texto shadow-[0_8px_20px_-6px_rgb(255_106_0/0.55)] transition-transform duration-75 active:scale-95 motion-reduce:transition-none md:hidden'
+  if (motivo) {
+    return (
+      <>
+        <button type="button" aria-label="Novo pedido" data-testid="botao-novo-pedido-flutuante" onClick={() => setExplicando(true)} className={`${classe} opacity-60`}>
+          <Icone nome="mais" tamanho={28} />
+        </button>
+        <Folha aberta={explicando} titulo="Novo pedido indisponível" onFechar={() => setExplicando(false)}>
+          <p className="ivo-corpo text-texto-suave">{motivo}</p>
+        </Folha>
+      </>
+    )
+  }
+  return (
+    <Link to="/pedidos/novo" viewTransition aria-label="Novo pedido" data-testid="botao-novo-pedido-flutuante" onClick={() => navigator.vibrate?.(10)} className={classe}>
+      <Icone nome="mais" tamanho={28} />
     </Link>
   )
 }
@@ -87,7 +119,7 @@ export function Pedidos() {
       <CabecalhoTela
         sobretitulo={perfil?.papel === 'CLIENTE' ? (perfil.empresa_nome ?? 'Sua empresa') : 'IVO Transportes'}
         titulo="Pedidos"
-        acao={perfil && podeCriarPedido(perfil) ? <BotaoNovoPedido perfil={perfil} /> : undefined}
+        acao={perfil && podeCriarPedido(perfil) ? <BotaoNovoPedido perfil={perfil} soDesktop /> : undefined}
       />
 
       <div role="group" aria-label="Filtrar pedidos" className="flex gap-1 rounded-full bg-borda/60 p-1">

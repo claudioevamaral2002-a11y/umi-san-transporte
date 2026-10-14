@@ -160,7 +160,7 @@ export function Inicio() {
           </Link>
         )}
 
-        {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande />}
+        {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande soDesktop />}
 
         {perfil && <PendenciasDoPerfil perfil={perfil} />}
 

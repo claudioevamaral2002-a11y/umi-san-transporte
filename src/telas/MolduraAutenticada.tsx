@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { Icone, type NomeIcone } from '../design/componentes/Icone.tsx'
-import { LogoIvo } from '../design/componentes/LogoIvo.tsx'
+import { SimboloIvo } from '../design/componentes/SimboloIvo.tsx'
 import { gereEquipe } from '../lib/administracao.ts'
 import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { supabase } from '../lib/supabase.ts'
+import { BotaoFlutuanteNovoPedido } from './pedidos/Pedidos.tsx'
 
 interface Item {
   para: string
@@ -90,7 +91,7 @@ function EmpresaCliente({ perfil }: { perfil: Perfil }) {
   const nome = perfil.empresa_nome ?? ''
   return (
     <div
-      className="flex h-10 max-w-[55vw] items-center rounded-full bg-papel px-3.5 text-marinho md:max-w-xs"
+      className="flex h-9 max-w-[50vw] items-center rounded-full bg-superficie px-3.5 text-texto shadow-[var(--sombra)] md:h-10 md:max-w-xs md:bg-papel md:text-marinho md:shadow-none"
       data-testid="empresa-cliente"
     >
       {logo && !falhou ? (
@@ -160,6 +161,18 @@ function AvisoDaNavegacao() {
   )
 }
 
+/** Iniciais do nome para o avatar ("Diego Rocha" → "DR"). */
+function iniciais(nome: string | undefined): string {
+  const partes = (nome ?? '').trim().split(/\s+/).filter(Boolean)
+  if (partes.length === 0) return '?'
+  const primeira = partes[0]![0] ?? ''
+  const ultima = partes.length > 1 ? (partes[partes.length - 1]![0] ?? '') : ''
+  return (primeira + ultima).toUpperCase()
+}
+
+/** Telas principais do celular em que o "+" de novo pedido aparece. */
+const COM_BOTAO_NOVO = ['/', '/pedidos', '/agenda', '/extrato']
+
 export function MolduraAutenticada() {
   const { perfil, email, sair } = useSessao()
   const grupos = gruposDo(perfil)
@@ -171,17 +184,26 @@ export function MolduraAutenticada() {
     menu.current?.close()
   }, [local.pathname])
 
-  // Abas do celular: os destinos principais do perfil (no máximo 4) + "Menu" — até 5 na barra.
-  const abas = grupos.flatMap((g) => g.itens.filter((i) => i.aba)).slice(0, 4)
+  // Abas do celular: os destinos principais do perfil (até 5). O menu completo abre pelo avatar no topo.
+  const abas = grupos.flatMap((g) => g.itens.filter((i) => i.aba)).slice(0, 5)
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] md:grid-rows-[auto_1fr]">
-      <header className="nao-imprimir sobre-marinho sticky top-0 z-20 flex items-center justify-between gap-3 bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-2.5 text-papel md:col-span-2">
-        <NavLink to="/" aria-label="IVO Transportes — início" className="flex min-h-12 items-center rounded-lg">
-          <LogoIvo variante="simbolo" cor="branco" altura={34} />
+      <header className="nao-imprimir sticky top-0 z-20 flex items-center justify-between gap-3 bg-fundo px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 text-texto md:col-span-2 md:bg-marinho md:pb-2.5 md:text-papel md:sobre-marinho">
+        <NavLink to="/" aria-label="IVO Transportes, início" className="flex min-h-12 items-center rounded-lg">
+          <SimboloIvo altura={34} />
         </NavLink>
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
           {perfil?.papel === 'CLIENTE' && <EmpresaCliente perfil={perfil} />}
+          <button
+            type="button"
+            onClick={() => menu.current?.showModal()}
+            aria-haspopup="dialog"
+            aria-label="Menu"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-selecao-suave text-sm font-bold text-texto md:hidden"
+          >
+            <span aria-hidden="true">{iniciais(perfil?.nome)}</span>
+          </button>
           <button
             type="button"
             onClick={() => void sair()}
@@ -197,14 +219,15 @@ export function MolduraAutenticada() {
         <ListaMenu grupos={grupos} />
       </nav>
 
-      <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div className="pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-0">
         <Outlet />
       </div>
+      {COM_BOTAO_NOVO.includes(local.pathname) && perfil && <BotaoFlutuanteNovoPedido perfil={perfil} />}
       <AvisoDaNavegacao />
 
       <nav
         aria-label="Navegação"
-        className="nao-imprimir fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="nao-imprimir fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-barra px-2 pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="flex">
           {abas.map((a) => (
@@ -221,7 +244,10 @@ export function MolduraAutenticada() {
               >
                 {({ isActive }) => (
                   <>
-                    <span className={`rounded-full px-4 py-1 ${isActive ? 'bg-acao text-acao-texto' : ''}`}>
+                    <span
+                      data-testid="aba-icone"
+                      className={`flex h-[30px] w-[52px] items-center justify-center rounded-full ${isActive ? 'bg-selecao text-selecao-texto' : ''}`}
+                    >
                       <Icone nome={a.icone} />
                     </span>
                     {a.curto ?? a.rotulo}
@@ -230,19 +256,6 @@ export function MolduraAutenticada() {
               </NavLink>
             </li>
           ))}
-          <li className="flex-1">
-            <button
-              type="button"
-              onClick={() => menu.current?.showModal()}
-              aria-haspopup="dialog"
-              className="flex min-h-16 w-full flex-col items-center justify-center gap-0.5 text-xs font-semibold text-texto-suave"
-            >
-              <span className="rounded-full px-4 py-1">
-                <Icone nome="menu" />
-              </span>
-              Menu
-            </button>
-          </li>
         </ul>
       </nav>
 

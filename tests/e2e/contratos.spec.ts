@@ -43,7 +43,7 @@ test.describe('início do ADM', () => {
     await expect(page).toHaveURL(/\/adm\/contratos$/)
     await expect(page.getByRole('heading', { level: 1, name: 'Contratos' })).toBeVisible()
     // A aba "Contratos" substitui a antiga "Tabela".
-    await expect(page.getByRole('navigation', { name: 'Navegação' }).getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda', 'Contratos'])
+    await expect(page.getByRole('navigation', { name: 'Navegação' }).getByRole('link')).toHaveText(['Início', 'Pedidos', 'Agenda', 'Contratos', 'Admin'])
   })
 })
 
