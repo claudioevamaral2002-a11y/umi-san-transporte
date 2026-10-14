@@ -59,6 +59,20 @@ test.describe('motorista', () => {
     expect(csp).toEqual([])
   })
 
+  test('orçar: km já preenchidos pela rota, com aviso para conferir; pedido antigo sem km continua igual', async ({ page }) => {
+    await comSessaoFalsa(page, MOTORISTA, AAL2)
+    await simularApi(page)
+    await simularPedidos(page, {
+      detalhes: [pedidoSolicitadoMotorista({ km_estimado: 38.2, minutos_estimados: 45 }), pedidoSolicitadoMotorista()],
+    })
+    await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
+    await expect(page.getByLabel('Quilometragem')).toHaveValue('38,2')
+    await expect(page.getByTestId('km-estimado')).toHaveText('Estimado pela rota: 38 km, cerca de 45 min. Confira.')
+    await page.reload()
+    await expect(page.getByLabel('Quilometragem')).toHaveValue('0')
+    await expect(page.getByTestId('km-estimado')).toHaveCount(0)
+  })
+
   test('orçar: quantidades com preços travados, total ao vivo do servidor e envio confirmado', async ({ page }) => {
     const csp = await vigiarCsp(page)
     await comSessaoFalsa(page, MOTORISTA, AAL2)

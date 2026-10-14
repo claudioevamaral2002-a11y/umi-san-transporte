@@ -147,10 +147,10 @@ export function pedidoOrcadoCliente() {
 }
 
 /** Detalhe que o motorista atribuído recebe com o pedido aguardando orçamento. */
-export function pedidoSolicitadoMotorista() {
+export function pedidoSolicitadoMotorista(extra: Record<string, unknown> = {}) {
   return {
     ok: true,
-    pedido: detalheFalso({ status: 'SOLICITADA', solicitante_nome: 'Diego Rocha' }),
+    pedido: detalheFalso({ status: 'SOLICITADA', solicitante_nome: 'Diego Rocha', ...extra }),
     historico: [HISTORICO_ORCADO[0]],
     orcamento: null,
     acoes: { ...SEM_ACOES, orcar: true, recusar: true, cancelar: true },

@@ -50,14 +50,21 @@ function inteiroEntre(v: unknown, min: number, max: number): number | null {
 /**
  * Formulário pré-preenchido com a entrada do orçamento anterior (revisão pedida pelo cliente). A entrada vem do
  * servidor (`orcamento_anterior.entrada`), mas é lida com cuidado: valor estranho cai no padrão do pedido.
+ * Fase 3A: sem orçamento anterior, os km começam com a estimativa da rota (o motorista confere e ajusta).
  */
 export function formDaEntrada(
   entrada: unknown,
   modalidadePedido: Modalidade,
   reboque: 'SIM' | 'NAO' | 'NAO_SEI',
+  kmEstimado: number | null = null,
 ): FormOrcamento {
   const base = formInicial(modalidadePedido, reboque)
-  if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) return base
+  if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) {
+    if (modalidadePedido === 'VEICULO_PROPRIO' && typeof kmEstimado === 'number') {
+      base.kmDecimos = inteiroEntre(Math.round(kmEstimado * 10), 0, KM_MAX_DECIMOS) ?? 0
+    }
+    return base
+  }
   const e = entrada as Record<string, unknown>
   const modalidade: Modalidade =
     e.modalidade === 'VEICULO_PROPRIO' || e.modalidade === 'VEICULO_CLIENTE' ? e.modalidade : modalidadePedido

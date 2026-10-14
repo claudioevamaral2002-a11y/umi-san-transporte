@@ -84,6 +84,21 @@ describe('montarEntrada', () => {
   })
 })
 
+describe('formDaEntrada com km estimado pela rota (fase 3A)', () => {
+  it('sem orçamento anterior, usa os km estimados pela rota; com revisão, vale o anterior', () => {
+    expect(formDaEntrada(null, 'VEICULO_PROPRIO', 'SIM', 38.2).kmDecimos).toBe(382)
+    expect(formDaEntrada(null, 'VEICULO_PROPRIO', 'SIM', null).kmDecimos).toBe(0)
+    expect(formDaEntrada(null, 'VEICULO_PROPRIO', 'SIM').kmDecimos).toBe(0)
+    expect(formDaEntrada({ km: 40 }, 'VEICULO_PROPRIO', 'SIM', 38.2).kmDecimos).toBe(400)
+  })
+
+  it('km estimado estranho ou veículo do cliente: nada preenchido', () => {
+    expect(formDaEntrada(null, 'VEICULO_PROPRIO', 'NAO', -3).kmDecimos).toBe(0)
+    expect(formDaEntrada(null, 'VEICULO_PROPRIO', 'NAO', Number.NaN).kmDecimos).toBe(0)
+    expect(formDaEntrada(null, 'VEICULO_CLIENTE', 'NAO', 38.2).kmDecimos).toBe(0)
+  })
+})
+
 describe('formDaEntrada (revisão: pré-preenche com o orçamento anterior)', () => {
   it('volta exatamente à entrada anterior (ida e volta pelo montarEntrada)', () => {
     const anterior = {

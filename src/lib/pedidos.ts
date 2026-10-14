@@ -52,6 +52,17 @@ export interface DetalhePedido {
   prazo_vencido: boolean
   criada_em: string
   atualizada_em: string
+  // Fase 3A: endereços reconhecidos e rota estimada (opcionais: pedidos antigos não têm).
+  origem_lat?: number | null
+  origem_lng?: number | null
+  destino_lat?: number | null
+  destino_lng?: number | null
+  origem_endereco?: string | null
+  destino_endereco?: string | null
+  origem_place_id?: string | null
+  destino_place_id?: string | null
+  km_estimado?: number | null
+  minutos_estimados?: number | null
 }
 
 export interface LinhaOrcamento {
