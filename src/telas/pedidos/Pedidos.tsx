@@ -81,7 +81,7 @@ export function BotaoFlutuanteNovoPedido({ perfil }: { perfil: Perfil }) {
   const [explicando, setExplicando] = useState(false)
   if (!podeCriarPedido(perfil)) return null
   const classe =
-    'nao-imprimir fixed right-[18px] bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-[60px] items-center justify-center rounded-[20px] bg-acao text-acao-texto shadow-[0_8px_20px_-6px_rgb(255_106_0/0.55)] transition-transform duration-75 active:scale-95 motion-reduce:transition-none md:hidden'
+    'nao-imprimir transicao-botao-novo fixed right-[18px] bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-[60px] items-center justify-center rounded-[20px] bg-acao text-acao-texto shadow-[0_8px_20px_-6px_rgb(255_106_0/0.55)] transition-transform duration-75 active:scale-95 motion-reduce:transition-none md:hidden'
   if (motivo) {
     return (
       <>
@@ -108,8 +108,10 @@ export function Pedidos() {
   const { perfil } = useSessao()
   const [params, setParams] = useSearchParams()
   const filtro: Filtro = ORDEM.includes(params.get('filtro') as Filtro) ? (params.get('filtro') as Filtro) : 'abertos'
-  const { dados, erro, carregando, recarregar } = useConsulta(`pedidos-${filtro}`, () =>
-    pedidos.listar(FILTROS[filtro].status),
+  const { dados, erro, carregando, atualizando, recarregar } = useConsulta(
+    `pedidos-${filtro}`,
+    () => pedidos.listar(FILTROS[filtro].status),
+    { manterAnterior: true, cache: true },
   )
   useTempoReal(topicoDoPerfil(perfil), recarregar)
   const equipe = perfil?.papel !== 'CLIENTE'
@@ -156,7 +158,11 @@ export function Pedidos() {
         </EstadoVazio>
       )}
       {dados && dados.length > 0 && (
-        <ul className="space-y-3" data-testid="lista-pedidos">
+        <ul
+          className={`space-y-3 transition-opacity duration-150 motion-reduce:transition-none ${atualizando ? 'opacity-60' : ''}`}
+          data-testid="lista-pedidos"
+          aria-busy={atualizando || undefined}
+        >
           {dados.map((item) => (
             <li key={item.id}>
               <CartaoPedido item={item} mostrarEmpresa={equipe} />

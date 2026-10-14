@@ -100,13 +100,20 @@ export function Agenda() {
   const domingoHoje = domingoDe(hoje)
   const domingo = dia >= domingoHoje && dia <= somarDias(domingoHoje, 13) ? domingoHoje : domingoDe(dia)
   const mesesDaFaixa = [...new Set([mesDe(domingo), mesDe(somarDias(domingo, 13))])]
-  const faixa = useConsulta(`agenda-faixa-${domingo}`, async () =>
-    (await Promise.all(mesesDaFaixa.map((m) => pedidos.diasDoMes(m, 60)))).flat(),
+  const faixa = useConsulta(
+    `agenda-faixa-${domingo}`,
+    async () => (await Promise.all(mesesDaFaixa.map((m) => pedidos.diasDoMes(m, 60)))).flat(),
+    { manterAnterior: true, cache: true },
   )
-  const calendario = useConsulta(`agenda-mes-${mes}-${visao === 'mes'}`, () =>
-    visao === 'mes' ? pedidos.diasDoMes(mes, 60) : Promise.resolve(undefined),
+  const calendario = useConsulta(
+    `agenda-mes-${mes}-${visao === 'mes'}`,
+    () => (visao === 'mes' ? pedidos.diasDoMes(mes, 60) : Promise.resolve(undefined)),
+    { manterAnterior: true, cache: true },
   )
-  const doDia = useConsulta(`agenda-dias-${dias.join(',')}`, () => carregarDias(dias, hoje, !equipe))
+  const doDia = useConsulta(`agenda-dias-${dias.join(',')}-${equipe}`, () => carregarDias(dias, hoje, !equipe), {
+    manterAnterior: true,
+    cache: true,
+  })
   const recarregar = () => {
     faixa.recarregar()
     calendario.recarregar()
@@ -182,7 +189,12 @@ export function Agenda() {
       ) : (
         <>
           <FaixaSemana inicio={domingo} selecionado={dia} hoje={hoje} dias={faixa.dados} aoSelecionar={setDia} />
-          <section aria-label={nomeDoDia(dia)} data-testid="agenda-dia">
+          <section
+            aria-label={nomeDoDia(dia)}
+            data-testid="agenda-dia"
+            aria-busy={doDia.atualizando || undefined}
+            className={`transition-opacity duration-150 motion-reduce:transition-none ${doDia.atualizando ? 'opacity-60' : ''}`}
+          >
             {doDia.erro && doDia.dados === undefined ? (
               <ErroDia recarregar={doDia.recarregar} />
             ) : doDia.dados === undefined ? (
