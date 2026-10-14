@@ -16,8 +16,22 @@
   --color-alerta-texto: var(--cor-alerta-texto);
   --color-selecao: var(--cor-selecao);
   --color-selecao-texto: var(--cor-selecao-texto);
+  --color-ocupado: var(--cor-ocupado);
+  --color-livre: var(--cor-livre);
+  --color-livre-fundo: var(--cor-livre-fundo);
+  --color-bloco: var(--cor-bloco);
+  --color-bloco-texto: var(--cor-bloco-texto);
+  --color-bloco-suave: var(--cor-bloco-suave);
+  --color-comando: var(--cor-comando);
+  --color-comando-texto: var(--cor-comando-texto);
+  --color-selecao-suave: var(--cor-selecao-suave);
+  --color-barra: var(--cor-barra);
+  --color-laranja: var(--cor-laranja);
   --font-sans: "Manrope Variable", system-ui, sans-serif;
-  --radius-cartao: var(--raio);
+  --radius-folha: var(--raio-folha);
+  --radius-cartao: var(--raio-cartao);
+  --radius-botao: var(--raio-botao);
+  --radius-campo: var(--raio-campo);
 }
 
 @layer base {
@@ -58,6 +72,13 @@
 
 /* Em @layer components para que utilitários (motion-reduce:animate-none) prevaleçam. */
 @layer components {
+  /* Escolhido (dia, horário, opção, aba do seletor): cor cheia + contorno laranja afastado, sem ✓. */
+  .ivo-escolhido {
+    background: var(--cor-selecao);
+    color: var(--cor-selecao-texto);
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--cor-fundo), 0 0 0 4px var(--cor-laranja);
+  }
   .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 600ms linear infinite; }
   .pickup-balanco { animation: pickup-balancar 450ms ease-in-out infinite; }
   .pickup-estrada { animation: estrada-andar 400ms linear infinite; }
