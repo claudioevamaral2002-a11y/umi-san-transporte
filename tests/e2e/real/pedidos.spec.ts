@@ -10,6 +10,7 @@ import {
   entrarComDoisFatores,
   entrarComSenha,
 } from './apoio.ts'
+import { escolherDiaNoPedido } from '../apoio/escolherDia.ts'
 
 // Fase 2A contra o Supabase real do CI: cliente cria o pedido → motorista orça pela calculadora → cliente vê o
 // memorial e pede revisão → motorista reenvia → cliente reprova. Status chegam por tempo real (sem recarregar).
@@ -18,13 +19,10 @@ import {
 const FORMATO_DIA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' })
 const diaSp = (n: number) => FORMATO_DIA.format(new Date(Date.now() + n * 86_400_000))
 
+/** Novo pedido (redesign): espera a faixa de dias carregar do banco real e escolhe o dia (faixa ou mês inteiro). */
 async function escolherDia(page: Page, dia: string) {
-  const calendario = page.getByTestId('calendario')
-  await expect(calendario.locator('[data-dia]').first()).toBeVisible({ timeout: 20_000 })
-  const botao = calendario.locator(`[data-dia="${dia}"]`)
-  if ((await botao.count()) === 0) await calendario.getByRole('button', { name: 'Próximo mês' }).click()
-  await botao.click()
-  await expect(botao).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('faixa-dias').locator('[data-dia]').first()).toBeVisible({ timeout: 20_000 })
+  await escolherDiaNoPedido(page, dia)
 }
 
 test.describe('pedido e orçamento (fase 2A)', () => {
@@ -175,7 +173,7 @@ test.describe('saldo, aprovação e cancelamento com multa (fase 2B)', () => {
       await recarga.getByLabel('Motivo').fill('Pix de teste E2E')
       await recarga.getByLabel('Comprovante (opcional)').fill('E2E-PIX-1')
       await recarga.getByRole('button', { name: 'Revisar' }).click()
-      await expect(recarga.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s0,00 → R\$\s1\.000,00/)
+      await expect(recarga.getByTestId('confirmar-disponivel')).toHaveText(/R\$\s0,00 para R\$\s1\.000,00/)
       await recarga.getByRole('button', { name: 'Confirmar recarga' }).click()
       await expect(pa.getByRole('status').filter({ hasText: 'Recarga lançada' })).toContainText(
         /Disponível agora: R\$\s1\.000,00/,
