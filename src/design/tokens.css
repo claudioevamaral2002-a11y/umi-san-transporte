@@ -32,6 +32,7 @@
   --cor-bloco-texto: #f6f4ee;
   --cor-bloco-suave: #a9b8cc;
   --cor-bloco-alerta: #ff8a4c; /* aviso sobre o bloco marinho do saldo */
+  --cor-bloco-reservado: #7fb2e8; /* parte reservada da barra do saldo */
   --cor-comando: #0a2540;
   --cor-comando-texto: #f6f4ee;
   /* Seleção suave (Maré clara): frase de confirmação, avatar, saldo do extrato. */
@@ -76,6 +77,7 @@
     --cor-bloco-texto: #f6f4ee;
     --cor-bloco-suave: #b8c6d8;
     --cor-bloco-alerta: #ff8a4c;
+    --cor-bloco-reservado: #7fb2e8;
     --cor-comando: #0c2a49;
     --cor-comando-texto: #f6f4ee;
     --cor-selecao-suave: #173f68;
@@ -124,6 +126,7 @@
   --cor-bloco-texto: #ffffff;
   --cor-bloco-suave: #ffffff;
   --cor-bloco-alerta: #ffffff;
+  --cor-bloco-reservado: #9ca3af;
   --cor-comando: #000000;
   --cor-comando-texto: #ffffff;
   --cor-barra: #ffffff;

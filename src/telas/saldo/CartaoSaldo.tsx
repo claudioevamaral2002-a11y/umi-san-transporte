@@ -30,7 +30,7 @@ function Barra({ saldo }: { saldo: Saldo }) {
         style={{ width: `${(1 - reservado) * 100}%` }}
       />
       <span
-        className="h-full bg-[var(--marcador-meu)] transition-[width] duration-500 motion-reduce:transition-none"
+        className="h-full bg-bloco-reservado transition-[width] duration-500 motion-reduce:transition-none"
         style={{ width: `${reservado * 100}%` }}
       />
     </div>
@@ -78,7 +78,7 @@ export function CartaoSaldo({
             </dd>
           </div>
           <div className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-[var(--marcador-meu)]" />
+            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-bloco-reservado" />
             <dt className="text-bloco-suave">Reservado</dt>
             <dd className="ml-auto font-bold" data-testid="saldo-reservado">
               <Dinheiro centavos={saldo.reservado_cent} />

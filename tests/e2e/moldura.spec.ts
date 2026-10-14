@@ -52,3 +52,11 @@ test('aba ativa fica numa pílula com a cor de seleção; o avatar abre o menu',
   await page.getByRole('button', { name: 'Menu' }).click()
   await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible()
 })
+
+test('desktop: o topo marinho usa foco claro (contorno visível)', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 800 })
+  await entrar(page, N2)
+  await page.goto('/')
+  const foco = await page.locator('header').first().evaluate((e) => getComputedStyle(e).getPropertyValue('--cor-foco').trim())
+  expect(foco.toLowerCase()).toBe('#f6f4ee')
+})

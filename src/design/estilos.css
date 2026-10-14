@@ -23,6 +23,7 @@
   --color-bloco-texto: var(--cor-bloco-texto);
   --color-bloco-suave: var(--cor-bloco-suave);
   --color-bloco-alerta: var(--cor-bloco-alerta);
+  --color-bloco-reservado: var(--cor-bloco-reservado);
   --color-comando: var(--cor-comando);
   --color-comando-texto: var(--cor-comando-texto);
   --color-selecao-suave: var(--cor-selecao-suave);
@@ -49,7 +50,11 @@
   button, a { touch-action: manipulation; }
   /* Foco sempre visível (teclado e leitores de tela). Sobre o azul do topo, contorno claro. */
   :focus-visible { outline: 3px solid var(--cor-foco); outline-offset: 2px; }
-  .sobre-marinho { --cor-foco: var(--cor-papel); }
+}
+
+/* Sobre fundo marinho, o contorno de foco fica claro. Utilitário (e não classe base) para valer também em md:. */
+@utility sobre-marinho {
+  --cor-foco: var(--cor-papel);
 }
 
 /* Escala tipográfica IVO (docs/marca/TIPOGRAFIA.md). Valores financeiros: tabular-nums. */

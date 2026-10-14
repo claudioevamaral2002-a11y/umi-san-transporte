@@ -96,7 +96,9 @@ export function Agenda() {
   const pedir = !!perfil && podeCriarPedido(perfil) && !indisponivel
 
   const dias = visao === 'tres' ? [dia, somarDias(dia, 1), somarDias(dia, 2)] : [dia]
-  const domingo = domingoDe(dia)
+  // A faixa fica presa à semana de hoje (esta e a próxima); só muda de âncora se o dia escolhido sair dela.
+  const domingoHoje = domingoDe(hoje)
+  const domingo = dia >= domingoHoje && dia <= somarDias(domingoHoje, 13) ? domingoHoje : domingoDe(dia)
   const mesesDaFaixa = [...new Set([mesDe(domingo), mesDe(somarDias(domingo, 13))])]
   const faixa = useConsulta(`agenda-faixa-${domingo}`, async () =>
     (await Promise.all(mesesDaFaixa.map((m) => pedidos.diasDoMes(m, 60)))).flat(),
@@ -179,7 +181,7 @@ export function Agenda() {
         </>
       ) : (
         <>
-          <FaixaSemana inicio={dia} selecionado={dia} hoje={hoje} dias={faixa.dados} aoSelecionar={setDia} />
+          <FaixaSemana inicio={domingo} selecionado={dia} hoje={hoje} dias={faixa.dados} aoSelecionar={setDia} />
           <section aria-label={nomeDoDia(dia)} data-testid="agenda-dia">
             {doDia.erro && doDia.dados === undefined ? (
               <ErroDia recarregar={doDia.recarregar} />

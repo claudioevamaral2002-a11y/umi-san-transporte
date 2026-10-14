@@ -49,6 +49,26 @@ for (const tema of ['light', 'dark'] as const) {
       await expect(page.getByTestId('grade-horas').locator('[data-coluna-dia]').first()).toHaveAttribute('data-coluna-dia', DIA_PEDIDO)
     })
 
+    test('dia tocado na 2ª semana continua visível na faixa; bloco mostra o status em texto', async ({ page }) => {
+      await abrirAgenda(page)
+      const faixa = page.getByTestId('faixa-semana')
+      const dia = (await faixa.locator('[data-dia]').nth(10).getAttribute('data-dia'))!
+      const alvo = faixa.locator(`[data-dia="${dia}"]`)
+      await alvo.scrollIntoViewIfNeeded()
+      await alvo.tap()
+      await expect(alvo).toHaveAttribute('aria-pressed', 'true')
+      // Depois de re-renderizar, o dia escolhido segue dentro da área visível da faixa.
+      await expect
+        .poll(async () => {
+          const f = (await faixa.boundingBox())!
+          const b = (await faixa.locator('[aria-pressed="true"]').boundingBox())!
+          return b.x >= f.x - 1 && b.x + b.width <= f.x + f.width + 1
+        })
+        .toBe(true)
+      await escolherDiaNaAgenda(page, DIA_PEDIDO, 'tap')
+      await expect(page.getByTestId('bloco-proprio')).toContainText('Solicitada')
+    })
+
     test('Mês: legenda logo abaixo e resumo do dia tocado; Hoje volta para hoje', async ({ page }) => {
       await abrirAgenda(page)
       await visao(page).getByRole('radio', { name: 'Mês' }).tap()

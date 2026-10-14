@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import type { DiaDoMes } from '../../lib/pedidos.ts'
 import { diaDaSemanaCurto, nomeDoDia, somarDias } from '../../lib/tempo.ts'
@@ -21,8 +22,14 @@ export function FaixaDias({
 }) {
   const lista = Array.from({ length: quantos }, (_, i) => somarDias(inicio, i))
   const porDia = new Map((dias ?? []).map((d) => [d.dia, d]))
+  // A faixa muda de âncora quando o dia escolhido sai dela: traz o escolhido de volta à área visível.
+  const faixa = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    faixa.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [selecionado, inicio])
   return (
     <div
+      ref={faixa}
       data-testid="faixa-dias"
       className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pt-1 pb-2 [scrollbar-width:none]"
       aria-busy={dias === undefined}

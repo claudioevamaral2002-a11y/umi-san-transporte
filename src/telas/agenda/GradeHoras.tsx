@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { MarcaAgora } from '../../design/componentes/MarcaAgora.tsx'
-import { corDoStatus } from '../../design/componentes/StatusBadge.tsx'
+import { corDoStatus, StatusBadge } from '../../design/componentes/StatusBadge.tsx'
 import { faixaDeHoras, posicionar, topoDoAgora, type EntradaGrade, type ItemGrade } from '../../lib/gradeAgenda.ts'
 import { diaDaSemanaCurto, faixaHorario, horaDe, numeroPedido } from '../../lib/tempo.ts'
 
@@ -77,6 +77,12 @@ function Item({ it, compacto, equipe, pedir }: { it: ItemGrade; compacto: boolea
         {b.numero !== undefined ? numeroPedido(b.numero) : ''}
       </span>
       <span className="block tabular-nums">{faixaHorario(b.inicio, b.fim)}</span>
+      {!compacto && b.status && (
+        <span className="absolute top-1.5 right-1.5">
+          <StatusBadge status={b.status} />
+        </span>
+      )}
+      {it.tipo === 'aguardando' && <span className="block font-semibold text-alerta-texto">Aguarda você</span>}
       {!compacto && (
         <>
           {equipe && b.empresa_nome && <span className="block font-semibold">{b.empresa_nome}</span>}
@@ -90,7 +96,6 @@ function Item({ it, compacto, equipe, pedir }: { it: ItemGrade; compacto: boolea
           )}
         </>
       )}
-      {compacto && it.tipo === 'aguardando' && <span className="block font-semibold">Aguarda você</span>}
     </>
   )
   const classe = `${base} block border-l-[3px] text-texto`

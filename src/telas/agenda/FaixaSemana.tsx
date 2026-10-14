@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { DiaDoMes } from '../../lib/pedidos.ts'
 import { somarDias } from '../../lib/tempo.ts'
 import { descrever } from './Calendario.tsx'
@@ -30,8 +31,13 @@ export function FaixaSemana({
   const primeiro = domingoDe(inicio)
   const lista = Array.from({ length: 14 }, (_, i) => somarDias(primeiro, i))
   const porDia = new Map((dias ?? []).map((d) => [d.dia, d]))
+  // A faixa muda de âncora quando o dia escolhido sai dela: traz o escolhido de volta à área visível.
+  const faixa = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    faixa.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [selecionado, inicio])
   return (
-    <div data-testid="faixa-semana" className="-mx-4 flex snap-x snap-mandatory overflow-x-auto px-2 pb-1 [scrollbar-width:none]">
+    <div ref={faixa} data-testid="faixa-semana" className="-mx-4 flex snap-x snap-mandatory overflow-x-auto px-2 pb-1 [scrollbar-width:none]">
       {[0, 7].map((desde) => (
         <div key={desde} className="grid w-full shrink-0 snap-start grid-cols-7">
           {lista.slice(desde, desde + 7).map((dia, i) => {
