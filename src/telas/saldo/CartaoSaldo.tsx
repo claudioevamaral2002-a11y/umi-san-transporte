@@ -24,13 +24,13 @@ export function useSaldo(empresa: string | null, comoAdm = false) {
 function Barra({ saldo }: { saldo: Saldo }) {
   const reservado = fracaoReservada(saldo)
   return (
-    <div aria-hidden="true" className="flex h-3 w-full overflow-hidden rounded-full bg-borda" data-testid="saldo-barra">
+    <div aria-hidden="true" className="flex h-2 w-full overflow-hidden rounded-full bg-white/15" data-testid="saldo-barra">
       <span
-        className="h-full bg-marinho-2 transition-[width] duration-500 motion-reduce:transition-none"
+        className="h-full bg-bloco-texto transition-[width] duration-500 motion-reduce:transition-none"
         style={{ width: `${(1 - reservado) * 100}%` }}
       />
       <span
-        className="h-full bg-[var(--cor-laranja)] transition-[width] duration-500 motion-reduce:transition-none"
+        className="h-full bg-[var(--marcador-meu)] transition-[width] duration-500 motion-reduce:transition-none"
         style={{ width: `${reservado * 100}%` }}
       />
     </div>
@@ -49,16 +49,14 @@ export function CartaoSaldo({
 }) {
   const negativo = saldo.disponivel_cent < 0
   return (
-    <Cartao
-      className={`space-y-4 ${saldo.abaixo_alerta ? 'border-[var(--cor-laranja)]' : ''}`}
+    <section
+      className="space-y-4 rounded-folha bg-bloco p-[18px] text-bloco-texto sobre-marinho"
       data-testid="cartao-saldo"
       aria-label={titulo}
-      role="region"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="ivo-sobretitulo text-texto-suave">{titulo}</p>
-          <p className="mt-1 ivo-legenda font-semibold text-texto-suave">Disponível</p>
+          <p className="ivo-legenda font-semibold text-bloco-suave">Disponível para novos pedidos</p>
           <ValorAnimado centavos={saldo.disponivel_cent} className="block ivo-valor" data-testid="saldo-disponivel" />
         </div>
         {saldo.abaixo_alerta && (
@@ -73,21 +71,21 @@ export function CartaoSaldo({
         <Barra saldo={saldo} />
         <dl className="grid grid-cols-2 gap-x-3 gap-y-2 ivo-legenda">
           <div className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-marinho-2" />
-            <dt className="text-texto-suave">Disponível</dt>
+            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-bloco-texto" />
+            <dt className="text-bloco-suave">Disponível</dt>
             <dd className="ml-auto font-bold">
               <Dinheiro centavos={saldo.disponivel_cent} />
             </dd>
           </div>
           <div className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-[var(--cor-laranja)]" />
-            <dt className="text-texto-suave">Reservado</dt>
+            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-[var(--marcador-meu)]" />
+            <dt className="text-bloco-suave">Reservado</dt>
             <dd className="ml-auto font-bold" data-testid="saldo-reservado">
               <Dinheiro centavos={saldo.reservado_cent} />
             </dd>
           </div>
-          <div className="col-span-2 flex items-center gap-1.5 border-t border-borda pt-2">
-            <dt className="text-texto-suave">Total contábil</dt>
+          <div className="col-span-2 flex items-center gap-1.5 border-t border-white/15 pt-2">
+            <dt className="text-bloco-suave">Total contábil</dt>
             <dd className="ml-auto font-bold" data-testid="saldo-contabil">
               <Dinheiro centavos={saldo.saldo_contabil_cent} />
             </dd>
@@ -95,14 +93,14 @@ export function CartaoSaldo({
         </dl>
       </div>
 
-      <p className="flex items-center gap-1.5 ivo-legenda text-texto-suave" data-testid="saldo-limite">
+      <p className="flex items-center gap-1.5 ivo-legenda text-bloco-suave" data-testid="saldo-limite">
         <Icone nome="escudo" tamanho={16} />
         Limite de crédito {formatarCentavos(saldo.limite_cent)}
-        {negativo && <> · usando {formatarCentavos(-saldo.disponivel_cent)}</>}
+        {negativo && <>, usando {formatarCentavos(-saldo.disponivel_cent)}</>}
       </p>
 
       {saldo.abaixo_alerta && (
-        <p className="ivo-legenda font-semibold text-alerta-texto" data-testid="saldo-alerta">
+        <p className="ivo-legenda font-semibold text-bloco-alerta" data-testid="saldo-alerta">
           Abaixo do alerta de {formatarCentavos(saldo.alerta_cent)}. Fale com a IVO Transportes para recarregar.
         </p>
       )}
@@ -111,13 +109,12 @@ export function CartaoSaldo({
         <Link
           to={linkExtrato}
           viewTransition
-          className="inline-flex min-h-12 items-center gap-1 font-semibold text-marinho-2 underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-bloco-texto underline underline-offset-4"
         >
           Ver extrato
-          <Icone nome="setaDireitaPequena" tamanho={18} />
         </Link>
       )}
-    </Cartao>
+    </section>
   )
 }
 
@@ -129,7 +126,7 @@ export function SaldoDaEmpresa({ empresa, comoAdm = false, linkExtrato }: { empr
       return (
         <Cartao className="space-y-2" role="alert">
           <p className="font-bold">Não foi possível carregar o saldo.</p>
-          <button type="button" onClick={recarregar} className="min-h-12 font-semibold text-marinho-2 underline">
+          <button type="button" onClick={recarregar} className="min-h-12 font-semibold text-link underline">
             Tentar de novo
           </button>
         </Cartao>

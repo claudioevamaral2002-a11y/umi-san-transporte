@@ -364,7 +364,7 @@ export function CreditoEmpresa() {
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
       <div className="nao-imprimir space-y-1">
-        <Link to="/adm/creditos" viewTransition className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-xl px-2 font-semibold text-marinho-2">
+        <Link to="/adm/creditos" viewTransition className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-xl px-2 font-semibold text-link">
           <Icone nome="setaEsquerda" tamanho={20} />
           Clientes e crédito
         </Link>

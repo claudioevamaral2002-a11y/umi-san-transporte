@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { Botao } from '../../design/componentes/Botao.tsx'
+import { formatarCentavos } from '../../design/dinheiro.ts'
 import { AreaTexto } from '../../design/componentes/Campo.tsx'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { Dinheiro } from '../../design/componentes/Dinheiro.tsx'
@@ -136,7 +137,7 @@ function FolhaAcao({
 function Linha({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div className="border-b border-borda py-3 last:border-b-0">
-      <p className="ivo-sobretitulo text-texto-suave">{titulo}</p>
+      <p className="ivo-legenda font-semibold text-texto-suave">{titulo}</p>
       <div className="mt-1">{children}</div>
     </div>
   )
@@ -151,7 +152,7 @@ function Detalhes({ r }: { r: RespostaPedido }) {
     p.dimensoes,
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join(', ')
   return (
     <Cartao className="py-1" data-testid="detalhes-pedido">
       <Linha titulo="Quando">
@@ -174,7 +175,7 @@ function Detalhes({ r }: { r: RespostaPedido }) {
         <Linha titulo="Contato no local">
           <p className="font-semibold">{p.contato_nome}</p>
           {p.contato_telefone && (
-            <a href={`tel:${p.contato_telefone.replace(/[^\d+]/g, '')}`} className="font-semibold text-marinho-2 underline">
+            <a href={`tel:${p.contato_telefone.replace(/[^\d+]/g, '')}`} className="font-semibold text-link underline">
               {p.contato_telefone}
             </a>
           )}
@@ -248,7 +249,7 @@ export function Pedido() {
       <main className="mx-auto max-w-3xl p-4 md:p-6">
         <EstadoVazio icone="busca" titulo="Pedido não encontrado">
           Ele não existe ou não está disponível para você.{' '}
-          <Link to="/pedidos" className="font-semibold text-marinho-2 underline">
+          <Link to="/pedidos" className="font-semibold text-link underline">
             Ver pedidos
           </Link>
         </EstadoVazio>
@@ -266,26 +267,26 @@ export function Pedido() {
 
   return (
     <main>
-      <section className="sobre-marinho bg-marinho px-4 pt-4 pb-6 text-papel">
+      <section className="px-4 pt-2 pb-2">
         <div className="mx-auto max-w-3xl space-y-2">
-          <Link to="/pedidos" viewTransition className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-xl px-2 font-semibold text-cinza-azulado hover:text-papel">
+          <Link to="/pedidos" viewTransition className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-xl px-2 font-semibold text-texto-suave hover:text-texto">
             <Icone nome="setaEsquerda" tamanho={20} />
             Pedidos
           </Link>
-          <p className="ivo-sobretitulo text-cinza-azulado">{prestador || perfil?.papel === 'GESTOR_FROTA' ? p.empresa_nome : 'Pedido'}</p>
+          {(prestador || perfil?.papel === 'GESTOR_FROTA') && <p className="ivo-legenda font-semibold text-texto-suave">{p.empresa_nome}</p>}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="ivo-h1 tabular-nums">Pedido {numeroPedido(p.numero)}</h1>
             <SelosStatus status={p.status} prazoVencido={p.prazo_vencido} />
           </div>
           {aberto && p.status === 'SOLICITADA' && (
-            <p className="flex items-center gap-2 font-semibold text-papel">
-              <Icone nome="relogio" tamanho={18} className="text-[var(--cor-laranja)]" />
+            <p className="flex items-center gap-2 font-semibold text-alerta-texto">
+              <Icone nome="relogio" tamanho={18} />
               <Contagem anunciar prazo={p.prazo_orcar_ate} prefixo={prestador ? 'Responder em' : 'Orçamento em até'} />
             </p>
           )}
           {aberto && p.status === 'ORCADA' && o && (
-            <p className="flex items-center gap-2 font-semibold text-papel">
-              <Icone nome="relogio" tamanho={18} className="text-[var(--cor-laranja)]" />
+            <p className="flex items-center gap-2 font-semibold text-alerta-texto">
+              <Icone nome="relogio" tamanho={18} />
               <Contagem anunciar prazo={o.valido_ate} prefixo="Orçamento válido por mais" />
             </p>
           )}
@@ -304,10 +305,9 @@ export function Pedido() {
         {dados.acoes.orcar && (
           <Link
             to={`/pedidos/${p.id}/orcar`}
-            className="flex min-h-14 w-full items-center justify-center gap-2 rounded-cartao bg-acao px-5 text-lg ivo-botao text-acao-texto"
+            className="flex min-h-14 w-full items-center justify-center gap-2 rounded-botao bg-acao px-5 text-lg ivo-botao text-acao-texto"
           >
             Orçar este pedido
-            <Icone nome="setaDireita" tamanho={20} />
           </Link>
         )}
 
@@ -315,8 +315,8 @@ export function Pedido() {
           <Cartao className="space-y-4" data-testid="orcamento-recebido">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="ivo-sobretitulo text-texto-suave">
-                  Orçamento{o.versao > 1 ? ` · versão ${o.versao}` : ''}
+                <p className="font-semibold text-texto-suave">
+                  Orçamento{o.versao > 1 ? `, versão ${o.versao}` : ''}
                 </p>
                 {comValores ? (
                   <Dinheiro centavos={o.total_cent!} className="ivo-valor" />
@@ -345,7 +345,7 @@ export function Pedido() {
               <div className="space-y-3 border-t border-borda pt-4">
                 {dados.acoes.aprovar && (
                   <Botao variante="principal" className="w-full" onClick={() => setAprovando(true)}>
-                    Aprovar
+                    {comValores ? `Aprovar ${formatarCentavos(o.total_cent!)}` : 'Aprovar'}
                   </Botao>
                 )}
                 <div className="grid grid-cols-2 gap-3">
@@ -383,7 +383,7 @@ export function Pedido() {
                   <p className="font-semibold">{ROTULO_HISTORICO[h.para] ?? h.para}</p>
                   <p className="ivo-legenda text-texto-suave tabular-nums">
                     {formatarDataHora(h.em)}
-                    {h.por_nome ? ` · ${h.por_nome}` : ''}
+                    {h.por_nome ? `, ${h.por_nome}` : ''}
                   </p>
                   {h.observacao && <p className="ivo-corpo break-words">“{h.observacao}”</p>}
                 </div>

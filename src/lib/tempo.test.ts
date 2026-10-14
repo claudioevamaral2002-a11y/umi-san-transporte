@@ -87,7 +87,7 @@ describe('duração e contagem regressiva', () => {
   })
 
   it('quando, faixa de horário, fim e número do pedido', () => {
-    expect(formatarQuando('2026-10-09T17:30:00Z')).toMatch(/^sex\.?, 9 de out\.? · 14:30$/)
+    expect(formatarQuando('2026-10-09T17:30:00Z')).toMatch(/^sex\.?, 9 de out\.?, 14:30$/)
     expect(faixaHorario('2026-10-09T11:00:00Z', '2026-10-09T13:00:00Z')).toBe('08:00–10:00')
     expect(fimDe('2026-10-09T11:00:00Z', 90).toISOString()).toBe('2026-10-09T12:30:00.000Z')
     expect(numeroPedido(42)).toBe('#0042')
@@ -124,5 +124,26 @@ describe('diaDaSemanaCurto', () => {
     expect(diaDaSemanaCurto('2026-10-13')).toBe('Ter')
     expect(diaDaSemanaCurto('2026-10-17')).toBe('Sáb')
     expect(diaDaSemanaCurto('2026-10-18')).toBe('Dom')
+  })
+})
+
+describe('saudacao', () => {
+  it('bom dia, boa tarde e boa noite pelo horário de São Paulo', async () => {
+    const { saudacao } = await import('./tempo.ts')
+    expect(saudacao(new Date('2026-10-13T08:00:00-03:00'))).toBe('Bom dia')
+    expect(saudacao(new Date('2026-10-13T11:59:00-03:00'))).toBe('Bom dia')
+    expect(saudacao(new Date('2026-10-13T12:00:00-03:00'))).toBe('Boa tarde')
+    expect(saudacao(new Date('2026-10-13T18:00:00-03:00'))).toBe('Boa noite')
+    expect(saudacao(new Date('2026-10-13T04:59:00-03:00'))).toBe('Boa noite')
+    // 02:00 UTC ainda é 23:00 do dia anterior em São Paulo.
+    expect(saudacao(new Date('2026-10-14T02:00:00Z'))).toBe('Boa noite')
+  })
+})
+
+describe('formatarQuando', () => {
+  it('sem o separador "·"', async () => {
+    const { formatarQuando } = await import('./tempo.ts')
+    expect(formatarQuando('2026-10-09T14:30:00-03:00')).not.toContain('·')
+    expect(formatarQuando('2026-10-09T14:30:00-03:00')).toMatch(/9 de out\.?, 14:30$/)
   })
 })

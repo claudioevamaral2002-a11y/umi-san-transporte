@@ -18,7 +18,7 @@ export function CabecalhoTela({
   return (
     <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0 space-y-1">
-        <p className="ivo-sobretitulo text-texto-suave">{sobretitulo}</p>
+        <p className="ivo-legenda font-semibold text-texto-suave">{sobretitulo}</p>
         <h1 className="ivo-h1">{titulo}</h1>
         {descricao && <p className="ivo-corpo text-texto-suave">{descricao}</p>}
       </div>
@@ -38,7 +38,7 @@ export function EstadoVazio({
 }) {
   return (
     <Cartao className="flex flex-col items-center gap-2 py-8 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-fundo text-marinho-2">
+      <span className="flex size-12 items-center justify-center rounded-full bg-fundo text-link">
         <Icone nome={icone} />
       </span>
       <p className="ivo-h3">{titulo}</p>

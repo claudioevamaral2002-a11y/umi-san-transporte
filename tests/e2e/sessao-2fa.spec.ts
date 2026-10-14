@@ -13,12 +13,12 @@ test('token guardado aal1 com sessão já verificada no servidor: vai ao Início
     if (r.url().startsWith(`${URL_SUPABASE}/auth/v1/token?grant_type=refresh_token`)) renovacoes.push(r.url())
   })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Olá, Alice' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Alice$/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Digite o código' })).toHaveCount(0)
   expect(renovacoes).toHaveLength(1)
   // Recarregar: o token guardado agora é aal2, nada de renovar de novo.
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Olá, Alice' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Alice$/ })).toBeVisible()
   expect(renovacoes).toHaveLength(1)
 })
 

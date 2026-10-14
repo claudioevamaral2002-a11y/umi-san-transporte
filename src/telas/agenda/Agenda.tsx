@@ -255,7 +255,7 @@ function ErroDia({ recarregar }: { recarregar: () => void }) {
   return (
     <div className="space-y-2 pt-3">
       <Mensagem tipo="erro">Não foi possível carregar este dia. Verifique a conexão.</Mensagem>
-      <button type="button" onClick={recarregar} className="min-h-12 rounded-xl px-3 font-semibold text-marinho-2 underline">
+      <button type="button" onClick={recarregar} className="min-h-12 rounded-xl px-3 font-semibold text-link underline">
         Tentar de novo
       </button>
     </div>

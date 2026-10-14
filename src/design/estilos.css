@@ -22,10 +22,12 @@
   --color-bloco: var(--cor-bloco);
   --color-bloco-texto: var(--cor-bloco-texto);
   --color-bloco-suave: var(--cor-bloco-suave);
+  --color-bloco-alerta: var(--cor-bloco-alerta);
   --color-comando: var(--cor-comando);
   --color-comando-texto: var(--cor-comando-texto);
   --color-selecao-suave: var(--cor-selecao-suave);
   --color-barra: var(--cor-barra);
+  --color-link: var(--cor-link);
   --color-laranja: var(--cor-laranja);
   --font-sans: "Manrope Variable", system-ui, sans-serif;
   --radius-folha: var(--raio-folha);

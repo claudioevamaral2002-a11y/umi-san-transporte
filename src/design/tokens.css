@@ -31,11 +31,13 @@
   --cor-bloco: #0a2540;
   --cor-bloco-texto: #f6f4ee;
   --cor-bloco-suave: #a9b8cc;
+  --cor-bloco-alerta: #ff8a4c; /* aviso sobre o bloco marinho do saldo */
   --cor-comando: #0a2540;
   --cor-comando-texto: #f6f4ee;
   /* Seleção suave (Maré clara): frase de confirmação, avatar, saldo do extrato. */
   --cor-selecao-suave: #e6edf5;
   --cor-barra: #ffffff;
+  --cor-link: #1e4b7a; /* links e textos em azul Maré */
 
   --status-solicitada: #5b6b80;
   --status-aguardando: #b45309;
@@ -73,10 +75,12 @@
     --cor-bloco: #10365f;
     --cor-bloco-texto: #f6f4ee;
     --cor-bloco-suave: #b8c6d8;
+    --cor-bloco-alerta: #ff8a4c;
     --cor-comando: #0c2a49;
     --cor-comando-texto: #f6f4ee;
     --cor-selecao-suave: #173f68;
     --cor-barra: #0a2540;
+    --cor-link: #7fb2e8;
     --sombra: 0 0 0 1px #1b3d63;
     --cor-selecao: #f6f4ee;
     --cor-selecao-texto: #0a2540;
@@ -119,9 +123,11 @@
   --cor-bloco: #000000;
   --cor-bloco-texto: #ffffff;
   --cor-bloco-suave: #ffffff;
+  --cor-bloco-alerta: #ffffff;
   --cor-comando: #000000;
   --cor-comando-texto: #ffffff;
   --cor-barra: #ffffff;
+  --cor-link: #1e3a8a;
   --marcador-meu: #1e3a8a;
   --marcador-aguardando: #9a3412;
   --sombra: 0 0 0 1.5px #000000;

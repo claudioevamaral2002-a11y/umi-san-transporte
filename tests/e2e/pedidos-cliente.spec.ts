@@ -178,7 +178,7 @@ test.describe('cliente: novo pedido', () => {
     await simularApi(page)
     const chamadas = await simularPedidos(page)
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Olá, Elisa' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Elisa$/ })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Novo pedido' })).toHaveCount(0)
     await page.goto('/pedidos')
     await expect(page.getByRole('heading', { level: 1, name: 'Pedidos' })).toBeVisible()
@@ -211,7 +211,7 @@ test.describe('cliente: pedidos e orçamento recebido', () => {
     await expect(aprovar.getByTestId('pendencia-aprovar')).toContainText(/R\$\s710,00/)
     await expect(aprovar.getByTestId('contagem')).toHaveText(/^Aprovar em até (19|20) h/)
     const andamento = page.getByTestId('grupo-acompanhar')
-    await expect(andamento.getByTestId('pendencia-acompanhar')).toContainText('URGENTE')
+    await expect(andamento.getByTestId('pendencia-acompanhar')).toContainText('Urgente')
     await expect(andamento.getByTestId('contagem')).toHaveText(/^Orçamento em até (4|5) h/)
 
     await page.getByRole('navigation', { name: 'Navegação' }).getByRole('link', { name: 'Pedidos' }).click()

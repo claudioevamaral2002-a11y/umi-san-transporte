@@ -30,7 +30,7 @@ async function digitarCodigo(page: Page, codigo: string) {
 }
 
 /**
- * Digita o código TOTP calculado do segredo e espera a tela "Olá". Se o código for recusado (virada da
+ * Digita o código TOTP calculado do segredo e espera a saudação do Início. Se o código for recusado (virada da
  * janela de 30 s), espera a próxima janela e tenta de novo.
  */
 export async function confirmarCodigo(page: Page, segredo: string) {
@@ -38,7 +38,7 @@ export async function confirmarCodigo(page: Page, segredo: string) {
     await digitarCodigo(page, gerarTotp(segredo))
     const resultado = await Promise.race([
       page
-        .getByRole('heading', { name: /^Olá,/ })
+        .getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite),/ })
         .waitFor({ timeout: 20_000 })
         .then(
           () => 'ok',
@@ -57,7 +57,7 @@ export async function confirmarCodigo(page: Page, segredo: string) {
     if (resultado === 'nada') break
     await page.waitForTimeout(30_000 - (Date.now() % 30_000) + 1_000)
   }
-  await expect(page.getByRole('heading', { name: /^Olá,/ })).toBeVisible({ timeout: 5_000 })
+  await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite),/ })).toBeVisible({ timeout: 5_000 })
 }
 
 /** Login completo de quem já tem 2FA cadastrado: senha + código; termina no Início. */

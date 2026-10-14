@@ -46,7 +46,7 @@ function ListaCredito({ dados, limite }: { dados: DadosPainel; limite?: number }
     <ul className="divide-y divide-borda" data-testid="painel-lista-credito">
       {mostradas.map((e) => (
         <li key={e.empresa_id}>
-          <Link to={`/adm/creditos/${e.empresa_id}`} className="flex min-h-14 items-center justify-between gap-3 py-2 hover:text-marinho-2">
+          <Link to={`/adm/creditos/${e.empresa_id}`} className="flex min-h-14 items-center justify-between gap-3 py-2 hover:text-link">
             <span className="min-w-0">
               <span className="block truncate font-bold">{e.empresa_nome}</span>
               <span className="block ivo-legenda text-texto-suave tabular-nums">
@@ -92,7 +92,7 @@ function Reconciliacao({ dados }: { dados: DadosPainel }) {
                 {d.atividade_id && (
                   <>
                     {' · '}
-                    <Link to={`/pedidos/${d.atividade_id}`} className="font-semibold text-marinho-2 underline">
+                    <Link to={`/pedidos/${d.atividade_id}`} className="font-semibold text-link underline">
                       ver pedido
                     </Link>
                   </>
@@ -113,7 +113,7 @@ function Blocos({ dados, resumo = false }: { dados: DadosPainel; resumo?: boolea
         titulo="Crédito por cliente"
         testid="painel-credito"
         acao={
-          <Link to="/adm/creditos" className="min-h-10 font-semibold text-marinho-2 underline-offset-4 hover:underline">
+          <Link to="/adm/creditos" className="min-h-10 font-semibold text-link underline-offset-4 hover:underline">
             Ver todos
           </Link>
         }
@@ -204,7 +204,7 @@ export function PainelResumo() {
         <h2 id="titulo-painel-resumo" className="ivo-sobretitulo text-texto-suave">
           Painel
         </h2>
-        <Link to="/adm/painel" viewTransition className="inline-flex min-h-12 items-center gap-1 font-semibold text-marinho-2">
+        <Link to="/adm/painel" viewTransition className="inline-flex min-h-12 items-center gap-1 font-semibold text-link">
           Abrir painel
           <Icone nome="setaDireitaPequena" tamanho={18} />
         </Link>

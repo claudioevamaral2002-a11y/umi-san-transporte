@@ -50,7 +50,7 @@ export function FaixasCancelamento({ faixas }: { faixas: Faixa[] }) {
     <ul className="mt-2 space-y-2" data-testid="faixas-cancelamento">
       {descreverFaixas(faixas).map((t) => (
         <li key={t} className="flex items-start gap-2.5 rounded-xl bg-fundo px-3 py-2.5 tabular-nums">
-          <Icone nome="relogio" tamanho={18} className="mt-0.5 shrink-0 text-marinho-2" />
+          <Icone nome="relogio" tamanho={18} className="mt-0.5 shrink-0 text-link" />
           <span>{t}</span>
         </li>
       ))}

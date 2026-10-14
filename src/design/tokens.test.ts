@@ -24,7 +24,10 @@ const PARES: Array<[string, string, number]> = [
   ['--marcador-ocupado', '--cor-superficie', 3],
   ['--cor-bloco-texto', '--cor-bloco', 4.5],
   ['--cor-bloco-suave', '--cor-bloco', 4.5],
+  ['--cor-bloco-alerta', '--cor-bloco', 4.5],
   ['--cor-comando-texto', '--cor-comando', 4.5],
+  ['--cor-link', '--cor-superficie', 4.5],
+  ['--cor-link', '--cor-fundo', 4.5],
 ]
 
 for (const modo of ['claro', 'escuro', 'alto'] as const) {

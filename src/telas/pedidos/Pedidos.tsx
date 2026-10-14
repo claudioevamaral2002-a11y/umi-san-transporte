@@ -122,15 +122,15 @@ export function Pedidos() {
         acao={perfil && podeCriarPedido(perfil) ? <BotaoNovoPedido perfil={perfil} soDesktop /> : undefined}
       />
 
-      <div role="group" aria-label="Filtrar pedidos" className="flex gap-1 rounded-full bg-borda/60 p-1">
+      <div role="group" aria-label="Filtrar pedidos" className="flex gap-1 rounded-full border-[1.5px] border-borda bg-superficie p-1">
         {ORDEM.map((f) => (
           <button
             key={f}
             type="button"
             aria-pressed={f === filtro}
             onClick={() => setParams(f === 'abertos' ? {} : { filtro: f }, { replace: true })}
-            className={`min-h-12 flex-1 rounded-full px-3 text-sm font-bold transition-colors duration-150 motion-reduce:transition-none ${
-              f === filtro ? 'bg-superficie text-texto shadow-[var(--sombra)]' : 'text-texto-suave'
+            className={`min-h-10 flex-1 rounded-full px-3 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+              f === filtro ? 'ivo-escolhido' : 'text-texto-suave'
             }`}
           >
             {FILTROS[f].rotulo}

@@ -25,7 +25,7 @@ test.describe('início do ADM', () => {
     await comSessaoFalsa(page, ADM, AAL2)
     await simularApi(page, { vigente: [], historico: [] })
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Ana$/ })).toBeVisible()
     const chamada = page.getByTestId('chamada-primeira-tabela')
     await expect(chamada).toContainText('Publique a tabela modelo')
     const atalhos = page.getByRole('region', { name: 'Atalhos' }).getByRole('link')

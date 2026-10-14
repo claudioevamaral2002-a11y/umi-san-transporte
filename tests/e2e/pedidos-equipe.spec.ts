@@ -41,7 +41,7 @@ test.describe('motorista', () => {
     await expect(grupo.getByRole('heading', { name: /Aguardando seu orçamento/ })).toContainText('2')
     const cartoes = grupo.getByTestId('pendencia-orcar')
     await expect(cartoes).toHaveCount(2)
-    await expect(cartoes.nth(0)).toContainText('URGENTE')
+    await expect(cartoes.nth(0)).toContainText('Urgente')
     await expect(cartoes.nth(0)).toContainText(/Pedido #0042.*Umi San/)
     await expect(cartoes.nth(0).getByTestId('contagem')).toHaveText(/^Responder em (4|5) h/)
     await expect(cartoes.nth(1)).toContainText('Revisão')
@@ -249,7 +249,7 @@ test.describe('ADM e gestor de frota', () => {
       lista: [itemLista({ empresa_nome: EMPRESA_UMI.nome, status: 'SOLICITADA', total_cent: null })],
     })
     await page.goto('/pedidos')
-    await expect(page.getByTestId('lista-pedidos').getByRole('listitem')).toContainText('Pedido #0042 · Umi San')
+    await expect(page.getByTestId('lista-pedidos').getByRole('listitem')).toContainText('Pedido #0042, Umi San')
     await expect(page.getByRole('link', { name: 'Novo pedido' })).toHaveCount(0)
   })
 
@@ -261,7 +261,7 @@ test.describe('ADM e gestor de frota', () => {
     })
     await page.goto('/')
     await expect(page.getByTestId('atalho-agenda')).toContainText('Agenda da frota')
-    await expect(page.getByTestId('grupo-acompanhar')).toContainText('Pedido #0042 · Umi San')
+    await expect(page.getByTestId('grupo-acompanhar')).toContainText('Pedido #0042, Umi San')
     expect(await page.locator('main').innerText()).not.toMatch(/R\$/)
     await page.getByTestId('atalho-agenda').click()
     await expect(page.getByRole('heading', { level: 1, name: 'Agenda' })).toBeVisible()

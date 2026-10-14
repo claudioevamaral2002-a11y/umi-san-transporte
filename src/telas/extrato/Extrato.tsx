@@ -62,7 +62,7 @@ function NumeroPedido({ item }: { item: ItemExtrato }) {
   if (item.numero === null) return <span className="text-texto-suave">—</span>
   // Detalhe só para quem pode ver o pedido (privacidade do extrato, especificação 2); os demais veem o número.
   return item.pode_abrir && item.atividade_id ? (
-    <Link to={`/pedidos/${item.atividade_id}`} className="font-semibold text-marinho-2 underline underline-offset-2">
+    <Link to={`/pedidos/${item.atividade_id}`} className="font-semibold text-link underline underline-offset-2">
       Pedido {numeroPedido(item.numero)}
     </Link>
   ) : (

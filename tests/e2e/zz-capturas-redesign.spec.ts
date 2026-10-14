@@ -2,7 +2,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { escolherDiaNaAgenda, escolherDiaNoPedido } from './apoio/escolherDia.ts'
-import { DIA_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { saldoFalso, simularDinheiro } from './apoio/dinheiroFalso.ts'
+import { DIA_PEDIDO, ID_PEDIDO, pedidoOrcadoCliente, pendenciaFalsa, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
 const PASTA = process.env.PASTA_CAPTURAS ?? 'test-results/capturas-redesign'
@@ -17,6 +18,28 @@ for (const tema of ['light', 'dark'] as const) {
 
   test.describe(`capturas ${sufixo}`, () => {
     test.use({ colorScheme: tema })
+
+    test('início e pedido', async ({ page }) => {
+      await comSessaoFalsa(page, CLIENTE)
+      await simularApi(page)
+      await simularDinheiro(page, { saldos: [saldoFalso()] })
+      await simularPedidos(page, {
+        detalhes: [pedidoOrcadoCliente()],
+        pendencias: {
+          aguardando_aprovacao: [pendenciaFalsa({ status: 'ORCADA', prazo: new Date(Date.now() + 20 * 3600_000).toISOString(), total_cent: 185000 })],
+          proximos: [pendenciaFalsa({ id: 'p', numero: 36, status: 'AGENDADA' })],
+        },
+      })
+      await page.goto('/')
+      await expect(page.getByTestId('cartao-saldo')).toBeVisible()
+      await foto(page, '01-inicio-cliente')
+      await page.goto('/pedidos')
+      await expect(page.getByTestId('lista-pedidos')).toBeVisible()
+      await foto(page, '06-pedidos')
+      await page.goto(`/pedidos/${ID_PEDIDO}`)
+      await expect(page.getByTestId('orcamento-recebido')).toBeVisible()
+      await foto(page, '07-pedido-detalhe')
+    })
 
     test('novo pedido', async ({ page }) => {
       await comSessaoFalsa(page, CLIENTE)

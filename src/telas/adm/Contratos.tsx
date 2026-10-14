@@ -34,7 +34,7 @@ function ItemContrato({ c }: { c: ContratoListado }) {
       >
         <span
           className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
-            modelo ? 'bg-marinho text-papel' : 'bg-fundo text-marinho-2'
+            modelo ? 'bg-marinho text-papel' : 'bg-fundo text-link'
           }`}
         >
           <Icone nome={modelo ? 'tabela' : 'predio'} />

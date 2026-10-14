@@ -455,7 +455,7 @@ export function Orcar() {
         <main className="mx-auto w-full max-w-lg p-4">
           <EstadoVazio icone="relogio" titulo="Este pedido não está aguardando orçamento">
             Ele mudou de situação ou o prazo venceu.{' '}
-            <Link to={`/pedidos/${id}`} className="font-semibold text-marinho-2 underline">
+            <Link to={`/pedidos/${id}`} className="font-semibold text-link underline">
               Ver o pedido
             </Link>
           </EstadoVazio>

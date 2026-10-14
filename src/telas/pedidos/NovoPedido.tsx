@@ -453,7 +453,7 @@ function LinhaResumo({ titulo, aoEditar, children }: { titulo: string; aoEditar:
         type="button"
         onClick={aoEditar}
         aria-label={`Editar ${titulo.toLowerCase()}`}
-        className="-mr-2 min-h-12 shrink-0 rounded-xl px-3 font-semibold text-marinho-2 hover:bg-borda/60"
+        className="-mr-2 min-h-12 shrink-0 rounded-xl px-3 font-semibold text-link hover:bg-borda/60"
       >
         Editar
       </button>
@@ -524,7 +524,7 @@ function PassoRevisar({
         </LinhaResumo>
       </Cartao>
       <div className="flex gap-3 rounded-cartao border-[1.5px] border-marinho-2/40 bg-marinho-2/10 p-4" data-testid="aviso-prazo">
-        <Icone nome="relogio" className="mt-0.5 text-marinho-2" />
+        <Icone nome="relogio" className="mt-0.5 text-link" />
         <p className="ivo-corpo">
           {prazoHoras
             ? `O motorista envia o orçamento em até ${prazoPorExtenso(prazoHoras)}; o horário fica pré-reservado até lá.`

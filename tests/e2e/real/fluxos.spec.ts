@@ -53,7 +53,7 @@ test.describe('fluxos reais', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     const adm = await criarPessoa({ papel: 'ADM', nome: 'Admin Convite' })
     await entrarComDoisFatores(page, adm.email, adm.senha, adm.segredoTotp!)
-    await expect(page.getByRole('heading', { name: 'Olá, Admin' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Admin$/ })).toBeVisible()
 
     await page.goto('/adm/usuarios')
     await page.getByRole('button', { name: 'Convidar' }).click()
@@ -82,7 +82,7 @@ test.describe('fluxos reais', () => {
       const chave = (await pagina.locator('code').first().innerText()).replace(/\s+/g, '')
       expect(chave).toMatch(/^[A-Z2-7]{16,}$/)
       await confirmarCodigo(pagina, chave)
-      await expect(pagina.getByRole('heading', { name: 'Olá, Marlene' })).toBeVisible()
+      await expect(pagina.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Marlene$/ })).toBeVisible()
 
       // Início de motorista: a Tabela para orçar; sem a administração nem os contratos (fase 1B).
       await pagina.getByRole('button', { name: 'Menu' }).click()
@@ -132,7 +132,7 @@ test.describe('fluxos reais', () => {
     await entrarComSenha(page, emailCliente, senha)
 
     // Cliente não passa por 2FA: vai direto ao início.
-    await expect(page.getByRole('heading', { name: 'Olá, Carla' })).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Carla$/ })).toBeVisible({ timeout: 30_000 })
     const pilula = page.getByTestId('empresa-cliente')
     await expect(pilula).toBeVisible()
     const logo = pilula.getByRole('img', { name: nomeEmpresa })

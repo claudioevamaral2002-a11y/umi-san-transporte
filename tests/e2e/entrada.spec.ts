@@ -192,7 +192,7 @@ test.describe('moldura autenticada', () => {
   test('ADM vê o grupo Administração; motorista não, e a URL forçada mostra "sem permissão"', async ({ page }) => {
     await comSessaoFalsa(page, { papel: 'ADM', tem_2fa: true }, { aal: 'aal2' })
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Ana$/ })).toBeVisible()
     await page.getByRole('button', { name: 'Menu' }).click()
     await expect(page.getByRole('dialog').getByText('Administração')).toBeVisible()
   })

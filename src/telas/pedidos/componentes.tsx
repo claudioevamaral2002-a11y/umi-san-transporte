@@ -3,6 +3,7 @@ import { useId, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Dinheiro } from '../../design/componentes/Dinheiro.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
+import { MarcaAgora } from '../../design/componentes/MarcaAgora.tsx'
 import { StatusBadge, type Status } from '../../design/componentes/StatusBadge.tsx'
 import type { ItemPedido, LinhaOrcamento } from '../../lib/pedidos.ts'
 import { ETAPAS, etapaDoPedido, statusExibido } from '../../lib/situacao.ts'
@@ -162,11 +163,13 @@ export function Contagem({
 /** Origem → destino com a linha da rota (anel marinho → triângulo laranja). */
 export function Rota({ origem, destino, compacta = false }: { origem: string; destino: string; compacta?: boolean }) {
   return (
-    <div className="flex gap-3">
-      <div aria-hidden="true" className="flex flex-col items-center pt-1.5">
-        <span className="size-3 rounded-full border-[3px] border-marinho-2" />
-        <span className={`w-0.5 flex-1 bg-borda ${compacta ? 'my-0.5 min-h-3' : 'my-1 min-h-5'}`} />
-        <span className="size-0 border-x-[6px] border-t-[10px] border-x-transparent border-t-[var(--cor-laranja)]" />
+    <div className="flex gap-3" data-testid="rota">
+      <div aria-hidden="true" className="flex w-3.5 flex-col items-center pt-1.5">
+        <span className="size-3 rounded-full border-[2.5px] border-[var(--marcador-meu)]" />
+        <span
+          className={`w-0.5 flex-1 bg-[repeating-linear-gradient(var(--cor-texto-suave)_0_3px,transparent_3px_7px)] opacity-60 ${compacta ? 'my-0.5 min-h-3' : 'my-1 min-h-5'}`}
+        />
+        <MarcaAgora tamanho={14} />
       </div>
       <div className={`min-w-0 flex-1 ${compacta ? 'space-y-1' : 'space-y-2.5'}`}>
         <p className="truncate font-semibold">
@@ -204,16 +207,16 @@ export function CartaoPedido({ item, mostrarEmpresa = false }: { item: ItemPedid
     <Link
       to={`/pedidos/${item.id}`}
       viewTransition
-      className="block rounded-cartao border-[1.5px] border-borda bg-superficie p-4 shadow-[var(--sombra)] transition-colors hover:border-marinho-2"
+      className="block rounded-cartao bg-superficie p-4 shadow-[var(--sombra)] transition-colors"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="ivo-sobretitulo text-texto-suave">
+          <p className="font-bold tabular-nums">
             Pedido {numeroPedido(item.numero)}
-            {mostrarEmpresa && item.empresa_nome ? ` · ${item.empresa_nome}` : ''}
+            {mostrarEmpresa && item.empresa_nome ? `, ${item.empresa_nome}` : ''}
           </p>
-          <p className="mt-0.5 font-bold tabular-nums">
-            {formatarQuando(item.inicio)} · {formatarDuracao(item.duracao_min)}
+          <p className="mt-0.5 ivo-legenda text-texto-suave tabular-nums">
+            {formatarQuando(item.inicio)}, {formatarDuracao(item.duracao_min)}
           </p>
         </div>
         <StatusBadge status={statusExibido(item.status, item.prazo_vencido)} />
@@ -244,7 +247,7 @@ const quantidade = (q: number) => q.toLocaleString('pt-BR', { maximumFractionDig
 export function Memorial({ linhas, total }: { linhas: LinhaOrcamento[]; total: number }) {
   return (
     <div>
-      <p className="ivo-sobretitulo text-texto-suave">Memorial de cálculo</p>
+      <p className="font-semibold">Memorial de cálculo</p>
       <ul className="mt-2" data-testid="memorial">
         {linhas.map((l, i) => (
           <li key={`${l.codigo}-${i}`} className="flex items-baseline justify-between gap-4 border-b border-borda py-2.5">
@@ -306,7 +309,7 @@ export function LinhaDoTempo({
                   ehAtual && encerrado
                     ? 'border-[var(--status-cancelada)] bg-[var(--status-cancelada)] text-white'
                     : ehAtual
-                      ? 'border-[var(--cor-laranja)] bg-[var(--cor-laranja)] text-marinho'
+                      ? 'border-transparent bg-transparent'
                       : feita
                         ? 'border-marinho-2 bg-marinho-2 text-white'
                         : 'border-borda bg-superficie text-texto-suave'
@@ -315,7 +318,7 @@ export function LinhaDoTempo({
                 {ehAtual && encerrado ? (
                   <Icone nome="fechar" tamanho={16} />
                 ) : ehAtual ? (
-                  <Icone nome="caminhao" tamanho={16} />
+                  <MarcaAgora tamanho={20} />
                 ) : feita ? (
                   <Icone nome="check" tamanho={16} />
                 ) : (

@@ -127,9 +127,15 @@ export function formatarContagem(prazo: Date | string, agora: Date = new Date())
   return `${mins} min`
 }
 
-/** "sex., 9 de out. · 14:30". */
+/** "sex., 9 de out., 14:30". */
 export function formatarQuando(instante: Date | string): string {
-  return `${DIA_HORA_CURTO.format(comoData(instante))} · ${horaDe(instante)}`
+  return `${DIA_HORA_CURTO.format(comoData(instante))}, ${horaDe(instante)}`
+}
+
+/** "Bom dia" (5h–11h59), "Boa tarde" (12h–17h59) ou "Boa noite", pelo horário de São Paulo. */
+export function saudacao(agora: Date = new Date()): string {
+  const h = Number(horaDe(agora).slice(0, 2))
+  return h >= 5 && h < 12 ? 'Bom dia' : h >= 12 && h < 18 ? 'Boa tarde' : 'Boa noite'
 }
 
 /** "08:00–10:00". */

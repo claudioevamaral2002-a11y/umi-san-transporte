@@ -42,7 +42,7 @@ test.describe('pedido e orçamento (fase 2A)', () => {
 
     // 1. Cliente cria o pedido em 4 passos.
     await entrarComSenha(page, cliente.email, cliente.senha)
-    await expect(page.getByRole('heading', { name: 'Olá, Carla' })).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Carla$/ })).toBeVisible({ timeout: 30_000 })
     await page.getByRole('link', { name: 'Novo pedido' }).first().click()
     await expect(page.getByRole('heading', { level: 1, name: 'Quando?' })).toBeVisible()
     await escolherDia(page, diaSp(12))
@@ -184,7 +184,7 @@ test.describe('saldo, aprovação e cancelamento com multa (fase 2B)', () => {
 
       // 2. Cliente vê o saldo e cria o pedido.
       await entrarComSenha(page, cliente.email, cliente.senha)
-      await expect(page.getByRole('heading', { name: 'Olá, Clara' })).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Clara$/ })).toBeVisible({ timeout: 30_000 })
       await expect(page.getByTestId('saldo-disponivel')).toContainText(/R\$\s1\.000,00/, { timeout: 20_000 })
       await page.getByRole('link', { name: 'Novo pedido' }).first().click()
       await escolherDia(page, diaSp(12))
