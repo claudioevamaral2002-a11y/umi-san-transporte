@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IVO Transportes — mockups da fase 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---------- Página de apresentação (fora dos celulares) ---------- */
+:root { --pg-fundo:#e9e6de; --pg-texto:#0a2540; --pg-suave:#4b5b70; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--pg-fundo); color:var(--pg-texto); font-family:Manrope, Inter, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+.pg { max-width:1480px; margin:0 auto; padding:32px 16px 96px; }
+.pg-topo { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:16px; margin-bottom:8px; }
+.pg h1 { font-size:30px; line-height:1.18; letter-spacing:-0.035em; margin:0; font-weight:700; }
+.pg-intro { max-width:68ch; color:var(--pg-suave); font-size:16px; line-height:1.55; margin:8px 0 0; }
+.pg h2 { font-size:24px; letter-spacing:-0.025em; margin:56px 0 4px; }
+.pg h2 + p { margin:0 0 20px; color:var(--pg-suave); max-width:72ch; line-height:1.55; }
+.chave { display:inline-flex; background:#fff; border-radius:999px; padding:4px; gap:4px; box-shadow:0 1px 2px rgb(10 37 64/.1); }
+.chave button { font:600 15px Manrope; border:0; background:none; color:var(--pg-texto); padding:10px 18px; border-radius:999px; cursor:pointer; }
+.chave button[aria-pressed=true] { background:#0a2540; color:#f6f4ee; }
+.fileira { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; }
+.peca { display:flex; flex-direction:column; gap:10px; }
+.peca > figcaption { font-size:13px; font-weight:500; color:var(--pg-suave); max-width:360px; line-height:1.4; }
+.peca > figcaption b { color:var(--pg-texto); font-weight:700; }
+figure { margin:0; }
+
+/* ---------- Tokens dentro do celular ---------- */
+.tel {
+  --fundo:#f6f4ee; --folha:#ffffff; --texto:#0a2540; --suave:#4b5b70; --linha:#e1e6ed;
+  --marinho:#0a2540; --mare:#1e4b7a; --laranja:#ff6a00; --laranja-texto:#c2410c; --nevoa:#e1e6ed;
+  --bloco:#0a2540; --bloco-texto:#f6f4ee; --bloco-suave:#a9b8cc;
+  --sel:#0a2540; --sel-texto:#f6f4ee; --sel-suave:#dde6f1;
+  --suave-sel:#e6edf5; /* seleção suave (Maré clara) */
+  --livre:#15803d; --livre-fundo:#ecf7ef;
+  --ocupado:#74859c;
+  --st-sol:#5b6b80; --st-agu:#b45309; --st-age:#1e4b7a; --st-and:#c2410c; --st-con:#15803d; --st-can:#b91c1c;
+  --barra:#ffffff; --sombra:0 1px 2px rgb(10 37 64/.06), 0 6px 20px rgb(10 37 64/.07);
+  width:360px; height:760px; border-radius:44px; padding:10px; background:#11161d; flex-shrink:0;
+  box-shadow:0 30px 60px -20px rgb(10 37 64/.35);
+}
+.tel[data-tema=escuro], body[data-tema=escuro] .tel:not([data-tema=claro]) {
+  --fundo:#061a30; --folha:#0c2a49; --texto:#f6f4ee; --suave:#a9b8cc; --linha:#1b3d63;
+  --bloco:#10365f; --bloco-texto:#f6f4ee; --bloco-suave:#b8c6d8;
+  --sel:#f6f4ee; --sel-texto:#0a2540; --sel-suave:#3a4d64;
+  --suave-sel:#173f68;
+  --laranja-texto:#ff8a4c; --livre:#4ade80; --livre-fundo:#0d3326; --ocupado:#8094ad;
+  --st-sol:#9fb0c4; --st-agu:#fbbf24; --st-age:#7fb2e8; --st-and:#ff8a4c; --st-con:#4ade80; --st-can:#f87171;
+  --barra:#0a2540; --sombra:0 0 0 1px #1b3d63;
+}
+.tela { position:relative; width:100%; height:100%; border-radius:34px; overflow:hidden; background:var(--fundo); color:var(--texto);
+  font-size:16px; line-height:1.55; display:flex; flex-direction:column; }
+.tela * { font-variant-numeric:tabular-nums; }
+.sb { height:38px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center; padding:0 26px; font-size:14px; font-weight:700; }
+.sb .ilha { width:96px; height:26px; background:#000; border-radius:20px; }
+.rolo { flex:1; overflow:hidden; padding:4px 16px 0; position:relative; }
+.sobre-marinho .sb, .sb.claro { color:#f6f4ee; }
+
+/* tipografia (TIPOGRAFIA.md) */
+.h1 { font-size:30px; font-weight:700; line-height:1.18; letter-spacing:-0.035em; margin:0; }
+.h2 { font-size:24px; font-weight:700; line-height:1.25; letter-spacing:-0.025em; margin:0; }
+.h3 { font-size:18px; font-weight:700; line-height:1.35; letter-spacing:-0.015em; margin:0; }
+.leg { font-size:13px; font-weight:500; line-height:1.4; color:var(--suave); }
+.grupo { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--suave); margin:20px 0 8px; }
+.valor { font-size:30px; font-weight:700; line-height:1.15; letter-spacing:-0.025em; }
+.forte { font-weight:600; }
+
+/* superfícies: hierarquia de raios 24 / 16 / 12 / 999 */
+.folha { background:var(--folha); border-radius:24px; }
+.cartao { background:var(--folha); border-radius:16px; padding:14px 16px; box-shadow:var(--sombra); }
+.campo { border:1.5px solid var(--linha); background:var(--folha); border-radius:12px; padding:10px 14px; min-height:52px; }
+.campo .r { font-size:13px; font-weight:500; color:var(--suave); display:block; line-height:1.3; }
+.campo .v { font-weight:600; }
+.pilula { border-radius:999px; }
+
+/* botões */
+.btn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; border-radius:14px; font:600 16px Manrope; border:0; width:100%; }
+.btn-acao { background:var(--laranja); color:#0a2540; }
+.btn-sec { background:transparent; color:var(--texto); border:1.5px solid var(--linha); }
+.btn-txt { background:none; color:var(--texto); min-height:44px; text-decoration:underline; text-underline-offset:3px; }
+
+/* status: ícone + texto, nunca só cor */
+.st { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; line-height:1; padding:6px 10px 6px 8px; border-radius:999px;
+  background:color-mix(in srgb, currentColor 12%, transparent); }
+.st svg { width:14px; height:14px; }
+.st.sol{color:var(--st-sol)} .st.agu{color:var(--st-agu)} .st.age{color:var(--st-age)} .st.and{color:var(--st-and)} .st.con{color:var(--st-con)} .st.can{color:var(--st-can)}
+
+/* rota: círculo → triângulo da marca */
+.rota { display:grid; grid-template-columns:18px 1fr; column-gap:10px; }
+.rota .trilho { display:flex; flex-direction:column; align-items:center; padding-top:6px; }
+.rota .ini { width:12px; height:12px; border-radius:50%; border:2.5px solid var(--mare); }
+.tel[data-tema=escuro] .rota .ini, body[data-tema=escuro] .tel:not([data-tema=claro]) .rota .ini { border-color:#7fb2e8; }
+.rota .via { width:2px; flex:1; min-height:22px; background:repeating-linear-gradient(var(--suave) 0 3px, transparent 3px 7px); opacity:.6; margin:3px 0; }
+.rota .fim { width:14px; height:12px; }
+.rota p { margin:0; }
+.rota .lugar { font-weight:600; line-height:1.35; }
+.rota .quando { font-size:13px; color:var(--suave); font-weight:500; margin-bottom:10px; }
+
+/* barra inferior + botão flutuante */
+.abas { flex-shrink:0; background:var(--barra); display:flex; justify-content:space-around; padding:8px 8px 22px; border-top:1px solid var(--linha); }
+.aba { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; font-weight:600; color:var(--suave); width:64px; }
+.aba .ic { width:52px; height:30px; display:grid; place-items:center; border-radius:999px; }
+.aba svg { width:22px; height:22px; }
+.aba.ativa { color:var(--texto); }
+.aba.ativa .ic { background:var(--sel); color:var(--sel-texto); }
+.fab { position:absolute; right:18px; bottom:96px; width:60px; height:60px; border-radius:20px; background:var(--laranja); color:#0a2540;
+  display:grid; place-items:center; box-shadow:0 8px 20px -6px rgb(255 106 0/.55); }
+.fab svg { width:28px; height:28px; }
+
+/* topo das telas principais */
+.topo { display:flex; align-items:center; justify-content:space-between; padding:6px 0 14px; }
+.empresa { height:36px; padding:0 14px; display:flex; align-items:center; border-radius:999px; background:var(--folha); font-weight:700; font-size:14px; box-shadow:var(--sombra); }
+.avatar { width:36px; height:36px; border-radius:50%; background:var(--suave-sel); color:var(--texto); display:grid; place-items:center; font-weight:700; font-size:14px; }
+
+/* barra de comando marinho (novo pedido, orçar) */
+.cmd { background:#0a2540; color:#f6f4ee; padding:0 16px 16px; flex-shrink:0; }
+.tel[data-tema=escuro] .cmd, body[data-tema=escuro] .tel:not([data-tema=claro]) .cmd { background:#0c2a49; border-bottom:1px solid #1b3d63; }
+.cmd .linha1 { display:flex; justify-content:space-between; align-items:center; height:44px; }
+.cmd .icb { width:44px; height:44px; display:grid; place-items:center; margin-left:-10px; }
+.cmd .passo { font-size:13px; font-weight:500; color:#a9b8cc; margin:4px 0 2px; }
+.cmd .h1 { color:#f6f4ee; }
+.prog { display:flex; gap:6px; margin-top:12px; }
+.prog i { flex:1; height:4px; border-radius:4px; background:rgb(255 255 255/.18); }
+.prog i.feito { background:var(--laranja); } .prog i.atual { background:#f6f4ee; }
+.rodape { flex-shrink:0; padding:12px 16px 26px; background:var(--fundo); border-top:1px solid var(--linha); }
+
+/* seleção (dia, horário, segmentos): cheio + contorno laranja, sem ✓ */
+.escolhido { background:var(--sel) !important; color:var(--sel-texto) !important; box-shadow:0 0 0 2px var(--fundo), 0 0 0 4px var(--laranja); border-color:transparent !important; }
+
+/* faixa de dias */
+.dias { display:flex; gap:8px; margin:0 -16px; padding:4px 16px 8px; overflow:hidden; }
+.dia { flex-shrink:0; width:52px; height:68px; border-radius:16px; background:var(--folha); border:1.5px solid var(--linha); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; }
+.dia .ds { font-size:12px; font-weight:600; color:var(--suave); line-height:1.2; }
+.dia .dn { font-size:20px; font-weight:700; letter-spacing:-0.02em; line-height:1.25; }
+.dia.escolhido .ds { color:inherit; opacity:.8; }
+.dia.cheio .dn { text-decoration:line-through; color:var(--suave); }
+
+/* horários em 4 colunas */
+.horas { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.hora { height:44px; border-radius:12px; display:grid; place-items:center; font-weight:600; font-size:15px; background:var(--folha); border:1.5px solid var(--linha); }
+.hora.ocup { background:transparent; color:var(--suave); text-decoration:line-through; border-style:dashed; }
+
+.stepper { display:flex; align-items:center; justify-content:space-between; }
+.stepper .ctl { display:flex; align-items:center; gap:0; border:1.5px solid var(--linha); border-radius:12px; background:var(--folha); }
+.stepper .ctl span { width:46px; height:44px; display:grid; place-items:center; font-size:22px; font-weight:600; }
+.stepper .ctl b { min-width:64px; text-align:center; font-size:16px; }
+.confirma { background:var(--suave-sel); border-radius:12px; padding:12px 14px; font-weight:600; line-height:1.4; margin-top:16px; }
+
+/* segmentado */
+.seg { display:flex; background:var(--folha); border:1.5px solid var(--linha); border-radius:999px; padding:4px; gap:4px; }
+.seg span { flex:1; text-align:center; font-size:14px; font-weight:600; padding:7px 0; border-radius:999px; color:var(--suave); }
+.seg span.escolhido { box-shadow:0 0 0 2px var(--laranja); }
+
+/* opções (cartões selecionáveis) */
+.ops { display:grid; gap:8px; }
+.op { display:flex; align-items:center; gap:12px; border:1.5px solid var(--linha); background:var(--folha); border-radius:12px; padding:12px 14px; font-weight:600; }
+.op svg { width:22px; height:22px; flex-shrink:0; }
+
+/* agenda Lark */
+.ag-topo { display:flex; justify-content:space-between; align-items:center; padding:2px 0 10px; }
+.mes { display:flex; align-items:center; gap:4px; }
+.mes svg { width:18px; height:18px; }
+.hoje { height:36px; padding:0 14px; border-radius:999px; border:1.5px solid var(--linha); font-weight:600; font-size:14px; display:grid; place-items:center; background:var(--folha); }
+.semana { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; margin:10px 0 6px; }
+.semana .d { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.semana .l { font-size:12px; font-weight:600; color:var(--suave); }
+.semana .n { width:36px; height:36px; display:grid; place-items:center; border-radius:12px; font-weight:700; font-size:15px; position:relative; }
+.semana .n i { position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); }
+.grade { position:relative; margin:0 -16px; border-top:1px solid var(--linha); padding-top:10px; }
+.hr { height:56px; display:grid; grid-template-columns:52px 1fr; }
+.hr .t { font-size:12px; font-weight:500; color:var(--suave); text-align:right; padding-right:8px; transform:translateY(-8px); }
+.hr .c { border-top:1px solid var(--linha); }
+.hr:first-child .c { border-top:0; }
+.bl { position:absolute; left:60px; right:12px; border-radius:10px; padding:6px 10px; font-size:13px; line-height:1.3; overflow:hidden; }
+.bl b { display:block; font-size:14px; }
+.bl.meu { background:color-mix(in srgb, var(--st-age) 12%, var(--folha)); border-left:3px solid var(--st-age); }
+.bl.agu { background:color-mix(in srgb, var(--st-agu) 13%, var(--folha)); border-left:3px solid var(--st-agu); }
+.bl.ocup { background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--ocupado) 22%, transparent) 0 6px, transparent 6px 12px); color:var(--suave); display:flex; align-items:center; gap:6px; font-weight:600; border:1px solid color-mix(in srgb, var(--ocupado) 40%, transparent); }
+.bl.livre { border:1.5px dashed var(--livre); color:var(--livre); background:var(--livre-fundo); font-weight:700; display:flex; align-items:center; justify-content:space-between; }
+.agora { position:absolute; left:46px; right:0; height:2px; background:var(--laranja); z-index:3; }
+.agora svg { position:absolute; left:-2px; top:-11px; width:14px; height:12px; }
+.agora .hh { position:absolute; left:-44px; top:-9px; font-size:11px; font-weight:700; color:var(--laranja-texto); background:var(--fundo); padding:0 2px; }
+
+/* mês */
+.cal { display:grid; grid-template-columns:repeat(7,1fr); row-gap:6px; text-align:center; }
+.cal .l { font-size:12px; font-weight:600; color:var(--suave); padding-bottom:4px; }
+.cal .c { height:44px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:4px; border-radius:12px; font-weight:600; font-size:15px; gap:3px; }
+.cal .c.fora { color:var(--suave); opacity:.45; }
+.cal .c.cheio { text-decoration:line-through; color:var(--suave); }
+.cal .c .mk { display:flex; gap:3px; height:8px; }
+.cal .c.hj { color:var(--laranja-texto); font-weight:800; }
+.legenda { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:13px; font-weight:500; color:var(--suave); margin:10px 0 14px; padding:10px 0; border-top:1px solid var(--linha); border-bottom:1px solid var(--linha); }
+.legenda span { display:flex; align-items:center; gap:6px; }
+
+/* saldo */
+.saldo { background:var(--bloco); color:var(--bloco-texto); border-radius:24px; padding:18px 18px 16px; }
+.saldo .leg { color:var(--bloco-suave); }
+.saldo .barra { height:8px; border-radius:8px; background:rgb(255 255 255/.14); margin:14px 0 12px; overflow:hidden; display:flex; }
+.saldo .barra i { display:block; height:100%; }
+.saldo .pes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.saldo .pes b { display:block; font-size:16px; }
+.aguardando { border:2px solid var(--laranja); }
+.lst { display:grid; gap:10px; }
+.item-ped { display:grid; gap:8px; }
+.item-ped .lin { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.mini-rota { display:flex; align-items:center; gap:8px; font-weight:600; font-size:15px; line-height:1.3; }
+.mini-rota .o { width:8px; height:8px; border:2px solid var(--mare); border-radius:50%; flex-shrink:0; }
+.mini-rota svg { width:10px; height:9px; flex-shrink:0; }
+
+/* extrato */
+.mov { display:grid; grid-template-columns:36px 1fr auto; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--linha); }
+.mov .ic { width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:var(--suave-sel); }
+.mov .ic svg { width:18px; height:18px; }
+.mov .vl { text-align:right; font-weight:700; }
+.mov .vl small { display:block; font-weight:500; font-size:12px; color:var(--suave); }
+
+/* código 2FA */
+.cod { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.cod span { height:58px; border-radius:12px; border:1.5px solid var(--linha); background:var(--folha); display:grid; place-items:center; font-size:26px; font-weight:700; }
+.cod span.atual { border-color:var(--texto); border-width:2px; }
+
+/* carrinho */
+.palco { width:360px; height:220px; border-radius:24px; display:grid; place-items:center; position:relative; overflow:hidden; }
+.palco.claro { background:#f6f4ee; color:#0a2540; }
+.palco.escuro { background:#061a30; color:#f6f4ee; }
+.palco .leg { position:absolute; bottom:18px; left:0; right:0; text-align:center; font-size:14px; font-weight:500; }
+.palco.claro .leg { color:#4b5b70; } .palco.escuro .leg { color:#a9b8cc; }
+.carro { width:300px; height:auto; overflow:visible; }
+.carro .roda { transform-box:fill-box; transform-origin:center; animation:girar .7s linear infinite; }
+.carro .corpo { animation:balanco .9s ease-in-out infinite alternate; }
+.carro .reboque { animation:balanco .9s ease-in-out .22s infinite alternate; }
+.carro .estrada { animation:estrada .7s linear infinite; }
+.carro .onda { animation:onda 1.4s ease-in infinite; }
+.carro .onda.b { animation-delay:.7s; }
+@keyframes girar { to { transform:rotate(360deg); } }
+@keyframes balanco { from { transform:translateY(0); } to { transform:translateY(-1.6px); } }
+@keyframes estrada { to { stroke-dashoffset:40; } }
+@keyframes onda { 0% { transform:translateX(8px); opacity:0; } 30% { opacity:.55; } 100% { transform:translateX(-26px); opacity:0; } }
+.parado .carro * { animation:none !important; }
+.splash { background:#0a2540; color:#f6f4ee; align-items:center; justify-content:center; gap:28px; }
+@media (prefers-reduced-motion:reduce) { .carro * { animation:none !important; } }
+
+.notas { background:#fff; border-radius:16px; padding:18px 20px; max-width:760px; line-height:1.55; }
+.notas ul { margin:6px 0 0; padding-left:20px; }
+.notas li { margin:4px 0; }
+.pares { border-collapse:collapse; font-size:14px; background:#fff; border-radius:16px; overflow:hidden; }
+.pares th, .pares td { padding:8px 14px; text-align:left; border-bottom:1px solid #e1e6ed; }
+.pares td.ok { color:#15803d; font-weight:700; }
+.amostra { display:inline-block; width:18px; height:18px; border-radius:5px; vertical-align:-4px; margin-right:6px; border:1px solid rgb(0 0 0/.1); }
+.tel { --mapa-terra:#eef0ea; --mapa-agua:#bcd3e6; --mapa-rua:#ffffff; --mapa-quadra:#dfe3da; --mapa-texto:#4b5b70; }
+.tel[data-tema=escuro], body[data-tema=escuro] .tel:not([data-tema=claro]) { --mapa-terra:#1c2b3c; --mapa-agua:#0e2236; --mapa-rua:#2c405a; --mapa-quadra:#243548; --mapa-texto:#a9b8cc; }
+</style>
+</head>
+<body>
+<!-- Ícones e símbolos reutilizados -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="tri" viewBox="0 0 14 12"><path d="M0 0H14L7 12Z" fill="#FF6A00"/></symbol>
+    <symbol id="ivo" viewBox="0 0 172 148"><g fill="currentColor"><path d="M3 35 C22 34 37 45 49 64 C63 85 70 107 89 117 C97 121 107 123 114 126 C106 138 96 144 84 144 C64 144 53 133 43 114 Z"/><path d="M30 36 C45 37 58 53 71 71 C90 96 105 93 119 93 L134 93 L119 116 C101 116 85 106 70 87 C52 64 44 44 30 36 Z"/><path d="M96 73 C110 53 127 36 150 33 C156 32 163 34 169 35 L139 84 C124 86 110 80 96 73 Z"/></g><path fill="#FF6A00" d="M45 10 L124 10 L84.5 48 Z"/></symbol>
+    <symbol id="i-casa" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-tabela" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 9.5h17M10 9.5v10" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-usu" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5M16 5.5a3.2 3.2 0 0 1 0 6.2M18 14.8c1.9.7 3.1 2.5 3.5 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-volta" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-baixo" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m8 12.5 2.7 2.7L16 9.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal-st" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M4 10h16" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></symbol>
+    <symbol id="i-mais-c" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-menos-c" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pessoas" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.7-3.6 3.4-6 7-6s6.3 2.4 7 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-caixa" viewBox="0 0 24 24"><path d="M4 8 12 4l8 4v8.5L12 20l-8-3.5z M4 8l8 4 8-4M12 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-dinheiro" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-seta-baixo" viewBox="0 0 24 24"><path d="M12 5v13M6.5 12.5 12 18l5.5-5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-seta-cima" viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-desfaz" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-volante" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M3.8 10.5c5.4-1.3 11-1.3 16.4 0M12 14v6.5" stroke="currentColor" stroke-width="2"/></symbol>
+    <!-- pickup com reboque (carregamento) -->
+    <symbol id="carro-sym" viewBox="0 0 320 120" overflow="visible">
+    </symbol>
+  </defs>
+</svg>
+
+<div class="pg">
+  <div class="pg-topo">
+    <div>
+      <h1>Fase 3A: endereços, distância e prévia</h1>
+      <p class="pg-intro">Mockups das telas novas, para aprovação antes da implementação. Endereços, distâncias e valores são exemplos. A chave alterna todas as telas para o modo escuro.</p>
+    </div>
+    <div class="chave" role="group" aria-label="Modo das telas">
+      <button type="button" aria-pressed="true" data-t="claro">Modo claro</button>
+      <button type="button" aria-pressed="false" data-t="escuro">Modo escuro</button>
+    </div>
+  </div>
+
+  <h2>1. Passo "Onde?" com endereços reais</h2>
+  <p>Ao digitar, os <b>locais da empresa</b> aparecem primeiro (sem custo), seguidos das sugestões do Google em duas linhas: nome e endereço. No fim da lista fica "Marcar no mapa". Com os dois pontos escolhidos, a rota mostra os km e o tempo estimado.</p>
+  <div class="fileira" id="onde"></div>
+
+  <h2>2. Marcar no mapa</h2>
+  <p>Para portos, marinas e estaleiros sem endereço exato. O mapa se move por baixo do pino fixo, cuja ponta é o triângulo da marca. A pessoa dá um nome ao ponto e confirma.</p>
+  <div class="fileira" id="mapa"></div>
+
+  <h2>3. Prévia do orçamento em "Confira o pedido" (N1 e N2)</h2>
+  <p>Fica abaixo das informações principais. Mostra o valor estimado pela tabela do contrato e as linhas, que abrem e fecham com um toque, e deixa claro que o valor final vem do motorista. Com "Usa reboque? Não sei", mostra os dois valores.</p>
+  <div class="fileira" id="previa"></div>
+
+  <h2>4. Orçar (motorista): km já preenchidos</h2>
+  <p>Os km chegam preenchidos pela rota, com o aviso para conferir. O motorista continua livre para ajustar.</p>
+  <div class="fileira" id="orcar"></div>
+</div>
+
+<script>
+const ic = (id, s = 22) => `<svg width="${s}" height="${s}"><use href="#${id}"/></svg>`
+const tri = (w = 14, h = 12) => `<svg width="${w}" height="${h}" viewBox="0 0 14 12"><path d="M0 0H14L7 12Z" fill="#FF6A00"/></svg>`
+const sb = (claro) => `<div class="sb${claro ? ' claro' : ''}"><span>10:20</span><span class="ilha"></span><span>5G</span></div>`
+const tel = (miolo, legenda, tema) =>
+  `<figure class="peca"><div class="tel"${tema ? ` data-tema="${tema}"` : ''}><div class="tela">${miolo}</div></div><figcaption>${legenda}</figcaption></figure>`
+const cmd = (n, titulo) => `<div class="cmd">${sb(true)}
+  <div class="linha1"><span class="icb">${n > 1 ? ic('i-volta') : ''}</span><span class="icb" style="margin:0 -10px 0 0">${ic('i-x')}</span></div>
+  <p class="passo">Passo ${n} de 4</p><h1 class="h1">${titulo}</h1>
+  <div class="prog">${[1, 2, 3, 4].map((i) => `<i class="${i < n ? 'feito' : i === n ? 'atual' : ''}"></i>`).join('')}</div></div>`
+const predio = `<svg width="20" height="20" viewBox="0 0 24 24"><path d="M5 21V4h10v17 M15 9h4v12 M3 21h18 M8.5 8h3 M8.5 12h3 M8.5 16h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
+const pino = `<svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" fill="none" stroke="currentColor" stroke-width="2"/></svg>`
+const sug = (icone, nome, end, destaque) => `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--linha)${destaque ? ';background:var(--suave-sel);margin:0 -16px;padding:10px 20px' : ''}">
+  <span style="color:var(--suave);margin-top:2px">${icone}</span><div style="min-width:0"><p style="margin:0;font-weight:600;line-height:1.3">${nome}</p><p class="leg" style="margin:0">${end}</p></div></div>`
+
+const trilho = (a, b, c) => `<div style="display:grid;grid-template-columns:18px 1fr;gap:10px">
+  <div style="display:flex;flex-direction:column;align-items:center;padding-top:22px"><span class="rota"><span class="ini" style="display:block"></span></span><span style="width:2px;flex:1;margin:6px 0;background:repeating-linear-gradient(var(--suave) 0 3px,transparent 3px 7px);opacity:.6"></span><span style="margin-bottom:22px">${tri()}</span></div>
+  <div style="display:grid;gap:12px">${a}${b}</div></div>${c ?? ''}`
+const campo = (r, v, foco) => `<div class="campo" style="${foco ? 'border-color:var(--texto);border-width:2px' : ''}"><span class="r">${r}</span><span class="v">${v}</span></div>`
+
+const ondeBusca = cmd(2, 'Onde?') + `<div class="rolo" style="padding-top:14px">
+  ${trilho(campo('Origem', 'Porto de Itajaí, portão 3'), campo('Destino', 'estaleiro nav<span style="border-left:2px solid var(--texto);margin-left:1px"></span>', true))}
+  <div class="folha" style="margin-top:10px;padding:4px 16px 6px;box-shadow:var(--sombra)">
+    <p class="leg" style="margin:8px 0 2px;font-weight:600">Locais da empresa</p>
+    ${sug(predio, 'Estaleiro Navegantes', 'Av. Prefeito Cirino Adolfo Cabral, 1500, Navegantes', true)}
+    <p class="leg" style="margin:10px 0 2px;font-weight:600">Sugestões</p>
+    ${sug(pino, 'Estaleiro Navship', 'Rua Prefeito José Juvenal Mafra, Navegantes, SC')}
+    ${sug(pino, 'Estaleiro Detroit', 'Rodovia Jorge Lacerda, Itajaí, SC')}
+    <div style="display:flex;gap:10px;align-items:center;padding:12px 4px;font-weight:600">${pino}<span style="text-decoration:underline;text-underline-offset:3px">Não achou? Marcar no mapa</span></div>
+  </div>
+</div>`
+
+const ondeOk = cmd(2, 'Onde?') + `<div class="rolo" style="padding-top:14px">
+  <div class="forte" style="margin-bottom:8px">Trajeto</div>
+  <div class="ops" style="grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:16px">
+    <div class="op" style="justify-content:center;padding:10px 4px;font-size:14px">Só levar</div>
+    <div class="op" style="justify-content:center;padding:10px 4px;font-size:14px">Só trazer</div>
+    <div class="op escolhido" style="justify-content:center;padding:10px 4px;font-size:14px">Ida e volta</div>
+  </div>
+  ${trilho(campo('Origem', 'Porto de Itajaí, portão 3<br><span class="leg" style="font-weight:500">Av. Ministro Victor Konder, Itajaí</span>'), campo('Destino', 'Estaleiro Navegantes<br><span class="leg" style="font-weight:500">Av. Pref. Cirino Adolfo Cabral, 1500</span>'),
+    `<div class="confirma" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><span>38 km pela rota</span><span class="leg" style="font-size:14px">cerca de 45 min</span></div>`)}
+  <div class="forte" style="margin:20px 0 8px">Contato no local</div>
+  ${campo('Nome do contato', 'Rafael Souza')}
+</div><div class="rodape"><div class="btn btn-acao">Continuar</div></div>`
+
+const ondeOff = cmd(2, 'Onde?') + `<div class="rolo" style="padding-top:14px">
+  ${trilho(campo('Origem', 'Porto de Itajaí, portão 3'), campo('Destino', 'Marina do Saco da Fazenda'))}
+  <div style="margin-top:14px;border-radius:12px;padding:12px 14px;background:color-mix(in srgb,var(--st-agu) 12%,var(--folha));display:flex;gap:10px">
+    <span style="color:var(--st-agu)">${ic('i-relogio', 20)}</span>
+    <p style="margin:0;font-size:15px;line-height:1.45">Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.</p>
+  </div>
+</div><div class="rodape"><div class="btn btn-acao">Continuar</div></div>`
+
+// Mapa falso (ruas e água) só para o mockup.
+const mapaFalso = `<svg viewBox="0 0 340 420" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="display:block">
+  <rect width="340" height="420" fill="var(--mapa-terra)"/>
+  <path d="M0 250 C60 230 120 260 180 240 C240 220 280 250 340 230 V420 H0Z" fill="var(--mapa-agua)"/>
+  <path d="M-10 90 L350 70 M-10 170 L350 150 M60 -10 L90 260 M200 -10 L215 245 M290 -10 L300 235" stroke="var(--mapa-rua)" stroke-width="9" fill="none"/>
+  <path d="M-10 130 L350 112 M130 -10 L150 250" stroke="var(--mapa-rua)" stroke-width="5" fill="none"/>
+  <rect x="150" y="185" width="70" height="40" rx="4" fill="var(--mapa-quadra)"/>
+  <text x="18" y="300" font-size="12" font-weight="600" fill="var(--mapa-texto)" font-family="Manrope">Rio Itajaí-Açu</text>
+  <text x="225" y="200" font-size="11" fill="var(--mapa-texto)" font-family="Manrope">Marina</text>
+</svg>`
+const marcar = sb() + `<div class="rolo" style="padding:0;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 16px 10px"><span class="h3">Marcar no mapa</span><span>${ic('i-x')}</span></div>
+  <div style="position:relative;flex:1;min-height:0;border-radius:24px 24px 0 0;overflow:hidden">
+    ${mapaFalso}
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center">
+      <span style="background:var(--sel);color:var(--sel-texto);border-radius:12px;padding:6px 10px;font-size:13px;font-weight:700;white-space:nowrap;margin-bottom:4px">Ponto do embarque</span>
+      <span style="width:3px;height:22px;background:var(--sel)"></span>${tri(18, 15)}
+    </div>
+    <span style="position:absolute;right:8px;bottom:6px;font-size:10px;color:var(--mapa-texto);background:color-mix(in srgb,var(--mapa-terra) 80%,transparent);padding:1px 4px;border-radius:4px">Google</span>
+  </div>
+  <div style="background:var(--folha);padding:14px 16px 26px;display:grid;gap:12px;border-top:1px solid var(--linha)">
+    <p class="leg" style="margin:0">Mova o mapa até a ponta do triângulo ficar no lugar certo.</p>
+    ${campo('Nome do local', 'Marina Itajaí, rampa 2')}
+    <div class="btn btn-acao">Usar este ponto</div>
+  </div>
+</div>`
+
+const linhaPrev = (n, v, sub) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--linha)"><div><p style="margin:0" class="forte">${n}</p>${sub ? `<span class="leg">${sub}</span>` : ''}</div><b>${v}</b></div>`
+const resumo = `<div class="cartao" style="display:grid;gap:12px">
+    <div style="display:flex;justify-content:space-between;gap:8px"><div><span class="leg">Quando</span><p style="margin:0" class="forte">Terça, 13 de outubro, das 07:30 às 09:30</p></div><span class="forte" style="font-size:14px;text-decoration:underline;text-underline-offset:3px">Alterar</span></div>
+    <div style="border-top:1px solid var(--linha)"></div>
+    <div class="rota"><div class="trilho"><span class="ini"></span><span class="via"></span>${tri()}</div><div><p class="lugar">Porto de Itajaí, portão 3</p><p class="quando">38 km pela rota, cerca de 45 min</p><p class="lugar">Estaleiro Navegantes</p><p class="quando" style="margin:0">Ida e volta, com reboque</p></div></div>
+  </div>`
+const avisoPrev = `<p class="leg" style="margin:10px 0 0">Estimativa pela tabela do contrato. O valor final vem no orçamento do motorista.</p>`
+const confira = cmd(4, 'Confira o pedido') + `<div class="rolo" style="padding-top:14px">
+  ${resumo}
+  <div class="cartao" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h3">Prévia do orçamento</span><span class="leg">estimativa</span></div>
+    <div class="valor" style="margin:4px 0 6px">R$ 423,60</div>
+    ${linhaPrev('Km rodados', 'R$ 182,40', '38 km × R$ 4,80 com reboque')}
+    ${linhaPrev('Retorno (50%)', 'R$ 91,20', 'trecho único')}
+    ${linhaPrev('Taxa fixa do reboque', 'R$ 150,00')}
+    <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:600;text-decoration:underline;text-underline-offset:3px;font-size:14px">Ocultar as linhas</div>
+    ${avisoPrev}
+  </div>
+</div><div class="rodape"><div class="btn btn-acao">Enviar pedido</div></div>`
+
+const conferaNaoSei = cmd(4, 'Confira o pedido') + `<div class="rolo" style="padding-top:14px">
+  ${resumo.replace('com reboque', 'reboque: não sei')}
+  <div class="cartao" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h3">Prévia do orçamento</span><span class="leg">estimativa</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div style="border:1.5px solid var(--linha);border-radius:12px;padding:10px 12px"><span class="leg">Sem reboque</span><div style="font-size:22px;font-weight:700;letter-spacing:-.02em">R$ 199,50</div></div>
+      <div style="border:1.5px solid var(--linha);border-radius:12px;padding:10px 12px"><span class="leg">Com reboque</span><div style="font-size:22px;font-weight:700;letter-spacing:-.02em">R$ 423,60</div></div>
+    </div>
+    <div style="padding:10px 0 0;font-weight:600;text-decoration:underline;text-underline-offset:3px;font-size:14px">Ver as linhas</div>
+    ${avisoPrev}
+  </div>
+</div><div class="rodape"><div class="btn btn-acao">Enviar pedido</div></div>`
+
+const orcar = `<div class="cmd">${sb(true)}<div class="linha1"><span class="icb">${ic('i-volta')}</span></div><p class="passo">Orçar, Umi San</p><h1 class="h1">Pedido #0047</h1></div>
+<div class="rolo" style="padding-top:12px">
+  <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--linha);align-items:center">
+    <div><p style="margin:0" class="forte">Km rodados</p><span class="leg">R$ 4,80 por km, trecho único</span></div>
+    <span style="display:flex;align-items:center;border:2px solid var(--texto);border-radius:12px;background:var(--folha);padding:0 12px;height:44px;font-weight:700;min-width:96px;justify-content:flex-end">38 km</span>
+    <span class="leg" style="grid-column:1/3;display:flex;gap:6px;align-items:center;color:var(--laranja-texto);font-weight:600">${tri(12, 10)} Estimado pela rota: 38 km, cerca de 45 min. Confira.</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--linha)"><span class="forte">Usa reboque</span><span style="width:52px;height:32px;border-radius:999px;background:var(--sel);position:relative"><i style="position:absolute;right:4px;top:4px;width:24px;height:24px;border-radius:50%;background:var(--sel-texto)"></i></span></div>
+</div>
+<div class="rodape"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span style="color:var(--suave)">Total do orçamento</span><span class="valor" style="font-size:26px">R$ 423,60</span></div><div class="btn btn-acao">Enviar orçamento</div></div>`
+
+document.getElementById('onde').innerHTML = [
+  tel(ondeBusca, '<b>Digitando o destino.</b> O local já usado pela empresa vem primeiro, destacado. As sugestões do Google vêm depois, e "Marcar no mapa" fica no fim.'),
+  tel(ondeOk, '<b>Pontos escolhidos.</b> A rota mostra os km e o tempo estimado. Cada campo mostra o nome e o endereço reconhecido.'),
+  tel(ondeOff, '<b>Sem internet ou com o Google fora do ar.</b> O campo aceita texto livre e o pedido segue sem prévia, como hoje.'),
+].join('')
+document.getElementById('mapa').innerHTML = [tel(marcar, '<b>Marcar no mapa, claro.</b>', 'claro'), tel(marcar, '<b>Marcar no mapa, escuro.</b>', 'escuro')].join('')
+document.getElementById('previa').innerHTML = [
+  tel(confira, '<b>Prévia com reboque.</b> O valor fica em destaque e as linhas abrem com um toque. O aviso diz que o valor final vem do motorista.'),
+  tel(conferaNaoSei, '<b>"Usa reboque? Não sei".</b> Mostra os dois valores lado a lado.'),
+  tel(confira, '<b>Prévia no modo escuro.</b>', 'escuro'),
+].join('')
+document.getElementById('orcar').innerHTML = [tel(orcar, '<b>Orçar.</b> Os km chegam preenchidos pela rota, com o aviso para conferir, e o motorista ajusta se precisar.')].join('')
+
+document.querySelectorAll('.chave button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.chave button').forEach((x) => x.setAttribute('aria-pressed', x === b))
+  document.body.dataset.tema = b.dataset.t
+}))
+</script>
+</body>
+</html>
