@@ -135,6 +135,19 @@ describe('enderecos', () => {
     expect(usou).toBe(false)
   })
 
+  it('falha do Google fica no log com a ação e o status, sem a chave', async () => {
+    const logs: unknown[][] = []
+    const m = criarManipuladorEnderecos({
+      chave: 'CHAVE-SECRETA',
+      buscar: (async () => resp({ error: { message: 'API key not valid' } }, 403)) as unknown as typeof fetch,
+      registrarUso: ok,
+      log: (...a: unknown[]) => logs.push(a),
+    })
+    await m({ acao: 'sugerir', texto: 'porto', sessao: SESSAO })
+    expect(logs).toEqual([['google:sugerir', { status: 403 }]])
+    expect(JSON.stringify(logs)).not.toContain('CHAVE-SECRETA')
+  })
+
   it('limite do banco, sem chave e Google fora do ar', async () => {
     const recusa = async () => ({ ok: false, codigo: 'TETO_DIARIO' })
     let chamou = false

@@ -2,7 +2,7 @@
 -- só para cliente N1 e N2; mesma conta do orçamento do motorista; nunca grava orçamento; recusas auditadas.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -39,6 +39,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.r', api.previa_orcamento(current_setting('t.e')::jsonb)::text, true);
 select is(current_setting('t.r')::jsonb ->> 'ok', 'true', 'N2 vê a prévia');
+select set_config('t.iv', api.previa_orcamento(current_setting('t.e')::jsonb || '{"trazer": true}')::text, true);
 select set_config('t.sem', api.previa_orcamento(current_setting('t.e')::jsonb || '{"usa_reboque": false}')::text, true);
 select ok((current_setting('t.sem')::jsonb ->> 'total_cent')::int < (current_setting('t.r')::jsonb ->> 'total_cent')::int,
   'sem reboque sai mais barato');
@@ -64,6 +65,10 @@ select is((current_setting('t.r')::jsonb ->> 'total_cent')::bigint,
   (interno.calcular_linhas((select c from interno.contrato_vigente('00000000-0000-0000-0000-0000000000e1') c), true, false,
    'VEICULO_PROPRIO', '{"km": 38.2, "usa_reboque": true}') ->> 'total_cent')::bigint,
   'prévia = conta do orçamento do motorista');
+select is((current_setting('t.iv')::jsonb ->> 'total_cent')::bigint,
+  (interno.calcular_linhas((select c from interno.contrato_vigente('00000000-0000-0000-0000-0000000000e1') c), true, true,
+   'VEICULO_PROPRIO', '{"km": 76.4, "usa_reboque": true}') ->> 'total_cent')::bigint,
+  'ida e volta: a prévia usa o dobro dos km da rota, como o motorista orçaria');
 select is((select count(*)::int from app.orcamentos), 0, 'a prévia nunca grava orçamento');
 select ok((select count(*) from app.auditoria where acao = 'PREVIA_ORCAMENTO' and resultado = 'NEGADO') >= 3,
   'recusas auditadas');

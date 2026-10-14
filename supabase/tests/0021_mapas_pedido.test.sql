@@ -2,7 +2,7 @@
 -- estimados pela rota, todos opcionais no criar_pedido; validados no banco; devolvidos no detalhe (api.pedido).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(12);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -58,6 +58,13 @@ select is((api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'km_estimad
   'o detalhe devolve o km estimado');
 select is(api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'destino_endereco', 'Av. Pref. Cirino Adolfo Cabral, 1500',
   'o detalhe devolve o endereço formatado');
+
+select is((api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'km_para_orcar')::numeric, 38.2,
+  'trecho único: o motorista orça os km da rota');
+select set_config('t.id2', api.criar_pedido(current_setting('t.ped')::jsonb || current_setting('t.geo')::jsonb
+  || jsonb_build_object('inicio', current_setting('t.d5'), 'trazer', true)) ->> 'id', true);
+select is((api.pedido(current_setting('t.id2')::uuid) -> 'pedido' ->> 'km_para_orcar')::numeric, 76.4,
+  'ida e volta: o motorista orça o dobro dos km da rota (o km do orçamento já é ida e volta)');
 
 reset role;
 select results_eq($$ select origem_lat, origem_lng, destino_place_id, km_estimado, minutos_estimados

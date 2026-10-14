@@ -63,7 +63,11 @@ test.describe('motorista', () => {
     await comSessaoFalsa(page, MOTORISTA, AAL2)
     await simularApi(page)
     await simularPedidos(page, {
-      detalhes: [pedidoSolicitadoMotorista({ km_estimado: 38.2, minutos_estimados: 45 }), pedidoSolicitadoMotorista()],
+      detalhes: [
+        pedidoSolicitadoMotorista({ km_estimado: 38.2, km_para_orcar: 38.2, minutos_estimados: 45 }),
+        pedidoSolicitadoMotorista(),
+        pedidoSolicitadoMotorista({ trazer: true, km_estimado: 38.2, km_para_orcar: 76.4, minutos_estimados: 45 }),
+      ],
     })
     await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
     await expect(page.getByLabel('Quilometragem')).toHaveValue('38,2')
@@ -71,6 +75,12 @@ test.describe('motorista', () => {
     await page.reload()
     await expect(page.getByLabel('Quilometragem')).toHaveValue('0')
     await expect(page.getByTestId('km-estimado')).toHaveCount(0)
+    // Ida e volta: o km do orçamento é o dobro do trecho da rota.
+    await page.reload()
+    await expect(page.getByLabel('Quilometragem')).toHaveValue('76,4')
+    await expect(page.getByTestId('km-estimado')).toHaveText(
+      'Estimado pela rota: 38 km por trecho, 76 km ida e volta, cerca de 45 min cada trecho. Confira.',
+    )
   })
 
   test('orçar: quantidades com preços travados, total ao vivo do servidor e envio confirmado', async ({ page }) => {

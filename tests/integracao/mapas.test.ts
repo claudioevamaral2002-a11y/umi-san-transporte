@@ -50,6 +50,24 @@ describe('prévia do orçamento e km estimado', () => {
     const locais = await rpc(n2, 'locais_da_empresa', { p_texto: 'estaleiro' })
     expect(locais).toMatchObject({ ok: true, locais: [{ nome: 'Estaleiro Navegantes', place_id: 'ChIJdef' }] })
 
+    // Ida e volta: a prévia recebe o km de um trecho e cobra o dobro, igual ao orçamento com o km de ida e volta.
+    const ida = new Date(inicio.getTime() + 86_400_000)
+    const idaEVolta = await rpc(n2, 'criar_pedido', {
+      p: {
+        inicio: ida.toISOString(), duracao_min: 120, origem: 'Porto de Itajaí', destino: 'Estaleiro Navegantes',
+        levar: true, trazer: true, carga: 'PESSOAS', pessoas_qtd: 1, modalidade: 'VEICULO_PROPRIO', reboque: 'NAO',
+        origem_lat: -26.9078, origem_lng: -48.6619, destino_lat: -26.8986, destino_lng: -48.6542, km_estimado: 38.2,
+      },
+    })
+    expect(idaEVolta).toMatchObject({ ok: true })
+    const previaIv = await rpc(n2, 'previa_orcamento', {
+      p: { km: 38.2, usa_reboque: false, levar: true, trazer: true, modalidade: 'VEICULO_PROPRIO' },
+    })
+    const detalheIv = await rpc(motorista, 'pedido', { p_id: idaEVolta.id })
+    expect(detalheIv.pedido).toMatchObject({ km_estimado: 38.2, km_para_orcar: 76.4 })
+    const orcamentoIv = await rpc(motorista, 'calcular_orcamento', { p_atividade: idaEVolta.id, p: { km: 76.4 } })
+    expect(previaIv.total_cent).toBe(orcamentoIv.total_cent)
+
     // A prévia nunca grava orçamento.
     const n = await comBanco((db) =>
       db.query<{ n: number }>('select count(*)::int as n from app.orcamentos where atividade_id = $1', [criado.id]),
