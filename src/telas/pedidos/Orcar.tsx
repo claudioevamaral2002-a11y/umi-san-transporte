@@ -83,15 +83,22 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
   const navegar = useNavigate()
   // Revisão pedida: começa do orçamento anterior (o motorista só ajusta o que o cliente pediu).
   // Sem revisão, os km começam com a estimativa da rota (fase 3A); o motorista confere e ajusta.
+  // Com Levar e Trazer o km do orçamento é ida e volta: o banco já devolve o dobro do trecho em km_para_orcar.
   const kmEstimado = typeof p.km_estimado === 'number' ? p.km_estimado : null
+  const kmParaOrcar = typeof p.km_para_orcar === 'number' ? p.km_para_orcar : null
   const [f, setF] = useState<FormOrcamento>(() =>
-    formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque, kmEstimado),
+    formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque, kmParaOrcar),
   )
   const avisoKm =
-    kmEstimado !== null && !anterior
+    kmEstimado !== null && kmParaOrcar !== null && !anterior
       ? (() => {
           const t = formatarRota(kmEstimado, typeof p.minutos_estimados === 'number' ? p.minutos_estimados : null)
-          return `Estimado pela rota: ${[t.km.replace(' pela rota', ''), t.tempo].filter(Boolean).join(', ')}. Confira.`
+          const trecho = t.km.replace(' pela rota', '')
+          if (p.levar && p.trazer) {
+            const tempo = t.tempo ? `, ${t.tempo} cada trecho` : ''
+            return `Estimado pela rota: ${trecho} por trecho, ${Math.round(kmParaOrcar)} km ida e volta${tempo}. Confira.`
+          }
+          return `Estimado pela rota: ${[trecho, t.tempo].filter(Boolean).join(', ')}. Confira.`
         })()
       : null
   const [kmTexto, setKmTexto] = useState(() => kmParaTexto(f.kmDecimos))

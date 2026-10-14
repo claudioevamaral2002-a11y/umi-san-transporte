@@ -30,7 +30,8 @@ begin
 end $$;
 
 ------------------------------------------------------------------------------------------------
--- 2. Prévia. Entrada: {km (0 a 5000, 1 casa), usa_reboque (opcional), levar, trazer, modalidade}.
+-- 2. Prévia. Entrada: {km (da rota, um trecho: 0 a 5000, 1 casa), usa_reboque (opcional), levar, trazer, modalidade}.
+--    Com Levar e Trazer o km do orçamento é ida e volta: a prévia usa o dobro do km da rota.
 --    Saída: a de interno.calcular_linhas ({ok, modalidade, linhas, total_cent}).
 ------------------------------------------------------------------------------------------------
 create function api.previa_orcamento(p jsonb)
@@ -63,7 +64,9 @@ begin
   end if;
   -- Só km e reboque (no veículo próprio); no veículo do cliente as diárias são do motorista.
   e := case when p ->> 'modalidade' = 'VEICULO_PROPRIO'
-            then jsonb_build_object('km', p -> 'km', 'usa_reboque', coalesce((p ->> 'usa_reboque')::boolean, false))
+            then jsonb_build_object('km', (p ->> 'km')::numeric
+                                          * case when (p ->> 'levar')::boolean and (p ->> 'trazer')::boolean then 2 else 1 end,
+                                    'usa_reboque', coalesce((p ->> 'usa_reboque')::boolean, false))
             else '{}'::jsonb end;
   r := interno.calcular_linhas(c, (p ->> 'levar')::boolean, (p ->> 'trazer')::boolean,
                                (p ->> 'modalidade')::app.modalidade, e);

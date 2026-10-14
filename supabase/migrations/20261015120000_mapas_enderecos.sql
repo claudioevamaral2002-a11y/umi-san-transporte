@@ -341,7 +341,9 @@ begin
     'origem_lat', a.origem_lat, 'origem_lng', a.origem_lng, 'destino_lat', a.destino_lat, 'destino_lng', a.destino_lng,
     'origem_endereco', a.origem_endereco, 'destino_endereco', a.destino_endereco,
     'origem_place_id', a.origem_place_id, 'destino_place_id', a.destino_place_id,
-    'km_estimado', a.km_estimado, 'minutos_estimados', a.minutos_estimados);
+    'km_estimado', a.km_estimado, 'minutos_estimados', a.minutos_estimados,
+    -- O km da rota é de um trecho; com Levar e Trazer o km do orçamento é ida e volta (o dobro).
+    'km_para_orcar', case when a.levar and a.trazer then a.km_estimado * 2 else a.km_estimado end);
 
   select coalesce(jsonb_agg(jsonb_build_object('de', h.de, 'para', h.para, 'em', h.em, 'observacao', h.observacao,
                                                'por_nome', pf.nome) order by h.id), '[]')

@@ -62,6 +62,8 @@ export interface DetalhePedido {
   origem_place_id?: string | null
   destino_place_id?: string | null
   km_estimado?: number | null
+  /** Km que o motorista orça: o da rota, ou o dobro em ida e volta (calculado no banco). */
+  km_para_orcar?: number | null
   minutos_estimados?: number | null
 }
 

@@ -12,6 +12,7 @@ Deno.serve(
       const manipular = criarManipuladorEnderecos({
         chave: Deno.env.get('GOOGLE_MAPS_CHAVE_SERVIDOR') || null,
         buscar: fetch,
+        log: (etapa, detalhe) => logErro(ctx.funcao, etapa, detalhe),
         registrarUso: async (tipo) => {
           const { data, error } = await ctx.usuario.rpc('registrar_uso_mapas', { p_tipo: tipo })
           if (error || !data) {

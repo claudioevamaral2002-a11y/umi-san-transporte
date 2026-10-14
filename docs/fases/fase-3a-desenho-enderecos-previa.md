@@ -25,7 +25,7 @@ Quem pede um transporte escolhe a origem e o destino entre endereços reais, vê
 |---|---|
 | Fornecedor | **Google Maps Platform** |
 | Uso da distância | **Só estimativa.** O motorista confirma ou ajusta os km no orçamento oficial, e a cobrança não muda |
-| Km da prévia | **Só da origem até o destino.** O retorno de 50% (trecho único) vem da tabela, como hoje |
+| Km da prévia | **Só da origem até o destino.** O retorno de 50% (trecho único) vem da tabela, como hoje. Com Levar e Trazer, o km do orçamento é ida e volta: a prévia e o "Orçar" usam o dobro do km da rota (achado da revisão final) |
 | Local sem endereço | **Marcar no mapa** (pino) |
 | Locais já usados | **Sim, locais da empresa** aparecem primeiro na busca |
 | Quem vê a prévia | **N1 e N2.** O N2 vê o valor estimado, não a tabela de preços |
@@ -197,6 +197,7 @@ Fontes:
 - **Estimativa diferente do real:** a rota do Google não considera rampa, balsa ou acesso restrito de porto. Por isso a prévia é só estimativa, e o motorista ajusta.
 - **Locais da empresa gravados pelo cliente** (achado da revisão de segurança, 14/10): nome e ponto do local vêm do pedido. O primeiro registro de um `place_id` vale (outro pedido só soma uso), então ninguém reescreve um local já usado. Um usuário mal-intencionado da própria empresa ainda pode ser o primeiro a gravar um nome ou ponto errado; o efeito fica na mesma empresa e não mexe em dinheiro. Mitigação futura, se preciso: o servidor assinar o resultado do "detalhar".
 - **Esgotar o teto da empresa:** além do teto diário por empresa, cada pessoa tem 500 chamadas por dia.
+- **Termos do Google sobre guardar dados** (achado da revisão final, 14/10; **decisão do dono pendente**): `app.locais_empresa` e os pedidos guardam coordenadas e endereço vindos do Place Details. Pelos termos do Places, só o `place_id` pode ser guardado sem prazo; coordenadas, por até 30 dias. Opções: aceitar o risco, ou guardar só o `place_id` e buscar as coordenadas de novo ao usar (custo extra). A lista de sugestões mostra "Google Maps" e o mapa mostra "Google"; o texto de copyright por região da Map Tiles API não foi implementado.
 - **Mapa por blocos:** com a Map Tiles API e o Leaflet não há o mapa interativo completo do Google (Street View, camadas), e não precisamos disso.
 
 ## 11. Referência pública (Uber), aplicada aqui

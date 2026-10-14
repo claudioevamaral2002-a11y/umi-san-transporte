@@ -169,6 +169,10 @@ export function CampoEndereco({
           <ul role="group" aria-label="Sugestões" className="space-y-1">
             {doGoogle.map((s, i) => item(s, daEmpresa.length + i))}
           </ul>
+          {/* Atribuição exigida para resultados do Google mostrados fora de um mapa do Google. */}
+          <p aria-hidden="true" className="px-3 pt-1 text-right text-[11px] text-texto-suave">
+            Google Maps
+          </p>
         </li>
       )}
       <li

@@ -35,16 +35,23 @@ export function criarManipuladorEnderecos(deps: {
   buscar: typeof fetch
   registrarUso: Uso
   tempoLimiteMs?: number
+  /** Registro de falhas do Google (só a ação e o status; nunca a chave nem o corpo). */
+  log?: (etapa: string, detalhe: { status: number | null }) => void
 }) {
-  const chamar = async (url: string, init: RequestInit, mascara?: string): Promise<unknown | null> => {
+  const chamar = async (url: string, init: RequestInit, mascara?: string, etapa = 'google'): Promise<unknown | null> => {
     const headers = new Headers(init.headers)
     headers.set('X-Goog-Api-Key', deps.chave!)
     headers.set('Content-Type', 'application/json')
     if (mascara) headers.set('X-Goog-FieldMask', mascara)
     try {
       const r = await deps.buscar(url, { ...init, headers, signal: AbortSignal.timeout(deps.tempoLimiteMs ?? 5000) })
-      return r.ok ? await r.json() : null
+      if (!r.ok) {
+        deps.log?.(etapa, { status: r.status })
+        return null
+      }
+      return await r.json()
     } catch {
+      deps.log?.(etapa, { status: null })
       return null
     }
   }
@@ -82,7 +89,7 @@ export function criarManipuladorEnderecos(deps: {
           languageCode: 'pt-BR',
           locationBias: SC,
         }),
-      })) as {
+      }, undefined, 'google:sugerir')) as {
         suggestions?: Array<{
           placePrediction?: { placeId?: string; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } }
         }>
@@ -104,6 +111,7 @@ export function criarManipuladorEnderecos(deps: {
         `https://places.googleapis.com/v1/places/${c.place_id}?sessionToken=${c.sessao}&languageCode=pt-BR`,
         { method: 'GET' },
         'id,formattedAddress,location',
+        'google:detalhar',
       )) as { id?: string; formattedAddress?: string; location?: { latitude?: number; longitude?: number } } | null
       const lat = r?.location?.latitude
       const lng = r?.location?.longitude
@@ -131,6 +139,7 @@ export function criarManipuladorEnderecos(deps: {
         }),
       },
       'routes.distanceMeters,routes.duration',
+      'google:rota',
     )) as { routes?: Array<{ distanceMeters?: number; duration?: string }> } | null
     const rota = r?.routes?.[0]
     if (!rota?.distanceMeters || rota.distanceMeters <= 0) return SEM_ROTA
