@@ -139,13 +139,13 @@ function Conteudo({
             >
               <div className="flex items-baseline justify-between gap-3">
                 <span className="ivo-legenda font-semibold">{d.rotulo}</span>
-                {d.mudou && base && <span className="ivo-sobretitulo text-alerta-texto">Alterado</span>}
+                {d.mudou && base && <span className="ivo-legenda font-semibold text-alerta-texto">Alterado</span>}
               </div>
               <p className="tabular-nums">
                 {d.mudou && d.antes !== null && (
                   <>
                     <span className="text-texto-suave line-through">{d.antes}</span>
-                    <span aria-hidden="true"> → </span>
+                    <span aria-hidden="true"> para </span>
                     <span className="sr-only"> passa a </span>
                   </>
                 )}

@@ -2,8 +2,16 @@
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { escolherDiaNaAgenda, escolherDiaNoPedido } from './apoio/escolherDia.ts'
+import { EMPRESA_PORTO, EMPRESA_UMI } from './apoio/apiFalsa.ts'
 import { saldoFalso, simularDinheiro } from './apoio/dinheiroFalso.ts'
-import { DIA_PEDIDO, ID_PEDIDO, pedidoOrcadoCliente, pendenciaFalsa, simularPedidos } from './apoio/pedidosFalsos.ts'
+import {
+  DIA_PEDIDO,
+  ID_PEDIDO,
+  pedidoOrcadoCliente,
+  pedidoSolicitadoMotorista,
+  pendenciaFalsa,
+  simularPedidos,
+} from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 
 const PASTA = process.env.PASTA_CAPTURAS ?? 'test-results/capturas-redesign'
@@ -39,6 +47,62 @@ for (const tema of ['light', 'dark'] as const) {
       await page.goto(`/pedidos/${ID_PEDIDO}`)
       await expect(page.getByTestId('orcamento-recebido')).toBeVisible()
       await foto(page, '07-pedido-detalhe')
+    })
+
+    test('entrada e 2FA', async ({ page }) => {
+      await comSessaoFalsa(page, { papel: 'ADM', tem_2fa: true }, { semSessaoInicial: true })
+      await simularApi(page)
+      await page.goto('/entrar')
+      await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
+      await foto(page, '11-entrar')
+    })
+
+    test('2FA', async ({ page }) => {
+      await comSessaoFalsa(page, { papel: 'ADM', tem_2fa: true }, { aal: 'aal1' })
+      await simularApi(page)
+      await page.goto('/')
+      await expect(page.getByRole('heading', { name: 'Digite o código' })).toBeVisible()
+      await foto(page, '12-2fa')
+    })
+
+    test('extrato', async ({ page }) => {
+      await comSessaoFalsa(page, CLIENTE)
+      await simularApi(page)
+      await simularDinheiro(page)
+      await page.goto('/extrato')
+      await expect(page.getByTestId('lista-extrato')).toBeVisible()
+      await foto(page, '13-extrato')
+    })
+
+    test('motorista: início e orçar', async ({ page }) => {
+      await comSessaoFalsa(page, { papel: 'MOTORISTA', nome: 'João Reis', tem_2fa: true }, { aal: 'aal2' })
+      await simularApi(page)
+      await simularPedidos(page, {
+        detalhes: [pedidoSolicitadoMotorista()],
+        pendencias: { aguardando_orcamento: [pendenciaFalsa({ urgente: true })] },
+      })
+      await page.goto('/')
+      await expect(page.getByTestId('pendencia-orcar')).toBeVisible()
+      await foto(page, '02-inicio-motorista')
+      await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
+      await expect(page.getByTestId('total-ao-vivo')).toBeVisible()
+      await foto(page, '14-orcar')
+    })
+
+    test('ADM: início, créditos e painel', async ({ page }) => {
+      await comSessaoFalsa(page, { papel: 'ADM', nome: 'Ana Souza', tem_2fa: true }, { aal: 'aal2' })
+      await simularApi(page, { empresas: [EMPRESA_UMI, EMPRESA_PORTO] })
+      await simularDinheiro(page, { saldos: [saldoFalso()] })
+      await simularPedidos(page)
+      await page.goto('/')
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await foto(page, '03-inicio-adm')
+      await page.goto('/adm/creditos')
+      await expect(page.getByTestId('credito-empresa').first()).toBeVisible()
+      await foto(page, '15-creditos')
+      await page.goto('/adm/painel')
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await foto(page, '16-painel')
     })
 
     test('novo pedido', async ({ page }) => {

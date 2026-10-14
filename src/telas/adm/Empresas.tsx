@@ -225,7 +225,7 @@ export function Empresas() {
       <div aria-live="polite">{aviso && <Mensagem tipo="sucesso">{aviso}</Mensagem>}</div>
       {criada && (
         <Cartao className="space-y-3 border-[var(--cor-laranja)]" data-testid="proximo-passo-contrato">
-          <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+          <p className="flex items-center gap-2 ivo-legenda font-semibold text-alerta-texto">
             <Icone nome="alerta" tamanho={16} />
             Próximo passo
           </p>
@@ -237,7 +237,6 @@ export function Empresas() {
             className="inline-flex min-h-12 items-center gap-2 rounded-cartao bg-acao px-5 ivo-botao text-acao-texto"
           >
             Criar contrato a partir da tabela modelo
-            <Icone nome="setaDireita" tamanho={20} />
           </Link>
         </Cartao>
       )}

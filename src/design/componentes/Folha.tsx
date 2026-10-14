@@ -68,7 +68,7 @@ export function Folha({
         <div className="space-y-4 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 pt-1">
-              {sobretitulo && <p className="ivo-sobretitulo text-texto-suave">{sobretitulo}</p>}
+              {sobretitulo && <p className="ivo-legenda font-semibold text-texto-suave">{sobretitulo}</p>}
               <h2 id={`${id}-titulo`} className="ivo-h3">
                 {titulo}
               </h2>

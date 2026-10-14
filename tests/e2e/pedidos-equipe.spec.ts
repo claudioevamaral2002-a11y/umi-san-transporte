@@ -70,7 +70,7 @@ test.describe('motorista', () => {
     await page.goto(`/pedidos/${ID_PEDIDO}`)
     await page.getByRole('link', { name: 'Orçar este pedido' }).click()
 
-    await expect(page.getByText('Orçar · Umi San')).toBeVisible()
+    await expect(page.getByText('Orçar, Umi San')).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: 'Pedido #0042' })).toBeVisible()
     await expect(page.getByTestId('contagem')).toHaveText(/^Responder em (4|5) h/)
     await expect(page.getByTestId('precos-travados')).toHaveText('Preços do contrato Umi San — não editáveis')

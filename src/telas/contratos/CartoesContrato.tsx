@@ -140,7 +140,7 @@ export function Historico({
                   Vigente desde <span className="tabular-nums text-texto">{formatarDataHora(v.vigente_desde)}</span>
                   {v.publicado_por_nome && (
                     <>
-                      {' · '}publicada por <span className="text-texto">{v.publicado_por_nome}</span>
+                      {', '}publicada por <span className="text-texto">{v.publicado_por_nome}</span>
                     </>
                   )}
                 </p>

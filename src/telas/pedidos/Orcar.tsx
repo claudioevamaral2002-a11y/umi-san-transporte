@@ -326,7 +326,7 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
       <div className="sticky bottom-0 z-10 border-t border-borda bg-superficie/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center gap-4">
           <div className="min-w-0 flex-1" data-testid="total-ao-vivo" aria-live="polite">
-            <p className="ivo-sobretitulo text-texto-suave">Total{previa?.estado === 'calculando' ? ' · calculando…' : ''}</p>
+            <p className="ivo-legenda font-semibold text-texto-suave">Total do orçamento{previa?.estado === 'calculando' ? ', calculando…' : ''}</p>
             {previa?.estado === 'ok' ? (
               <Dinheiro centavos={previa.total} className="text-2xl font-extrabold" />
             ) : (
@@ -404,7 +404,7 @@ export function Orcar() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-fundo">
-      <header className="sobre-marinho bg-marinho px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-5 text-papel">
+      <header className="sobre-marinho border-b border-borda bg-comando px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-5 text-comando-texto">
         <div className="mx-auto max-w-lg space-y-2">
           <Link
             to={`/pedidos/${id}`}
@@ -413,18 +413,18 @@ export function Orcar() {
           >
             <Icone nome="fechar" />
           </Link>
-          <p className="ivo-sobretitulo text-cinza-azulado">Orçar{r ? ` · ${r.pedido.empresa_nome}` : ''}</p>
+          <p className="ivo-legenda font-semibold text-bloco-suave">Orçar{r ? `, ${r.pedido.empresa_nome}` : ''}</p>
           <h1 className="ivo-h1 tabular-nums">{r ? `Pedido ${numeroPedido(r.pedido.numero)}` : 'Orçar pedido'}</h1>
           {r && (
             <>
               <div className="rounded-cartao bg-white/10 p-3">
                 <Rota origem={r.pedido.origem} destino={r.pedido.destino} compacta />
-                <p className="mt-2 ivo-legenda text-cinza-azulado tabular-nums">
-                  {formatarQuando(r.pedido.inicio)} · {formatarDuracao(r.pedido.duracao_min)} · {rotuloTrajeto(r.pedido.levar, r.pedido.trazer)}
+                <p className="mt-2 ivo-legenda text-bloco-suave tabular-nums">
+                  {formatarQuando(r.pedido.inicio)}, {formatarDuracao(r.pedido.duracao_min)}, {rotuloTrajeto(r.pedido.levar, r.pedido.trazer)}
                 </p>
               </div>
               {r.acoes.orcar && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--cor-laranja)] px-3 py-1.5 text-sm font-bold text-marinho">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-bold text-bloco-alerta">
                   <Icone nome="relogio" tamanho={16} />
                   <Contagem anunciar prazo={r.pedido.prazo_orcar_ate} prefixo="Responder em" />
                 </span>

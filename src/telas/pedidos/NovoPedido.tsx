@@ -446,7 +446,7 @@ function LinhaResumo({ titulo, aoEditar, children }: { titulo: string; aoEditar:
   return (
     <div className="flex items-start justify-between gap-3 border-b border-borda py-3 last:border-b-0">
       <div className="min-w-0">
-        <p className="ivo-sobretitulo text-texto-suave">{titulo}</p>
+        <p className="ivo-legenda font-semibold text-texto-suave">{titulo}</p>
         <div className="mt-1">{children}</div>
       </div>
       <button
@@ -501,7 +501,7 @@ function PassoRevisar({
       <Cartao className="py-1" data-testid="resumo-pedido">
         <LinhaResumo titulo="Quando" aoEditar={() => irPara(1)}>
           <p className="font-bold tabular-nums">
-            {f.dia ? nomeDoDia(f.dia) : ''} · {f.inicio ? horaDe(f.inicio) : ''}
+            {f.dia ? nomeDoDia(f.dia) : ''}, {f.inicio ? horaDe(f.inicio) : ''}
           </p>
           <p className="ivo-legenda text-texto-suave">Duração estimada: {formatarDuracao(f.duracaoMin)}</p>
         </LinhaResumo>
@@ -510,7 +510,7 @@ function PassoRevisar({
           <p className="mt-1 ivo-legenda text-texto-suave">{rotuloTrajeto(f.levar, f.trazer)}</p>
           {(f.contatoNome || f.contatoTelefone) && (
             <p className="ivo-legenda text-texto-suave">
-              Contato: {[f.contatoNome.trim(), f.contatoTelefone].filter(Boolean).join(' · ')}
+              Contato: {[f.contatoNome.trim(), f.contatoTelefone].filter(Boolean).join(', ')}
             </p>
           )}
         </LinhaResumo>
@@ -552,7 +552,7 @@ function Sucesso({ id, numero, prazoHoras }: { id: string; numero: number; prazo
           className="check-traco motion-reduce:animate-none"
         />
       </svg>
-      <p className="ivo-sobretitulo text-texto-suave">Pedido {numeroPedido(numero)}</p>
+      <p className="ivo-legenda font-semibold text-texto-suave">Pedido {numeroPedido(numero)}</p>
       <h1 ref={titulo} tabIndex={-1} className="ivo-h1 outline-none">
         Pedido enviado
       </h1>
@@ -627,7 +627,7 @@ export function NovoPedido() {
             className="space-y-2"
             data-testid={perfil?.empresa_tem_contrato === false ? 'novo-pedido-sem-contrato' : 'novo-pedido-sem-credito'}
           >
-            <p className="flex items-center gap-2 ivo-sobretitulo text-alerta-texto">
+            <p className="flex items-center gap-2 ivo-legenda font-semibold text-alerta-texto">
               <Icone nome="alerta" tamanho={16} />
               Novo pedido indisponível
             </p>

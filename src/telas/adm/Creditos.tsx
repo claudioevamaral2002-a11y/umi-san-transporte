@@ -309,10 +309,10 @@ function ConteudoLancamento({
           {TITULO[op.tipo]} {formatarComSinal(pronto.efeito)}
         </LinhaConfirma>
         <LinhaConfirma rotulo="Disponível" testid="confirmar-disponivel">
-          <Dinheiro centavos={saldo.disponivel_cent} /> → <Dinheiro centavos={depois.disponivel_depois_cent} />
+          <Dinheiro centavos={saldo.disponivel_cent} /> para <Dinheiro centavos={depois.disponivel_depois_cent} />
         </LinhaConfirma>
         <LinhaConfirma rotulo="Total contábil">
-          <Dinheiro centavos={saldo.saldo_contabil_cent} /> → <Dinheiro centavos={depois.contabil_depois_cent} />
+          <Dinheiro centavos={saldo.saldo_contabil_cent} /> para <Dinheiro centavos={depois.contabil_depois_cent} />
         </LinhaConfirma>
         <LinhaConfirma rotulo="Motivo">
           <span className="font-semibold break-words">{pronto.motivo}</span>

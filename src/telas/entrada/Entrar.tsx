@@ -1,8 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo } from '../../design/componentes/Campo.tsx'
-import { Icone } from '../../design/componentes/Icone.tsx'
-import { LogoIvo } from '../../design/componentes/LogoIvo.tsx'
+import { SimboloIvo } from '../../design/componentes/SimboloIvo.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Turnstile, type ControleTurnstile } from '../../design/componentes/Turnstile.tsx'
 import { mensagemErroAuth } from '../../lib/erros.ts'
@@ -42,22 +41,19 @@ export function Entrar() {
 
   return (
     <main className="flex min-h-dvh flex-col bg-fundo">
-      <section className="bg-marinho px-6 pt-[calc(env(safe-area-inset-top)+2.5rem)] pb-10 text-papel">
-        <div className="mx-auto w-full max-w-md">
-          <LogoIvo variante="simbolo" cor="branco" altura={46} />
-          <p className="mt-8 max-w-[18ch] text-[1.875rem] leading-[1.12] font-extrabold tracking-[-0.035em] text-balance">
-            Movimento que conecta novos horizontes
-          </p>
-          <span aria-hidden="true" className="mt-4 block h-[3px] w-[34px] rounded-full bg-[var(--cor-laranja)]" />
-        </div>
-      </section>
 
       <form
         onSubmit={entrar}
         noValidate
-        className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-6 pt-8 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]"
+        className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-6 pt-[calc(env(safe-area-inset-top)+2.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]"
       >
-        <h1 className="ivo-sobretitulo text-texto-suave">Entrar</h1>
+        <div className="text-texto">
+          <SimboloIvo altura={52} rotulo="IVO Transportes" />
+        </div>
+        <div className="mt-6 mb-1">
+          <h1 className="ivo-h1">Entrar</h1>
+          <p className="mt-1 ivo-corpo text-texto-suave">Use o e-mail do seu convite.</p>
+        </div>
 
         {aviso && <Mensagem tipo={aviso.startsWith('Senha criada') ? 'sucesso' : 'info'}>{aviso}</Mensagem>}
         {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
@@ -97,7 +93,6 @@ export function Entrar() {
           aria-describedby={!token ? 'verificando' : undefined}
         >
           {enviando ? 'Entrando…' : 'Entrar'}
-          {!enviando && <Icone nome="setaDireita" tamanho={20} />}
         </Botao>
         {!token && (
           <p id="verificando" className="-mt-2 text-center ivo-legenda text-texto-suave" aria-live="polite">
@@ -105,9 +100,6 @@ export function Entrar() {
           </p>
         )}
 
-        <p className="mt-auto pt-8 text-center text-[0.6875rem] font-bold tracking-[0.32em] text-texto-suave">
-          IVO TRANSPORTES
-        </p>
       </form>
     </main>
   )
