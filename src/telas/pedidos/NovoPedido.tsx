@@ -47,6 +47,7 @@ import { Calendario } from '../agenda/Calendario.tsx'
 import { FaixaDias } from './FaixaDias.tsx'
 import { useCreditoParaPedido } from './Pedidos.tsx'
 import { CampoEndereco } from './CampoEndereco.tsx'
+import { FolhaMarcarNoMapa } from './FolhaMarcarNoMapa.tsx'
 import { CaixaChip, Contador, Escolhas, Rota } from './componentes.tsx'
 
 const TITULOS = { 1: 'Quando?', 2: 'Onde?', 3: 'O que vamos levar?', 4: 'Confira o pedido' } as const
@@ -720,6 +721,17 @@ export function NovoPedido() {
           {enviando ? 'Enviando…' : rotuloBotao}
         </Botao>
       </Rodape>
+
+      <FolhaMarcarNoMapa
+        aberta={mapaPara !== null}
+        centro={(mapaPara === 'origem' ? (f.origemLocal ?? f.destinoLocal) : (f.destinoLocal ?? f.origemLocal)) ?? null}
+        aoFechar={() => setMapaPara(null)}
+        aoUsar={(local) => {
+          if (mapaPara === 'origem') mudar({ origem: local.nome, origemLocal: local, kmEstimado: null, minutosEstimados: null })
+          else mudar({ destino: local.nome, destinoLocal: local, kmEstimado: null, minutosEstimados: null })
+          setMapaPara(null)
+        }}
+      />
 
       <Folha aberta={confirmarSaida} titulo="Descartar este pedido?" onFechar={() => setConfirmarSaida(false)}>
         <p className="ivo-corpo text-texto-suave">O que você preencheu até aqui será perdido.</p>
