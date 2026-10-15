@@ -7,12 +7,14 @@ import { Dinheiro } from '../../design/componentes/Dinheiro.tsx'
 import { Folha } from '../../design/componentes/Folha.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Interruptor } from '../../design/componentes/Interruptor.tsx'
+import { MarcaAgora } from '../../design/componentes/MarcaAgora.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
 import { api } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import type { PrecosParaOrcar } from '../../lib/contratos.ts'
+import { formatarRota } from '../../lib/enderecos.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
 import {
   DIARIAS_MAX,
@@ -80,7 +82,25 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
   const anterior = r.orcamento_anterior ?? null
   const navegar = useNavigate()
   // Revisão pedida: começa do orçamento anterior (o motorista só ajusta o que o cliente pediu).
-  const [f, setF] = useState<FormOrcamento>(() => formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque))
+  // Sem revisão, os km começam com a estimativa da rota (fase 3A); o motorista confere e ajusta.
+  // Com Levar e Trazer o km do orçamento é ida e volta: o banco já devolve o dobro do trecho em km_para_orcar.
+  const kmEstimado = typeof p.km_estimado === 'number' ? p.km_estimado : null
+  const kmParaOrcar = typeof p.km_para_orcar === 'number' ? p.km_para_orcar : null
+  const [f, setF] = useState<FormOrcamento>(() =>
+    formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque, kmParaOrcar),
+  )
+  const avisoKm =
+    kmEstimado !== null && kmParaOrcar !== null && !anterior
+      ? (() => {
+          const t = formatarRota(kmEstimado, typeof p.minutos_estimados === 'number' ? p.minutos_estimados : null)
+          const trecho = t.km.replace(' pela rota', '')
+          if (p.levar && p.trazer) {
+            const tempo = t.tempo ? `, ${t.tempo} cada trecho` : ''
+            return `Estimado pela rota: ${trecho} por trecho, ${Math.round(kmParaOrcar)} km ida e volta${tempo}. Confira.`
+          }
+          return `Estimado pela rota: ${[trecho, t.tempo].filter(Boolean).join(', ')}. Confira.`
+        })()
+      : null
   const [kmTexto, setKmTexto] = useState(() => kmParaTexto(f.kmDecimos))
   const [sugerir, setSugerir] = useState(false)
   const [sugerido, setSugerido] = useState('')
@@ -178,6 +198,12 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
                 />
               </Contador>
               {!kmValido && <p className="pb-2 ivo-legenda text-[var(--status-cancelada)]">Km com até 1 casa decimal, por exemplo 120,5.</p>}
+              {avisoKm && (
+                <p data-testid="km-estimado" className="flex items-center gap-1.5 pb-2 ivo-legenda font-semibold text-alerta-texto">
+                  <MarcaAgora tamanho={12} />
+                  <span>{avisoKm}</span>
+                </p>
+              )}
               {trechoUnico && precos.retorno_trecho_unico_bp > 0 && (
                 <p className="py-2 ivo-legenda text-texto-suave">
                   Trecho único: o servidor soma o retorno de {formatarPercentual(precos.retorno_trecho_unico_bp)} sobre os km.

@@ -12,8 +12,9 @@ export function montarCsp(urlSupabase: string): string {
     ['default-src', ["'self'"]],
     ['script-src', ["'self'", 'https://challenges.cloudflare.com']],
     ['frame-src', ['https://challenges.cloudflare.com']],
-    ['connect-src', ["'self'", url.origin, websocket]],
-    ['img-src', ["'self'", 'data:', 'blob:', url.origin]],
+    // Fase 3A: blocos do mapa da Google Map Tiles API (imagens e criação da sessão de blocos). Nenhum script do Google.
+    ['connect-src', ["'self'", url.origin, websocket, 'https://tile.googleapis.com']],
+    ['img-src', ["'self'", 'data:', 'blob:', url.origin, 'https://tile.googleapis.com']],
     ['style-src', ["'self'"]],
     ['font-src', ["'self'"]],
     ['worker-src', ["'self'"]],

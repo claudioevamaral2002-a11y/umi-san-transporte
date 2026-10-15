@@ -11,11 +11,16 @@ export interface Contexto extends Clientes {
   origem: string | null
 }
 
-// Limite em memória por instância: só um freio auxiliar (o controle de verdade são os limites no banco).
-const limitador = criarLimitador(20, 60_000)
-
-/** Casca comum: método, CORS, JWT, limite por usuário e corpo JSON. Nunca devolve detalhes internos. */
-export function criarServidor(funcao: string, manipulador: (ctx: Contexto) => Promise<Corpo>) {
+/**
+ * Casca comum: método, CORS, JWT, limite por usuário e corpo JSON. Nunca devolve detalhes internos.
+ * `limitePorMinuto`: freio em memória por instância (o controle de verdade são os limites no banco); padrão 20.
+ */
+export function criarServidor(
+  funcao: string,
+  manipulador: (ctx: Contexto) => Promise<Corpo>,
+  opcoes: { limitePorMinuto?: number } = {},
+) {
+  const limitador = criarLimitador(opcoes.limitePorMinuto ?? 20, 60_000)
   return async (req: Request): Promise<Response> => {
     const origens = origensPermitidas(origensConfiguradas())
     const origem = req.headers.get('origin')

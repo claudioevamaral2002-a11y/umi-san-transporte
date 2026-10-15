@@ -1,5 +1,6 @@
 // Formulário do "Novo pedido" (4 passos): estado, máscara de telefone, validação por passo e o corpo de
 // `api.criar_pedido(p)`. O banco valida tudo de novo (interno.validar_pedido); isto só guia a tela.
+import type { Local } from './enderecos.ts'
 import type { Carga, Modalidade, Reboque } from './situacao.ts'
 
 export const DURACAO_PADRAO = 120
@@ -15,6 +16,12 @@ export interface FormPedido {
   duracaoMin: number
   origem: string
   destino: string
+  /** Fase 3A: ponto escolhido na busca ou no mapa (`null` = texto livre). */
+  origemLocal: Local | null
+  destinoLocal: Local | null
+  /** Rota de carro entre os dois pontos (só estimativa; o motorista confirma os km). */
+  kmEstimado: number | null
+  minutosEstimados: number | null
   levar: boolean
   trazer: boolean
   contatoNome: string
@@ -35,6 +42,10 @@ export const FORM_VAZIO: FormPedido = {
   duracaoMin: DURACAO_PADRAO,
   origem: '',
   destino: '',
+  origemLocal: null,
+  destinoLocal: null,
+  kmEstimado: null,
+  minutosEstimados: null,
   levar: false,
   trazer: false,
   contatoNome: '',
@@ -163,6 +174,18 @@ export function montarPedido(f: FormPedido): Record<string, unknown> {
     observacoes: ouNulo(f.observacoes),
   }
   if (pessoas) p.pessoas_qtd = f.pessoasQtd
+  // Fase 3A: coordenadas e endereço só de ponto escolhido; km só com os dois pontos.
+  for (const [lado, local] of [['origem', f.origemLocal], ['destino', f.destinoLocal]] as const) {
+    if (!local) continue
+    p[`${lado}_lat`] = local.lat
+    p[`${lado}_lng`] = local.lng
+    if (local.endereco) p[`${lado}_endereco`] = local.endereco
+    if (local.place_id) p[`${lado}_place_id`] = local.place_id
+  }
+  if (f.origemLocal && f.destinoLocal && f.kmEstimado !== null) {
+    p.km_estimado = f.kmEstimado
+    if (f.minutosEstimados !== null) p.minutos_estimados = f.minutosEstimados
+  }
   if (equipamento) {
     p.equipamento_desc = f.equipamentoDesc.trim()
     p.peso_kg = f.pesoKg.trim() === '' ? null : pesoParaNumero(f.pesoKg)

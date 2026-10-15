@@ -27,6 +27,8 @@ import {
   type FormPedido,
   type Passo,
 } from '../../lib/novoPedido.ts'
+import { chaveDaRota, formatarRota } from '../../lib/enderecos.ts'
+import { rota } from '../../lib/enderecosRemoto.ts'
 import { pedidos } from '../../lib/pedidos.ts'
 import type { Saldo } from '../../lib/saldo.ts'
 import { useSessao } from '../../lib/sessao.tsx'
@@ -46,6 +48,9 @@ import { fraseQuando, horariosDoDia } from '../../lib/horariosDoDia.ts'
 import { Calendario } from '../agenda/Calendario.tsx'
 import { FaixaDias } from './FaixaDias.tsx'
 import { useCreditoParaPedido } from './Pedidos.tsx'
+import { CampoEndereco } from './CampoEndereco.tsx'
+import { FolhaMarcarNoMapa } from './FolhaMarcarNoMapa.tsx'
+import { PreviaOrcamento } from './PreviaOrcamento.tsx'
 import { CaixaChip, Contador, Escolhas, Rota } from './componentes.tsx'
 
 const TITULOS = { 1: 'Quando?', 2: 'Onde?', 3: 'O que vamos levar?', 4: 'Confira o pedido' } as const
@@ -293,7 +298,18 @@ function PassoQuando({
 
 const mesmoDia = (inicio: string | null, dia: string) => !!inicio && diaDe(inicio) === dia
 
-function PassoOnde({ f, mudar, erros }: { f: FormPedido; mudar: (p: Partial<FormPedido>) => void; erros: ErrosPedido }) {
+function PassoOnde({
+  f,
+  mudar,
+  erros,
+  aoMarcarNoMapa,
+}: {
+  f: FormPedido
+  mudar: (p: Partial<FormPedido>) => void
+  erros: ErrosPedido
+  aoMarcarNoMapa: (lado: 'origem' | 'destino') => void
+}) {
+  const textoRota = f.kmEstimado !== null ? formatarRota(f.kmEstimado, f.minutosEstimados) : null
   return (
     <div className="space-y-5">
       <Cartao className="flex gap-3">
@@ -303,24 +319,32 @@ function PassoOnde({ f, mudar, erros }: { f: FormPedido; mudar: (p: Partial<Form
           <span className="size-0 border-x-[7px] border-t-[12px] border-x-transparent border-t-[var(--cor-laranja)]" />
         </div>
         <div className="min-w-0 flex-1 space-y-4">
-          <Campo
+          <CampoEndereco
             rotulo="Origem"
-            value={f.origem}
-            onChange={(e) => mudar({ origem: e.target.value })}
+            valor={{ texto: f.origem, local: f.origemLocal }}
+            aoMudar={(v) => mudar({ origem: v.texto, origemLocal: v.local, kmEstimado: null, minutosEstimados: null })}
+            aoMarcarNoMapa={() => aoMarcarNoMapa('origem')}
             placeholder="Endereço ou local de saída"
-            autoComplete="off"
-            maxLength={200}
             erro={erros.origem}
           />
-          <Campo
+          <CampoEndereco
             rotulo="Destino"
-            value={f.destino}
-            onChange={(e) => mudar({ destino: e.target.value })}
+            valor={{ texto: f.destino, local: f.destinoLocal }}
+            aoMudar={(v) => mudar({ destino: v.texto, destinoLocal: v.local, kmEstimado: null, minutosEstimados: null })}
+            aoMarcarNoMapa={() => aoMarcarNoMapa('destino')}
             placeholder="Endereço ou local de chegada"
-            autoComplete="off"
-            maxLength={200}
             erro={erros.destino}
           />
+          {textoRota && (
+            <p
+              data-testid="rota-estimada"
+              aria-live="polite"
+              className="flex items-baseline justify-between gap-3 rounded-campo bg-selecao-suave px-3.5 py-3"
+            >
+              <span className="font-semibold tabular-nums">{textoRota.km}</span>
+              {textoRota.tempo && <span className="ivo-legenda text-texto-suave">{textoRota.tempo}</span>}
+            </p>
+          )}
         </div>
       </Cartao>
 
@@ -507,6 +531,13 @@ function PassoRevisar({
         </LinhaResumo>
         <LinhaResumo titulo="Onde" aoEditar={() => irPara(2)}>
           <Rota origem={f.origem} destino={f.destino} compacta />
+          {f.kmEstimado !== null && (
+            <p className="mt-1 ivo-legenda text-texto-suave">
+              {[formatarRota(f.kmEstimado, f.minutosEstimados).km, formatarRota(f.kmEstimado, f.minutosEstimados).tempo]
+                .filter(Boolean)
+                .join(', ')}
+            </p>
+          )}
           <p className="mt-1 ivo-legenda text-texto-suave">{rotuloTrajeto(f.levar, f.trazer)}</p>
           {(f.contatoNome || f.contatoTelefone) && (
             <p className="ivo-legenda text-texto-suave">
@@ -523,6 +554,7 @@ function PassoRevisar({
           <p className="ivo-legenda text-texto-suave">Reboque: {ROTULO_REBOQUE[f.reboque]}</p>
         </LinhaResumo>
       </Cartao>
+      <PreviaOrcamento f={f} />
       <div className="flex gap-3 rounded-cartao border-[1.5px] border-marinho-2/40 bg-marinho-2/10 p-4" data-testid="aviso-prazo">
         <Icone nome="relogio" className="mt-0.5 text-link" />
         <p className="ivo-corpo">
@@ -592,6 +624,9 @@ export function NovoPedido() {
   const [criado, setCriado] = useState<{ id: string; numero: number } | null>(null)
   const [confirmarSaida, setConfirmarSaida] = useState(false)
   const [rodada, setRodada] = useState(0)
+  const [mapaPara, setMapaPara] = useState<'origem' | 'destino' | null>(null)
+  const [rotas, setRotas] = useState<Record<string, { km: number | null; minutos: number | null }>>({})
+  const rotasPedidas = useRef(new Set<string>())
   const titulo = useRef<HTMLHeadingElement>(null)
   const primeiraVez = useRef(true)
   const regras = useConsulta('novo-pedido-regras', api.regrasDoServico)
@@ -607,6 +642,15 @@ export function NovoPedido() {
     titulo.current?.focus()
     window.scrollTo({ top: 0 })
   }, [passo])
+
+  const chaveRota = chaveDaRota(f.origemLocal, f.destinoLocal)
+  useEffect(() => {
+    if (!chaveRota || rotasPedidas.current.has(chaveRota) || !f.origemLocal || !f.destinoLocal) return
+    rotasPedidas.current.add(chaveRota)
+    void rota(f.origemLocal, f.destinoLocal).then((r) => setRotas((m) => ({ ...m, [chaveRota]: r })))
+  }, [chaveRota, f.origemLocal, f.destinoLocal])
+  const rotaAtual = chaveRota ? rotas[chaveRota] : undefined
+  const fc: FormPedido = { ...f, kmEstimado: rotaAtual?.km ?? null, minutosEstimados: rotaAtual?.minutos ?? null }
 
   const mudar = (p: Partial<FormPedido>) => {
     setF((a) => ({ ...a, ...p }))
@@ -670,7 +714,7 @@ export function NovoPedido() {
     }
     setEnviando(true)
     setErroEnvio(null)
-    const r = await pedidos.criar(montarPedido(f))
+    const r = await pedidos.criar(montarPedido(fc))
     setEnviando(false)
     if (r.ok && typeof r.id === 'string') {
       setCriado({ id: r.id, numero: Number(r.numero) })
@@ -698,10 +742,10 @@ export function NovoPedido() {
       />
       <main className="mx-auto w-full max-w-lg flex-1 p-4 pb-6">
         {passo === 1 && <PassoQuando f={f} mudar={mudar} rodada={rodada} erro={erros.inicio} aviso={aviso} />}
-        {passo === 2 && <PassoOnde f={f} mudar={mudar} erros={erros} />}
+        {passo === 2 && <PassoOnde f={fc} mudar={mudar} erros={erros} aoMarcarNoMapa={setMapaPara} />}
         {passo === 3 && <PassoOque f={f} mudar={mudar} erros={erros} />}
         {passo === 4 && (
-          <PassoRevisar f={f} irPara={setPasso} prazoHoras={prazoHoras} erroEnvio={erroEnvio} saldo={credito.saldo} />
+          <PassoRevisar f={fc} irPara={setPasso} prazoHoras={prazoHoras} erroEnvio={erroEnvio} saldo={credito.saldo} />
         )}
         {enviando && <CarregandoPickup ativo rotulo="Enviando o pedido…" />}
       </main>
@@ -710,6 +754,17 @@ export function NovoPedido() {
           {enviando ? 'Enviando…' : rotuloBotao}
         </Botao>
       </Rodape>
+
+      <FolhaMarcarNoMapa
+        aberta={mapaPara !== null}
+        centro={(mapaPara === 'origem' ? (f.origemLocal ?? f.destinoLocal) : (f.destinoLocal ?? f.origemLocal)) ?? null}
+        aoFechar={() => setMapaPara(null)}
+        aoUsar={(local) => {
+          if (mapaPara === 'origem') mudar({ origem: local.nome, origemLocal: local, kmEstimado: null, minutosEstimados: null })
+          else mudar({ destino: local.nome, destinoLocal: local, kmEstimado: null, minutosEstimados: null })
+          setMapaPara(null)
+        }}
+      />
 
       <Folha aberta={confirmarSaida} titulo="Descartar este pedido?" onFechar={() => setConfirmarSaida(false)}>
         <p className="ivo-corpo text-texto-suave">O que você preencheu até aqui será perdido.</p>

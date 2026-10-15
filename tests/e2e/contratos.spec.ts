@@ -202,6 +202,22 @@ test.describe('configurações e empresas', () => {
     expect(chamadas.find((c) => c.rpc === 'definir_retencao_fotos')?.corpo).toEqual({ p_dias: 45 })
   })
 
+  test('teto diário da busca de endereços: cartão em Configurações, salva só com confirmação do servidor', async ({ page }) => {
+    await comSessaoFalsa(page, ADM, AAL2)
+    const chamadas = await simularApi(page)
+    await page.goto('/adm/configuracoes')
+    const cartao = page.getByTestId('cartao-teto-mapas')
+    await expect(cartao).toContainText('2.000 por dia')
+    await cartao.getByRole('button', { name: 'Alterar teto' }).click()
+    await cartao.getByLabel('Buscas por empresa, por dia').fill('0')
+    await cartao.getByRole('button', { name: 'Salvar' }).click()
+    await expect(cartao.getByText('Informe um número inteiro, de 1 a 1.000.000.')).toBeVisible()
+    await cartao.getByLabel('Buscas por empresa, por dia').fill('3500')
+    await cartao.getByRole('button', { name: 'Salvar' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Cada empresa pode fazer até 3.500 buscas de endereço por dia.' })).toBeVisible()
+    expect(chamadas.find((c) => c.rpc === 'definir_teto_mapas')?.corpo).toEqual({ p_valor: 3500 })
+  })
+
   test('nova empresa: depois de criar, convite para o contrato a partir da tabela modelo', async ({ page }) => {
     await comSessaoFalsa(page, ADM, AAL2)
     await simularApi(page, { ...CENARIO, rpc: { salvar_empresa: { ok: true, id: EMPRESA_PORTO.id } } })

@@ -42,6 +42,7 @@ jobs:
         env:
           REF: ${{ vars.SUPABASE_PROJECT_REF }}
           SUPABASE_AUTH_CAPTCHA_SECRET: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          GOOGLE_MAPS_CHAVE_SERVIDOR: ${{ secrets.GOOGLE_MAPS_CHAVE_SERVIDOR }}
         run: |
           set -euo pipefail
           # Guarda (a): o project_id de [remotes.producao] tem de ser o projeto de destino.
@@ -58,6 +59,15 @@ jobs:
           npx supabase config push --project-ref "$REF" --yes
           npx supabase db push --yes
           npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev --project-ref "$REF"
+          # Fase 3A: chave de servidor do Google (Places New e Routes). Sem ela, a função `enderecos` devolve
+          # MAPAS_INDISPONIVEL e o app cai no texto livre (RUNBOOK §Google Maps).
+          if [ -n "${GOOGLE_MAPS_CHAVE_SERVIDOR:-}" ]; then
+            printf 'GOOGLE_MAPS_CHAVE_SERVIDOR=%s\n' "$GOOGLE_MAPS_CHAVE_SERVIDOR" > "$RUNNER_TEMP/segredos-mapas.env"
+            npx supabase secrets set --env-file "$RUNNER_TEMP/segredos-mapas.env" --project-ref "$REF"
+            rm -f "$RUNNER_TEMP/segredos-mapas.env"
+          else
+            echo "GOOGLE_MAPS_CHAVE_SERVIDOR ausente: busca de endereços desligada (texto livre)"
+          fi
           if [ -n "$(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name '_*' 2>/dev/null)" ]; then
             npx supabase functions deploy --project-ref "$REF" --import-map supabase/functions/deno.json
           else
@@ -70,6 +80,8 @@ jobs:
           npm run build
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          # Fase 3A: chave de navegador, restrita ao domínio do app e só à Map Tiles API (pode faltar: sem mapa).
+          VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR: ${{ vars.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR }}
       - name: Nenhum segredo no bundle
         run: node scripts/varrer-segredos.ts dist
       - name: Publicar no Cloudflare Pages

@@ -119,6 +119,39 @@ describe('montarPedido', () => {
   })
 })
 
+describe('montarPedido com endereços (fase 3A)', () => {
+  it('inclui coordenadas e km só quando há local escolhido', () => {
+    const base = { ...COMPLETO }
+    expect(montarPedido(base)).not.toHaveProperty('origem_lat')
+    expect(montarPedido(base)).not.toHaveProperty('km_estimado')
+    const p = montarPedido({
+      ...base,
+      origemLocal: { nome: 'Porto', endereco: 'Av. X', lat: -26.9, lng: -48.66, place_id: 'ChIJabc' },
+      destinoLocal: { nome: 'Estaleiro', endereco: null, lat: -26.89, lng: -48.65, place_id: null },
+      kmEstimado: 38.2,
+      minutosEstimados: 45,
+    })
+    expect(p).toMatchObject({
+      origem_lat: -26.9,
+      origem_lng: -48.66,
+      origem_endereco: 'Av. X',
+      origem_place_id: 'ChIJabc',
+      destino_lat: -26.89,
+      destino_lng: -48.65,
+      km_estimado: 38.2,
+      minutos_estimados: 45,
+    })
+    expect(p).not.toHaveProperty('destino_place_id')
+    expect(p).not.toHaveProperty('destino_endereco')
+  })
+
+  it('km sem os dois pontos não vai (a rota só existe com origem e destino escolhidos)', () => {
+    const p = montarPedido({ ...COMPLETO, origemLocal: null, destinoLocal: null, kmEstimado: 10, minutosEstimados: 12 })
+    expect(p).not.toHaveProperty('km_estimado')
+    expect(p).not.toHaveProperty('minutos_estimados')
+  })
+})
+
 describe('temDados', () => {
   it('formulário intocado pode fechar sem perguntar', () => {
     expect(temDados(FORM_VAZIO)).toBe(false)

@@ -147,10 +147,10 @@ export function pedidoOrcadoCliente() {
 }
 
 /** Detalhe que o motorista atribuído recebe com o pedido aguardando orçamento. */
-export function pedidoSolicitadoMotorista() {
+export function pedidoSolicitadoMotorista(extra: Record<string, unknown> = {}) {
   return {
     ok: true,
-    pedido: detalheFalso({ status: 'SOLICITADA', solicitante_nome: 'Diego Rocha' }),
+    pedido: detalheFalso({ status: 'SOLICITADA', solicitante_nome: 'Diego Rocha', ...extra }),
     historico: [HISTORICO_ORCADO[0]],
     orcamento: null,
     acoes: { ...SEM_ACOES, orcar: true, recusar: true, cancelar: true },
@@ -319,16 +319,22 @@ export interface PedidosFalsos {
   equipe?: boolean
   /** Respostas das RPCs de escrita, em sequência por nome (depois `{ ok: true }`). */
   respostas?: Record<string, unknown[]>
+  /** Atraso (ms) de uma RPC de leitura a partir da chamada `depois` + 1 (testes de fluidez). */
+  atrasos?: Record<string, { ms: number; depois: number }>
 }
 
 /** Registra as RPCs de pedidos/agenda/orçamento; devolve as chamadas recebidas (nome + corpo). */
 export async function simularPedidos(page: Page, opcoes: PedidosFalsos = {}) {
   const chamadas: Array<{ rpc: string; corpo: Record<string, unknown> }> = []
   const corpoDe = (route: Route) => (route.request().postDataJSON() ?? {}) as Record<string, unknown>
+  const contagem: Record<string, number> = {}
   const rota = (nome: string, responder: (corpo: Record<string, unknown>) => unknown) =>
-    page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, (route) => {
+    page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, async (route) => {
       const corpo = corpoDe(route)
       chamadas.push({ rpc: nome, corpo })
+      contagem[nome] = (contagem[nome] ?? 0) + 1
+      const atraso = opcoes.atrasos?.[nome]
+      if (atraso && contagem[nome]! > atraso.depois) await new Promise((r) => setTimeout(r, atraso.ms))
       return json(route, responder(corpo))
     })
   const detalhes = [...(opcoes.detalhes ?? [pedidoOrcadoCliente()])]

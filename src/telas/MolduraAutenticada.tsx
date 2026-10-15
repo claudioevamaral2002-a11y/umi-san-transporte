@@ -179,6 +179,17 @@ export function MolduraAutenticada() {
   const menu = useRef<HTMLDialogElement>(null)
   const local = useLocation()
 
+  // Carrega antes o código das abas principais (sem "Carregando…" no primeiro toque).
+  useEffect(() => {
+    const carregar = () => {
+      void import('./Inicio.tsx')
+      void import('./pedidos/Pedidos.tsx')
+      void import('./agenda/Agenda.tsx')
+    }
+    const t = setTimeout(carregar, 800)
+    return () => clearTimeout(t)
+  }, [])
+
   // Fecha o menu ao trocar de tela.
   useEffect(() => {
     menu.current?.close()
@@ -189,7 +200,7 @@ export function MolduraAutenticada() {
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] md:grid-rows-[auto_1fr]">
-      <header className="nao-imprimir sticky top-0 z-20 flex items-center justify-between gap-3 bg-fundo px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 text-texto md:col-span-2 md:bg-marinho md:pb-2.5 md:text-papel md:sobre-marinho">
+      <header className="nao-imprimir transicao-topo sticky top-0 z-20 flex items-center justify-between gap-3 bg-fundo px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 text-texto md:col-span-2 md:bg-marinho md:pb-2.5 md:text-papel md:sobre-marinho">
         <NavLink to="/" aria-label="IVO Transportes, início" className="flex min-h-12 items-center rounded-lg">
           <SimboloIvo altura={34} />
         </NavLink>
@@ -227,7 +238,7 @@ export function MolduraAutenticada() {
 
       <nav
         aria-label="Navegação"
-        className="nao-imprimir fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-barra px-2 pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="nao-imprimir transicao-abas fixed inset-x-0 bottom-0 z-20 border-t border-borda bg-barra px-2 pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="flex">
           {abas.map((a) => (

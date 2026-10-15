@@ -52,6 +52,19 @@ export interface DetalhePedido {
   prazo_vencido: boolean
   criada_em: string
   atualizada_em: string
+  // Fase 3A: endereços reconhecidos e rota estimada (opcionais: pedidos antigos não têm).
+  origem_lat?: number | null
+  origem_lng?: number | null
+  destino_lat?: number | null
+  destino_lng?: number | null
+  origem_endereco?: string | null
+  destino_endereco?: string | null
+  origem_place_id?: string | null
+  destino_place_id?: string | null
+  km_estimado?: number | null
+  /** Km que o motorista orça: o da rota, ou o dobro em ida e volta (calculado no banco). */
+  km_para_orcar?: number | null
+  minutos_estimados?: number | null
 }
 
 export interface LinhaOrcamento {
@@ -176,6 +189,14 @@ export interface Pendencias {
   proximos: ItemPendencia[]
 }
 
+export interface EntradaPrevia {
+  km: number
+  usa_reboque: boolean
+  levar: boolean
+  trazer: boolean
+  modalidade: Modalidade
+}
+
 export interface Previa {
   modalidade: Modalidade
   linhas: LinhaOrcamento[]
@@ -224,6 +245,9 @@ export const pedidos = {
     (await ler<{ dias: DiaDoMes[] }>('dias_do_mes', { p_mes: mes, p_duracao_min: duracaoMin })).dias,
 
   pendencias: () => ler<Pendencias>('pendencias', {}),
+
+  /** Fase 3A: prévia do orçamento pela tabela do contrato (N1/N2; nunca grava orçamento). */
+  previaOrcamento: (p: EntradaPrevia) => ler<{ linhas: LinhaOrcamento[]; total_cent: number }>('previa_orcamento', { p }),
 
   // Ações (todas confirmadas pelo servidor).
   criar: (p: Record<string, unknown>) => chamar('criar_pedido', { p }),
