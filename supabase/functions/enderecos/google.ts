@@ -24,6 +24,17 @@ function noBrasil(p: unknown): p is Ponto {
   )
 }
 
+/** Ponto da rota: do Google, pelo place_id (o app não guarda as coordenadas do Google); marcado no mapa, por lat/lng. */
+type PontoRota = { place_id: string } | Ponto
+function pontoValido(p: unknown): p is PontoRota {
+  if (typeof p !== 'object' || p === null) return false
+  const { place_id, lat, lng } = p as Record<string, unknown>
+  if (place_id !== undefined) return typeof place_id === 'string' && PLACE.test(place_id) && lat === undefined && lng === undefined
+  return noBrasil(p)
+}
+const paraGoogle = (p: PontoRota) =>
+  'place_id' in p ? { placeId: p.place_id } : { location: { latLng: { latitude: p.lat, longitude: p.lng } } }
+
 const texto = (v: unknown, min: number, max: number): string | null => {
   if (typeof v !== 'string') return null
   const t = v.trim()
@@ -67,7 +78,7 @@ export function criarManipuladorEnderecos(deps: {
           || !texto(c.nome, 1, 200)) return INVALIDO
       tipo = 'DETALHAR'
     } else if (c.acao === 'rota') {
-      if (!noBrasil(c.origem) || !noBrasil(c.destino)) return INVALIDO
+      if (!pontoValido(c.origem) || !pontoValido(c.destino)) return INVALIDO
       tipo = 'ROTA'
     } else {
       return INVALIDO
@@ -124,15 +135,15 @@ export function criarManipuladorEnderecos(deps: {
     }
 
     // Rota: falha, tempo esgotado ou nenhuma rota de carro viram km null (o pedido segue sem prévia).
-    const o = c.origem as Ponto
-    const d = c.destino as Ponto
+    const o = c.origem as PontoRota
+    const d = c.destino as PontoRota
     const r = (await chamar(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
       {
         method: 'POST',
         body: JSON.stringify({
-          origin: { location: { latLng: { latitude: o.lat, longitude: o.lng } } },
-          destination: { location: { latLng: { latitude: d.lat, longitude: d.lng } } },
+          origin: paraGoogle(o),
+          destination: paraGoogle(d),
           travelMode: 'DRIVE',
           languageCode: 'pt-BR',
           units: 'METRIC',

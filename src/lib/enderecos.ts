@@ -6,8 +6,17 @@ import { formatarDuracao } from './tempo.ts'
  * ficam em `enderecosRemoto.ts`.
  */
 
-/** Ponto escolhido. Sem `place_id` nem `endereco`: ponto marcado no mapa. */
-export type Local = { nome: string; endereco: string | null; lat: number; lng: number; place_id: string | null }
+/**
+ * Ponto escolhido. Do Google: `place_id` (as coordenadas e o endereço, quando vêm, ficam só na memória da tela; pelos
+ * termos do Google não são guardados). Marcado no mapa: só `lat`/`lng`, sem `place_id`.
+ */
+export type Local = {
+  nome: string
+  endereco: string | null
+  lat: number | null
+  lng: number | null
+  place_id: string | null
+}
 
 export type SugestaoGoogle = { place_id: string; nome: string; endereco: string }
 
@@ -48,7 +57,7 @@ export function juntarSugestoes(locais: Local[], google: SugestaoGoogle[]): Suge
   ]
 }
 
-const ponto = (l: Local) => l.place_id ?? `${l.lat.toFixed(5)},${l.lng.toFixed(5)}`
+const ponto = (l: Local) => l.place_id ?? `${l.lat?.toFixed(5)},${l.lng?.toFixed(5)}`
 
 /** Identifica a dupla origem/destino: a rota é pedida uma vez por par. `null` sem os dois pontos. */
 export function chaveDaRota(origem: Local | null, destino: Local | null): string | null {

@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { comBanco, criarPessoa, empresaComContrato, motoristaUnico, rpc } from './ajuda.ts'
 
 /**
- * Fase 3A contra o banco real: a prévia do cliente dá o mesmo total que o orçamento do motorista para os mesmos km, e o
- * pedido com coordenadas grava o km estimado, que o motorista recebe no detalhe.
+ * Fase 3A contra o banco real: a prévia do cliente dá o mesmo total que o orçamento do motorista para os mesmos km
+ * (também em ida e volta), e do ponto do Google o pedido guarda só o place_id (termos do Google).
  */
 describe('prévia do orçamento e km estimado', () => {
-  it('a prévia do N2 dá o mesmo total que o orçamento do motorista; o detalhe traz o km estimado', async () => {
+  it('a prévia do N2 dá o mesmo total que o orçamento do motorista; o pedido guarda só o place_id', async () => {
     const empresa = await empresaComContrato()
     const n2 = await criarPessoa({ papel: 'CLIENTE', nivel: 2, empresa })
     const motorista = await motoristaUnico()
@@ -27,11 +27,7 @@ describe('prévia do orçamento e km estimado', () => {
         reboque: 'SIM',
         origem_lat: -26.9078,
         origem_lng: -48.6619,
-        destino_lat: -26.8986,
-        destino_lng: -48.6542,
         destino_place_id: 'ChIJdef',
-        km_estimado: 38.2,
-        minutos_estimados: 45,
       },
     })
     expect(criado).toMatchObject({ ok: true })
@@ -45,7 +41,7 @@ describe('prévia do orçamento e km estimado', () => {
     expect(previa.total_cent).toBe(orcamento.total_cent)
 
     const detalhe = await rpc(motorista, 'pedido', { p_id: criado.id })
-    expect(detalhe.pedido).toMatchObject({ km_estimado: 38.2, minutos_estimados: 45, destino_place_id: 'ChIJdef' })
+    expect(detalhe.pedido).toMatchObject({ destino_place_id: 'ChIJdef', destino_lat: null, origem_lat: -26.9078, trechos_km: 1 })
 
     const locais = await rpc(n2, 'locais_da_empresa', { p_texto: 'estaleiro' })
     expect(locais).toMatchObject({ ok: true, locais: [{ nome: 'Estaleiro Navegantes', place_id: 'ChIJdef' }] })
@@ -56,7 +52,7 @@ describe('prévia do orçamento e km estimado', () => {
       p: {
         inicio: ida.toISOString(), duracao_min: 120, origem: 'Porto de Itajaí', destino: 'Estaleiro Navegantes',
         levar: true, trazer: true, carga: 'PESSOAS', pessoas_qtd: 1, modalidade: 'VEICULO_PROPRIO', reboque: 'NAO',
-        origem_lat: -26.9078, origem_lng: -48.6619, destino_lat: -26.8986, destino_lng: -48.6542, km_estimado: 38.2,
+        origem_place_id: 'ChIJabc', destino_place_id: 'ChIJdef',
       },
     })
     expect(idaEVolta).toMatchObject({ ok: true })
@@ -64,7 +60,7 @@ describe('prévia do orçamento e km estimado', () => {
       p: { km: 38.2, usa_reboque: false, levar: true, trazer: true, modalidade: 'VEICULO_PROPRIO' },
     })
     const detalheIv = await rpc(motorista, 'pedido', { p_id: idaEVolta.id })
-    expect(detalheIv.pedido).toMatchObject({ km_estimado: 38.2, km_para_orcar: 76.4 })
+    expect(detalheIv.pedido).toMatchObject({ origem_place_id: 'ChIJabc', trechos_km: 2 })
     const orcamentoIv = await rpc(motorista, 'calcular_orcamento', { p_atividade: idaEVolta.id, p: { km: 76.4 } })
     expect(previaIv.total_cent).toBe(orcamentoIv.total_cent)
 

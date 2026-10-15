@@ -155,9 +155,11 @@ test.describe('endereços no novo pedido', () => {
       origem_place_id: 'ChIJpor',
       destino: 'Estaleiro Navship',
       destino_place_id: 'ChIJnav',
-      km_estimado: 38.2,
-      minutos_estimados: 45,
     })
+    // Termos do Google: coordenadas, endereço e km do Google não são guardados no pedido.
+    for (const chave of ['origem_lat', 'destino_lat', 'origem_endereco', 'km_estimado', 'minutos_estimados']) {
+      expect(criar).not.toHaveProperty(chave)
+    }
     expect(csp).toEqual([])
   })
 

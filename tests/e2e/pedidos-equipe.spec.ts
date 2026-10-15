@@ -11,6 +11,7 @@ import {
 } from './apoio/pedidosFalsos.ts'
 import { escolherDiaNaAgenda } from './apoio/escolherDia.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
+import { simularMapas } from './apoio/mapasFalsos.ts'
 import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
 const AAL2 = { aal: 'aal2' as const }
@@ -59,22 +60,28 @@ test.describe('motorista', () => {
     expect(csp).toEqual([])
   })
 
-  test('orçar: km já preenchidos pela rota, com aviso para conferir; pedido antigo sem km continua igual', async ({ page }) => {
+  test('orçar: km calculados pela rota ao abrir, com aviso para conferir; pedido antigo sem pontos continua igual', async ({ page }) => {
     await comSessaoFalsa(page, MOTORISTA, AAL2)
     await simularApi(page)
     await simularPedidos(page, {
       detalhes: [
-        pedidoSolicitadoMotorista({ km_estimado: 38.2, km_para_orcar: 38.2, minutos_estimados: 45 }),
+        pedidoSolicitadoMotorista({ origem_place_id: 'ChIJpor', destino_lat: -26.91, destino_lng: -48.65, trechos_km: 1 }),
         pedidoSolicitadoMotorista(),
-        pedidoSolicitadoMotorista({ trazer: true, km_estimado: 38.2, km_para_orcar: 76.4, minutos_estimados: 45 }),
+        pedidoSolicitadoMotorista({ trazer: true, origem_place_id: 'ChIJpor', destino_place_id: 'ChIJdef', trechos_km: 2 }),
       ],
     })
+    const mapas = await simularMapas(page)
     await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
     await expect(page.getByLabel('Quilometragem')).toHaveValue('38,2')
     await expect(page.getByTestId('km-estimado')).toHaveText('Estimado pela rota: 38 km, cerca de 45 min. Confira.')
     await page.reload()
     await expect(page.getByLabel('Quilometragem')).toHaveValue('0')
     await expect(page.getByTestId('km-estimado')).toHaveCount(0)
+    // A rota vai pelo place_id (Google) ou pelas coordenadas do ponto marcado no mapa.
+    expect(mapas.filter((c) => c.acao === 'rota')[0]).toMatchObject({
+      origem: { place_id: 'ChIJpor' },
+      destino: { lat: -26.91, lng: -48.65 },
+    })
     // Ida e volta: o km do orçamento é o dobro do trecho da rota.
     await page.reload()
     await expect(page.getByLabel('Quilometragem')).toHaveValue('76,4')

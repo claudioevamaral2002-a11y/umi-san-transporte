@@ -52,19 +52,15 @@ export interface DetalhePedido {
   prazo_vencido: boolean
   criada_em: string
   atualizada_em: string
-  // Fase 3A: endereços reconhecidos e rota estimada (opcionais: pedidos antigos não têm).
+  // Fase 3A (opcionais: pedidos antigos não têm). Ponto do Google: só o place_id; marcado no mapa: lat/lng.
   origem_lat?: number | null
   origem_lng?: number | null
   destino_lat?: number | null
   destino_lng?: number | null
-  origem_endereco?: string | null
-  destino_endereco?: string | null
   origem_place_id?: string | null
   destino_place_id?: string | null
-  km_estimado?: number | null
-  /** Km que o motorista orça: o da rota, ou o dobro em ida e volta (calculado no banco). */
-  km_para_orcar?: number | null
-  minutos_estimados?: number | null
+  /** Trechos que o km do orçamento cobre: 2 em ida e volta, 1 em trecho único (regra do banco). */
+  trechos_km?: 1 | 2
 }
 
 export interface LinhaOrcamento {

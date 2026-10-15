@@ -15,9 +15,12 @@ const MINIMO_GOOGLE = 3
 function comoLocal(x: unknown): Local | null {
   if (!x || typeof x !== 'object') return null
   const l = x as Record<string, unknown>
-  const lat = Number(l.lat)
-  const lng = Number(l.lng)
-  if (typeof l.nome !== 'string' || !Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const lat = num(l.lat)
+  const lng = num(l.lng)
+  const place = typeof l.place_id === 'string' ? l.place_id : null
+  // Local do Google: basta o place_id. Ponto marcado no mapa: precisa das coordenadas.
+  if (typeof l.nome !== 'string' || (!place && (lat === null || lng === null))) return null
   return {
     nome: l.nome,
     endereco: typeof l.endereco === 'string' ? l.endereco : null,
@@ -55,13 +58,21 @@ export async function detalhar(placeId: string, nome: string, sessao: string): P
   return r.ok ? comoLocal(r.local) : null
 }
 
-/** Distância e tempo da rota de carro; `null` nos dois quando não há rota ou o Google falhou. */
-export async function rota(o: Local, d: Local): Promise<{ km: number | null; minutos: number | null }> {
-  const r = await chamarFuncao('enderecos', {
-    acao: 'rota',
-    origem: { lat: o.lat, lng: o.lng },
-    destino: { lat: d.lat, lng: d.lng },
-  })
+/** Ponto da rota: do Google pelo place_id; marcado no mapa pelas coordenadas. */
+export function pontoDaRota(l: Pick<Local, 'lat' | 'lng' | 'place_id'>): Record<string, unknown> | null {
+  if (l.place_id) return { place_id: l.place_id }
+  return l.lat !== null && l.lng !== null ? { lat: l.lat, lng: l.lng } : null
+}
+
+/** Distância e tempo da rota de carro (calculados na hora, nunca guardados); `null` sem rota ou com o Google fora. */
+export async function rota(
+  o: Pick<Local, 'lat' | 'lng' | 'place_id'>,
+  d: Pick<Local, 'lat' | 'lng' | 'place_id'>,
+): Promise<{ km: number | null; minutos: number | null }> {
+  const origem = pontoDaRota(o)
+  const destino = pontoDaRota(d)
+  if (!origem || !destino) return { km: null, minutos: null }
+  const r = await chamarFuncao('enderecos', { acao: 'rota', origem, destino })
   const km = r.ok && typeof r.km === 'number' ? r.km : null
   return { km, minutos: km !== null && typeof r.minutos === 'number' ? r.minutos : null }
 }

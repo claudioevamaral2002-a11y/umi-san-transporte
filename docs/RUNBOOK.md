@@ -77,7 +77,7 @@ Local: GitHub, Settings, Environments, **producao** (https://github.com/claudioe
 | `SUPABASE_PROJECT_REF` | variável | ambiente `producao` | identificador do projeto Supabase |
 | `CLOUDFLARE_ACCOUNT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY` | variáveis | ambiente `producao` | públicas (vão no front) |
 | `GOOGLE_MAPS_CHAVE_SERVIDOR` | segredo | ambiente `producao` (o Deploy copia para o Supabase) | busca de endereços e rota (fase 3A). Ver item 16 |
-| `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` | variável | ambiente `producao` | blocos do mapa no "Marcar no mapa" (fase 3A; restrita ao domínio). Ver item 16 |
+| `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` | variável (ou segredo) | ambiente `producao` | blocos do mapa no "Marcar no mapa" (fase 3A; restrita ao domínio). Ver item 16 |
 
 **Mover para o ambiente `producao`:** `SUPABASE_ACCESS_TOKEN` e `SUPABASE_DB_PASSWORD` devem ficar só no ambiente `producao` (assim só os workflows que usam esse ambiente os enxergam). O dono faz assim: em Settings, Environments, **producao**, seção *Environment secrets*, **Add environment secret**, cole o valor com o mesmo nome; depois, em Settings, Secrets and variables, Actions, apague o segredo de mesmo nome do nível do repositório. Rode o workflow Deploy de novo para confirmar.
 
@@ -104,7 +104,7 @@ Detalhes em [docs/fases/fase-1-desenho.md](fases/fase-1-desenho.md), seção 7. 
 - O gestor da empresa (cliente N1) gera link de senha para colegas da própria empresa, o que equivale a assumir a conta deles; e pode reativar um colega da própria empresa que o ADM tenha desativado. Tudo auditado; o ADM pode desativar o próprio N1 (ver [fase-1b-desenho-e-plano.md](fases/fase-1b-desenho-e-plano.md), "Revisão de segurança").
 - Se o serviço de senhas vazadas (HIBP) estiver fora do ar, definir senha fica bloqueado até voltar.
 - A configuração de Auth só muda pelo código (`config.toml`); mudanças feitas no painel seriam sobrescritas no próximo deploy.
-- Endereços (fase 3A): os locais da empresa são gravados a partir dos pedidos; quem cria o pedido informa nome e ponto, e o primeiro registro de um local vale para a empresa toda. Um usuário mal-intencionado da própria empresa poderia gravar primeiro um nome ou ponto errado para um local; o efeito fica na mesma empresa e não mexe em dinheiro (a prévia é estimativa e o motorista confere os km). O custo do Google tem teto diário por empresa e por pessoa (item 16.4).
+- Endereços (fase 3A): pelos termos do Google, de um ponto do Google o app guarda só o código do local (place_id); os km são calculados na hora. Os locais da empresa são gravados a partir dos pedidos; quem cria o pedido informa nome e ponto, e o primeiro registro de um local vale para a empresa toda. Um usuário mal-intencionado da própria empresa poderia gravar primeiro um nome ou ponto errado para um local; o efeito fica na mesma empresa e não mexe em dinheiro (a prévia é estimativa e o motorista confere os km). O custo do Google tem teto diário por empresa e por pessoa (item 16.4).
 - Pedidos (fase 2A): um cliente pode pré-reservar horários do motorista (até 20 pedidos por hora) mesmo sem intenção real; o motorista recusa e o horário volta. Quem trabalha na IVO (ADM, gestor de frota, motorista) recebe em tempo real o número interno e o status de todos os pedidos, sem detalhes. Ver [fase-2a-desenho-e-plano.md](fases/fase-2a-desenho-e-plano.md), "Revisão de segurança e concorrência".
 
 ---

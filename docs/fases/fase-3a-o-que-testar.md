@@ -7,7 +7,7 @@ Aplicativo: https://umi-san-transporte.pages.dev. Use o **celular**. Marque cada
 **Preparação:** contrato vigente da Umi San com preço de km e taxa de reboque; um **N2** e um **N3** da Umi San; o **motorista** ativo com 2FA.
 
 ## A. Deploy
-1. **Migrations e função.** No log do workflow **Deploy** da `main`: o passo de migrations aplicou `20261015120000`, `20261015120100`, `20261015120200` e `20261015120300`, e a lista de funções publicadas inclui `enderecos`.
+1. **Migrations e função.** No log do workflow **Deploy** da `main`: o passo de migrations aplicou `20261015120000`, `20261015120100`, `20261015120200` e `20261015120300` (no primeiro deploy) e `20261015140000` (ajuste dos termos do Google), e a lista de funções publicadas inclui `enderecos`.
 
 ## B. Cliente pede com endereços reais (N2)
 2. **Buscar um porto.** **Novo pedido**, escolha dia e horário, **Continuar**. Em **Origem**, digite `porto itaj`: aparecem sugestões do Google em duas linhas (nome e endereço). Toque em **Porto de Itajaí**: o campo mostra o nome e, embaixo, o endereço reconhecido.
@@ -21,7 +21,7 @@ Aplicativo: https://umi-san-transporte.pages.dev. Use o **celular**. Marque cada
 8. **N3 sem prévia.** O N3 da Umi San não vê **Novo pedido** (e, portanto, nenhuma prévia).
 
 ## D. Motorista
-9. **Km preenchidos.** O motorista abre o pedido do item 6 e toca em **Orçar**: o campo de km já vem com a estimativa e o aviso "Estimado pela rota: NN km, cerca de NN min. Confira.". Ajuste se precisar e envie normalmente. Um pedido antigo (de antes da 3A) abre o **Orçar** com os km vazios, sem aviso.
+9. **Km preenchidos.** O motorista abre o pedido do item 6 e toca em **Orçar**: em instantes o campo de km se preenche com a rota calculada agora e aparece o aviso "Estimado pela rota: … Confira." (em ida e volta, o dobro do trecho). Ajuste se precisar e envie normalmente. Um pedido antigo (de antes da 3A) abre o **Orçar** com os km vazios, sem aviso.
 
 ## E. Sem Google
 10. **Google fora do ar.** No Google Cloud, em **Credenciais**, edite a chave `servidor-enderecos` e, em **Restrições de API**, desmarque temporariamente a **Places API (New)**; salve e aguarde 5 minutos. No app, ao digitar a origem aparece "Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.", e o pedido segue até **Enviar pedido**, sem prévia. Depois **marque de novo** a Places API (New) e salve.

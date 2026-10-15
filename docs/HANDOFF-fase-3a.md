@@ -9,6 +9,7 @@ Estado em **14/10/2026**. Este documento passa o projeto de um chat (ou pessoa) 
 | **PR #24** (5 correções mobile) | **Na `main` e em produção** desde 14/10 (deploy verde). |
 | **PR #25** (`redesign-mobile` → `main`) | **Na `main`** desde 14/10. Atenção: as duas correções finais (fim do "pisca" e o cache entre contas) **não entraram** nesse merge, porque nunca tinham sido enviadas ao GitHub. Elas seguem na branch `fase-3a`. |
 | **Branch `fase-3a`** (no GitHub) | Rebaseada na `main`. **Fase 3A implementada** (12 tarefas, CI verde) e PR aberto para a `main`, sem merge. Leva junto as duas correções acima. Atualização em 14/10. |
+| **Termos do Google** | Resolvido em 15/10 (decisão do dono): dos pontos do Google o app guarda só o `place_id`; os km são calculados na hora. |
 | **Chaves do Google** | **Pendentes, com o dono:** [RUNBOOK](RUNBOOK.md) item 16. Sem elas o app funciona em texto livre. Roteiro de produção: [`fases/fase-3a-o-que-testar.md`](fases/fase-3a-o-que-testar.md). |
 
 Quando o PR #25 entrar na `main`, rode `git rebase main` na `fase-3a`, ou abra o PR da 3A já com base na `main`.

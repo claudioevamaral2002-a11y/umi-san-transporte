@@ -64,7 +64,7 @@ PWA ──(JWT)──► Edge Function `enderecos` ──(chave de servidor)─�
    - levar/trazer e modalidade vêm do formulário.
 
    Devolve as linhas e o total. Com "Usa reboque? Não sei", o app chama duas vezes e mostra os dois valores.
-6. **Gravação:** `api.criar_pedido` passa a aceitar e gravar coordenadas, endereço formatado, `place_id` e `km_estimado`. Ao criar o pedido, grava ou atualiza os dois locais em `app.locais_empresa`.
+6. **Gravação (dentro dos termos do Google, decisão do dono em 15/10):** de um ponto do Google, `api.criar_pedido` grava **só o `place_id`**; de um ponto marcado no mapa, as coordenadas. Endereço formatado, coordenadas e km do Google **não são gravados**: os km são calculados na hora pela rota (no "Onde?" e ao abrir o "Orçar"). Ao criar o pedido, grava ou atualiza os dois locais em `app.locais_empresa`.
 
 ### 4.1 Mapa sem afrouxar a CSP
 
@@ -75,19 +75,19 @@ O mapa oficial do Google para web (Maps JavaScript API) injeta `<style>` na pág
 
 ## 5. Dados (migration nova; nenhuma antiga é editada)
 
-- **`app.pedidos`:** colunas novas, todas opcionais, para o pedido antigo continuar válido:
-  - `origem_lat`, `origem_lng`, `destino_lat`, `destino_lng` (`numeric(9,6)`);
-  - `origem_endereco`, `destino_endereco` (`text`, até 300 caracteres);
-  - `origem_place_id`, `destino_place_id` (`text`);
-  - `km_estimado` (`numeric(7,1)`);
-  - `minutos_estimados` (`int`).
+> O modelo abaixo é o final, depois da migration `20261015140000_termos_google.sql`, que corrigiu as da primeira publicação para seguir os termos do Google.
 
-  Checagens: latitude entre -90 e 90, longitude entre -180 e 180, km entre 0 e 5000.
+- **`app.pedidos`:** colunas novas, todas opcionais, para o pedido antigo continuar válido:
+  - `origem_place_id`, `destino_place_id` (`text`): ponto do Google;
+  - `origem_lat`, `origem_lng`, `destino_lat`, `destino_lng` (`numeric(9,6)`): só de ponto marcado no mapa.
+
+  Checagens: latitude entre -90 e 90, longitude entre -180 e 180, e nunca `place_id` e coordenadas no mesmo lado.
+- **Termos do Google** (Service Specific Terms, itens 14.3 e 19.3, conferidos em 15/10/2026): coordenadas do Places e do Routes só podem ficar em cache por até 30 dias; o `place_id` pode ser guardado. Por isso o banco guarda só o `place_id` dos pontos do Google.
 - **`app.locais_empresa`:**
-  - colunas: `empresa_id`, `nome`, `endereco`, `lat`, `lng`, `place_id`, `usos`, `ultimo_uso`;
+  - colunas: `empresa_id`, `nome`, `lat`, `lng` (só ponto marcado no mapa), `place_id` (só ponto do Google), `usos`, `ultimo_uso`;
   - unicidade: (`empresa_id`, `place_id`) quando houver `place_id`, senão (`empresa_id`, `nome`, lat e lng arredondados a 5 casas);
   - sem escrita para usuários: grava só por `criar_pedido` e lê só por `api.locais_da_empresa`.
-- **`api.locais_da_empresa(p_texto)`:** até 5 locais da empresa de quem chama, por `usos` e `ultimo_uso`, com filtro por nome ou endereço sem acento. A equipe da IVO não usa essa busca.
+- **`api.locais_da_empresa(p_texto)`:** até 5 locais da empresa de quem chama, por `usos` e `ultimo_uso`, com filtro por nome sem acento. A equipe da IVO não usa essa busca.
 - **`api.previa_orcamento(p)`:**
   - liberada para o cliente N1 e N2 e com limite de uso;
   - entradas validadas: km de 0 a 5000, `usa_reboque` booleano, levar/trazer, modalidade, `inicio`;
@@ -96,7 +96,7 @@ O mapa oficial do Google para web (Maps JavaScript API) injeta `<style>` na pág
 - **`api.criar_pedido`:** passa a aceitar os campos novos e continua aceitando o pedido sem eles.
 - **`api.pedido` (detalhe):**
   - devolve os campos novos a quem já vê o pedido;
-  - o "Orçar" do motorista recebe `km_estimado`.
+  - devolve `trechos_km` (2 em ida e volta, 1 em trecho único): o "Orçar" calcula a rota ao abrir e preenche km × trechos.
 
 ## 6. Edge Function `enderecos`
 
@@ -156,7 +156,7 @@ Fontes:
    - aviso: "Estimativa pela tabela do contrato. O valor final vem no orçamento do motorista.";
    - com "Não sei" no reboque: "Sem reboque R$ X" e "Com reboque R$ Y";
    - sem km: o bloco não aparece.
-4. **"Orçar" (motorista):** km preenchidos com `km_estimado` e o aviso "Estimado pela rota. Confira." O valor continua editável.
+4. **"Orçar" (motorista):** ao abrir, a rota é calculada e os km chegam preenchidos (o dobro em ida e volta), com o aviso "Estimado pela rota: … Confira." O valor continua editável.
 
 ## 8. Testes
 
@@ -197,7 +197,7 @@ Fontes:
 - **Estimativa diferente do real:** a rota do Google não considera rampa, balsa ou acesso restrito de porto. Por isso a prévia é só estimativa, e o motorista ajusta.
 - **Locais da empresa gravados pelo cliente** (achado da revisão de segurança, 14/10): nome e ponto do local vêm do pedido. O primeiro registro de um `place_id` vale (outro pedido só soma uso), então ninguém reescreve um local já usado. Um usuário mal-intencionado da própria empresa ainda pode ser o primeiro a gravar um nome ou ponto errado; o efeito fica na mesma empresa e não mexe em dinheiro. Mitigação futura, se preciso: o servidor assinar o resultado do "detalhar".
 - **Esgotar o teto da empresa:** além do teto diário por empresa, cada pessoa tem 500 chamadas por dia.
-- **Termos do Google sobre guardar dados** (achado da revisão final, 14/10; **decisão do dono pendente**): `app.locais_empresa` e os pedidos guardam coordenadas e endereço vindos do Place Details. Pelos termos do Places, só o `place_id` pode ser guardado sem prazo; coordenadas, por até 30 dias. Opções: aceitar o risco, ou guardar só o `place_id` e buscar as coordenadas de novo ao usar (custo extra). A lista de sugestões mostra "Google Maps" e o mapa mostra "Google"; o texto de copyright por região da Map Tiles API não foi implementado.
+- **Termos do Google sobre guardar dados:** resolvido (decisão do dono, 15/10): dos pontos do Google só o `place_id` é guardado; os km são calculados na hora (uma chamada a mais de rota quando o motorista abre o "Orçar"). A lista de sugestões mostra "Google Maps" e o mapa mostra "Google"; o texto de copyright por região da Map Tiles API não foi implementado.
 - **Mapa por blocos:** com a Map Tiles API e o Leaflet não há o mapa interativo completo do Google (Street View, camadas), e não precisamos disso.
 
 ## 11. Referência pública (Uber), aplicada aqui
