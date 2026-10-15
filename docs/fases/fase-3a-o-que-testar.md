@@ -7,7 +7,7 @@ Aplicativo: https://umi-san-transporte.pages.dev. Use o **celular**. Marque cada
 **Preparação:** contrato vigente da Umi San com preço de km e taxa de reboque; um **N2** e um **N3** da Umi San; o **motorista** ativo com 2FA.
 
 ## A. Deploy
-1. **Migrations e função.** No log do workflow **Deploy** da `main`: o passo de migrations aplicou `20261015120000`, `20261015120100`, `20261015120200` e `20261015120300`, e a lista de funções publicadas inclui `enderecos`.
+1. **Migrations e função.** No log do workflow **Deploy** da `main`: o passo de migrations aplicou `20261015120000`, `20261015120100`, `20261015120200` e `20261015120300` (no primeiro deploy) e `20261015140000` (ajuste dos termos do Google), e a lista de funções publicadas inclui `enderecos`.
 
 ## B. Cliente pede com endereços reais (N2)
 2. **Buscar um porto.** **Novo pedido**, escolha dia e horário, **Continuar**. Em **Origem**, digite `porto itaj`: aparecem sugestões do Google em duas linhas (nome e endereço). Toque em **Porto de Itajaí**: o campo mostra o nome e, embaixo, o endereço reconhecido.

@@ -75,6 +75,8 @@ O mapa oficial do Google para web (Maps JavaScript API) injeta `<style>` na pág
 
 ## 5. Dados (migration nova; nenhuma antiga é editada)
 
+> O modelo abaixo é o final, depois da migration `20261015140000_termos_google.sql`, que corrigiu as da primeira publicação para seguir os termos do Google.
+
 - **`app.pedidos`:** colunas novas, todas opcionais, para o pedido antigo continuar válido:
   - `origem_place_id`, `destino_place_id` (`text`): ponto do Google;
   - `origem_lat`, `origem_lng`, `destino_lat`, `destino_lng` (`numeric(9,6)`): só de ponto marcado no mapa.

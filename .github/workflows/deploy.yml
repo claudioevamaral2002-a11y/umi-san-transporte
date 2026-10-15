@@ -81,7 +81,8 @@ jobs:
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
           # Fase 3A: chave de navegador, restrita ao domínio do app e só à Map Tiles API (pode faltar: sem mapa).
-          VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR: ${{ vars.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR }}
+          # Aceita variável ou segredo do ambiente `producao` (ela vai no app de qualquer forma; a proteção é a restrição).
+          VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR: ${{ vars.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR || secrets.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR }}
       - name: Nenhum segredo no bundle
         run: node scripts/varrer-segredos.ts dist
       - name: Publicar no Cloudflare Pages

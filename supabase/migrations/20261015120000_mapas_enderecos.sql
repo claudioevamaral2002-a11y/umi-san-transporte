@@ -1,9 +1,7 @@
 -- Fase 3A (decisão do dono, 2026-10-14; docs/fases/fase-3a-desenho-enderecos-previa.md §5): endereços reais,
--- distância e prévia. Dentro dos termos do Google (decisão do dono, 2026-10-15; Service Specific Terms 14.3 e 19.3):
---   ponto do Google: só o place_id (pode ser guardado sem prazo; coordenadas, endereço e km do Google não);
---   ponto marcado no mapa pela pessoa: as coordenadas dela.
--- Os km da rota são calculados na hora (função `enderecos`), nunca guardados. Tudo opcional: pedidos antigos e pedidos
--- em texto livre continuam válidos.
+-- distância e prévia. Coordenadas, endereço formatado, place_id e km/minutos estimados pela rota (Google), todos
+-- opcionais: pedidos antigos e pedidos sem endereço reconhecido continuam válidos. O km estimado é só referência; o
+-- motorista confirma ou ajusta no orçamento oficial.
 
 ------------------------------------------------------------------------------------------------
 -- 1. Colunas.
@@ -11,14 +9,16 @@
 alter table app.atividades
   add column origem_lat numeric(9,6), add column origem_lng numeric(9,6),
   add column destino_lat numeric(9,6), add column destino_lng numeric(9,6),
+  add column origem_endereco text, add column destino_endereco text,
   add column origem_place_id text, add column destino_place_id text,
+  add column km_estimado numeric(7,1), add column minutos_estimados int,
   add constraint atividades_origem_coord check ((origem_lat is null) = (origem_lng is null)),
   add constraint atividades_destino_coord check ((destino_lat is null) = (destino_lng is null)),
   add constraint atividades_lat check (origem_lat between -90 and 90 and destino_lat between -90 and 90),
   add constraint atividades_lng check (origem_lng between -180 and 180 and destino_lng between -180 and 180),
-  -- Coordenadas do Google não são guardadas: um lado tem place_id OU coordenadas (ponto marcado no mapa).
-  add constraint atividades_origem_google check (origem_place_id is null or origem_lat is null),
-  add constraint atividades_destino_google check (destino_place_id is null or destino_lat is null),
+  add constraint atividades_km_est check (km_estimado between 0 and 5000),
+  add constraint atividades_min_est check (minutos_estimados between 0 and 10000),
+  add constraint atividades_enderecos check (char_length(origem_endereco) <= 300 and char_length(destino_endereco) <= 300),
   add constraint atividades_place check ((origem_place_id ~ '^[A-Za-z0-9_-]+$' and char_length(origem_place_id) <= 300)
                                          and (destino_place_id ~ '^[A-Za-z0-9_-]+$' and char_length(destino_place_id) <= 300));
 
@@ -33,8 +33,9 @@ declare
   opcionais constant text[] := array['pessoas_qtd', 'equipamento_desc', 'peso_kg', 'dimensoes', 'contato_nome',
                                      'contato_telefone', 'observacoes',
                                      -- fase 3A
-                                     'origem_lat', 'origem_lng', 'destino_lat', 'destino_lng', 'origem_place_id',
-                                     'destino_place_id'];
+                                     'origem_lat', 'origem_lng', 'destino_lat', 'destino_lng', 'origem_endereco',
+                                     'destino_endereco', 'origem_place_id', 'destino_place_id', 'km_estimado',
+                                     'minutos_estimados'];
   desconhecidos text[];
   ausentes text[];
   inv text[] := '{}';
@@ -146,7 +147,7 @@ begin
     inv := array_append(inv, 'observacoes');
   end if;
 
-  -- fase 3A: coordenadas em par e nos limites; place_id só com caracteres do Google; nunca os dois no mesmo lado.
+  -- fase 3A: coordenadas em par e nos limites; endereço até 300; place_id só com caracteres do Google; km e minutos.
   if coalesce(jsonb_typeof(p -> 'origem_lat'), 'null') <> coalesce(jsonb_typeof(p -> 'origem_lng'), 'null')
      or (coalesce(jsonb_typeof(p -> 'origem_lat'), 'null') <> 'null'
          and not coalesce(case when jsonb_typeof(p -> 'origem_lat') = 'number' and jsonb_typeof(p -> 'origem_lng') = 'number'
@@ -161,6 +162,14 @@ begin
                                     and (p ->> 'destino_lng')::numeric between -180 and 180 end, false)) then
     inv := array_append(inv, 'destino_coordenadas');
   end if;
+  if coalesce(jsonb_typeof(p -> 'origem_endereco'), 'null') <> 'null'
+     and not (jsonb_typeof(p -> 'origem_endereco') = 'string' and length(p ->> 'origem_endereco') <= 300) then
+    inv := array_append(inv, 'origem_endereco');
+  end if;
+  if coalesce(jsonb_typeof(p -> 'destino_endereco'), 'null') <> 'null'
+     and not (jsonb_typeof(p -> 'destino_endereco') = 'string' and length(p ->> 'destino_endereco') <= 300) then
+    inv := array_append(inv, 'destino_endereco');
+  end if;
   if coalesce(jsonb_typeof(p -> 'origem_place_id'), 'null') <> 'null'
      and not (jsonb_typeof(p -> 'origem_place_id') = 'string' and (p ->> 'origem_place_id') ~ '^[A-Za-z0-9_-]+$'
                   and length(p ->> 'origem_place_id') <= 300) then
@@ -171,11 +180,15 @@ begin
                   and length(p ->> 'destino_place_id') <= 300) then
     inv := array_append(inv, 'destino_place_id');
   end if;
-  if coalesce(jsonb_typeof(p -> 'origem_place_id'), 'null') <> 'null' and coalesce(jsonb_typeof(p -> 'origem_lat'), 'null') <> 'null' then
-    inv := array_append(inv, 'origem_coordenadas');
+  if coalesce(jsonb_typeof(p -> 'km_estimado'), 'null') <> 'null'
+     and not coalesce(case when jsonb_typeof(p -> 'km_estimado') = 'number'
+                           then (p ->> 'km_estimado')::numeric between 0 and 5000 end, false) then
+    inv := array_append(inv, 'km_estimado');
   end if;
-  if coalesce(jsonb_typeof(p -> 'destino_place_id'), 'null') <> 'null' and coalesce(jsonb_typeof(p -> 'destino_lat'), 'null') <> 'null' then
-    inv := array_append(inv, 'destino_coordenadas');
+  if coalesce(jsonb_typeof(p -> 'minutos_estimados'), 'null') <> 'null'
+     and not (jsonb_typeof(p -> 'minutos_estimados') = 'number' and (p ->> 'minutos_estimados') ~ '^[0-9]{1,5}$'
+              and (p ->> 'minutos_estimados')::int <= 10000) then
+    inv := array_append(inv, 'minutos_estimados');
   end if;
 
   if cardinality(desconhecidos) > 0 or cardinality(ausentes) > 0 or cardinality(inv) > 0 then
@@ -252,7 +265,8 @@ begin
       empresa_id, solicitante_id, motorista_id, inicio, duracao_min, origem, destino, levar, trazer, carga,
       pessoas_qtd, equipamento_desc, peso_kg, dimensoes, modalidade, reboque, contato_nome, contato_telefone,
       observacoes, prazo_orcar_ate,
-      origem_lat, origem_lng, destino_lat, destino_lng, origem_place_id, destino_place_id)
+      origem_lat, origem_lng, destino_lat, destino_lng, origem_endereco, destino_endereco,
+      origem_place_id, destino_place_id, km_estimado, minutos_estimados)
     values (
       v.empresa_id, v.usuario_id, v_motorista, v_inicio, (p ->> 'duracao_min')::int,
       btrim(p ->> 'origem'), btrim(p ->> 'destino'), (p ->> 'levar')::boolean, (p ->> 'trazer')::boolean,
@@ -264,7 +278,9 @@ begin
       nullif(p ->> 'observacoes', ''), v_prazo,
       (p ->> 'origem_lat')::numeric, (p ->> 'origem_lng')::numeric,
       (p ->> 'destino_lat')::numeric, (p ->> 'destino_lng')::numeric,
-      p ->> 'origem_place_id', p ->> 'destino_place_id')
+      nullif(btrim(p ->> 'origem_endereco'), ''), nullif(btrim(p ->> 'destino_endereco'), ''),
+      p ->> 'origem_place_id', p ->> 'destino_place_id',
+      round((p ->> 'km_estimado')::numeric, 1), (p ->> 'minutos_estimados')::int)
     returning id, numero into v_id, v_numero;
     insert into app.atividade_historico (atividade_id, de, para, por, observacao)
     values (v_id, null, 'SOLICITADA', v.usuario_id, null);
@@ -323,9 +339,11 @@ begin
     'criada_em', a.criada_em, 'atualizada_em', a.atualizada_em,
     -- fase 3A
     'origem_lat', a.origem_lat, 'origem_lng', a.origem_lng, 'destino_lat', a.destino_lat, 'destino_lng', a.destino_lng,
+    'origem_endereco', a.origem_endereco, 'destino_endereco', a.destino_endereco,
     'origem_place_id', a.origem_place_id, 'destino_place_id', a.destino_place_id,
+    'km_estimado', a.km_estimado, 'minutos_estimados', a.minutos_estimados,
     -- O km da rota é de um trecho; com Levar e Trazer o km do orçamento é ida e volta (o dobro).
-    'trechos_km', case when a.levar and a.trazer then 2 else 1 end);
+    'km_para_orcar', case when a.levar and a.trazer then a.km_estimado * 2 else a.km_estimado end);
 
   select coalesce(jsonb_agg(jsonb_build_object('de', h.de, 'para', h.para, 'em', h.em, 'observacao', h.observacao,
                                                'por_nome', pf.nome) order by h.id), '[]')

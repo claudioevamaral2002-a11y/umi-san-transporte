@@ -11,17 +11,15 @@ create table app.locais_empresa (
   id bigint generated always as identity primary key,
   empresa_id uuid not null references app.empresas (id) on delete cascade,
   nome text not null check (char_length(nome) between 1 and 200),
-  -- Local do Google: só o place_id (termos do Google). Ponto marcado no mapa: as coordenadas da própria pessoa.
-  lat numeric(9,6) check (lat between -90 and 90),
-  lng numeric(9,6) check (lng between -180 and 180),
+  endereco text check (char_length(endereco) <= 300),
+  lat numeric(9,6) not null check (lat between -90 and 90),
+  lng numeric(9,6) not null check (lng between -180 and 180),
   place_id text check ((place_id ~ '^[A-Za-z0-9_-]+$' and char_length(place_id) <= 300)),
   -- place_id; sem ele (ponto marcado no mapa), nome em minúsculas + lat/lng com 5 casas.
   chave text not null check (char_length(chave) <= 400),
   usos int not null default 1 check (usos > 0),
   ultimo_uso timestamptz not null default now(),
-  unique (empresa_id, chave),
-  check ((lat is null) = (lng is null)),
-  check ((place_id is null) <> (lat is null))
+  unique (empresa_id, chave)
 );
 create index locais_empresa_uso on app.locais_empresa (empresa_id, usos desc, ultimo_uso desc);
 alter table app.locais_empresa enable row level security;
@@ -30,17 +28,17 @@ alter table app.locais_empresa enable row level security;
 ------------------------------------------------------------------------------------------------
 -- 2. Gravação (chamada pelo criar_pedido) e busca.
 ------------------------------------------------------------------------------------------------
-create function interno.guardar_local(p_empresa uuid, p_nome text, p_lat numeric, p_lng numeric, p_place text)
+create function interno.guardar_local(p_empresa uuid, p_nome text, p_endereco text, p_lat numeric, p_lng numeric,
+                                      p_place text)
 returns void language plpgsql security definer set search_path = '' as $$
 begin
-  if p_empresa is null or coalesce(p_nome, '') = '' or (p_place is null and (p_lat is null or p_lng is null)) then
+  if p_empresa is null or p_lat is null or p_lng is null or coalesce(p_nome, '') = '' then
     return;
   end if;
-  insert into app.locais_empresa (empresa_id, nome, lat, lng, place_id, chave)
-  values (p_empresa, left(p_nome, 200),
-          case when p_place is null then p_lat end, case when p_place is null then p_lng end, p_place,
+  insert into app.locais_empresa (empresa_id, nome, endereco, lat, lng, place_id, chave)
+  values (p_empresa, left(p_nome, 200), p_endereco, p_lat, p_lng, p_place,
           coalesce(p_place, left(lower(p_nome), 200) || '@' || round(p_lat, 5) || ',' || round(p_lng, 5)))
-  -- O primeiro registro vale: outro pedido com o mesmo place_id só soma uso (o nome vem do cliente e não pode
+  -- O primeiro registro vale: outro pedido com o mesmo place_id só soma uso (nome e ponto vêm do cliente e não podem
   -- reescrever o local que o resto da empresa usa).
   on conflict (empresa_id, chave) do update
     set usos = app.locais_empresa.usos + 1, ultimo_uso = now();
@@ -70,11 +68,11 @@ begin
   -- Curingas do LIKE viram texto comum.
   t := replace(replace(replace(interno.sem_acento(btrim(p_texto)), '\', '\\'), '%', '\%'), '_', '\_');
   return jsonb_build_object('ok', true, 'locais', coalesce((
-    select jsonb_agg(jsonb_build_object('nome', l.nome, 'lat', l.lat, 'lng', l.lng, 'place_id', l.place_id)
-                     order by l.usos desc, l.ultimo_uso desc, l.id)
+    select jsonb_agg(jsonb_build_object('nome', l.nome, 'endereco', l.endereco, 'lat', l.lat, 'lng', l.lng,
+                                        'place_id', l.place_id) order by l.usos desc, l.ultimo_uso desc, l.id)
     from (select x.* from app.locais_empresa x
           where x.empresa_id = v.empresa_id
-            and (t = '' or interno.sem_acento(x.nome) like '%' || t || '%')
+            and (t = '' or interno.sem_acento(x.nome || ' ' || coalesce(x.endereco, '')) like '%' || t || '%')
           order by x.usos desc, x.ultimo_uso desc, x.id
           limit 5) l), '[]'::jsonb));
 end $$;
@@ -146,7 +144,8 @@ begin
       empresa_id, solicitante_id, motorista_id, inicio, duracao_min, origem, destino, levar, trazer, carga,
       pessoas_qtd, equipamento_desc, peso_kg, dimensoes, modalidade, reboque, contato_nome, contato_telefone,
       observacoes, prazo_orcar_ate,
-      origem_lat, origem_lng, destino_lat, destino_lng, origem_place_id, destino_place_id)
+      origem_lat, origem_lng, destino_lat, destino_lng, origem_endereco, destino_endereco,
+      origem_place_id, destino_place_id, km_estimado, minutos_estimados)
     values (
       v.empresa_id, v.usuario_id, v_motorista, v_inicio, (p ->> 'duracao_min')::int,
       btrim(p ->> 'origem'), btrim(p ->> 'destino'), (p ->> 'levar')::boolean, (p ->> 'trazer')::boolean,
@@ -158,7 +157,9 @@ begin
       nullif(p ->> 'observacoes', ''), v_prazo,
       (p ->> 'origem_lat')::numeric, (p ->> 'origem_lng')::numeric,
       (p ->> 'destino_lat')::numeric, (p ->> 'destino_lng')::numeric,
-      p ->> 'origem_place_id', p ->> 'destino_place_id')
+      nullif(btrim(p ->> 'origem_endereco'), ''), nullif(btrim(p ->> 'destino_endereco'), ''),
+      p ->> 'origem_place_id', p ->> 'destino_place_id',
+      round((p ->> 'km_estimado')::numeric, 1), (p ->> 'minutos_estimados')::int)
     returning id, numero into v_id, v_numero;
     insert into app.atividade_historico (atividade_id, de, para, por, observacao)
     values (v_id, null, 'SOLICITADA', v.usuario_id, null);
@@ -174,9 +175,9 @@ begin
                        'inicio', v_inicio, 'duracao_min', (p ->> 'duracao_min')::int, 'contrato_versao', c.versao,
                        'expiradas', v_expiradas));
   -- fase 3A: os dois pontos com coordenadas viram locais da empresa (aparecem primeiro na próxima busca).
-  perform interno.guardar_local(v.empresa_id, btrim(p ->> 'origem'),
+  perform interno.guardar_local(v.empresa_id, btrim(p ->> 'origem'), nullif(btrim(p ->> 'origem_endereco'), ''),
     (p ->> 'origem_lat')::numeric, (p ->> 'origem_lng')::numeric, p ->> 'origem_place_id');
-  perform interno.guardar_local(v.empresa_id, btrim(p ->> 'destino'),
+  perform interno.guardar_local(v.empresa_id, btrim(p ->> 'destino'), nullif(btrim(p ->> 'destino_endereco'), ''),
     (p ->> 'destino_lat')::numeric, (p ->> 'destino_lng')::numeric, p ->> 'destino_place_id');
   return jsonb_build_object('ok', true, 'id', v_id, 'numero', v_numero, 'prazo_orcar_ate', v_prazo);
 end $$;
@@ -185,7 +186,7 @@ end $$;
 -- 4. Privilégios.
 ------------------------------------------------------------------------------------------------
 revoke execute on function
-  interno.guardar_local(uuid, text, numeric, numeric, text),
+  interno.guardar_local(uuid, text, text, numeric, numeric, text),
   interno.sem_acento(text)
 from public, anon, authenticated;
 revoke all on function api.locais_da_empresa(text) from public, anon, authenticated, service_role;

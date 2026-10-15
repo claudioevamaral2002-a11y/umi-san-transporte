@@ -77,7 +77,7 @@ Local: GitHub, Settings, Environments, **producao** (https://github.com/claudioe
 | `SUPABASE_PROJECT_REF` | variável | ambiente `producao` | identificador do projeto Supabase |
 | `CLOUDFLARE_ACCOUNT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY` | variáveis | ambiente `producao` | públicas (vão no front) |
 | `GOOGLE_MAPS_CHAVE_SERVIDOR` | segredo | ambiente `producao` (o Deploy copia para o Supabase) | busca de endereços e rota (fase 3A). Ver item 16 |
-| `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` | variável | ambiente `producao` | blocos do mapa no "Marcar no mapa" (fase 3A; restrita ao domínio). Ver item 16 |
+| `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` | variável (ou segredo) | ambiente `producao` | blocos do mapa no "Marcar no mapa" (fase 3A; restrita ao domínio). Ver item 16 |
 
 **Mover para o ambiente `producao`:** `SUPABASE_ACCESS_TOKEN` e `SUPABASE_DB_PASSWORD` devem ficar só no ambiente `producao` (assim só os workflows que usam esse ambiente os enxergam). O dono faz assim: em Settings, Environments, **producao**, seção *Environment secrets*, **Add environment secret**, cole o valor com o mesmo nome; depois, em Settings, Secrets and variables, Actions, apague o segredo de mesmo nome do nível do repositório. Rode o workflow Deploy de novo para confirmar.
 
