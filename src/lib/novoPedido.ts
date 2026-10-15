@@ -174,17 +174,15 @@ export function montarPedido(f: FormPedido): Record<string, unknown> {
     observacoes: ouNulo(f.observacoes),
   }
   if (pessoas) p.pessoas_qtd = f.pessoasQtd
-  // Fase 3A: coordenadas e endereço só de ponto escolhido; km só com os dois pontos.
+  // Fase 3A, dentro dos termos do Google: de um ponto do Google vai só o place_id (coordenadas, endereço e km do
+  // Google não são guardados); de um ponto marcado no mapa, as coordenadas da própria pessoa.
   for (const [lado, local] of [['origem', f.origemLocal], ['destino', f.destinoLocal]] as const) {
     if (!local) continue
-    p[`${lado}_lat`] = local.lat
-    p[`${lado}_lng`] = local.lng
-    if (local.endereco) p[`${lado}_endereco`] = local.endereco
     if (local.place_id) p[`${lado}_place_id`] = local.place_id
-  }
-  if (f.origemLocal && f.destinoLocal && f.kmEstimado !== null) {
-    p.km_estimado = f.kmEstimado
-    if (f.minutosEstimados !== null) p.minutos_estimados = f.minutosEstimados
+    else if (local.lat !== null && local.lng !== null) {
+      p[`${lado}_lat`] = local.lat
+      p[`${lado}_lng`] = local.lng
+    }
   }
   if (equipamento) {
     p.equipamento_desc = f.equipamentoDesc.trim()

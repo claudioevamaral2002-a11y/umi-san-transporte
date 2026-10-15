@@ -1,5 +1,6 @@
--- Fase 3A (migration 20261015120000_mapas_enderecos.sql): coordenadas, endereço formatado, place_id e km/minutos
--- estimados pela rota, todos opcionais no criar_pedido; validados no banco; devolvidos no detalhe (api.pedido).
+-- Fase 3A (migration 20261015120000_mapas_enderecos.sql), dentro dos termos do Google (decisão do dono, 2026-10-15):
+-- de um ponto do Google o pedido guarda só o place_id (coordenadas, endereço formatado e km do Google não são
+-- guardados); coordenadas só de ponto marcado no mapa pela pessoa. O detalhe diz quantos trechos o motorista orça.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(12);
@@ -30,47 +31,44 @@ from unnest(array['a2', 'a5']) u;
 select set_config('t.ped', '{"duracao_min": 120, "origem": "Porto de Itajaí", "destino": "Estaleiro Navegantes",
   "levar": true, "trazer": false, "carga": "PESSOAS", "pessoas_qtd": 2, "modalidade": "VEICULO_PROPRIO",
   "reboque": "NAO"}', true);
-select set_config('t.geo', '{"origem_lat": -26.9078, "origem_lng": -48.6619, "destino_lat": -26.8986, "destino_lng": -48.6542,
-  "origem_endereco": "Av. Min. Victor Konder, Itajaí", "destino_endereco": "Av. Pref. Cirino Adolfo Cabral, 1500",
-  "origem_place_id": "ChIJabc", "destino_place_id": "ChIJdef", "km_estimado": 38.2, "minutos_estimados": 45}', true);
+-- Origem do Google (só o place_id); destino marcado no mapa (só coordenadas).
+select set_config('t.geo', '{"origem_place_id": "ChIJabc", "destino_lat": -26.91, "destino_lng": -48.65}', true);
 
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 
 select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d1'))) ->> 'ok',
-  'true', 'pedido sem coordenadas continua válido');
+  'true', 'pedido sem pontos escolhidos continua válido');
 select set_config('t.id', api.criar_pedido(current_setting('t.ped')::jsonb || current_setting('t.geo')::jsonb
   || jsonb_build_object('inicio', current_setting('t.d2'))) ->> 'id', true);
-select isnt(nullif(current_setting('t.id'), ''), null, 'pedido com coordenadas, endereço, place_id e km estimado');
+select isnt(nullif(current_setting('t.id'), ''), null, 'pedido com place_id na origem e ponto marcado no destino');
 
-select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'origem_lat', 120, 'origem_lng', -48)) ->> 'codigo',
+select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'destino_lat', 120, 'destino_lng', -48)) ->> 'codigo',
   'CAMPOS_INVALIDOS', 'latitude fora de -90..90');
-select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'km_estimado', 9000)) ->> 'codigo',
-  'CAMPOS_INVALIDOS', 'km acima de 5000');
-select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'origem_lat', -26.9)) ->> 'codigo',
+select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'destino_lat', -26.9)) ->> 'codigo',
   'CAMPOS_INVALIDOS', 'latitude sem longitude');
 select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'origem_place_id', 'x y/../')) ->> 'codigo',
   'CAMPOS_INVALIDOS', 'place_id com caracteres inválidos');
-select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'km_estimado', '38')) ->> 'codigo',
-  'CAMPOS_INVALIDOS', 'km como texto');
+select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'),
+  'origem_place_id', 'ChIJabc', 'origem_lat', -26.9, 'origem_lng', -48.66)) ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'coordenadas de um ponto do Google não são guardadas');
+select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'km_estimado', 38.2)) ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'km da rota não é guardado (é calculado na hora)');
+select is(api.criar_pedido(current_setting('t.ped')::jsonb || jsonb_build_object('inicio', current_setting('t.d3'), 'origem_endereco', 'Av. X')) ->> 'codigo',
+  'CAMPOS_INVALIDOS', 'endereço formatado do Google não é guardado');
 
-select is((api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'km_estimado')::numeric, 38.2,
-  'o detalhe devolve o km estimado');
-select is(api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'destino_endereco', 'Av. Pref. Cirino Adolfo Cabral, 1500',
-  'o detalhe devolve o endereço formatado');
-
-select is((api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'km_para_orcar')::numeric, 38.2,
-  'trecho único: o motorista orça os km da rota');
+select is(api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'origem_place_id', 'ChIJabc', 'o detalhe devolve o place_id');
+select is((api.pedido(current_setting('t.id')::uuid) -> 'pedido' ->> 'trechos_km')::int, 1, 'trecho único: um trecho');
 select set_config('t.id2', api.criar_pedido(current_setting('t.ped')::jsonb || current_setting('t.geo')::jsonb
   || jsonb_build_object('inicio', current_setting('t.d5'), 'trazer', true)) ->> 'id', true);
-select is((api.pedido(current_setting('t.id2')::uuid) -> 'pedido' ->> 'km_para_orcar')::numeric, 76.4,
-  'ida e volta: o motorista orça o dobro dos km da rota (o km do orçamento já é ida e volta)');
+select is((api.pedido(current_setting('t.id2')::uuid) -> 'pedido' ->> 'trechos_km')::int, 2,
+  'ida e volta: o km do orçamento é o dobro do trecho da rota');
 
 reset role;
-select results_eq($$ select origem_lat, origem_lng, destino_place_id, km_estimado, minutos_estimados
+select results_eq($$ select origem_place_id, origem_lat, destino_place_id, destino_lat, destino_lng
                      from app.atividades where id = current_setting('t.id')::uuid $$,
-  $$ values (-26.907800::numeric, -48.661900::numeric, 'ChIJdef'::text, 38.2::numeric, 45) $$,
-  'colunas gravadas');
+  $$ values ('ChIJabc'::text, null::numeric, null::text, -26.910000::numeric, -48.650000::numeric) $$,
+  'só o place_id do ponto do Google; coordenadas só do ponto marcado');
 
 select * from finish();
 rollback;

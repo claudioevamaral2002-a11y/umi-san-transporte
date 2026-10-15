@@ -15,6 +15,7 @@ import { api } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import type { PrecosParaOrcar } from '../../lib/contratos.ts'
 import { formatarRota } from '../../lib/enderecos.ts'
+import { rota } from '../../lib/enderecosRemoto.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
 import {
   DIARIAS_MAX,
@@ -82,26 +83,47 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
   const anterior = r.orcamento_anterior ?? null
   const navegar = useNavigate()
   // Revisão pedida: começa do orçamento anterior (o motorista só ajusta o que o cliente pediu).
-  // Sem revisão, os km começam com a estimativa da rota (fase 3A); o motorista confere e ajusta.
-  // Com Levar e Trazer o km do orçamento é ida e volta: o banco já devolve o dobro do trecho em km_para_orcar.
-  const kmEstimado = typeof p.km_estimado === 'number' ? p.km_estimado : null
-  const kmParaOrcar = typeof p.km_para_orcar === 'number' ? p.km_para_orcar : null
-  const [f, setF] = useState<FormOrcamento>(() =>
-    formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque, kmParaOrcar),
-  )
-  const avisoKm =
-    kmEstimado !== null && kmParaOrcar !== null && !anterior
-      ? (() => {
-          const t = formatarRota(kmEstimado, typeof p.minutos_estimados === 'number' ? p.minutos_estimados : null)
-          const trecho = t.km.replace(' pela rota', '')
-          if (p.levar && p.trazer) {
-            const tempo = t.tempo ? `, ${t.tempo} cada trecho` : ''
-            return `Estimado pela rota: ${trecho} por trecho, ${Math.round(kmParaOrcar)} km ida e volta${tempo}. Confira.`
-          }
-          return `Estimado pela rota: ${[trecho, t.tempo].filter(Boolean).join(', ')}. Confira.`
-        })()
-      : null
+  const [f, setF] = useState<FormOrcamento>(() => formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque))
   const [kmTexto, setKmTexto] = useState(() => kmParaTexto(f.kmDecimos))
+  // Fase 3A: sem revisão, os km começam com a rota calculada agora (o app não guarda km nem coordenadas do Google).
+  // Com Levar e Trazer o banco diz que são 2 trechos (ida e volta). O motorista confere e ajusta.
+  const trechos = p.trechos_km === 2 ? 2 : 1
+  const [rotaPedido, setRotaPedido] = useState<{ km: number; minutos: number | null } | null>(null)
+  const kmTocado = useRef(false)
+  const pontos = [p.origem_place_id, p.origem_lat, p.origem_lng, p.destino_place_id, p.destino_lat, p.destino_lng]
+  const chavePontos = JSON.stringify(pontos)
+  useEffect(() => {
+    if (anterior || p.modalidade !== 'VEICULO_PROPRIO') return
+    const [op, ola, olg, dp, dla, dlg] = JSON.parse(chavePontos) as Array<string | number | null | undefined>
+    const ponto = (place: unknown, lat: unknown, lng: unknown) => ({
+      place_id: typeof place === 'string' ? place : null,
+      lat: typeof lat === 'number' ? lat : null,
+      lng: typeof lng === 'number' ? lng : null,
+    })
+    let vivo = true
+    void rota(ponto(op, ola, olg), ponto(dp, dla, dlg)).then((r) => {
+      if (!vivo || r.km === null) return
+      setRotaPedido({ km: r.km, minutos: r.minutos })
+      if (kmTocado.current) return
+      const decimos = Math.round(r.km * trechos * 10)
+      setF((a) => ({ ...a, kmDecimos: decimos }))
+      setKmTexto(kmParaTexto(decimos))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [anterior, p.modalidade, chavePontos, trechos])
+  const avisoKm = rotaPedido
+    ? (() => {
+        const t = formatarRota(rotaPedido.km, rotaPedido.minutos)
+        const trecho = t.km.replace(' pela rota', '')
+        if (trechos === 2) {
+          const tempo = t.tempo ? `, ${t.tempo} cada trecho` : ''
+          return `Estimado pela rota: ${trecho} por trecho, ${Math.round(rotaPedido.km * 2)} km ida e volta${tempo}. Confira.`
+        }
+        return `Estimado pela rota: ${[trecho, t.tempo].filter(Boolean).join(', ')}. Confira.`
+      })()
+    : null
   const [sugerir, setSugerir] = useState(false)
   const [sugerido, setSugerido] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -118,6 +140,7 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
   const sugestaoInvalida = sugerir && (!horarioSugerido || horarioSugerido.getTime() <= agora.getTime())
 
   const mudar = (x: Partial<FormOrcamento>) => {
+    if ('kmDecimos' in x) kmTocado.current = true
     setF((a) => ({ ...a, ...x }))
     setErroEnvio(null)
   }

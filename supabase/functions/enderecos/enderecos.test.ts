@@ -89,6 +89,30 @@ describe('enderecos', () => {
     })
   })
 
+  it('rota: pontos do Google vão pelo place_id (o app não guarda as coordenadas do Google)', async () => {
+    let corpo: Record<string, unknown> = {}
+    const buscar = (async (_u: string, init: RequestInit) => {
+      corpo = JSON.parse(String(init.body))
+      return resp({ routes: [{ distanceMeters: 38240, duration: '2712s' }] })
+    }) as unknown as typeof fetch
+    const m = criarManipuladorEnderecos({ chave: 'K', buscar, registrarUso: ok })
+    expect(await m({ acao: 'rota', origem: { place_id: 'ChIJabc' }, destino: { lat: -26.91, lng: -48.65 } })).toEqual({
+      ok: true,
+      km: 38.2,
+      minutos: 45,
+    })
+    expect(corpo.origin).toEqual({ placeId: 'ChIJabc' })
+    expect(corpo.destination).toEqual({ location: { latLng: { latitude: -26.91, longitude: -48.65 } } })
+    expect(await m({ acao: 'rota', origem: { place_id: '../x' }, destino: { place_id: 'ChIJdef' } })).toEqual({
+      ok: false,
+      codigo: 'CAMPOS_INVALIDOS',
+    })
+    expect(await m({ acao: 'rota', origem: { place_id: 'ChIJabc', lat: -26.9, lng: -48.6 }, destino: { place_id: 'ChIJdef' } })).toEqual({
+      ok: false,
+      codigo: 'CAMPOS_INVALIDOS',
+    })
+  })
+
   it('rota: Google com tempo esgotado ou erro devolve km null (o pedido segue sem prévia)', async () => {
     const lento = (async (_u: string, init: RequestInit) => {
       // O sinal de tempo limite aborta a chamada.
