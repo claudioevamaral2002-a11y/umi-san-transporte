@@ -3,13 +3,8 @@
 import type { Page, Route } from '@playwright/test'
 import { json, URL_SUPABASE } from './sessaoFalsa.ts'
 
-export const LOCAL_EMPRESA = {
-  nome: 'Estaleiro Navegantes',
-  endereco: 'Av. Pref. Cirino Adolfo Cabral, 1500, Navegantes',
-  lat: -26.8986,
-  lng: -48.6542,
-  place_id: 'ChIJdef',
-}
+/** Local da empresa vindo do Google: o banco guarda só nome e place_id (termos do Google). */
+export const LOCAL_EMPRESA = { nome: 'Estaleiro Navegantes', lat: null, lng: null, place_id: 'ChIJdef' }
 
 const SUGESTOES = [
   { place_id: 'ChIJdef', nome: 'Estaleiro Navegantes', endereco: 'Navegantes, SC' },
@@ -22,7 +17,7 @@ const DETALHES: Record<string, { endereco: string; lat: number; lng: number }> =
   ChIJnav: { endereco: 'Rua Prefeito José Juvenal Mafra, Navegantes, SC', lat: -26.8801, lng: -48.6612 },
   ChIJdet: { endereco: 'Rodovia Jorge Lacerda, Itajaí, SC', lat: -26.93, lng: -48.69 },
   ChIJpor: { endereco: 'Av. Min. Victor Konder, Itajaí, SC', lat: -26.9078, lng: -48.6619 },
-  ChIJdef: { endereco: LOCAL_EMPRESA.endereco, lat: LOCAL_EMPRESA.lat, lng: LOCAL_EMPRESA.lng },
+  ChIJdef: { endereco: 'Av. Pref. Cirino Adolfo Cabral, 1500, Navegantes', lat: -26.8986, lng: -48.6542 },
 }
 
 const semAcento = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
@@ -44,7 +39,7 @@ export async function simularMapas(page: Page, opcoes: MapasFalsos = {}) {
   const chamadas: ChamadaMapas[] = []
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/locais_da_empresa`, (route: Route) => {
     const t = semAcento(String((route.request().postDataJSON() as { p_texto?: string })?.p_texto ?? ''))
-    const locais = [LOCAL_EMPRESA].filter((l) => t === '' || semAcento(`${l.nome} ${l.endereco}`).includes(t))
+    const locais = [LOCAL_EMPRESA].filter((l) => t === '' || semAcento(l.nome).includes(t))
     return json(route, { ok: true, locais })
   })
   await page.route(`${URL_SUPABASE}/functions/v1/enderecos`, async (route: Route) => {

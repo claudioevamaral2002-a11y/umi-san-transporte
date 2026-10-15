@@ -21,7 +21,7 @@ Aplicativo: https://umi-san-transporte.pages.dev. Use o **celular**. Marque cada
 8. **N3 sem prévia.** O N3 da Umi San não vê **Novo pedido** (e, portanto, nenhuma prévia).
 
 ## D. Motorista
-9. **Km preenchidos.** O motorista abre o pedido do item 6 e toca em **Orçar**: o campo de km já vem com a estimativa e o aviso "Estimado pela rota: NN km, cerca de NN min. Confira.". Ajuste se precisar e envie normalmente. Um pedido antigo (de antes da 3A) abre o **Orçar** com os km vazios, sem aviso.
+9. **Km preenchidos.** O motorista abre o pedido do item 6 e toca em **Orçar**: em instantes o campo de km se preenche com a rota calculada agora e aparece o aviso "Estimado pela rota: … Confira." (em ida e volta, o dobro do trecho). Ajuste se precisar e envie normalmente. Um pedido antigo (de antes da 3A) abre o **Orçar** com os km vazios, sem aviso.
 
 ## E. Sem Google
 10. **Google fora do ar.** No Google Cloud, em **Credenciais**, edite a chave `servidor-enderecos` e, em **Restrições de API**, desmarque temporariamente a **Places API (New)**; salve e aguarde 5 minutos. No app, ao digitar a origem aparece "Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.", e o pedido segue até **Enviar pedido**, sem prévia. Depois **marque de novo** a Places API (New) e salve.

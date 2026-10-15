@@ -27,7 +27,7 @@ import {
   type FormPedido,
   type Passo,
 } from '../../lib/novoPedido.ts'
-import { chaveDaRota, formatarRota } from '../../lib/enderecos.ts'
+import { chaveDaRota, formatarRota, type Local } from '../../lib/enderecos.ts'
 import { rota } from '../../lib/enderecosRemoto.ts'
 import { pedidos } from '../../lib/pedidos.ts'
 import type { Saldo } from '../../lib/saldo.ts'
@@ -294,6 +294,12 @@ function PassoQuando({
       </Folha>
     </div>
   )
+}
+
+/** Centro da folha do mapa: o primeiro ponto escolhido que tenha coordenadas na memória da tela. */
+function centroDoMapa(locais: Array<Local | null>): { lat: number; lng: number } | null {
+  const l = locais.find((x) => x && x.lat !== null && x.lng !== null)
+  return l ? { lat: l.lat!, lng: l.lng! } : null
 }
 
 const mesmoDia = (inicio: string | null, dia: string) => !!inicio && diaDe(inicio) === dia
@@ -757,7 +763,7 @@ export function NovoPedido() {
 
       <FolhaMarcarNoMapa
         aberta={mapaPara !== null}
-        centro={(mapaPara === 'origem' ? (f.origemLocal ?? f.destinoLocal) : (f.destinoLocal ?? f.origemLocal)) ?? null}
+        centro={centroDoMapa(mapaPara === 'origem' ? [f.origemLocal, f.destinoLocal] : [f.destinoLocal, f.origemLocal])}
         aoFechar={() => setMapaPara(null)}
         aoUsar={(local) => {
           if (mapaPara === 'origem') mudar({ origem: local.nome, origemLocal: local, kmEstimado: null, minutosEstimados: null })

@@ -119,36 +119,30 @@ describe('montarPedido', () => {
   })
 })
 
-describe('montarPedido com endereços (fase 3A)', () => {
-  it('inclui coordenadas e km só quando há local escolhido', () => {
+describe('montarPedido com endereços (fase 3A, termos do Google)', () => {
+  it('ponto do Google vai só pelo place_id; ponto marcado no mapa vai com as coordenadas; km nunca vai', () => {
     const base = { ...COMPLETO }
-    expect(montarPedido(base)).not.toHaveProperty('origem_lat')
-    expect(montarPedido(base)).not.toHaveProperty('km_estimado')
+    expect(montarPedido(base)).not.toHaveProperty('origem_place_id')
     const p = montarPedido({
       ...base,
       origemLocal: { nome: 'Porto', endereco: 'Av. X', lat: -26.9, lng: -48.66, place_id: 'ChIJabc' },
-      destinoLocal: { nome: 'Estaleiro', endereco: null, lat: -26.89, lng: -48.65, place_id: null },
+      destinoLocal: { nome: 'Marina, rampa 2', endereco: null, lat: -26.89, lng: -48.65, place_id: null },
       kmEstimado: 38.2,
       minutosEstimados: 45,
     })
-    expect(p).toMatchObject({
-      origem_lat: -26.9,
-      origem_lng: -48.66,
-      origem_endereco: 'Av. X',
-      origem_place_id: 'ChIJabc',
-      destino_lat: -26.89,
-      destino_lng: -48.65,
-      km_estimado: 38.2,
-      minutos_estimados: 45,
-    })
-    expect(p).not.toHaveProperty('destino_place_id')
-    expect(p).not.toHaveProperty('destino_endereco')
+    expect(p).toMatchObject({ origem_place_id: 'ChIJabc', destino_lat: -26.89, destino_lng: -48.65 })
+    for (const chave of ['origem_lat', 'origem_lng', 'origem_endereco', 'destino_place_id', 'km_estimado', 'minutos_estimados']) {
+      expect(p).not.toHaveProperty(chave)
+    }
   })
 
-  it('km sem os dois pontos não vai (a rota só existe com origem e destino escolhidos)', () => {
-    const p = montarPedido({ ...COMPLETO, origemLocal: null, destinoLocal: null, kmEstimado: 10, minutosEstimados: 12 })
-    expect(p).not.toHaveProperty('km_estimado')
-    expect(p).not.toHaveProperty('minutos_estimados')
+  it('local da empresa do Google (sem coordenadas) vai pelo place_id', () => {
+    const p = montarPedido({
+      ...COMPLETO,
+      destinoLocal: { nome: 'Estaleiro', endereco: null, lat: null, lng: null, place_id: 'ChIJdef' },
+    })
+    expect(p).toMatchObject({ destino_place_id: 'ChIJdef' })
+    expect(p).not.toHaveProperty('destino_lat')
   })
 })
 
