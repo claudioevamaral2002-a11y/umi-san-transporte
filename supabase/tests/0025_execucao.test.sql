@@ -175,7 +175,10 @@ select is(api.concluir(current_setting('t.s1')::uuid, null) ->> 'codigo', 'SEM_P
 select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is(api.concluir(current_setting('t.s1')::uuid, repeat('x', 1001)) ->> 'codigo', 'CAMPOS_INVALIDOS',
   'observação acima de 1000: recusada');
+reset role;
 select set_config('t.lanc_antes', (select count(*)::text from app.lancamentos), true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is(api.concluir(current_setting('t.s1')::uuid, '  Entregue no galpão 2  ') ->> 'ok', 'true', 'motorista conclui');
 select is(api.concluir(current_setting('t.s1')::uuid, null) ->> 'codigo', 'STATUS_INVALIDO', 'concluir de novo: STATUS_INVALIDO');
 reset role;

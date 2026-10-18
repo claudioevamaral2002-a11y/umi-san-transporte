@@ -11,7 +11,10 @@ test('headers de segurança presentes (especificação 9, item 19)', async ({ re
   expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin')
   expect(h['x-frame-options']).toBe('DENY')
   expect(h['cross-origin-opener-policy']).toBe('same-origin')
-  expect(h['permissions-policy']).toContain('geolocation=()')
+  // Fase 3B: o GPS e a tela acesa só para o próprio app (o motorista em viagem); terceiros em iframe, nunca.
+  expect(h['permissions-policy']).toContain('geolocation=(self)')
+  expect(h['permissions-policy']).toContain('screen-wake-lock=(self)')
+  expect(h['permissions-policy']).toContain('microphone=()')
 })
 
 test('CSP bloqueia script inline injetado (especificação 9, item 18)', async ({ page }) => {

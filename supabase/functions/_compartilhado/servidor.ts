@@ -14,11 +14,12 @@ export interface Contexto extends Clientes {
 /**
  * Casca comum: método, CORS, JWT, limite por usuário e corpo JSON. Nunca devolve detalhes internos.
  * `limitePorMinuto`: freio em memória por instância (o controle de verdade são os limites no banco); padrão 20.
+ * `limiteCorpoBytes`: tamanho máximo do corpo JSON; padrão LIMITE_CORPO_BYTES (só a foto precisa de mais).
  */
 export function criarServidor(
   funcao: string,
   manipulador: (ctx: Contexto) => Promise<Corpo>,
-  opcoes: { limitePorMinuto?: number } = {},
+  opcoes: { limitePorMinuto?: number; limiteCorpoBytes?: number } = {},
 ) {
   const limitador = criarLimitador(opcoes.limitePorMinuto ?? 20, 60_000)
   return async (req: Request): Promise<Response> => {
@@ -43,7 +44,7 @@ export function criarServidor(
       if (error || !data.user) return responder({ ok: false, codigo: 'NAO_AUTENTICADO' }, 401, cors)
       if (!limitador.permitir(data.user.id)) return responder({ ok: false, codigo: 'LIMITE_EXCEDIDO' }, 200, cors)
 
-      const corpo = await lerJson(req)
+      const corpo = await lerJson(req, opcoes.limiteCorpoBytes)
       if (!corpo) return responder({ ok: false, codigo: 'CAMPOS_INVALIDOS' }, 200, cors)
 
       const resultado = await manipulador({
