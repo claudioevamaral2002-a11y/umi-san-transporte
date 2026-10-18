@@ -8,8 +8,11 @@ import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { CabecalhoTela, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
 import { useConsulta } from '../../lib/consulta.ts'
 import { ROTULO_PRESET, diaBr, periodoDe, type Preset } from '../../lib/extrato.ts'
+import { pedidos } from '../../lib/pedidos.ts'
 import { dinheiro, ordenarPorRisco, type Divergencia, type Painel as DadosPainel } from '../../lib/saldo.ts'
 import { rotuloDivergencia } from '../../lib/saldoExibicao.ts'
+import { horaDe, numeroPedido } from '../../lib/tempo.ts'
+import { useTempoReal } from '../../lib/tempoReal.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
 import { SeloAlerta } from './Creditos.tsx'
 
@@ -106,6 +109,40 @@ function Reconciliacao({ dados }: { dados: DadosPainel }) {
   )
 }
 
+/** Fase 3B: viagens em andamento agora, com a previsão e o atalho para o mapa (o ADM vê todas). */
+function CorridasEmAndamento() {
+  const { dados, recarregar } = useConsulta('painel-corridas-andamento', pedidos.pendencias)
+  useTempoReal('equipe', recarregar)
+  const corridas = (dados?.proximos ?? []).filter((p) => p.status === 'EM_ANDAMENTO')
+  if (corridas.length === 0) return null
+  return (
+    <ul className="divide-y divide-borda" data-testid="lista-corridas-andamento">
+      {corridas.map((c) => (
+        <li key={c.id}>
+          <Link to={`/pedidos/${c.id}`} className="flex min-h-14 items-center justify-between gap-3 py-2 hover:text-link">
+            <span className="min-w-0">
+              <span className="block truncate font-bold">
+                Pedido {numeroPedido(c.numero)}
+                {c.empresa_nome ? `, ${c.empresa_nome}` : ''}
+              </span>
+              <span className="block truncate ivo-legenda text-texto-suave">
+                {c.destino}
+                {c.fim_previsto ? `, término previsto ${horaDe(c.fim_previsto)}` : ''}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2">
+              {c.atrasado && (
+                <span className="rounded-full bg-[var(--cor-laranja)]/15 px-2.5 py-0.5 text-xs font-bold text-alerta-texto">Atrasado</span>
+              )}
+              <Icone nome="mapa" tamanho={18} className="text-texto-suave" />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function Blocos({ dados, resumo = false }: { dados: DadosPainel; resumo?: boolean }) {
   return (
     <div className={`grid gap-4 ${resumo ? '' : 'md:grid-cols-2'}`}>
@@ -126,6 +163,7 @@ function Blocos({ dados, resumo = false }: { dados: DadosPainel; resumo?: boolea
             <Numero rotulo="Agendadas" valor={dados.corridas.agendadas} testid="painel-agendadas" />
             <Numero rotulo="Em andamento" valor={dados.corridas.em_andamento} testid="painel-em-andamento" />
           </div>
+          {dados.corridas.em_andamento > 0 && <CorridasEmAndamento />}
         </Bloco>
         {!resumo && (
           <Bloco titulo="Aprovado no período" testid="painel-aprovado">
@@ -134,7 +172,7 @@ function Blocos({ dados, resumo = false }: { dados: DadosPainel; resumo?: boolea
               valor={<Dinheiro centavos={dados.aprovado.total_cent} />}
               testid="painel-aprovado-total"
             />
-            <p className="ivo-legenda text-texto-suave">O valor realizado (serviços concluídos) chega com a execução.</p>
+            <p className="ivo-legenda text-texto-suave">O realizado é debitado na saída de cada serviço e aparece no extrato do cliente.</p>
           </Bloco>
         )}
         <Bloco titulo="Pendências" testid="painel-pendencias">

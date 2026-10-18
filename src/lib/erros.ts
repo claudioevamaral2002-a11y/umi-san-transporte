@@ -62,6 +62,14 @@ export const MENSAGENS = {
   // Endereços e mapas (fase 3A)
   TETO_DIARIO: 'A busca de endereços chegou ao limite de hoje. Escreva o local; o motorista confere os km.',
   MAPAS_INDISPONIVEL: 'Não foi possível buscar endereços agora. Escreva o local; o motorista confere os km.',
+
+  // Execução e rastreio (fase 3B)
+  FORA_DA_JANELA: 'Ainda é cedo para sair: a saída libera 1 hora antes do início.',
+  OUTRA_EM_ANDAMENTO: 'Você tem outro serviço em andamento. Conclua-o antes de sair para este.',
+  PREVISAO_INVALIDA: 'Escolha um horário entre agora e as próximas 24 horas.',
+  LIMITE_ETA: 'A previsão de chegada já foi recalculada o máximo de vezes nesta viagem.',
+  FOTO_INVALIDA: 'Foto inválida. Envie uma imagem JPEG, PNG ou WebP de até 5 MB.',
+  LIMITE_FOTOS: 'Este serviço já tem 10 fotos.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS

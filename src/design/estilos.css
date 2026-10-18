@@ -144,3 +144,17 @@
   body { background: #fff; color: #000; }
   .nao-imprimir { display: none !important; }
 }
+
+/* Fase 3B: marcadores do mapa ao vivo (Leaflet divIcon com classes; nada de estilo em linha por causa da CSP).
+   Com .leaflet-marker-icon para vencer o display:block do CSS do Leaflet, que carrega depois. */
+.leaflet-marker-icon.marcador-carro {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 9999px; border: 3px solid #fff;
+  background: var(--cor-marinho); color: var(--cor-laranja);
+  box-shadow: 0 4px 12px rgb(10 37 64 / 0.35);
+  transition: background-color 300ms;
+}
+.leaflet-marker-icon.marcador-carro.perdido { background: #8a96a6; color: #e9edf2; }
+.leaflet-marker-icon.marcador-destino { color: var(--cor-laranja); filter: drop-shadow(0 1px 1px rgb(10 37 64 / 0.4)); }
+.marcador-destino svg path { fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .marcador-carro { transition: none; } }

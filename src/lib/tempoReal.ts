@@ -2,11 +2,14 @@ import { useEffect, useRef } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from './supabase.ts'
 
-/** Eventos publicados pelo banco: `status` ({id, status, em}) e `saldo` ({empresa_id, em}, só em `saldo:<id>`). */
-export type EventoTempoReal = 'status' | 'saldo'
+/**
+ * Eventos publicados pelo banco: `status` ({id, status, em}), `saldo` ({empresa_id, em}, só em `saldo:<id>`) e, na
+ * fase 3B, `posicao` ({lat, lng, rumo, velocidade, precisao, seq, eta, ts}, só em `rastreio:<id>`).
+ */
+export type EventoTempoReal = 'status' | 'saldo' | 'posicao'
 
 interface Assinatura {
-  ouvintes: Set<{ evento: EventoTempoReal; aoMudar: () => void }>
+  ouvintes: Set<{ evento: EventoTempoReal; aoMudar: (payload: unknown) => void }>
   canal: RealtimeChannel | null
   encerrada: boolean
 }
@@ -29,8 +32,8 @@ function assinar(topico: string): Assinatura {
     if (a.encerrada) return
     a.canal = supabase
       .channel(topico, { config: { private: true } })
-      .on('broadcast', { event: '*' }, (m: { event?: string }) => {
-        for (const o of [...a.ouvintes]) if (o.evento === m.event) o.aoMudar()
+      .on('broadcast', { event: '*' }, (m: { event?: string; payload?: unknown }) => {
+        for (const o of [...a.ouvintes]) if (o.evento === m.event) o.aoMudar(m.payload)
       })
       .subscribe()
   })()
@@ -49,14 +52,22 @@ function soltar(topico: string, a: Assinatura) {
  * (padrão `status`). A tela relê os dados do servidor: o evento nunca é usado como dado.
  */
 export function useTempoReal(topico: string | null, aoMudar: () => void, evento: EventoTempoReal = 'status') {
-  const retorno = useRef(aoMudar)
+  useTransmissao(topico, evento, () => aoMudar())
+}
+
+/**
+ * Fase 3B: como useTempoReal, mas entrega o payload do evento (posição do motorista em `rastreio:<id>`). O payload é
+ * dado de terceiros: quem recebe valida cada campo antes de usar.
+ */
+export function useTransmissao(topico: string | null, evento: EventoTempoReal, aoReceber: (payload: unknown) => void) {
+  const retorno = useRef(aoReceber)
   useEffect(() => {
-    retorno.current = aoMudar
+    retorno.current = aoReceber
   })
   useEffect(() => {
     if (!topico) return
     const a = assinar(topico)
-    const ouvinte = { evento, aoMudar: () => retorno.current() }
+    const ouvinte = { evento, aoMudar: (payload: unknown) => retorno.current(payload) }
     a.ouvintes.add(ouvinte)
     return () => {
       a.ouvintes.delete(ouvinte)

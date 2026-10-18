@@ -279,6 +279,7 @@ As telas assinam **tópicos privados**; o banco decide quem pode assinar cada um
 | `empresa:<id da empresa>` | clientes da empresa (N1, N2, N3) e a equipe (ADM, gestor de frota, motorista) | um pedido da empresa mudou (listas, início, agenda) |
 | `equipe` | ADM, gestor de frota e motorista | qualquer pedido de qualquer empresa mudou (só número interno, empresa e status) |
 | `saldo:<id da empresa>` | ADM e clientes da empresa (nunca motorista nem gestor de frota) | entrou um lançamento (cartão de saldo e extrato) |
+| `rastreio:<id do pedido>` (fase 3B) | quem pediu, o N1 da empresa, o ADM, o gestor de frota e o motorista da viagem (nunca o N3 nem outro N2) | posição do motorista a cada ~5 s durante a viagem (esta mensagem leva a posição: lat, lng, chegada prevista) |
 
 Se uma tela parecer parada, puxe para atualizar ou recarregue: nada depende só do tempo real.
 
@@ -356,3 +357,37 @@ Configurações (ADM), cartão **Busca de endereços**: quantas chamadas ao Goog
 - **Sugestões nunca aparecem, sempre o aviso:** chave de servidor ausente ou com a API errada (precisa ser a *Places API (New)*), faturamento desativado, ou teto diário atingido (veja o cartão em Configurações e a Auditoria, ação `USO_MAPAS`).
 - **Sugestões aparecem, mas não os km:** a Routes API não está ativada ou não está na restrição da chave de servidor.
 - **"O mapa não está disponível agora":** a variável `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` falta (precisa de novo Deploy depois de criar), a Map Tiles API não está ativada, ou o referenciador não é exatamente `https://umi-san-transporte.pages.dev/*`.
+
+## 17. Execução da viagem e rastreio (fase 3B)
+
+**Fluxo:** pedido agendado → o motorista **desliza para sair** (a partir de 1 h antes do início) → viagem em andamento, com a posição para o cliente → **Concluir serviço** (fotos e observação) → resumo.
+
+### Dinheiro
+- **A saída cobra.** Numa só operação, a reserva é liberada e entra o **débito** do valor aprovado. O disponível da empresa não muda, porque o valor já estava reservado.
+- Depois da saída **não há cancelamento**. Uma correção só sai por **estorno** do débito em Créditos, com motivo.
+- **A conclusão não cobra nada.**
+- A reconciliação das 03:00 confere que reserva ativa só existe em pedido agendado e que todo débito aponta para a aprovação do mesmo orçamento.
+
+### Localização do motorista
+- Só durante a viagem e só com o app aberto e a tela acesa. Com a tela apagada ou outro app na frente, o envio para (limite do PWA, principalmente no iPhone). O cliente vê "Sinal do motorista perdido" e o carro cinza.
+- O navegador precisa da permissão de localização. Se a pessoa negou: ajustes do navegador › site umi-san-transporte.pages.dev › Localização › Permitir. A viagem funciona sem GPS; o cliente vê só o status.
+- **Retenção:** as posições são apagadas na conclusão. Fica só o resumo: saída, chegada e km rodados (aproximado, pelo GPS). Uma viagem esquecida em andamento tem as posições apagadas depois de 48 h (cron `limpar-posicoes`, de hora em hora).
+- **Chegada prevista:** calculada pelo celular do motorista com a rota do Google, no máximo **12 vezes por viagem** (na saída, a cada 10 min e ao trocar de destino na ida e volta).
+
+### Atraso
+- **Nova previsão:** o motorista informa a nova hora de término. A agenda se estende até ela, sem passar do início do próximo serviço.
+- **Quando colide com o próximo pedido:** o cliente desse pedido vê "O motorista está terminando outro serviço" no detalhe e nas pendências. E-mail e push só na fase 5.
+- **Viagem que passou da previsão** e continua em andamento: aparece como **atrasada** para o motorista e para o ADM (Painel › Corridas).
+
+### Fotos
+- Até **10 por serviço**, durante a viagem ou até 24 h depois de concluir. São reduzidas no celular e conferidas pelo servidor: tipo real JPEG, PNG ou WebP, até 5 MB.
+- Ficam no bucket privado `fotos` e só abrem por link temporário, para quem pode ver o pedido.
+- **Nenhuma foto é apagada nesta fase.** A retenção de Configurações passa a valer na fase 5, junto com o envio por e-mail. Acompanhe o uso do Storage no painel do Supabase (plano gratuito: 1 GB).
+
+### Problemas comuns
+| Sintoma | O que fazer |
+| --- | --- |
+| "Ainda é cedo para sair" | A saída libera 1 h antes do início. Espere ou peça ao cliente para mudar o horário. |
+| "Você tem outro serviço em andamento" | Conclua o serviço anterior antes de sair para o próximo. |
+| O cliente não vê o mapa | Confira se é quem fez o pedido ou o N1 (o N3 não vê). Sem as chaves do Google, aparece "o mapa não está disponível", mas o sinal e a chegada continuam. |
+| Saiu por engano | Não há como desfazer a saída pelo app. O ADM estorna o débito em Créditos (com motivo), e o motorista conclui o pedido com uma observação explicando. |
