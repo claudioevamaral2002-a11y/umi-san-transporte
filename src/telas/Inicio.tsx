@@ -348,8 +348,10 @@ function gruposDe(perfil: Perfil, p: Pendencias): DefGrupo[] {
     case 'MOTORISTA':
       return [
         { titulo: 'Aguardando seu orçamento', itens: p.aguardando_orcamento, tipo: 'orcar' },
-        // Serviços agendados chegam com a aprovação (fase 2B).
-        { titulo: 'Próximos serviços', itens: p.proximos, tipo: 'proximo', vazio: 'Nenhum serviço agendado por enquanto.' },
+        // Fase 3B: o primeiro dos próximos já está no cartão grande "Próximo serviço"; aqui ficam os seguintes.
+        p.proximos.length === 0
+          ? { titulo: 'Próximos serviços', itens: [], tipo: 'proximo', vazio: 'Nenhum serviço agendado por enquanto.' }
+          : { titulo: 'Depois', itens: p.proximos.slice(1), tipo: 'proximo' },
       ]
     case 'ADM':
       return [
@@ -381,6 +383,8 @@ function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
   const grupos = gruposDe(perfil, dados).filter((g) => g.itens.length > 0 || g.vazio)
   const aguardaVoce = (tipo: Tipo) =>
     (perfil.papel === 'CLIENTE' && tipo === 'aprovar') || (perfil.papel === 'MOTORISTA' && tipo === 'orcar')
+  // Motorista com o próximo serviço no cartão grande: nada a mais a mostrar aqui, mas também não é "nada pendente".
+  if (perfil.papel === 'MOTORISTA' && dados.proximos.length > 0 && grupos.every((g) => g.itens.length === 0)) return null
   if (grupos.every((g) => g.itens.length === 0)) {
     return (
       <>
