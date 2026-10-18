@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IVO Transportes — mockups da fase 3B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---------- Página de apresentação (mesmos tokens dos mockups da 3A) ---------- */
+:root { --pg-fundo:#e9e6de; --pg-texto:#0a2540; --pg-suave:#4b5b70; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--pg-fundo); color:var(--pg-texto); font-family:Manrope, Inter, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+.pg { max-width:1480px; margin:0 auto; padding:32px 16px 96px; }
+.pg-topo { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:16px; margin-bottom:8px; }
+.pg h1 { font-size:30px; line-height:1.18; letter-spacing:-0.035em; margin:0; font-weight:700; }
+.pg-intro { max-width:72ch; color:var(--pg-suave); font-size:16px; line-height:1.55; margin:8px 0 0; }
+.pg h2 { font-size:24px; letter-spacing:-0.025em; margin:56px 0 4px; }
+.pg h2 + p { margin:0 0 20px; color:var(--pg-suave); max-width:72ch; line-height:1.55; }
+.chave { display:inline-flex; background:#fff; border-radius:999px; padding:4px; gap:4px; box-shadow:0 1px 2px rgb(10 37 64/.1); }
+.chave button { font:600 15px Manrope; border:0; background:none; color:var(--pg-texto); padding:10px 18px; border-radius:999px; cursor:pointer; }
+.chave button[aria-pressed=true] { background:#0a2540; color:#f6f4ee; }
+.fileira { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; }
+.peca { display:flex; flex-direction:column; gap:10px; margin:0; }
+.peca > figcaption { font-size:13px; font-weight:500; color:var(--pg-suave); max-width:360px; line-height:1.4; }
+.peca > figcaption b { color:var(--pg-texto); font-weight:700; }
+
+/* ---------- Tokens dentro do celular ---------- */
+.tel {
+  --fundo:#f6f4ee; --folha:#ffffff; --texto:#0a2540; --suave:#4b5b70; --linha:#e1e6ed;
+  --mare:#1e4b7a; --laranja:#ff6a00; --laranja-texto:#c2410c; --suave-sel:#e6edf5;
+  --alerta-fundo:#fff4e5; --alerta:#b45309; --livre:#15803d;
+  --st-age:#1e4b7a; --st-and:#c2410c; --st-con:#15803d;
+  --mapa:#eef1ea; --mapa-rua:#ffffff; --mapa-agua:#cfe0ee; --mapa-verde:#dfe9d6;
+  --sombra:0 1px 2px rgb(10 37 64/.06), 0 6px 20px rgb(10 37 64/.07);
+  width:360px; height:760px; border-radius:44px; padding:10px; background:#11161d; flex-shrink:0;
+  box-shadow:0 30px 60px -20px rgb(10 37 64/.35);
+}
+body[data-tema=escuro] .tel {
+  --fundo:#061a30; --folha:#0c2a49; --texto:#f6f4ee; --suave:#a9b8cc; --linha:#1b3d63; --suave-sel:#173f68;
+  --alerta-fundo:#3a2a10; --alerta:#fbbf24; --laranja-texto:#ff8a4c; --livre:#4ade80;
+  --st-age:#7fb2e8; --st-and:#ff8a4c; --st-con:#4ade80;
+  --mapa:#1d2733; --mapa-rua:#2f3c4b; --mapa-agua:#123049; --mapa-verde:#1f3329;
+  --sombra:0 0 0 1px #1b3d63;
+}
+.tela { position:relative; width:100%; height:100%; border-radius:34px; overflow:hidden; background:var(--fundo); color:var(--texto);
+  font-size:16px; line-height:1.55; display:flex; flex-direction:column; }
+.tela * { font-variant-numeric:tabular-nums; }
+.sb { height:38px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center; padding:0 26px; font-size:14px; font-weight:700; }
+.sb .ilha { width:96px; height:26px; background:#000; border-radius:20px; }
+.rolo { flex:1; overflow:hidden; padding:4px 16px 0; position:relative; }
+.h1 { font-size:30px; font-weight:700; line-height:1.18; letter-spacing:-0.035em; margin:0; }
+.h2 { font-size:24px; font-weight:700; line-height:1.25; letter-spacing:-0.025em; margin:0; }
+.h3 { font-size:18px; font-weight:700; line-height:1.35; letter-spacing:-0.015em; margin:0; }
+.leg { font-size:13px; font-weight:500; line-height:1.4; color:var(--suave); }
+.grupo { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--suave); margin:18px 0 8px; }
+.forte { font-weight:600; }
+.cartao { background:var(--folha); border-radius:16px; padding:14px 16px; box-shadow:var(--sombra); }
+.btn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; border-radius:14px; font:600 16px Manrope; border:0; width:100%; }
+.btn-acao { background:var(--laranja); color:#0a2540; }
+.btn-sec { background:transparent; color:var(--texto); border:1.5px solid var(--linha); }
+.btn svg { width:20px; height:20px; }
+.duas { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.st { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; line-height:1; padding:6px 10px 6px 8px; border-radius:999px;
+  background:color-mix(in srgb, currentColor 12%, transparent); }
+.st svg { width:14px; height:14px; }
+.st.age{color:var(--st-age)} .st.and{color:var(--st-and)} .st.con{color:var(--st-con)}
+.rota { display:grid; grid-template-columns:18px 1fr; column-gap:10px; }
+.rota .trilho { display:flex; flex-direction:column; align-items:center; padding-top:6px; }
+.rota .ini { width:12px; height:12px; border-radius:50%; border:2.5px solid var(--mare); }
+.rota .via { width:2px; flex:1; min-height:18px; background:repeating-linear-gradient(var(--suave) 0 3px, transparent 3px 7px); opacity:.6; margin:3px 0; }
+.rota p { margin:0; }
+.rota .lugar { font-weight:600; line-height:1.35; }
+.rota .quando { font-size:13px; color:var(--suave); font-weight:500; margin-bottom:8px; }
+.abas { flex-shrink:0; background:var(--folha); display:flex; justify-content:space-around; padding:8px 8px 22px; border-top:1px solid var(--linha); }
+.aba { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; font-weight:600; color:var(--suave); width:64px; }
+.aba .ic { width:52px; height:30px; display:grid; place-items:center; border-radius:999px; }
+.aba svg { width:22px; height:22px; }
+.aba.ativa { color:var(--texto); }
+.aba.ativa .ic { background:#0a2540; color:#f6f4ee; }
+.cmd { background:#0a2540; color:#f6f4ee; padding:0 16px 16px; flex-shrink:0; }
+.cmd .linha1 { display:flex; justify-content:space-between; align-items:center; height:44px; }
+.cmd .icb { width:44px; height:44px; display:grid; place-items:center; margin-left:-10px; }
+.cmd .icb svg { width:22px; height:22px; }
+.cmd .sub { font-size:13px; font-weight:500; color:#a9b8cc; margin:2px 0; }
+.rodape { flex-shrink:0; padding:12px 16px 26px; background:var(--fundo); border-top:1px solid var(--linha); display:grid; gap:8px; }
+
+/* ---------- Novos componentes da 3B ---------- */
+/* trilho "deslize para sair" (role=slider; teclado: setas/Enter; reduced motion: botão "Confirmar saída") */
+.trilho-sair { position:relative; height:64px; border-radius:999px; background:#0a2540; color:#f6f4ee; display:flex; align-items:center; overflow:hidden; }
+.trilho-sair .faixa { position:absolute; left:76px; right:24px; top:50%; height:2px; background:repeating-linear-gradient(90deg, rgb(255 255 255/.35) 0 10px, transparent 10px 20px); }
+.trilho-sair .txt { position:relative; margin-left:auto; margin-right:22px; font-weight:700; font-size:15px; display:flex; align-items:center; gap:6px; }
+.trilho-sair .pino { position:absolute; left:6px; top:6px; width:52px; height:52px; border-radius:50%; background:var(--laranja); display:grid; place-items:center; color:#0a2540; }
+.trilho-sair .pino svg { width:34px; height:34px; }
+.trilho-sair.meio .pino { left:46%; }
+.trilho-sair.meio .txt { opacity:.35; }
+.selo { display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; padding:7px 12px; border-radius:999px; background:var(--suave-sel); }
+.selo .pulso { width:9px; height:9px; border-radius:50%; background:var(--livre); box-shadow:0 0 0 4px color-mix(in srgb, var(--livre) 25%, transparent); }
+.aviso { display:flex; gap:10px; padding:12px 14px; border-radius:14px; background:var(--alerta-fundo); color:var(--texto); font-size:14px; line-height:1.45; }
+.aviso svg { width:20px; height:20px; flex-shrink:0; color:var(--alerta); margin-top:1px; }
+.aviso b { font-weight:700; }
+/* mapa ilustrativo (no app: Leaflet + blocos do Google) */
+.mapa { position:relative; height:300px; margin:0 -16px; background:var(--mapa); overflow:hidden; }
+.mapa svg.base { position:absolute; inset:0; width:100%; height:100%; }
+.mapa .atrib { position:absolute; right:8px; bottom:6px; font-size:10px; font-weight:600; color:var(--suave); background:color-mix(in srgb, var(--folha) 80%, transparent); padding:1px 6px; border-radius:4px; }
+.mapa .sinal { position:absolute; left:12px; top:12px; }
+.carro { position:absolute; width:44px; height:44px; border-radius:50%; background:#0a2540; border:3px solid #fff; display:grid; place-items:center; color:#ff6a00; box-shadow:0 4px 12px rgb(10 37 64/.35); }
+.carro svg { width:26px; height:26px; }
+.carro.perdido { background:#8a96a6; color:#e9edf2; }
+.halo { position:absolute; width:90px; height:90px; border-radius:50%; background:rgb(30 75 122/.14); border:1px solid rgb(30 75 122/.3); }
+.eta { display:flex; justify-content:space-between; align-items:baseline; }
+.eta .grande { font-size:30px; font-weight:800; letter-spacing:-0.03em; line-height:1.1; }
+/* linha do tempo com carrinho */
+.lt { display:grid; grid-template-columns:repeat(4,1fr); position:relative; margin:6px 0 2px; }
+.lt::before { content:""; position:absolute; left:12%; right:12%; top:13px; height:3px; background:var(--linha); border-radius:3px; }
+.lt .feito-barra { position:absolute; left:12%; top:13px; height:3px; background:var(--laranja); border-radius:3px; }
+.lt .et { position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--suave); text-align:center; }
+.lt .et i { width:16px; height:16px; border-radius:50%; background:var(--folha); border:3px solid var(--linha); margin-top:6px; }
+.lt .et.ok i { border-color:var(--laranja); background:var(--laranja); }
+.lt .et.ok { color:var(--texto); }
+.lt .pick { position:absolute; top:-6px; width:34px; height:20px; color:var(--texto); }
+/* folha inferior */
+.veu { position:absolute; inset:0; background:rgb(6 26 48/.45); }
+.folha-inf { position:absolute; left:0; right:0; bottom:0; background:var(--folha); border-radius:24px 24px 0 0; padding:10px 16px 26px; }
+.folha-inf .alca { width:40px; height:5px; border-radius:5px; background:var(--linha); margin:0 auto 12px; }
+.horas { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.hora { height:44px; border-radius:12px; display:grid; place-items:center; font-weight:600; font-size:15px; background:var(--folha); border:1.5px solid var(--linha); }
+.hora.esc { background:#0a2540; color:#f6f4ee; box-shadow:0 0 0 2px var(--folha), 0 0 0 4px var(--laranja); border-color:transparent; }
+.campo { border:1.5px solid var(--linha); background:var(--folha); border-radius:12px; padding:10px 14px; min-height:52px; }
+.campo .r { font-size:13px; font-weight:500; color:var(--suave); display:block; line-height:1.3; }
+.fotos { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.foto { aspect-ratio:1; border-radius:12px; background:linear-gradient(135deg,#9fb4c9,#4f6c8a); position:relative; }
+.foto.b { background:linear-gradient(135deg,#c8b48c,#6f5b3b); }
+.foto.c { background:linear-gradient(135deg,#9cc0a2,#3f6b4a); }
+.foto.add { background:transparent; border:1.5px dashed var(--suave); display:grid; place-items:center; color:var(--suave); }
+.foto.add svg { width:26px; height:26px; }
+.resumo { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+.resumo .k { font-size:12px; font-weight:600; color:var(--suave); }
+.resumo .v { font-weight:700; font-size:17px; }
+.partida { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; height:100%; padding:0 28px; }
+.estrada { width:240px; height:70px; position:relative; }
+.estrada .chao { position:absolute; left:0; right:0; bottom:12px; height:3px; background:repeating-linear-gradient(90deg, var(--suave) 0 14px, transparent 14px 26px); opacity:.6; }
+.estrada svg { position:absolute; left:90px; bottom:14px; width:70px; height:44px; color:var(--texto); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="pickup" viewBox="0 0 64 36"><path fill="currentColor" d="M6 22h4l5-11h17v11h4V9h12l8 9 4 2v6h-4a6 6 0 0 0-12 0H26a6 6 0 0 0-12 0H6z"/><circle cx="20" cy="27" r="4.5" fill="currentColor"/><circle cx="42" cy="27" r="4.5" fill="currentColor"/><path fill="#ff6a00" d="M40 11h7l5 6H40z"/></symbol>
+    <symbol id="seta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="voltar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="fone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+    <symbol id="mapa-ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></symbol>
+    <symbol id="relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 7v5l3 2"/></symbol>
+    <symbol id="alerta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3 2 20h20z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 9v5M12 17.5v.5"/></symbol>
+    <symbol id="camera" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="m5 12 4.5 4.5L19 7"/></symbol>
+    <symbol id="inicio" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></symbol>
+    <symbol id="agenda" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M4 10h16M9 3v4M15 3v4"/></symbol>
+    <symbol id="lista" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 7h12M8 12h12M8 17h12M4 7h.5M4 12h.5M4 17h.5"/></symbol>
+    <symbol id="destino" viewBox="0 0 16 14"><path fill="#ff6a00" d="M8 14 0 0h16z"/></symbol>
+  </defs>
+</svg>
+
+<!-- Mapa ilustrativo reutilizado: ruas, água e rota -->
+<template id="mapa-base">
+  <svg class="base" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect width="360" height="300" fill="var(--mapa)"/>
+    <path d="M250 0h110v300H285c-20-60-10-120-35-170C238 90 260 40 250 0z" fill="var(--mapa-agua)"/>
+    <rect x="30" y="200" width="70" height="60" rx="8" fill="var(--mapa-verde)"/>
+    <g stroke="var(--mapa-rua)" stroke-linecap="round" fill="none">
+      <path d="M-10 60 L240 80" stroke-width="12"/><path d="M-10 160 L250 150" stroke-width="16"/>
+      <path d="M60 -10 L80 310" stroke-width="10"/><path d="M160 -10 L170 310" stroke-width="12"/><path d="M-10 250 L260 240" stroke-width="9"/>
+    </g>
+    <path d="M40 255 L78 248 L80 152 L168 150 L176 72 L232 78" fill="none" stroke="#1e4b7a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+    <path d="M40 255 L78 248 L80 152 L120 151" fill="none" stroke="#ff6a00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</template>
+
+<div class="pg">
+  <div class="pg-topo">
+    <div>
+      <h1>Fase 3B: execução da viagem e rastreio</h1>
+      <p class="pg-intro">Mockups para aprovação do dono, junto com <code>docs/fases/fase-3b-desenho-execucao-rastreio.md</code>. Valores, nomes e horários são de exemplo. O mapa aqui é um desenho; no app ele é o Leaflet com os blocos do Google, como na 3A.</p>
+    </div>
+    <div class="chave" role="group" aria-label="Tema">
+      <button type="button" aria-pressed="true" data-tema="claro">Claro</button>
+      <button type="button" aria-pressed="false" data-tema="escuro">Escuro</button>
+    </div>
+  </div>
+
+  <h2>Motorista</h2>
+  <p>O próximo serviço vira um cartão grande no Início. A saída é um trilho de deslizar; o débito só aparece depois que o servidor confirma.</p>
+  <div class="fileira">
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>08:14</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <p class="leg" style="margin:6px 0 0">Sábado, 18 de outubro</p>
+          <h1 class="h1">Bom dia, Rui</h1>
+          <p class="grupo">Próximo serviço</p>
+          <div class="cartao" style="display:grid;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="st age"><svg><use href="#relogio"/></svg>Agendado · 09:00</span>
+              <span class="leg">#0043</span>
+            </div>
+            <div class="rota">
+              <div class="trilho"><span class="ini"></span><span class="via"></span><svg width="14" height="12"><use href="#destino"/></svg></div>
+              <div><p class="lugar">Porto de Itajaí, portão 3</p><p class="quando">Levar e trazer · 2 pessoas + bomba d’água</p><p class="lugar">Base Navegantes</p></div>
+            </div>
+            <div class="duas">
+              <span class="btn btn-sec"><svg><use href="#mapa-ic"/></svg>Abrir no Maps</span>
+              <span class="btn btn-sec"><svg><use href="#fone"/></svg>Ligar</span>
+            </div>
+            <div class="trilho-sair" role="slider" aria-label="Deslize para sair">
+              <span class="faixa"></span>
+              <span class="pino"><svg><use href="#pickup"/></svg></span>
+              <span class="txt">Deslize para sair <svg width="18" height="18"><use href="#seta"/></svg></span>
+            </div>
+            <p class="leg" style="margin:-4px 0 0;text-align:center">Disponível a partir de 1 h antes do início (D1)</p>
+          </div>
+          <p class="grupo">Depois</p>
+          <div class="cartao" style="display:flex;justify-content:space-between;align-items:center">
+            <div><p class="forte" style="margin:0">14:00 · Marina Saco da Fazenda</p><p class="leg" style="margin:0">#0044 · Umi San</p></div>
+            <span class="st age">Agendado</span>
+          </div>
+        </div>
+        <nav class="abas"><span class="aba ativa"><span class="ic"><svg><use href="#inicio"/></svg></span>Início</span><span class="aba"><span class="ic"><svg><use href="#agenda"/></svg></span>Agenda</span><span class="aba"><span class="ic"><svg><use href="#lista"/></svg></span>Pedidos</span></nav>
+      </div></div>
+      <figcaption><b>1. Início do motorista.</b> Cartão "Próximo serviço" com Maps, Ligar e o trilho de saída (teclado: seta para a direita ou Enter; com reduced motion vira o botão "Confirmar saída").</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>08:52</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="partida">
+          <div class="estrada"><span class="chao"></span><svg><use href="#pickup"/></svg></div>
+          <h2 class="h2">Registrando a saída…</h2>
+          <p class="leg" style="font-size:15px">O valor do serviço sai do saldo da empresa agora. Aguarde a confirmação.</p>
+        </div>
+      </div></div>
+      <figcaption><b>2. Saindo.</b> A pickup "parte" e a tela espera o servidor (sem UI otimista). Se a resposta for "outra viagem em andamento" ou "fora da janela", volta ao cartão com a mensagem.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="cmd">
+          <div class="sb claro" style="padding:0 10px;color:#f6f4ee"><span>09:31</span><span class="ilha"></span><span>●●●</span></div>
+          <div class="linha1"><span class="icb"><svg><use href="#voltar"/></svg></span><span class="st and" style="color:#ff8a4c">Em andamento</span></div>
+          <p class="sub">Pedido #0043 · saiu 08:52</p>
+          <h1 class="h1" style="color:#f6f4ee">Base Navegantes</h1>
+        </div>
+        <div class="rolo" style="padding-top:14px;display:grid;gap:12px;align-content:start">
+          <span class="selo"><span class="pulso"></span>Compartilhando sua localização</span>
+          <div class="cartao">
+            <div class="eta"><span class="leg forte">Chegada ao destino</span><span class="leg">rota recalculada 09:28</span></div>
+            <p class="grande" style="font-size:30px;font-weight:800;letter-spacing:-0.03em;margin:2px 0 0">~09:47</p>
+            <p class="leg" style="margin:0">Término previsto 11:00</p>
+          </div>
+          <div class="aviso"><svg><use href="#alerta"/></svg><span><b>Mantenha o app aberto.</b> O cliente está acompanhando você. Com a tela apagada, o envio para.</span></div>
+          <div class="duas">
+            <span class="btn btn-sec"><svg><use href="#mapa-ic"/></svg>Maps</span>
+            <span class="btn btn-sec"><svg><use href="#fone"/></svg>Ligar</span>
+          </div>
+        </div>
+        <div class="rodape">
+          <span class="btn btn-sec"><svg><use href="#relogio"/></svg>Nova previsão de término</span>
+          <span class="btn btn-acao"><svg><use href="#check"/></svg>Concluir serviço</span>
+        </div>
+      </div></div>
+      <figcaption><b>3. Em andamento.</b> Selo de localização sempre visível, tela acesa (Wake Lock), chegada prevista calculada pelo app do motorista. Ações grandes embaixo, para uma mão.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="cmd">
+          <div class="sb claro" style="padding:0 10px;color:#f6f4ee"><span>10:58</span><span class="ilha"></span><span>●●●</span></div>
+          <div class="linha1"><span class="icb"><svg><use href="#voltar"/></svg></span><span class="st and" style="color:#ff8a4c">Em andamento</span></div>
+          <h1 class="h1" style="color:#f6f4ee">Base Navegantes</h1>
+        </div>
+        <div class="rolo" style="padding-top:14px">
+          <div class="aviso"><svg><use href="#alerta"/></svg><span><b>Você está perto da previsão (11:00).</b> Informe uma nova, se for passar.</span></div>
+        </div>
+        <div class="veu"></div>
+        <div class="folha-inf">
+          <div class="alca"></div>
+          <h2 class="h3">Nova previsão de término</h2>
+          <p class="leg" style="margin:2px 0 12px">Hoje · em passos de 15 min</p>
+          <div class="horas">
+            <span class="hora">11:15</span><span class="hora">11:30</span><span class="hora esc">11:45</span><span class="hora">12:00</span>
+            <span class="hora">12:15</span><span class="hora">12:30</span><span class="hora">12:45</span><span class="hora">13:00</span>
+          </div>
+          <div class="campo" style="margin-top:12px"><span class="r">Motivo (opcional)</span><span>Espera na balsa</span></div>
+          <div class="aviso" style="margin-top:12px"><svg><use href="#alerta"/></svg><span>Passa do início do próximo serviço (#0044, 14:00)? <b>Não.</b> Se passasse, o cliente dele seria avisado no app.</span></div>
+          <span class="btn btn-acao" style="margin-top:12px">Salvar previsão 11:45</span>
+        </div>
+      </div></div>
+      <figcaption><b>4. Nova previsão.</b> A agenda se estende até a hora escolhida. Se colidir com o próximo serviço, ele recebe o aviso de atraso (D4).</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="cmd">
+          <div class="sb claro" style="padding:0 10px;color:#f6f4ee"><span>11:41</span><span class="ilha"></span><span>●●●</span></div>
+          <div class="linha1"><span class="icb"><svg><use href="#voltar"/></svg></span><span></span></div>
+          <p class="sub">Pedido #0043</p>
+          <h1 class="h1" style="color:#f6f4ee">Concluir serviço</h1>
+        </div>
+        <div class="rolo" style="padding-top:14px">
+          <p class="forte" style="margin:0 0 8px">Fotos <span class="leg">(opcional, até 10)</span></p>
+          <div class="fotos"><span class="foto"></span><span class="foto b"></span><span class="foto c"></span><span class="foto add"><svg><use href="#camera"/></svg></span></div>
+          <div class="campo" style="margin-top:16px;min-height:96px"><span class="r">Observação (opcional)</span><span>Equipamento entregue ao Sr. Paulo no galpão 2.</span></div>
+          <div class="cartao" style="margin-top:16px">
+            <div class="resumo">
+              <div><div class="k">Saída</div><div class="v">08:52</div></div>
+              <div><div class="k">Agora</div><div class="v">11:41</div></div>
+              <div><div class="k">Duração</div><div class="v">2 h 49 min</div></div>
+              <div><div class="k">Km rodados (GPS)</div><div class="v">~41 km</div></div>
+            </div>
+          </div>
+          <p class="leg" style="margin:12px 0 0">Concluir não cobra nada: o valor já foi debitado na saída. O trajeto é apagado e fica só este resumo.</p>
+        </div>
+        <div class="rodape"><span class="btn btn-acao"><svg><use href="#check"/></svg>Concluir serviço</span></div>
+      </div></div>
+      <figcaption><b>5. Concluir.</b> Fotos reduzidas no aparelho antes do envio e conferidas pelo servidor (tipo real, 5 MB). Opcionais (D3).</figcaption>
+    </figure>
+  </div>
+
+  <h2>Cliente (solicitante e N1; também ADM e gestor de frota)</h2>
+  <p>No detalhe do pedido em andamento aparece o mapa ao vivo. O N3 e os outros N2 continuam vendo só o status.</p>
+  <div class="fileira">
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>09:33</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo" style="padding-top:0">
+          <div class="mapa" data-mapa>
+            <div class="halo" style="left:75px;top:106px"></div>
+            <div class="carro" style="left:98px;top:129px"><svg><use href="#pickup"/></svg></div>
+            <svg style="position:absolute;left:225px;top:66px" width="18" height="16"><use href="#destino"/></svg>
+            <span class="atrib">Google</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+            <span class="st and">Em andamento</span><span class="leg">atualizado agora</span>
+          </div>
+          <div class="eta" style="margin-top:8px"><div><p class="leg forte" style="margin:0">Chegada prevista</p><p class="grande" style="margin:0">~09:47</p></div><p class="leg" style="margin:0;text-align:right">Rui · pickup<br>saiu 08:52</p></div>
+          <div class="cartao" style="margin-top:12px;padding-bottom:12px">
+            <div class="lt">
+              <span class="feito-barra" style="width:50%"></span>
+              <svg class="pick" style="left:calc(50% - 4px)"><use href="#pickup"/></svg>
+              <span class="et ok"><i></i>Agendado</span><span class="et ok"><i></i>Saiu</span><span class="et ok"><i></i>Em andamento</span><span class="et"><i></i>Concluído</span>
+            </div>
+          </div>
+        </div>
+        <nav class="abas"><span class="aba"><span class="ic"><svg><use href="#inicio"/></svg></span>Início</span><span class="aba"><span class="ic"><svg><use href="#agenda"/></svg></span>Agenda</span><span class="aba ativa"><span class="ic"><svg><use href="#lista"/></svg></span>Pedidos</span></nav>
+      </div></div>
+      <figcaption><b>6. Acompanhando.</b> O carro anda interpolando entre os pontos (a cada ~5 s). Laranja = já percorrido; azul = rota até o destino. Linha do tempo com o carrinho avançando.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>09:40</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo" style="padding-top:0">
+          <div class="mapa" data-mapa>
+            <div class="carro perdido" style="left:98px;top:129px"><svg><use href="#pickup"/></svg></div>
+            <svg style="position:absolute;left:225px;top:66px" width="18" height="16"><use href="#destino"/></svg>
+            <span class="atrib">Google</span>
+          </div>
+          <div class="aviso" style="margin-top:14px"><svg><use href="#alerta"/></svg><span><b>Sinal do motorista perdido.</b> Última posição há 2 min. O mapa volta a se mover quando o sinal voltar.</span></div>
+          <div class="eta" style="margin-top:12px"><div><p class="leg forte" style="margin:0">Chegada prevista</p><p class="grande" style="margin:0;color:var(--suave)">~09:47</p></div><p class="leg" style="margin:0;text-align:right">estimativa<br>sem atualização</p></div>
+          <div class="duas" style="margin-top:14px"><span class="btn btn-sec"><svg><use href="#fone"/></svg>Ligar para a IVO</span><span></span></div>
+        </div>
+        <nav class="abas"><span class="aba"><span class="ic"><svg><use href="#inicio"/></svg></span>Início</span><span class="aba"><span class="ic"><svg><use href="#agenda"/></svg></span>Agenda</span><span class="aba ativa"><span class="ic"><svg><use href="#lista"/></svg></span>Pedidos</span></nav>
+      </div></div>
+      <figcaption><b>7. Sinal perdido.</b> Acima de 20 s: "atualizado há X s". Acima de 60 s: carro cinza e aviso. Nunca inventa posição.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>13:20</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <p class="leg" style="margin:6px 0 0">Pedido #0044</p>
+          <h1 class="h2">Marina Saco da Fazenda</h1>
+          <div style="margin-top:8px"><span class="st age">Agendado · 14:00</span></div>
+          <div class="aviso" style="margin-top:14px"><svg><use href="#relogio"/></svg><span><b>O motorista está terminando outro serviço.</b> Previsão de chegada ~14:40. Avisamos aqui quando ele sair.</span></div>
+          <div class="cartao" style="margin-top:14px">
+            <div class="rota">
+              <div class="trilho"><span class="ini"></span><span class="via"></span><svg width="14" height="12"><use href="#destino"/></svg></div>
+              <div><p class="lugar">Marina Saco da Fazenda</p><p class="quando">Só levar · 1 pessoa</p><p class="lugar">Estaleiro Navship</p></div>
+            </div>
+          </div>
+          <p class="grupo">Nas pendências do Início</p>
+          <div class="cartao" style="display:flex;gap:10px;align-items:center"><svg width="20" height="20" style="color:var(--alerta)"><use href="#alerta"/></svg><div><p class="forte" style="margin:0">Atraso no #0044</p><p class="leg" style="margin:0">Previsão ~14:40 (marcado 14:00)</p></div></div>
+        </div>
+        <nav class="abas"><span class="aba ativa"><span class="ic"><svg><use href="#inicio"/></svg></span>Início</span><span class="aba"><span class="ic"><svg><use href="#agenda"/></svg></span>Agenda</span><span class="aba"><span class="ic"><svg><use href="#lista"/></svg></span>Pedidos</span></nav>
+      </div></div>
+      <figcaption><b>8. Próximo pedido com atraso.</b> Quando a nova previsão do motorista passa do início deste pedido, o cliente vê o aviso no detalhe e nas pendências (e-mail e push só na fase 5).</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>12:05</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <p class="leg" style="margin:6px 0 0">Pedido #0043</p>
+          <h1 class="h2">Base Navegantes</h1>
+          <div style="margin-top:8px"><span class="st con"><svg><use href="#check"/></svg>Concluído</span></div>
+          <div class="cartao" style="margin-top:14px;padding-bottom:12px">
+            <div class="lt">
+              <span class="feito-barra" style="width:76%"></span>
+              <span class="et ok"><i></i>Agendado</span><span class="et ok"><i></i>Saiu</span><span class="et ok"><i></i>Em andamento</span><span class="et ok"><i></i>Concluído</span>
+            </div>
+          </div>
+          <div class="cartao" style="margin-top:12px">
+            <div class="resumo">
+              <div><div class="k">Saída</div><div class="v">08:52</div></div>
+              <div><div class="k">Chegada</div><div class="v">11:43</div></div>
+              <div><div class="k">Duração</div><div class="v">2 h 51 min</div></div>
+              <div><div class="k">Km rodados</div><div class="v">~41 km</div></div>
+            </div>
+            <p class="leg" style="margin:8px 0 0">Km pelo GPS do motorista, aproximado. O valor cobrado é o do orçamento aprovado.</p>
+          </div>
+          <p class="forte" style="margin:14px 0 8px">Fotos</p>
+          <div class="fotos"><span class="foto"></span><span class="foto b"></span><span class="foto c"></span></div>
+          <p class="leg" style="margin:12px 0 0">“Equipamento entregue ao Sr. Paulo no galpão 2.”</p>
+        </div>
+        <nav class="abas"><span class="aba"><span class="ic"><svg><use href="#inicio"/></svg></span>Início</span><span class="aba"><span class="ic"><svg><use href="#agenda"/></svg></span>Agenda</span><span class="aba ativa"><span class="ic"><svg><use href="#lista"/></svg></span>Pedidos</span></nav>
+      </div></div>
+      <figcaption><b>9. Concluído.</b> Resumo da viagem, fotos (URL assinada curta) e a observação do motorista. O trajeto já foi apagado.</figcaption>
+    </figure>
+  </div>
+</div>
+<script>
+  // Mapa ilustrativo em todas as peças que têm [data-mapa].
+  const base = document.getElementById('mapa-base')
+  document.querySelectorAll('[data-mapa]').forEach((m) => m.prepend(base.content.cloneNode(true)))
+  // Chave de tema.
+  document.querySelectorAll('.chave button').forEach((b) =>
+    b.addEventListener('click', () => {
+      document.body.dataset.tema = b.dataset.tema
+      document.querySelectorAll('.chave button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)))
+    }),
+  )
+</script>
+</body>
+</html>
