@@ -60,6 +60,39 @@ export const FORM_VAZIO: FormPedido = {
   observacoes: '',
 }
 
+// Rascunho para atravessar uma recarga: quem está no Novo pedido durante um deploy que muda as regras do banco recebe
+// CAMPOS_INVALIDOS do código antigo; o botão "Recarregar" guarda o formulário aqui e a tela nova o retoma no Confira.
+export const CHAVE_RASCUNHO = 'ivo:novo-pedido-rascunho'
+const VALIDADE_RASCUNHO_MS = 30 * 60_000
+type Armazem = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+
+/** Guarda o formulário (sem quebrar se o armazenamento estiver bloqueado, como na navegação privada). */
+export function guardarRascunho(f: FormPedido, armazem: Armazem | null, agora: number): void {
+  try {
+    armazem?.setItem(CHAVE_RASCUNHO, JSON.stringify({ em: agora, f }))
+  } catch {
+    // Sem onde guardar: a recarga só não retoma o formulário.
+  }
+}
+
+/** Devolve o rascunho uma vez só (e o apaga). Descarta se tiver mais de 30 min ou estiver estragado. */
+export function lerRascunho(armazem: Armazem | null, agora: number): FormPedido | null {
+  try {
+    const bruto = armazem?.getItem(CHAVE_RASCUNHO)
+    if (bruto == null) return null
+    armazem!.removeItem(CHAVE_RASCUNHO)
+    const r: unknown = JSON.parse(bruto)
+    if (typeof r !== 'object' || r === null) return null
+    const { em, f } = r as { em?: unknown; f?: unknown }
+    if (typeof em !== 'number' || agora - em < 0 || agora - em > VALIDADE_RASCUNHO_MS) return null
+    if (typeof f !== 'object' || f === null || Array.isArray(f)) return null
+    // Campos que uma versão anterior não tinha vêm do formulário vazio; o banco confere tudo de novo no envio.
+    return { ...FORM_VAZIO, ...(f as Partial<FormPedido>) }
+  } catch {
+    return null
+  }
+}
+
 /** A pessoa já digitou/escolheu algo (fechar pede confirmação). */
 export function temDados(f: FormPedido): boolean {
   return (

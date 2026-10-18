@@ -137,6 +137,52 @@ test.describe('cliente: novo pedido', () => {
     expect(csp).toEqual([])
   })
 
+  test('CAMPOS_INVALIDOS (app desatualizado) → Recarregar → volta no Confira com os dados → enviado', async ({ page }) => {
+    await comSessaoFalsa(page, CLIENTE_N2)
+    await simularApi(page)
+    const chamadas = await simularPedidos(page, {
+      respostas: { criar_pedido: [{ ok: false, codigo: 'CAMPOS_INVALIDOS' }] },
+    })
+    await page.goto('/pedidos/novo')
+    await escolherDiaNoPedido(page, DIA_PEDIDO)
+    await page.getByTestId('horarios-livres').getByRole('radio', { name: '10:00' }).click()
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await page.getByLabel('Origem').fill('Porto de Itajaí')
+    await page.getByLabel('Destino').fill('Base Navegantes')
+    await page.getByRole('checkbox', { name: 'Levar' }).check()
+    await page.getByLabel('Nome do contato').fill('Rui')
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await page.getByLabel('Observações (opcional)').fill('Portão 3')
+    await page.getByRole('button', { name: 'Revisar' }).click()
+    await page.getByRole('button', { name: 'Enviar pedido' }).click()
+
+    // O front já validou tudo: CAMPOS_INVALIDOS indica código antigo. Nada de mensagem genérica.
+    const aviso = page.getByTestId('aviso-app-atualizado')
+    await expect(aviso).toContainText('O app foi atualizado. Toque em Recarregar e envie de novo; seus dados ficam guardados.')
+    await expect(page.getByText('Confira os dados informados e tente de novo.')).toHaveCount(0)
+    await aviso.getByRole('button', { name: 'Recarregar' }).click()
+
+    // Depois da recarga: direto no passo 4, com o que foi preenchido.
+    await expect(page.getByRole('heading', { level: 1, name: 'Confira o pedido' })).toBeVisible()
+    const resumo = page.getByTestId('resumo-pedido')
+    await expect(resumo).toContainText('10:00')
+    await expect(resumo).toContainText('Porto de Itajaí')
+    await expect(resumo).toContainText('Base Navegantes')
+    await expect(resumo).toContainText('Rui')
+    await expect(page.getByTestId('aviso-app-atualizado')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Enviar pedido' }).click()
+    await expect(page.getByTestId('pedido-enviado')).toBeVisible()
+
+    const envios = chamadas.filter((c) => c.rpc === 'criar_pedido')
+    expect(envios).toHaveLength(2)
+    expect(envios[1]!.corpo.p).toEqual(envios[0]!.corpo.p)
+    expect(envios[1]!.corpo.p).toMatchObject({ origem: 'Porto de Itajaí', observacoes: 'Portão 3', inicio: instanteSp(DIA_PEDIDO, '10:00') })
+
+    // O rascunho é usado uma vez só: abrir o Novo pedido de novo começa vazio.
+    await page.goto('/pedidos/novo')
+    await expect(page.getByRole('heading', { level: 1, name: 'Quando?' })).toBeVisible()
+  })
+
   test('fechar com dados pede confirmação; sem dados fecha direto', async ({ page }) => {
     await comSessaoFalsa(page, CLIENTE_N2)
     await simularApi(page)

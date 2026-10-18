@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CHAVE_RASCUNHO,
   FORM_VAZIO,
+  guardarRascunho,
+  lerRascunho,
   mascararTelefone,
   montarPedido,
   pesoParaNumero,
@@ -143,6 +146,78 @@ describe('montarPedido com endereços (fase 3A, termos do Google)', () => {
     })
     expect(p).toMatchObject({ destino_place_id: 'ChIJdef' })
     expect(p).not.toHaveProperty('destino_lat')
+  })
+})
+
+describe('rascunho para depois de uma atualização do app', () => {
+  const MIN = 60_000
+  const AGORA = Date.parse('2026-10-18T15:00:00Z')
+
+  function armazemFalso(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> & { dados: Map<string, string> } {
+    const dados = new Map<string, string>()
+    return {
+      dados,
+      getItem: (k) => dados.get(k) ?? null,
+      setItem: (k, v) => void dados.set(k, v),
+      removeItem: (k) => void dados.delete(k),
+    }
+  }
+
+  const bloqueado: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> = {
+    getItem: () => {
+      throw new Error('SecurityError')
+    },
+    setItem: () => {
+      throw new Error('QuotaExceededError')
+    },
+    removeItem: () => {
+      throw new Error('SecurityError')
+    },
+  }
+
+  it('guarda e devolve o formulário uma vez só', () => {
+    const a = armazemFalso()
+    guardarRascunho(COMPLETO, a, AGORA)
+    expect(JSON.parse(a.dados.get(CHAVE_RASCUNHO)!)).toEqual({ em: AGORA, f: COMPLETO })
+    expect(lerRascunho(a, AGORA + 5 * MIN)).toEqual(COMPLETO)
+    expect(a.dados.has(CHAVE_RASCUNHO)).toBe(false)
+    expect(lerRascunho(a, AGORA + 5 * MIN)).toBeNull()
+  })
+
+  it('descarta rascunho com mais de 30 minutos (ou com data no futuro)', () => {
+    const a = armazemFalso()
+    guardarRascunho(COMPLETO, a, AGORA)
+    expect(lerRascunho(a, AGORA + 30 * MIN + 1)).toBeNull()
+    expect(a.dados.has(CHAVE_RASCUNHO)).toBe(false)
+    guardarRascunho(COMPLETO, a, AGORA)
+    expect(lerRascunho(a, AGORA + 30 * MIN)).toEqual(COMPLETO)
+    guardarRascunho(COMPLETO, a, AGORA + 10 * MIN)
+    expect(lerRascunho(a, AGORA)).toBeNull()
+  })
+
+  it('JSON estragado ou com outro formato é descartado', () => {
+    const a = armazemFalso()
+    for (const ruim of ['{', 'null', '[]', '{"em":"ontem","f":{}}', `{"em":${AGORA}}`, `{"em":${AGORA},"f":"x"}`]) {
+      a.dados.set(CHAVE_RASCUNHO, ruim)
+      expect(lerRascunho(a, AGORA)).toBeNull()
+      expect(a.dados.has(CHAVE_RASCUNHO)).toBe(false)
+    }
+  })
+
+  it('campos que faltam (rascunho de uma versão anterior) vêm do formulário vazio', () => {
+    const a = armazemFalso()
+    const semAlguns: Partial<FormPedido> = { ...COMPLETO }
+    delete semAlguns.observacoes
+    delete semAlguns.reboque
+    a.dados.set(CHAVE_RASCUNHO, JSON.stringify({ em: AGORA, f: semAlguns }))
+    expect(lerRascunho(a, AGORA)).toEqual({ ...COMPLETO, observacoes: '', reboque: 'NAO' })
+  })
+
+  it('armazenamento bloqueado (navegação privada) ou ausente não quebra', () => {
+    expect(() => guardarRascunho(COMPLETO, bloqueado, AGORA)).not.toThrow()
+    expect(lerRascunho(bloqueado, AGORA)).toBeNull()
+    expect(() => guardarRascunho(COMPLETO, null, AGORA)).not.toThrow()
+    expect(lerRascunho(null, AGORA)).toBeNull()
   })
 })
 
