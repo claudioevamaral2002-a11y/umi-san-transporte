@@ -74,7 +74,7 @@ Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~2
 
 ## 7. Como trabalhar neste repositório
 
-- **Sem Docker na máquina do dono** (decisão dele). Tudo que usa banco roda **só no CI**: faça push num branch e acompanhe com `gh run watch <id> --exit-status`.
+- **Sem Docker na máquina do dono** (decisão dele). Tudo que usa banco roda **só no CI**. O CI roda num push na `main` e em todo PR. Para testar um branch, faça push e abra um PR (pode ser rascunho, com `gh pr create --draft`); sem PR, dispare com `gh workflow run ci.yml --ref <branch>`. Acompanhe com `gh run watch <id> --exit-status`.
 - Localmente rodam lint, typecheck, unidade, `npm run build:test` e o e2e simulado. O `.env.test` local leva valores falsos e é ignorado pelo git.
 - O fluxo usado até aqui: **desenho → aprovação do dono (com mockups) → plano → implementação com testes → revisão de segurança → PR → merge pelo dono (= deploy)**.
 - O dono prefere **publicar fluxos completos de uma vez**, não fases pela metade.
