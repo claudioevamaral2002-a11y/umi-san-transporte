@@ -8,12 +8,22 @@ import { ORIGEM_APP, comBanco, criarPessoa, empresaComContrato, entrarComDoisFat
 
 test.describe('execução e rastreio (fase 3B)', () => {
   test.setTimeout(300_000)
+  let motoristaDoTeste: string | null = null
+  test.afterEach(async () => {
+    if (motoristaDoTeste) {
+      const id = motoristaDoTeste
+      await comBanco((db) => db.query(`update app.perfis set ativo = false where usuario_id = $1`, [id]))
+    }
+  })
 
   test('saída com débito → posição ao vivo para o cliente → conclusão com resumo', async ({ page, browser }) => {
+    // Este motorista passa a atender os pedidos novos (o ativo mais antigo) só durante o teste: no fim é desativado,
+    // para os próximos arquivos (que fazem o mesmo com o deles) não mandarem pedidos para ele.
     const motorista = await criarPessoa({ papel: 'MOTORISTA', nome: 'Márcio Viagem' })
     await comBanco((db) =>
-      db.query(`update app.perfis set criado_em = now() - interval '31 years' where usuario_id = $1`, [motorista.id]),
+      db.query(`update app.perfis set criado_em = now() - interval '40 years' where usuario_id = $1`, [motorista.id]),
     )
+    motoristaDoTeste = motorista.id
     const adm = await criarPessoa({ papel: 'ADM' })
     const empresa = await empresaComContrato()
     const cliente = await criarPessoa({ papel: 'CLIENTE', empresa, nivel: 2, nome: 'Clara Rastreio' })
@@ -66,6 +76,8 @@ test.describe('execução e rastreio (fase 3B)', () => {
       await pm.goto(`/pedidos/${id}`)
       await pm.getByRole('slider', { name: 'Deslize para sair' }).press('End', { timeout: 20_000 })
       await expect(pm.getByText('Saída registrada. Boa viagem!')).toBeVisible({ timeout: 20_000 })
+      // O GPS do navegador só responde à página visível: com dois navegadores abertos, a do motorista vem para a frente.
+      await pm.bringToFront()
       await pm.getByRole('button', { name: 'Começar a compartilhar' }).click()
       await expect(pm.getByTestId('selo-localizacao')).toHaveText('Compartilhando sua localização', { timeout: 20_000 })
 
