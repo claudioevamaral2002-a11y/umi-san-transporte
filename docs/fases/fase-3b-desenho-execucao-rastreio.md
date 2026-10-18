@@ -1,6 +1,6 @@
 # Fase 3B: execução da viagem e rastreio do motorista
 
-Estado: **especificação para revisão do dono** (18/10/2026). Nada foi implementado. Antes do código, o dono aprova este documento e os mockups ([`../redesign/mockups-fase-3b.html`](../redesign/mockups-fase-3b.html)), e responde às decisões da §3.
+Estado: **aprovada pelo dono em 18/10/2026**, com os mockups ([`../redesign/mockups-fase-3b.html`](../redesign/mockups-fase-3b.html)) e as propostas D1 a D5 da §3. Plano de implementação: [`fase-3b-plano.md`](fase-3b-plano.md).
 
 > A 3B junta duas coisas que o dono pediu para fazer juntas:
 > - a **fase 3 de execução** do backlog (issue #11): saída com débito, previsão de término e atraso, conclusão com fotos e linha do tempo;
