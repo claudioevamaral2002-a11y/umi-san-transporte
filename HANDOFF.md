@@ -39,12 +39,14 @@ GitHub Actions: CI (pgTAP + integração + e2e real) → Deploy (config push →
 | 1 | Convite por **link curto** imune a pré-visualização (`/c/<código>`), senha forte + HIBP, 2FA, perfis, auditoria imutável, rate limit, Auth como código |
 | 1B | **Contrato por empresa**, publicado só pelo ADM a partir de uma tabela modelo; papéis **ADM / Gestor de frota / Motorista**; cliente **N1 (gestor da empresa) / N2 (solicitante) / N3 (visualizador)**; visibilidade por perfil |
 | 2A | **Novo pedido** em 4 passos com calendário e horários livres; pré-reserva com bloqueio de conflito no banco; **orçamento-calculadora** do motorista (quantidades × preço travado do contrato); revisão, reprovação, recusa, cancelamento; agenda mês/dia; pendências; tempo real |
-| 3A (PR aberto) | **Endereços reais** (Google Places New, pela função `enderecos`, chave só no servidor), **locais da empresa** primeiro, **marcar no mapa** (Leaflet + Map Tiles, sem afrouxar a CSP), **km e tempo da rota**, **prévia do orçamento** para N1/N2 e **km preenchidos no Orçar**. Teto diário por empresa em Configurações |
+| 3A | **Endereços reais** (Google Places New, pela função `enderecos`, chave só no servidor), **locais da empresa** primeiro, **marcar no mapa** (Leaflet + Map Tiles, sem afrouxar a CSP), **km e tempo da rota**, **prévia do orçamento** para N1/N2 e **km preenchidos no Orçar**. Teto diário por empresa em Configurações |
 | 2B | **Motor de saldo**: recarga, ajuste e estorno (só ADM), reserva, **aprovação** com limite de crédito, **cancelamento de agendado com multa** pelas faixas do snapshot (valor travado entre prévia e confirmação), extrato (CSV/PDF), **painel do ADM**, reconciliação diária |
 
 Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~200 de unidade e ~95 e2e (simulados e contra o banco real). Antes de cada publicação, o CI também aplica as migrations sobre uma cópia do estado de produção.
 
 ## 4. Pendências imediatas (para o dono)
+
+> **Fase 3A em produção desde 15/10.** Estado, próximos passos e cuidados: [`docs/HANDOFF-fase-3a.md`](docs/HANDOFF-fase-3a.md).
 
 1. **Rodar o roteiro de produção** [`docs/fases/roteiro-producao-1b-2a-2b.md`](docs/fases/roteiro-producao-1b-2a-2b.md), com 26 passos. No dia seguinte, conferir a reconciliação das 03:00 no Painel do ADM.
 2. **Revisar os PRs do Dependabot** #2–#5 (versões das ações do GitHub). Ver a issue correspondente.
