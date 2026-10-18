@@ -10,10 +10,11 @@ import { podeEditarContratos } from '../lib/contratos.ts'
 import type { Papel, Perfil } from '../lib/estadoSessao.ts'
 import { pedidos, type ItemPendencia, type Pendencias } from '../lib/pedidos.ts'
 import { useSessao } from '../lib/sessao.tsx'
-import { formatarDuracao, formatarQuando, numeroPedido, saudacao } from '../lib/tempo.ts'
+import { formatarDuracao, formatarQuando, horaDe, numeroPedido, saudacao } from '../lib/tempo.ts'
 import { useTempoReal } from '../lib/tempoReal.ts'
 import { topicoDoPerfil } from '../lib/topicos.ts'
 import { PainelResumo } from './adm/Painel.tsx'
+import { ProximoServico } from './execucao/ProximoServico.tsx'
 import { Contagem, Rota } from './pedidos/componentes.tsx'
 import { BotaoNovoPedido, podeCriarPedido } from './pedidos/Pedidos.tsx'
 import { SaldoDaEmpresa } from './saldo/CartaoSaldo.tsx'
@@ -150,6 +151,8 @@ export function Inicio() {
 
         {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande soDesktop />}
 
+        {perfil?.papel === 'MOTORISTA' && <ProximoServico />}
+
         {perfil && <PendenciasDoPerfil perfil={perfil} />}
 
         {perfil?.papel === 'ADM' && <PainelResumo />}
@@ -234,6 +237,18 @@ function CartaoPendencia({
           )}
           {item.revisao && (
             <span className="rounded-full border border-marinho-2 px-2.5 py-0.5 text-xs font-bold text-link">Revisão</span>
+          )}
+          {/* Fase 3B: viagem em andamento (atrasada ou não) e atraso do serviço anterior do motorista. */}
+          {item.status === 'EM_ANDAMENTO' && (
+            <span className="rounded-full bg-[var(--status-andamento,var(--cor-laranja))]/15 px-2.5 py-0.5 text-xs font-bold text-alerta-texto">
+              {item.atrasado ? 'Em andamento, atrasado' : 'Em andamento'}
+            </span>
+          )}
+          {item.atraso_anterior_ate && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cor-laranja)]/15 px-2.5 py-0.5 text-xs font-bold text-alerta-texto" data-testid="selo-atraso">
+              <Icone nome="relogio" tamanho={12} />
+              Atraso: ~{horaDe(item.atraso_anterior_ate)}
+            </span>
           )}
         </div>
       </div>
