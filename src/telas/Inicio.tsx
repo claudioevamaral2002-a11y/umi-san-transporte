@@ -10,11 +10,10 @@ import { podeEditarContratos } from '../lib/contratos.ts'
 import type { Papel, Perfil } from '../lib/estadoSessao.ts'
 import { pedidos, type ItemPendencia, type Pendencias } from '../lib/pedidos.ts'
 import { useSessao } from '../lib/sessao.tsx'
-import { formatarDuracao, formatarQuando, horaDe, numeroPedido, saudacao } from '../lib/tempo.ts'
+import { formatarDuracao, formatarQuando, numeroPedido, saudacao } from '../lib/tempo.ts'
 import { useTempoReal } from '../lib/tempoReal.ts'
 import { topicoDoPerfil } from '../lib/topicos.ts'
 import { PainelResumo } from './adm/Painel.tsx'
-import { ProximoServico } from './execucao/ProximoServico.tsx'
 import { Contagem, Rota } from './pedidos/componentes.tsx'
 import { BotaoNovoPedido, podeCriarPedido } from './pedidos/Pedidos.tsx'
 import { SaldoDaEmpresa } from './saldo/CartaoSaldo.tsx'
@@ -151,8 +150,6 @@ export function Inicio() {
 
         {perfil && podeCriarPedido(perfil) && <BotaoNovoPedido perfil={perfil} grande soDesktop />}
 
-        {perfil?.papel === 'MOTORISTA' && <ProximoServico />}
-
         {perfil && <PendenciasDoPerfil perfil={perfil} />}
 
         {perfil?.papel === 'ADM' && <PainelResumo />}
@@ -237,18 +234,6 @@ function CartaoPendencia({
           )}
           {item.revisao && (
             <span className="rounded-full border border-marinho-2 px-2.5 py-0.5 text-xs font-bold text-link">Revisão</span>
-          )}
-          {/* Fase 3B: viagem em andamento (atrasada ou não) e atraso do serviço anterior do motorista. */}
-          {item.status === 'EM_ANDAMENTO' && (
-            <span className="rounded-full bg-[var(--status-andamento,var(--cor-laranja))]/15 px-2.5 py-0.5 text-xs font-bold text-alerta-texto">
-              {item.atrasado ? 'Em andamento, atrasado' : 'Em andamento'}
-            </span>
-          )}
-          {item.atraso_anterior_ate && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cor-laranja)]/15 px-2.5 py-0.5 text-xs font-bold text-alerta-texto" data-testid="selo-atraso">
-              <Icone nome="relogio" tamanho={12} />
-              Atraso: ~{horaDe(item.atraso_anterior_ate)}
-            </span>
           )}
         </div>
       </div>
@@ -348,10 +333,8 @@ function gruposDe(perfil: Perfil, p: Pendencias): DefGrupo[] {
     case 'MOTORISTA':
       return [
         { titulo: 'Aguardando seu orçamento', itens: p.aguardando_orcamento, tipo: 'orcar' },
-        // Fase 3B: o primeiro dos próximos já está no cartão grande "Próximo serviço"; aqui ficam os seguintes.
-        p.proximos.length === 0
-          ? { titulo: 'Próximos serviços', itens: [], tipo: 'proximo', vazio: 'Nenhum serviço agendado por enquanto.' }
-          : { titulo: 'Depois', itens: p.proximos.slice(1), tipo: 'proximo' },
+        // Serviços agendados chegam com a aprovação (fase 2B).
+        { titulo: 'Próximos serviços', itens: p.proximos, tipo: 'proximo', vazio: 'Nenhum serviço agendado por enquanto.' },
       ]
     case 'ADM':
       return [
@@ -383,8 +366,6 @@ function PendenciasDoPerfil({ perfil }: { perfil: Perfil }) {
   const grupos = gruposDe(perfil, dados).filter((g) => g.itens.length > 0 || g.vazio)
   const aguardaVoce = (tipo: Tipo) =>
     (perfil.papel === 'CLIENTE' && tipo === 'aprovar') || (perfil.papel === 'MOTORISTA' && tipo === 'orcar')
-  // Motorista com o próximo serviço no cartão grande: nada a mais a mostrar aqui, mas também não é "nada pendente".
-  if (perfil.papel === 'MOTORISTA' && dados.proximos.length > 0 && grupos.every((g) => g.itens.length === 0)) return null
   if (grupos.every((g) => g.itens.length === 0)) {
     return (
       <>

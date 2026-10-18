@@ -370,18 +370,6 @@ export async function simularPedidos(page: Page, opcoes: PedidosFalsos = {}) {
         : { ok: true }
     await rota(nome, () => respostas[nome]?.shift() ?? padrao)
   }
-  // Fase 3B: execução e rastreio.
-  const PADRAO_3B: Record<string, unknown> = {
-    registrar_saida: { ok: true, atividade_id: ID_PEDIDO, debitado_cent: 71000, saiu_em: new Date().toISOString() },
-    informar_previsao: { ok: true, conflito: false, proximo_id: null, proximo_numero: null },
-    concluir: { ok: true, concluiu_em: new Date().toISOString(), km_rodados: 41.4 },
-    enviar_posicao: { ok: true },
-    registrar_eta: { ok: true, restantes: 11 },
-    fotos_do_pedido: { ok: true, fotos: [] },
-  }
-  for (const [nome, padrao] of Object.entries(PADRAO_3B)) {
-    await rota(nome, () => respostas[nome]?.shift() ?? padrao)
-  }
   return chamadas
 }
 

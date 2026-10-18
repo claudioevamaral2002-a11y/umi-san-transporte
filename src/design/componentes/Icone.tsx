@@ -42,11 +42,6 @@ const CAMINHOS = {
   setaCima: 'M12 19V6 M6.5 11.5L12 6l5.5 5.5',
   setaParaBaixo: 'M12 5v13 M6.5 12.5L12 18l5.5-5.5',
   desfazer: 'M9 7L4.5 11.5 9 16 M5 11.5h9a5 5 0 0 1 0 10h-2',
-  // Fase 3B
-  telefone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
-  mapa: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
-  camera: 'M4 8h3l2-3h6l2 3h3v11H4z M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
-  sinal: 'M12 20h.01 M8.5 16.5a5 5 0 0 1 7 0 M5 13a10 10 0 0 1 14 0',
 } as const
 
 export type NomeIcone = keyof typeof CAMINHOS

@@ -19,7 +19,6 @@ import { formatarDuracao, formatarQuando, numeroPedido } from '../../lib/tempo.t
 import { useTempoReal } from '../../lib/tempoReal.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
 import { FaixasCancelamento } from '../contratos/CartoesContrato.tsx'
-import { PainelExecucao } from '../execucao/PainelExecucao.tsx'
 import { CartaoAgendado, FolhaAprovar, type Aprovacao } from './Aprovar.tsx'
 import { avisoCancelamento, FolhaCancelarAgendado } from './CancelarAgendado.tsx'
 import { Contagem, LinhaDoTempo, Memorial, Rota, SelosStatus } from './componentes.tsx'
@@ -302,16 +301,6 @@ export function Pedido() {
         <Cartao>
           <LinhaDoTempo status={p.status} historico={dados.historico} />
         </Cartao>
-
-        <PainelExecucao
-          r={dados}
-          papel={perfil?.papel}
-          aoMudou={(m) => {
-            setAviso(m)
-            setAprovacao(null)
-            recarregar()
-          }}
-        />
 
         {dados.acoes.orcar && (
           <Link

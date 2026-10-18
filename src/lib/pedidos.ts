@@ -61,20 +61,6 @@ export interface DetalhePedido {
   destino_place_id?: string | null
   /** Trechos que o km do orçamento cobre: 2 em ida e volta, 1 em trecho único (regra do banco). */
   trechos_km?: 1 | 2
-  // Fase 3B (opcionais: o app aberto durante o deploy ainda recebe o detalhe antigo).
-  saiu_em?: string | null
-  concluiu_em?: string | null
-  /** Previsão informada pelo motorista ou início + duração. */
-  fim_previsto?: string | null
-  previsao_informada?: boolean
-  /** O serviço anterior do motorista atrasou e deve acabar neste horário. */
-  atraso_anterior_ate?: string | null
-  km_rodados?: number | null
-  observacao_conclusao?: string | null
-  /** A saída libera 1 h antes do início (D1). */
-  saida_liberada_em?: string | null
-  pode_ver_rastreio?: boolean
-  fotos_qtd?: number
 }
 
 export interface LinhaOrcamento {
@@ -127,11 +113,6 @@ export interface Acoes {
   aprovar: boolean
   /** Fase 2B: cancelar AGENDADA (cliente com multa pela faixa; prestador sem custo, com motivo). */
   cancelar_agendado: boolean
-  /** Fase 3B (motorista do pedido ou ADM): deslize para sair, nova previsão, concluir e fotos. */
-  sair?: boolean
-  informar_previsao?: boolean
-  concluir?: boolean
-  enviar_fotos?: boolean
 }
 
 /** Motorista/ADM, pedido SOLICITADA depois de uma revisão: a última versão enviada e o motivo do cliente. */
@@ -196,11 +177,6 @@ export interface ItemPendencia {
   versao?: number
   total_cent?: number | null
   empresa_nome: string | null
-  // Fase 3B (próximos)
-  saiu_em?: string | null
-  fim_previsto?: string | null
-  atrasado?: boolean
-  atraso_anterior_ate?: string | null
 }
 
 export interface Pendencias {

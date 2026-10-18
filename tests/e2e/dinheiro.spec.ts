@@ -8,7 +8,7 @@ import {
   saldoFalso,
   simularDinheiro,
 } from './apoio/dinheiroFalso.ts'
-import { ID_PEDIDO, pedidoOrcadoCliente, pendenciaFalsa, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { ID_PEDIDO, pedidoOrcadoCliente, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa } from './apoio/sessaoFalsa.ts'
 import { esperarInicioComAviso } from './apoio/areaIndisponivel.ts'
 
@@ -515,19 +515,6 @@ test.describe('ADM: painel', () => {
     await comSessaoFalsa(page, ADM, AAL2)
     await simularApi(page)
     const chamadas = await simularDinheiro(page, { painel: painelFalso() })
-    // Fase 3B: a corrida em andamento aparece na lista, com o atraso e o atalho para o mapa.
-    await simularPedidos(page, {
-      pendencias: {
-        proximos: [
-          pendenciaFalsa({
-            status: 'EM_ANDAMENTO',
-            atrasado: true,
-            empresa_nome: 'Umi San',
-            fim_previsto: new Date(Date.now() - 10 * 60_000).toISOString(),
-          }),
-        ],
-      },
-    })
     await page.goto('/')
     // Resumo no Início do ADM.
     const resumo = page.getByTestId('painel-resumo')
@@ -543,9 +530,6 @@ test.describe('ADM: painel', () => {
     await expect(credito.nth(1)).toContainText(/Umi San.*R\$\s2\.490,00/s)
     await expect(page.getByTestId('painel-agendadas')).toHaveText('3')
     await expect(page.getByTestId('painel-em-andamento')).toHaveText('1')
-    const corrida = page.getByTestId('painel-corridas').getByTestId('lista-corridas-andamento').getByRole('link')
-    await expect(corrida).toContainText(/Pedido #0042, Umi San.*Base Navegantes, término previsto \d{2}:\d{2}.*Atrasado/s)
-    await expect(corrida).toHaveAttribute('href', `/pedidos/${ID_PEDIDO}`)
     await expect(page.getByTestId('painel-aprovado')).toContainText('3 pedidos aprovados')
     await expect(page.getByTestId('painel-aprovado-total')).toHaveText(R('2.130,00'))
     await expect(page.getByTestId('painel-pendencias')).toContainText(/Aguardando orçamento\s*2/)

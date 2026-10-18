@@ -66,8 +66,5 @@ test('tela de erro geral é da marca e "Recarregar" limpa os caches', async ({ p
   await expect(page.getByText('Unexpected Application Error')).toHaveCount(0)
   await page.evaluate(() => caches.open('lixo-de-teste'))
   await page.getByRole('button', { name: 'Recarregar' }).click()
-  // O botão apaga os caches e recarrega: durante a recarga o contexto da página some; a leitura tenta de novo.
-  await expect
-    .poll(() => page.evaluate(async () => (await caches.keys()).includes('lixo-de-teste')).catch(() => true))
-    .toBe(false)
+  await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes('lixo-de-teste'))).toBe(false)
 })

@@ -53,8 +53,7 @@ Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~2
 
 ## 5. Próximas fases (backlog em issues #11–#20)
 
-- **Fase 3B — Execução e rastreio (PR em revisão, 18/10):** "deslize para sair" com débito, posição do motorista ao vivo para o cliente, nova previsão e atraso, conclusão com fotos. Especificação, plano e roteiro: `docs/fases/fase-3b-*.md`; operação: RUNBOOK §17.
-- **Fase 3 — restante:** retenção das fotos (com o e-mail da fase 5); aditivo; revisão de contrato já aprovado (§4.4); anexos no pedido; "Repetir pedido".
+- **Fase 3 — Execução:** saída com "deslize para sair" e débito; previsão de término e atraso; conclusão com fotos e retenção; aditivo; revisão de contrato já aprovado (§4.4); anexos no pedido; "Repetir pedido".
 - **Fase 5 — Operação:** notificações (outbox, push e e-mail), backup diário criptografado no R2, *dead man's switch* (Healthchecks), teste de restauração mensal, monitoramento.
 - **SMS como 2º fator** (A8), para motoristas com pouca familiaridade com tecnologia.
 - **Fase 6 — Fechamento:** `SECURITY.md` com evidências, README completo, migração de contas.
