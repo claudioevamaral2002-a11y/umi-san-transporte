@@ -130,6 +130,13 @@ public = false
 file_size_limit = "500KiB"
 allowed_mime_types = ["image/png", "image/webp"]
 
+# Fotos da conclusão do serviço (fase 3B): privado; só a Edge Function enviar-foto grava (service role) e a leitura é
+# por URL assinada, para quem vê o pedido (política fotos_ler).
+[storage.buckets.fotos]
+public = false
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
 # public = false
