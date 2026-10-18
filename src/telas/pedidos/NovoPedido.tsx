@@ -10,6 +10,7 @@ import { Icone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { api } from '../../lib/api.ts'
+import { recarregarLimpo } from '../../lib/atualizacao.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import { prazoPorExtenso } from '../../lib/contratos.ts'
 import { mensagemDoCodigo, MENSAGENS } from '../../lib/erros.ts'
@@ -18,6 +19,8 @@ import {
   DURACAO_MIN,
   FORM_VAZIO,
   PASSO_DURACAO,
+  guardarRascunho,
+  lerRascunho,
   mascararTelefone,
   montarPedido,
   primeiroPassoComErro,
@@ -63,6 +66,22 @@ const mesmoInstante = (a: string | null, b: string | null) =>
 function formDaUrl(inicio: string | null): FormPedido {
   if (!inicio || Number.isNaN(new Date(inicio).getTime())) return FORM_VAZIO
   return { ...FORM_VAZIO, dia: diaDe(inicio), inicio: new Date(inicio).toISOString() }
+}
+
+/** `sessionStorage`, ou `null` quando o navegador bloqueia o acesso (até a leitura da propriedade pode lançar). */
+function armazemDaSessao(): Storage | null {
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
+
+/** Rascunho guardado antes de "Recarregar" (volta no Confira, ou no primeiro passo com erro); senão, o prefill da URL. */
+function inicioDoForm(inicioDaUrl: string | null): { f: FormPedido; passo: Etapa } {
+  const rascunho = lerRascunho(armazemDaSessao(), Date.now())
+  if (rascunho) return { f: rascunho, passo: primeiroPassoComErro(rascunho) ?? 4 }
+  return { f: formDaUrl(inicioDaUrl), passo: 1 }
 }
 
 function Cabecalho({
@@ -496,12 +515,15 @@ function PassoRevisar({
   irPara,
   prazoHoras,
   erroEnvio,
+  aoRecarregar,
   saldo,
 }: {
   f: FormPedido
   irPara: (p: Passo) => void
   prazoHoras: number | null | undefined
   erroEnvio: string | null
+  /** O banco recusou campos que a tela já validou: o app está desatualizado e precisa recarregar. */
+  aoRecarregar: (() => void) | null
   /** Saldo da empresa: abaixo do alerta do contrato, avisa (o pedido pode ser feito; a aprovação confere o valor). */
   saldo: Saldo | null
 }) {
@@ -514,6 +536,14 @@ function PassoRevisar({
   return (
     <div className="space-y-4">
       {erroEnvio && <Mensagem tipo="erro">{erroEnvio}</Mensagem>}
+      {aoRecarregar && (
+        <div className="space-y-3" data-testid="aviso-app-atualizado">
+          <Mensagem tipo="erro">O app foi atualizado. Toque em Recarregar e envie de novo; seus dados ficam guardados.</Mensagem>
+          <Botao variante="principal" className="w-full" onClick={aoRecarregar}>
+            Recarregar
+          </Botao>
+        </div>
+      )}
       {saldo?.abaixo_alerta && (
         <div
           className="flex gap-3 rounded-cartao border-[1.5px] border-[var(--cor-laranja)] bg-[var(--cor-laranja)]/10 p-4"
@@ -621,11 +651,14 @@ export function NovoPedido() {
   const navegar = useNavigate()
   const local = useLocation()
   const [params] = useSearchParams()
-  const [f, setF] = useState<FormPedido>(() => formDaUrl(params.get('inicio')))
-  const [passo, setPasso] = useState<Etapa>(1)
+  const [inicial] = useState(() => inicioDoForm(params.get('inicio')))
+  const [f, setF] = useState<FormPedido>(inicial.f)
+  const [passo, setPasso] = useState<Etapa>(inicial.passo)
   const [erros, setErros] = useState<ErrosPedido>({})
   const [aviso, setAviso] = useState<string | null>(null)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+  const [desatualizado, setDesatualizado] = useState(false)
+  const [recarregando, setRecarregando] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [criado, setCriado] = useState<{ id: string; numero: number } | null>(null)
   const [confirmarSaida, setConfirmarSaida] = useState(false)
@@ -720,6 +753,7 @@ export function NovoPedido() {
     }
     setEnviando(true)
     setErroEnvio(null)
+    setDesatualizado(false)
     const r = await pedidos.criar(montarPedido(fc))
     setEnviando(false)
     if (r.ok && typeof r.id === 'string') {
@@ -733,7 +767,18 @@ export function NovoPedido() {
       setPasso(1)
       return
     }
+    // A tela já validou tudo: o banco recusar campos indica que este código ficou para trás de um deploy.
+    if (r.codigo === 'CAMPOS_INVALIDOS') {
+      setDesatualizado(true)
+      return
+    }
     setErroEnvio(mensagemDoCodigo(r.codigo))
+  }
+
+  function recarregar() {
+    guardarRascunho(f, armazemDaSessao(), Date.now())
+    setRecarregando(true)
+    void recarregarLimpo()
   }
 
   const rotuloBotao = passo === 4 ? 'Enviar pedido' : passo === 3 ? 'Revisar' : 'Continuar'
@@ -751,12 +796,19 @@ export function NovoPedido() {
         {passo === 2 && <PassoOnde f={fc} mudar={mudar} erros={erros} aoMarcarNoMapa={setMapaPara} />}
         {passo === 3 && <PassoOque f={f} mudar={mudar} erros={erros} />}
         {passo === 4 && (
-          <PassoRevisar f={fc} irPara={setPasso} prazoHoras={prazoHoras} erroEnvio={erroEnvio} saldo={credito.saldo} />
+          <PassoRevisar
+            f={fc}
+            irPara={setPasso}
+            prazoHoras={prazoHoras}
+            erroEnvio={erroEnvio}
+            aoRecarregar={desatualizado && !recarregando ? recarregar : null}
+            saldo={credito.saldo}
+          />
         )}
         {enviando && <CarregandoPickup ativo rotulo="Enviando o pedido…" />}
       </main>
       <Rodape>
-        <Botao variante="principal" className="flex w-full items-center justify-center gap-2" onClick={() => void avancar()} disabled={enviando}>
+        <Botao variante="principal" className="flex w-full items-center justify-center gap-2" onClick={() => void avancar()} disabled={enviando || recarregando}>
           {enviando ? 'Enviando…' : rotuloBotao}
         </Botao>
       </Rodape>
