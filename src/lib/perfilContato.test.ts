@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const rpc = vi.fn()
 vi.mock('./supabase.ts', () => ({ supabase: { rpc: (...a: unknown[]) => rpc(...a) } }))
 
-const { contato, formatarTelefone, normalizarTelefone } = await import('./perfilContato.ts')
+const { contato, formatarTelefone, mascararTelefoneDoPerfil, normalizarTelefone } = await import('./perfilContato.ts')
 
 beforeEach(() => rpc.mockReset())
 
@@ -21,6 +21,21 @@ describe('normalizarTelefone (a mesma regra do banco)', () => {
     for (const t of ['4799999', '479999912345', '(07) 99999-1234', '47 9999a-1234', '47 8999-91234', '4'.repeat(40)]) {
       expect(normalizarTelefone(t), t).toEqual({ ok: false })
     }
+  })
+})
+
+describe('mascararTelefoneDoPerfil', () => {
+  it('tira o +55 (ou 55 com 12–13 dígitos) antes da máscara: o DDD nunca vira 55', () => {
+    expect(mascararTelefoneDoPerfil('+55 91 98888-7777')).toBe('(91) 98888-7777')
+    expect(mascararTelefoneDoPerfil('5591988887777')).toBe('(91) 98888-7777')
+    expect(mascararTelefoneDoPerfil('+55 47 3344-5566')).toBe('(47) 3344-5566')
+    expect(mascararTelefoneDoPerfil('554733445566')).toBe('(47) 3344-5566')
+  })
+  it('sem código do país, igual à máscara de hoje (também o DDD 55 de verdade)', () => {
+    expect(mascararTelefoneDoPerfil('(47) 99999-1234')).toBe('(47) 99999-1234')
+    expect(mascararTelefoneDoPerfil('55999991234')).toBe('(55) 99999-1234')
+    expect(mascararTelefoneDoPerfil('479')).toBe('(47) 9')
+    expect(mascararTelefoneDoPerfil('')).toBe('')
   })
 })
 

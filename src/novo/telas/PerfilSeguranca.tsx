@@ -7,8 +7,7 @@ import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { useConsulta } from '../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
-import { mascararTelefone } from '../../lib/novoPedido.ts'
-import { contato, formatarTelefone, normalizarTelefone } from '../../lib/perfilContato.ts'
+import { contato, formatarTelefone, mascararTelefoneDoPerfil, normalizarTelefone } from '../../lib/perfilContato.ts'
 import { rotuloCurto, useRotulos } from '../../lib/rotulos.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 
@@ -55,7 +54,7 @@ function Telefone({ atual, aoSalvar }: { atual: string | null; aoSalvar: () => v
         ajuda="Com DDD. Aparece no botão Ligar das corridas. Deixe em branco para apagar."
         erro={erro}
         value={texto}
-        onChange={(e) => setTexto(mascararTelefone(e.target.value))}
+        onChange={(e) => setTexto(mascararTelefoneDoPerfil(e.target.value))}
       />
       <div aria-live="polite">
         {aviso && <Mensagem tipo="sucesso">{aviso}</Mensagem>}

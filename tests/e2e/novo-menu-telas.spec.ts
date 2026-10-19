@@ -164,6 +164,13 @@ test('R15: Perfil e segurança mostra nome e e-mail só para ler e grava o telef
   await page.getByRole('button', { name: 'Salvar telefone' }).click()
   await expect(page.getByText('Telefone apagado.')).toBeVisible()
   expect(telefone.at(-1)).toEqual({ p_telefone: null })
+
+  // Colar com o código do país: o +55 sai, o DDD fica o de verdade (91), nada é cortado.
+  await campo.fill('+55 91 98888-7777')
+  await expect(campo).toHaveValue('(91) 98888-7777')
+  await page.getByRole('button', { name: 'Salvar telefone' }).click()
+  await expect(page.getByText('Telefone salvo.')).toBeVisible()
+  expect(telefone.at(-1)).toEqual({ p_telefone: '91988887777' })
 })
 
 for (const tema of ['light', 'dark'] as const) {
