@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('./funcoes.ts', () => ({ chamarFuncao: vi.fn() }))
+vi.mock('./enderecosRemoto.ts', () => ({ consultarRota: vi.fn() }))
 
-import { chamarFuncao } from './funcoes.ts'
+import { consultarRota } from './enderecosRemoto.ts'
 import { decodificarPolyline, rotaAte } from './rotaDesenhada.ts'
 
 describe('decodificarPolyline', () => {
@@ -24,18 +24,21 @@ describe('rotaAte', () => {
   const d = { place_id: 'ChIJabc' }
 
   it('devolve km, minutos e os pontos decodificados', async () => {
-    vi.mocked(chamarFuncao).mockResolvedValueOnce({ ok: true, km: 38.2, minutos: 45, polyline: '_p~iF~ps|U_ulLnnqC' })
+    vi.mocked(consultarRota).mockResolvedValueOnce({ km: 38.2, minutos: 45, polyline: '_p~iF~ps|U_ulLnnqC' })
     const r = await rotaAte(o, d)
-    expect(chamarFuncao).toHaveBeenCalledWith('enderecos', { acao: 'rota', origem: o, destino: d })
+    expect(consultarRota).toHaveBeenCalledWith(o, d)
     expect(r).toEqual({ km: 38.2, minutos: 45, pontos: [{ lat: 38.5, lng: -120.2 }, { lat: 40.7, lng: -120.95 }] })
   })
 
-  it('sem linha, sem km ou com falha devolve null', async () => {
-    vi.mocked(chamarFuncao).mockResolvedValueOnce({ ok: true, km: 3, minutos: 5, polyline: null })
+  it('sem linha mantém km e tempo, com pontos vazios', async () => {
+    vi.mocked(consultarRota).mockResolvedValueOnce({ km: 3, minutos: 5, polyline: null })
+    expect(await rotaAte(o, d)).toEqual({ km: 3, minutos: 5, pontos: [] })
+  })
+
+  it('sem km ou com falha da chamada devolve null', async () => {
+    vi.mocked(consultarRota).mockResolvedValueOnce({ km: null, minutos: null, polyline: null })
     expect(await rotaAte(o, d)).toBeNull()
-    vi.mocked(chamarFuncao).mockResolvedValueOnce({ ok: true, km: null, minutos: null })
-    expect(await rotaAte(o, d)).toBeNull()
-    vi.mocked(chamarFuncao).mockResolvedValueOnce({ ok: false, codigo: 'INDISPONIVEL' })
+    vi.mocked(consultarRota).mockResolvedValueOnce(null)
     expect(await rotaAte(o, d)).toBeNull()
   })
 })

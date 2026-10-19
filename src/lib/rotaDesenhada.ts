@@ -1,14 +1,9 @@
-import { chamarFuncao } from './funcoes.ts'
+import { consultarRota, type Coordenada, type PontoRota } from './enderecosRemoto.ts'
 
 /**
  * Fase 4: a linha do trajeto para desenhar no mapa. O Google devolve a rota como texto codificado; ela é decodificada
  * aqui, usada na tela e descartada: nunca vai para o banco (termos do Google).
  */
-
-export type Coordenada = { lat: number; lng: number }
-
-/** Ponto da rota: do Google pelo place_id; marcado no mapa pelas coordenadas. */
-export type PontoRota = { place_id: string } | Coordenada
 
 /** Algoritmo padrão de "encoded polyline" do Google, precisão 1e5. Texto truncado ou inválido para no último ponto inteiro. */
 export function decodificarPolyline(codificada: string): Coordenada[] {
@@ -39,14 +34,12 @@ export function decodificarPolyline(codificada: string): Coordenada[] {
   return pontos
 }
 
-/** Distância, tempo e linha do trajeto de carro; `null` sem rota, sem linha ou com o Google fora. */
+/** Distância, tempo e linha do trajeto de carro; sem linha, `pontos` vem vazio. `null` sem km ou com o Google fora. */
 export async function rotaAte(
   origem: PontoRota,
   destino: PontoRota,
 ): Promise<{ km: number; minutos: number | null; pontos: Coordenada[] } | null> {
-  const r = await chamarFuncao('enderecos', { acao: 'rota', origem, destino })
-  if (!r.ok || typeof r.km !== 'number' || typeof r.polyline !== 'string') return null
-  const pontos = decodificarPolyline(r.polyline)
-  if (pontos.length === 0) return null
-  return { km: r.km, minutos: typeof r.minutos === 'number' ? r.minutos : null, pontos }
+  const r = await consultarRota(origem, destino)
+  if (!r || r.km === null) return null
+  return { km: r.km, minutos: r.minutos, pontos: r.polyline ? decodificarPolyline(r.polyline) : [] }
 }

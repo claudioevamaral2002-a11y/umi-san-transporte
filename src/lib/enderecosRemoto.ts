@@ -58,10 +58,30 @@ export async function detalhar(placeId: string, nome: string, sessao: string): P
   return r.ok ? comoLocal(r.local) : null
 }
 
+export type Coordenada = { lat: number; lng: number }
+
 /** Ponto da rota: do Google pelo place_id; marcado no mapa pelas coordenadas. */
-export function pontoDaRota(l: Pick<Local, 'lat' | 'lng' | 'place_id'>): Record<string, unknown> | null {
+export type PontoRota = { place_id: string } | Coordenada
+
+/** Ponto da rota: do Google pelo place_id; marcado no mapa pelas coordenadas. */
+export function pontoDaRota(l: Pick<Local, 'lat' | 'lng' | 'place_id'>): PontoRota | null {
   if (l.place_id) return { place_id: l.place_id }
   return l.lat !== null && l.lng !== null ? { lat: l.lat, lng: l.lng } : null
+}
+
+/** Chamada única da ação `rota`: km, minutos e a linha codificada (cada um `null` quando ausente). `null` se a chamada falhou. */
+export async function consultarRota(
+  origem: PontoRota,
+  destino: PontoRota,
+): Promise<{ km: number | null; minutos: number | null; polyline: string | null } | null> {
+  const r = await chamarFuncao('enderecos', { acao: 'rota', origem, destino })
+  if (!r.ok) return null
+  const km = typeof r.km === 'number' ? r.km : null
+  return {
+    km,
+    minutos: km !== null && typeof r.minutos === 'number' ? r.minutos : null,
+    polyline: typeof r.polyline === 'string' && r.polyline.length > 0 ? r.polyline : null,
+  }
 }
 
 /** Distância e tempo da rota de carro (calculados na hora, nunca guardados); `null` sem rota ou com o Google fora. */
@@ -72,7 +92,6 @@ export async function rota(
   const origem = pontoDaRota(o)
   const destino = pontoDaRota(d)
   if (!origem || !destino) return { km: null, minutos: null }
-  const r = await chamarFuncao('enderecos', { acao: 'rota', origem, destino })
-  const km = r.ok && typeof r.km === 'number' ? r.km : null
-  return { km, minutos: km !== null && typeof r.minutos === 'number' ? r.minutos : null }
+  const r = await consultarRota(origem, destino)
+  return { km: r?.km ?? null, minutos: r?.minutos ?? null }
 }
