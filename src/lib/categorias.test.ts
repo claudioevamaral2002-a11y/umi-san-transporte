@@ -4,7 +4,7 @@ import { FORM_VAZIO } from './novoPedido.ts'
 const rpc = vi.fn()
 vi.mock('./supabase.ts', () => ({ supabase: { rpc: (...a: unknown[]) => rpc(...a) } }))
 
-const { categorias, pedidoDaCategoria, primeiroHorarioAgora } = await import('./categorias.ts')
+const { categorias, kmDaRota, pedidoDaCategoria, primeiroHorarioAgora, toleranciaKm } = await import('./categorias.ts')
 
 beforeEach(() => rpc.mockReset())
 
@@ -58,5 +58,16 @@ describe('categorias.disponiveis', () => {
     const r = await categorias.disponiveis({ km: 12.5, levar: true, trazer: false })
     expect(rpc).toHaveBeenCalledWith('categorias_disponiveis', { p: { km: 12.5, levar: true, trazer: false } })
     expect(r.categorias).toEqual(cats)
+  })
+})
+
+describe('km da rota', () => {
+  it('uma casa, meio para cima', () => {
+    expect(kmDaRota(42.37)).toBe(42.4)
+    expect(kmDaRota(42.34)).toBe(42.3)
+  })
+  it('tolerância: 1 km ou 1% da rota, o maior', () => {
+    expect(toleranciaKm(42)).toBe(1)
+    expect(toleranciaKm(250)).toBe(2.5)
   })
 })
