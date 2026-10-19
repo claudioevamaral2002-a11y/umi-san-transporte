@@ -30,6 +30,8 @@ export interface MapasFalsos {
   /** Rota sem caminho de carro (mesmo ponto, ilha): km null. */
   semRota?: boolean
   rota?: { km: number; minutos: number }
+  /** Fase 4: linha codificada do trajeto (desenhada no mapa). */
+  polyline?: string
 }
 
 export type ChamadaMapas = { acao: string; [campo: string]: unknown }
@@ -58,7 +60,12 @@ export async function simularMapas(page: Page, opcoes: MapasFalsos = {}) {
       return json(route, d ? { ok: true, local: { nome: c.nome, place_id: c.place_id, ...d } } : { ok: false, codigo: 'MAPAS_INDISPONIVEL' })
     }
     if (c.acao === 'rota') {
-      return json(route, opcoes.semRota ? { ok: true, km: null, minutos: null } : { ok: true, ...(opcoes.rota ?? { km: 38.2, minutos: 45 }) })
+      return json(
+        route,
+        opcoes.semRota
+          ? { ok: true, km: null, minutos: null }
+          : { ok: true, ...(opcoes.rota ?? { km: 38.2, minutos: 45 }), ...(opcoes.polyline ? { polyline: opcoes.polyline } : {}) },
+      )
     }
     return json(route, { ok: false, codigo: 'CAMPOS_INVALIDOS' })
   })

@@ -16,6 +16,22 @@ export interface CategoriaComPreco {
   linhas?: LinhaOrcamento[] | null
 }
 
+/**
+ * Como cada categoria preenche o pedido de hoje (o mesmo de `app.categorias`, conferido de novo pelo banco):
+ * Passageiros = pessoas; Carga Leve = equipamento; Carga Pesada = equipamento com reboque.
+ */
+export const PREENCHIMENTO: Record<CodigoCategoria, { carga: Carga; reboque: Reboque }> = {
+  PASSAGEIROS: { carga: 'PESSOAS', reboque: 'NAO' },
+  CARGA_LEVE: { carga: 'EQUIPAMENTO', reboque: 'NAO' },
+  CARGA_PESADA: { carga: 'EQUIPAMENTO', reboque: 'SIM' },
+}
+
+/** A categoria com o preenchimento dela; `null` para um código que esta versão do app não conhece. */
+export function comPreenchimento(c: CategoriaComPreco): (CategoriaComPreco & { carga: Carga; reboque: Reboque }) | null {
+  const p = Object.hasOwn(PREENCHIMENTO, c.codigo) ? PREENCHIMENTO[c.codigo] : null
+  return p ? { ...c, ...p } : null
+}
+
 /** "Agora" = primeiro horário livre a partir de agora + 60 min. */
 export const MARGEM_AGORA_MIN = 60
 

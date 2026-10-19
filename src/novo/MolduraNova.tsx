@@ -55,5 +55,7 @@ export function useCamadasDoMapa(camadas: CamadasDoMapa) {
 /** Telas por perfil no app novo. Fora do perfil, volta ao início (o banco recusa do mesmo jeito). */
 export function GuardaPerfil({ permite }: { permite: (p: Perfil) => boolean }) {
   const { perfil } = useSessao()
-  return perfil && permite(perfil) ? <Outlet /> : <Navigate to="/" replace />
+  // Repassa o contexto da TelaDeMapa: as telas de mapa com guarda também põem camadas no mapa compartilhado.
+  const contexto = useOutletContext()
+  return perfil && permite(perfil) ? <Outlet context={contexto} /> : <Navigate to="/" replace />
 }

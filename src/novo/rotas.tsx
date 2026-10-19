@@ -6,12 +6,21 @@ import { ErroGeral } from '../telas/ErroGeral.tsx'
 import { Raiz } from '../telas/Raiz.tsx'
 import { vePainelEmpresa } from './componentes/Menu.tsx'
 import { GuardaPerfil, MolduraNova, TelaDeMapa } from './MolduraNova.tsx'
+import { CorridaCliente } from './telas/cliente/Corrida.tsx'
+import { InicioCliente } from './telas/cliente/InicioCliente.tsx'
 import { EmBreve, InicioProvisorio } from './telas/Provisorias.tsx'
+import { useSessao } from '../lib/sessao.tsx'
 
 const ehAdm = (p: Perfil) => p.papel === 'ADM'
 const ehMotorista = (p: Perfil) => p.papel === 'MOTORISTA'
 const ehCliente = (p: Perfil) => p.papel === 'CLIENTE'
 const todos = () => true
+
+/** Início sobre o mapa: o cliente pede (Tarefa 8); motorista e ADM ainda no provisório (Tarefa 10). */
+function InicioDoPerfil() {
+  const { perfil } = useSessao()
+  return perfil?.papel === 'CLIENTE' ? <InicioCliente /> : <InicioProvisorio />
+}
 
 /** Telas de página que chegam nas próximas tarefas (11 e 14), por enquanto "em breve", cada uma com a sua guarda. */
 const PROVISORIAS: Array<{ path: string; titulo: string; permite: (p: Perfil) => boolean }> = [
@@ -80,7 +89,16 @@ export const roteadorNovo = createBrowserRouter([
           {
             element: <MolduraNova />,
             children: [
-              { element: <TelaDeMapa />, children: [{ index: true, Component: InicioProvisorio }] },
+              {
+                element: <TelaDeMapa />,
+                children: [
+                  { index: true, Component: InicioDoPerfil },
+                  {
+                    element: <GuardaPerfil permite={ehCliente} />,
+                    children: [{ path: 'corrida/:id', Component: CorridaCliente }],
+                  },
+                ],
+              },
               ...PROVISORIAS.map(({ path, titulo, permite }) => ({
                 element: <GuardaPerfil permite={permite} />,
                 children: [{ path, element: <EmBreve titulo={titulo} /> }],

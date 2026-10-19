@@ -82,7 +82,8 @@ function SaldoNoRecibo({ total }: { total: number }) {
   )
 }
 
-function SaldoInsuficiente({ detalhe }: { detalhe: Record<string, unknown> }) {
+/** Saldo insuficiente na aprovação: quanto falta, o disponível e o limite (reusado pela confirmação do app novo). */
+export function SaldoInsuficiente({ detalhe }: { detalhe: Record<string, unknown> }) {
   const n = (c: string) => (typeof detalhe[c] === 'number' ? (detalhe[c] as number) : null)
   const falta = n('falta_cent')
   return (

@@ -75,6 +75,13 @@ export interface DetalhePedido {
   saida_liberada_em?: string | null
   pode_ver_rastreio?: boolean
   fotos_qtd?: number
+  // Fase 4 (opcionais: pedidos do app atual não têm categoria).
+  categoria?: string | null
+  categoria_nome?: string | null
+  /** Veículo da corrida, visto pelo cliente a partir do orçamento (ORCADA). */
+  veiculo?: { modelo: string; cor: string; placa: string } | null
+  centro_custo?: string | null
+  agora?: boolean
 }
 
 export interface LinhaOrcamento {
