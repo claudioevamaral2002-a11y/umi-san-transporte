@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { DetalhePedido } from '../../../lib/pedidos.ts'
 import type { Veiculo } from '../../../lib/veiculos.ts'
 
+// Sem o Supabase de verdade (o CI de unidade não tem as variáveis do projeto): só as regras puras.
 vi.mock('../../../lib/supabase.ts', () => ({ supabase: { rpc: vi.fn() } }))
+vi.mock('../../../lib/funcoes.ts', () => ({ chamarFuncao: vi.fn() }))
 
 const { formDaCalculadora, formDaTabela, kmDecimosDaRota, trechos, usaReboque, veiculosDaChamada } = await import('./chamada.ts')
 const { montarEntrada } = await import('../../../lib/orcar.ts')
