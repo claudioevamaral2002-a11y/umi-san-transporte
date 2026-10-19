@@ -193,19 +193,29 @@ function EscolherHorario({
 export function EscolherCategoria({
   origem,
   destino,
+  categoriaInicial,
+  idaEVoltaInicial = false,
+  semData = false,
   aoVoltar,
 }: {
   origem: EnderecoEscolhido
   destino: EnderecoEscolhido
+  /** "Pedir de novo": a categoria da corrida anterior (vem marcada; sem ela, a última pedida neste aparelho). */
+  categoriaInicial?: string
+  idaEVoltaInicial?: boolean
+  /** "Pedir de novo": sem data escolhida; o seletor abre e o botão de pedir espera o horário. */
+  semData?: boolean
   aoVoltar: () => void
 }) {
   const navegar = useNavigate()
   const idQuando = useId()
-  const [idaEVolta, setIdaEVolta] = useState(false)
-  const [escolhida, setEscolhida] = useState<string | null>(() => lerUltimaCategoria())
+  const [idaEVolta, setIdaEVolta] = useState(idaEVoltaInicial)
+  const [escolhida, setEscolhida] = useState<string | null>(() => categoriaInicial ?? lerUltimaCategoria())
   const [modo, setModo] = useState<Modo>('agendar')
-  const [quandoAberto, setQuandoAberto] = useState(false)
-  const [agendado, setAgendado] = useState<{ dia: string; inicio: string | null } | null>(null)
+  const [quandoAberto, setQuandoAberto] = useState(semData)
+  const [agendado, setAgendado] = useState<{ dia: string; inicio: string | null } | null>(
+    semData ? { dia: somarDias(hoje(), 1), inicio: null } : null,
+  )
   const [semAgenda, setSemAgenda] = useState(false)
   const [agora, setAgora] = useState<{ inicio: string | null } | null>(null)
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
@@ -240,6 +250,7 @@ export function EscolherCategoria({
 
   // Padrão do "Agendar": o primeiro horário livre a partir de amanhã.
   useEffect(() => {
+    if (semData) return
     let vivo = true
     void primeiroAgendavel().then((p) => {
       if (!vivo) return
@@ -249,7 +260,7 @@ export function EscolherCategoria({
     return () => {
       vivo = false
     }
-  }, [])
+  }, [semData])
 
   // "Agora": calculado ao escolher (e de novo no envio).
   useEffect(() => {
@@ -273,7 +284,7 @@ export function EscolherCategoria({
           : 'Agora · sem horário livre'
       : agendado?.inicio
         ? `Agendar · ${quandoCompleto(agendado.inicio)}`
-        : semAgenda
+        : semData || semAgenda
           ? 'Agendar · escolha o dia'
           : 'Agendar · procurando horário…'
 
@@ -522,10 +533,12 @@ export function EscolherCategoria({
             >
               {`Pedir ${preenchida.nome} · ${quandoCurto(inicio)}`}
             </Botao>
-          ) : (
-            !preenchida && (
-              <p className="ivo-legenda text-texto-suave">Nenhuma categoria disponível no momento. Tente mais tarde.</p>
+          ) : preenchida ? (
+            semData && (
+              <p className="ivo-legenda text-texto-suave">Escolha o dia e o horário para pedir.</p>
             )
+          ) : (
+            <p className="ivo-legenda text-texto-suave">Nenhuma categoria disponível no momento. Tente mais tarde.</p>
           )}
           <p role="status" className="sr-only">
             {enviando ? 'Enviando o pedido ao Ivo…' : ''}

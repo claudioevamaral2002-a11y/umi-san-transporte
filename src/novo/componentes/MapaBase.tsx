@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { Map as MapaLeaflet, Marker } from 'leaflet'
 import { criarSessaoTiles } from '../../lib/mapaTiles.ts'
 import { sessaoTilesComRetentativa, type SessaoTiles } from '../../lib/mapaComRetentativa.ts'
-import type { Ponto } from '../../lib/rastreio.ts'
+import { interpolar, type Ponto } from '../../lib/rastreio.ts'
 
 export type { Ponto }
 export interface CarroNoMapa extends Ponto {
@@ -166,8 +166,13 @@ export function MapaBase({
     }
   }, [L, pontosRota, destinoLat, destinoLng, centroLat, centroLng])
 
-  // Carro: segue a posição recebida; cinza com o sinal perdido.
+  // Carro: anda até a posição recebida (interpolando, ~1 s; com movimento reduzido, salta); cinza com o sinal perdido.
   const marcadorCarro = useRef<Marker | null>(null)
+  const animacao = useRef<number | null>(null)
+  const enquadre = useRef<Ponto[]>([])
+  useEffect(() => {
+    enquadre.current = [...pontosRota, ...(destinoLat !== null && destinoLng !== null ? [{ lat: destinoLat, lng: destinoLng }] : [])]
+  }, [pontosRota, destinoLat, destinoLng])
   useEffect(() => {
     const m = mapa.current
     if (!L || !m || carroLat === null || carroLng === null) {
@@ -175,20 +180,42 @@ export function MapaBase({
       marcadorCarro.current = null
       return
     }
+    const alvo = { lat: carroLat, lng: carroLng }
     if (!marcadorCarro.current) {
-      marcadorCarro.current = L.marker([carroLat, carroLng], {
+      marcadorCarro.current = L.marker([alvo.lat, alvo.lng], {
         icon: L.divIcon({ className: 'marcador-carro', html: SVG_CARRO, iconSize: [44, 44], iconAnchor: [22, 22] }),
         keyboard: false,
         interactive: false,
         zIndexOffset: 1000,
       }).addTo(m)
+      // Primeira vez: enquadra o carro junto com o trajeto e o destino.
+      const todos = [alvo, ...enquadre.current]
+      if (todos.length > 1) m.fitBounds(L.latLngBounds(todos.map((p) => [p.lat, p.lng])).pad(0.2), { maxZoom: 15 })
+      else m.setView([alvo.lat, alvo.lng], 15)
+    } else if (reduzido()) {
+      marcadorCarro.current.setLatLng([alvo.lat, alvo.lng])
     } else {
-      marcadorCarro.current.setLatLng([carroLat, carroLng])
+      const marcador = marcadorCarro.current
+      const de = marcador.getLatLng()
+      if (animacao.current !== null) cancelAnimationFrame(animacao.current)
+      const inicio = performance.now()
+      const passo = (t: number) => {
+        const f = (t - inicio) / 1000
+        const p = interpolar({ lat: de.lat, lng: de.lng }, alvo, f)
+        marcador.setLatLng([p.lat, p.lng])
+        animacao.current = f < 1 ? requestAnimationFrame(passo) : null
+      }
+      animacao.current = requestAnimationFrame(passo)
     }
     marcadorCarro.current.getElement()?.classList.toggle('perdido', carroPerdido)
   }, [L, carroLat, carroLng, carroPerdido])
+  // Só o cinza muda (sinal perdido): sem mexer na posição.
+  useEffect(() => {
+    marcadorCarro.current?.getElement()?.classList.toggle('perdido', carroPerdido)
+  }, [carroPerdido])
   useEffect(
     () => () => {
+      if (animacao.current !== null) cancelAnimationFrame(animacao.current)
       marcadorCarro.current?.remove()
       marcadorCarro.current = null
     },
@@ -210,6 +237,7 @@ export function MapaBase({
         data-testid="mapa-base"
         data-pronto={estado === 'pronto' ? 'sim' : 'nao'}
         data-estado={estado}
+        data-carro={carroLat !== null && carroLng !== null ? `${carroLat.toFixed(6)},${carroLng.toFixed(6)}` : undefined}
         className="mapa-base absolute inset-0"
       />
       <p id={idDescricao} className="sr-only" aria-live="polite">

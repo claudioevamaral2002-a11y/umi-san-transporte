@@ -9,12 +9,17 @@ import { StatusBadge } from '../../../design/componentes/StatusBadge.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { pontoDaRota } from '../../../lib/enderecosRemoto.ts'
 import { pedidos, type DetalhePedido, type RespostaPedido } from '../../../lib/pedidos.ts'
+import { useSessao } from '../../../lib/sessao.tsx'
 import { useTempoReal } from '../../../lib/tempoReal.ts'
+import { podeCriarPedido } from '../../../telas/pedidos/Pedidos.tsx'
 import type { Aprovacao } from '../../../telas/pedidos/Aprovar.tsx'
+import { useAcompanhamento } from '../../acompanhamento.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
 import { useRota } from '../../useRota.ts'
+import { Acompanhar } from './Acompanhar.tsx'
 import { Aguardando, TrilhoCorrida } from './Aguardando.tsx'
+import { Concluida } from './Concluida.tsx'
 import { ConfirmarCorrida } from './ConfirmarCorrida.tsx'
 
 /** Sem o evento em tempo real (rede instável), relê o pedido a cada 30 s enquanto espera o Ivo. */
@@ -120,7 +125,14 @@ export function CorridaCliente() {
   const pontos = rota.fase === 'pronta' ? rota.rota.pontos : []
   const destino =
     pontos.at(-1) ?? (p && p.destino_lat != null && p.destino_lng != null ? { lat: p.destino_lat, lng: p.destino_lng } : undefined)
-  useCamadasDoMapa({ rota: pontos, destino })
+  const { perfil } = useSessao()
+  const acompanhamento = useAcompanhamento(p, rota.fase === 'pronta' ? rota.rota.minutos : null)
+  const { posicao } = acompanhamento
+  useCamadasDoMapa({
+    rota: pontos,
+    destino,
+    carro: posicao ? { lat: posicao.lat, lng: posicao.lng, perdido: acompanhamento.sinal === 'perdido' } : undefined,
+  })
 
   if (dados === undefined) {
     return (
@@ -161,5 +173,7 @@ export function CorridaCliente() {
       />
     )
   }
+  if (dados.pedido.status === 'EM_ANDAMENTO') return <Acompanhar r={dados} a={acompanhamento} />
+  if (dados.pedido.status === 'CONCLUIDA') return <Concluida r={dados} podePedir={podeCriarPedido(perfil)} aoMudar={recarregar} />
   return <OutraSituacao r={dados} />
 }

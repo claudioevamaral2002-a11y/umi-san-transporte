@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { Icone } from '../../../design/componentes/Icone.tsx'
 import type { Local } from '../../../lib/enderecos.ts'
@@ -10,6 +11,7 @@ import { FolhaMarcarNoMapa } from '../../../telas/pedidos/FolhaMarcarNoMapa.tsx'
 import { podeCriarPedido, usePedidoIndisponivel } from '../../../telas/pedidos/Pedidos.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
+import { lerPedirDeNovo } from '../../pedirDeNovo.ts'
 import { EscolherCategoria, type EnderecoEscolhido } from './EscolherCategoria.tsx'
 
 const VAZIO: ValorEndereco = { texto: '', local: null }
@@ -29,11 +31,14 @@ export function InicioCliente() {
   const primeiroNome = perfil?.nome.trim().split(/\s+/)[0] ?? ''
   const pode = podeCriarPedido(perfil)
   const indisponivel = usePedidoIndisponivel(perfil)
-  const [origem, setOrigem] = useState<ValorEndereco>(VAZIO)
-  const [destino, setDestino] = useState<ValorEndereco>(VAZIO)
+  // "Pedir de novo" (fim da corrida): chega pelo estado da navegação com a rota e a categoria, sem data.
+  const { state } = useLocation()
+  const [de] = useState(() => lerPedirDeNovo(state))
+  const [origem, setOrigem] = useState<ValorEndereco>(de?.origem ?? VAZIO)
+  const [destino, setDestino] = useState<ValorEndereco>(de?.destino ?? VAZIO)
   const [mapaPara, setMapaPara] = useState<'origem' | 'destino' | null>(null)
-  const [escolhendo, setEscolhendo] = useState(false)
-  const origemMexida = useRef(false)
+  const [escolhendo, setEscolhendo] = useState(de !== null)
+  const origemMexida = useRef(de !== null)
   const titulo = useRef<HTMLHeadingElement>(null)
 
   // Origem: o local mais usado da empresa (só os locais da empresa; nenhuma chamada ao Google).
@@ -62,11 +67,14 @@ export function InicioCliente() {
     if (temPonto(v) && temPonto(origem)) setEscolhendo(true)
   }
 
-  if (escolhendo && temPonto(origem) && temPonto(destino)) {
+  if (pode && !indisponivel && escolhendo && temPonto(origem) && temPonto(destino)) {
     return (
       <EscolherCategoria
         origem={origem}
         destino={destino}
+        categoriaInicial={de?.categoria ?? undefined}
+        idaEVoltaInicial={de?.idaEVolta}
+        semData={de !== null}
         aoVoltar={() => {
           setEscolhendo(false)
           requestAnimationFrame(() => titulo.current?.focus())

@@ -82,6 +82,10 @@ export interface DetalhePedido {
   veiculo?: { modelo: string; cor: string; placa: string } | null
   centro_custo?: string | null
   agora?: boolean
+  /** Nota de 1 a 5 do cliente (uma vez, só concluída). */
+  avaliacao?: number | null
+  /** Última posição gravada (só em andamento, para quem pode ver o rastreio): a tela já abre com ela. */
+  ultima_posicao?: { lat: number; lng: number; em: string } | null
 }
 
 export interface LinhaOrcamento {
@@ -139,6 +143,8 @@ export interface Acoes {
   informar_previsao?: boolean
   concluir?: boolean
   enviar_fotos?: boolean
+  /** Fase 4: avaliar a corrida concluída (cliente que decide, uma vez). */
+  avaliar?: boolean
 }
 
 /** Motorista/ADM, pedido SOLICITADA depois de uma revisão: a última versão enviada e o motivo do cliente. */
