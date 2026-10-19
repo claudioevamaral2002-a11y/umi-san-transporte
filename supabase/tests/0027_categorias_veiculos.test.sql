@@ -126,7 +126,7 @@ select is((select (x ->> 'total_cent')::bigint from jsonb_array_elements(current
   'fallback: Carga Pesada = prévia de hoje com reboque');
 select is((select (x ->> 'total_cent')::bigint from jsonb_array_elements(
     api.categorias_disponiveis('{"km":10,"levar":true,"trazer":true}'::jsonb) -> 'categorias') x where x ->> 'codigo' = 'PASSAGEIROS'),
-  (api.previa_orcamento('{"km":20,"usa_reboque":false,"levar":true,"trazer":true,"modalidade":"VEICULO_PROPRIO"}'::jsonb) ->> 'total_cent')::bigint,
+  (api.previa_orcamento('{"km":10,"usa_reboque":false,"levar":true,"trazer":true,"modalidade":"VEICULO_PROPRIO"}'::jsonb) ->> 'total_cent')::bigint,
   'levar e trazer: km dobrado, como na prévia');
 
 ------------------------------------------------------------------ 4. preço por categoria
