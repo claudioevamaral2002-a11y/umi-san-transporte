@@ -79,13 +79,26 @@ describe('enderecos', () => {
       ok: true,
       km: 38.2,
       minutos: 45,
+      polyline: null,
     })
-    expect(mascara).toBe('routes.distanceMeters,routes.duration')
+    expect(mascara).toBe('routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline')
     const vazio = criarManipuladorEnderecos({ chave: 'K', buscar: (async () => resp({})) as unknown as typeof fetch, registrarUso: ok })
     expect(await vazio({ acao: 'rota', origem: { lat: -26.9, lng: -48.66 }, destino: { lat: -26.9, lng: -48.66 } })).toEqual({
       ok: true,
       km: null,
       minutos: null,
+    })
+  })
+
+  it('rota: devolve a linha codificada do trajeto quando o Google a manda (sem gravar)', async () => {
+    const buscar = (async () =>
+      resp({ routes: [{ distanceMeters: 38240, duration: '2712s', polyline: { encodedPolyline: '_p~iF~ps|U_ulLnnqC' } }] })) as unknown as typeof fetch
+    const m = criarManipuladorEnderecos({ chave: 'K', buscar, registrarUso: ok })
+    expect(await m({ acao: 'rota', origem: { lat: -26.9, lng: -48.66 }, destino: { lat: -26.89, lng: -48.65 } })).toEqual({
+      ok: true,
+      km: 38.2,
+      minutos: 45,
+      polyline: '_p~iF~ps|U_ulLnnqC',
     })
   })
 
@@ -100,6 +113,7 @@ describe('enderecos', () => {
       ok: true,
       km: 38.2,
       minutos: 45,
+      polyline: null,
     })
     expect(corpo.origin).toEqual({ placeId: 'ChIJabc' })
     expect(corpo.destination).toEqual({ location: { latLng: { latitude: -26.91, longitude: -48.65 } } })
