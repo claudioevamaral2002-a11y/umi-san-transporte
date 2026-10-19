@@ -1,6 +1,6 @@
 # Fase 4: o IVO no estilo Uber (MVP em PWA)
 
-Estado: **especificação para revisão do dono** (19/10/2026). As decisões vieram de uma conversa com ele no mesmo dia. Mockups: [`../redesign/mockups-fase-4.html`](../redesign/mockups-fase-4.html).
+Estado: **aprovada pelo dono em 19/10/2026**, com os mockups. As decisões vieram de uma conversa com ele no mesmo dia. Mockups: [`../redesign/mockups-fase-4.html`](../redesign/mockups-fase-4.html).
 
 > **Por que "fase 4".** O dono chamou de fase 4 o acompanhamento dos motoristas. Esse acompanhamento já estava pronto na 3B, mas tinha três problemas de configuração, todos resolvidos em 19/10: o app instalado estava preso numa versão antiga, a chave do mapa estava bloqueada para a Map Tiles API e a chave estava colada duas vezes no GitHub. Depois do teste, o dono pediu outra coisa: **refazer a experiência no modelo da Uber** (InDrive, V1 e Rhinos também servem de referência), com pouco texto e mais mapa, mantendo a identidade da IVO. Essa é a fase 4.
 
