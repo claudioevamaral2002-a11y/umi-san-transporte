@@ -11,26 +11,46 @@ export type Previa =
   | { estado: 'ok'; linhas: LinhaOrcamento[]; total: number }
   | { estado: 'erro'; mensagem: string; codigo: string }
 
+/** Prévia guardada com a etiqueta (pedido + entrada) para a qual foi calculada. */
+export interface PreviaDaChave {
+  chave: string
+  previa: Previa
+}
+
+/** Etiqueta da prévia: o pedido e a entrada exata (a mesma entrada de outro pedido não reaproveita o total). */
+export function etiquetaDaPrevia(id: string, entrada: Record<string, unknown> | null): string | null {
+  return entrada ? JSON.stringify([id, entrada]) : null
+}
+
+/**
+ * A prévia só vale para a entrada atual: guardada para outra entrada (ou ainda nada), é "calculando". Assim a tela
+ * nunca mostra o total de uma entrada e envia outra durante o debounce (dinheiro: o que se vê é o que se envia).
+ */
+export function previaDaChave(guardada: PreviaDaChave | null, chave: string | null): Previa | null {
+  if (!chave) return null
+  return guardada && guardada.chave === chave ? guardada.previa : { estado: 'calculando' }
+}
+
 /** `calcular_orcamento` com debounce de 300 ms; respostas antigas são descartadas. Sem entrada, `null`. */
 export function usePrevia(id: string, entrada: Record<string, unknown> | null, atrasoMs = ATRASO_PREVIA_MS): Previa | null {
-  const [previa, setPrevia] = useState<Previa | null>(null)
-  const chave = entrada ? JSON.stringify(entrada) : null
+  const [guardada, setGuardada] = useState<PreviaDaChave | null>(null)
+  const chave = etiquetaDaPrevia(id, entrada)
   const sequencia = useRef(0)
   useEffect(() => {
     if (!chave) return
     const minha = ++sequencia.current
+    const [atividade, corpo] = JSON.parse(chave) as [string, Record<string, unknown>]
     const t = setTimeout(() => {
-      setPrevia({ estado: 'calculando' })
-      void pedidos.calcular(id, JSON.parse(chave) as Record<string, unknown>).then((r) => {
+      void pedidos.calcular(atividade, corpo).then((r) => {
         if (minha !== sequencia.current) return
-        if (r.ok && Array.isArray(r.linhas) && typeof r.total_cent === 'number') {
-          setPrevia({ estado: 'ok', linhas: r.linhas as LinhaOrcamento[], total: r.total_cent })
-        } else {
-          setPrevia({ estado: 'erro', mensagem: mensagemDoCodigo(r.codigo), codigo: String(r.codigo ?? '') })
-        }
+        const previa: Previa =
+          r.ok && Array.isArray(r.linhas) && typeof r.total_cent === 'number'
+            ? { estado: 'ok', linhas: r.linhas as LinhaOrcamento[], total: r.total_cent }
+            : { estado: 'erro', mensagem: mensagemDoCodigo(r.codigo), codigo: String(r.codigo ?? '') }
+        setGuardada({ chave, previa })
       })
     }, atrasoMs)
     return () => clearTimeout(t)
-  }, [id, chave, atrasoMs])
-  return chave ? previa : null
+  }, [chave, atrasoMs])
+  return previaDaChave(guardada, chave)
 }

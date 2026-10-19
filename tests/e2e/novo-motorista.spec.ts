@@ -328,6 +328,36 @@ test.describe('propor outro valor (calculadora)', () => {
     })
   })
 
+  test('durante o recálculo o envio fica travado: o que vai ao banco é a entrada do total mostrado', async ({ page }) => {
+    const { chamadas } = await abrir(page, { caminho: `/chamada/${ID_PEDIDO}/propor?veiculo=${V_HILUX}` })
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 180,00')
+    // O banco demora: a janela do debounce + resposta fica larga.
+    await page.route(`${URL_SUPABASE}/rest/v1/rpc/calcular_orcamento`, async (route: Route) => {
+      const corpo = (route.request().postDataJSON() ?? {}) as Record<string, unknown>
+      chamadas.push({ rpc: 'calcular_orcamento', corpo })
+      await new Promise((r) => setTimeout(r, 800))
+      return json(route, calcular((corpo.p ?? {}) as Record<string, unknown>))
+    })
+    const enviar = page.getByRole('button', { name: /^Enviar proposta/ })
+    await expect(enviar).toBeEnabled()
+    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Aumentar km rodados' }).click()
+    // Logo depois dos toques: nada do total antigo, botão travado, e tocar nele não envia nada.
+    await enviar.click({ force: true })
+    await page.waitForTimeout(200)
+    expect(envios(chamadas)).toHaveLength(0)
+    await expect(enviar).toBeDisabled()
+    await expect(enviar).toHaveText('Enviar proposta')
+    await expect(page.getByTestId('total-proposta')).toHaveCount(0)
+    // Chega o total dos 45 km: só então o envio, com os mesmos 45 km.
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 189,00')
+    await expect(enviar).toHaveText('Enviar proposta · R$ 189')
+    await enviar.click()
+    await expect(page.getByText('Proposta enviada')).toBeVisible()
+    expect(envios(chamadas)).toHaveLength(1)
+    expect(envios(chamadas)[0]!.corpo.p).toMatchObject({ km: 45, veiculo_id: V_HILUX })
+    expect(calcular(envios(chamadas)[0]!.corpo.p as Record<string, unknown>).total_cent).toBe(18900)
+  })
+
   test('diminuir abaixo da tabela mostra a diferença negativa; pedágio e outros entram no cálculo', async ({ page }) => {
     const { chamadas } = await abrir(page, { caminho: `/chamada/${ID_PEDIDO}/propor?veiculo=${V_HILUX}` })
     await expect(page.getByTestId('pela-tabela')).toHaveText('Pela tabela R$ 180,00')
