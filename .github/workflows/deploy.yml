@@ -58,7 +58,9 @@ jobs:
           npx supabase config diff --project-ref "$REF" || echo "config diff indisponível ou falhou (não bloqueia)"
           npx supabase config push --project-ref "$REF" --yes
           npx supabase db push --yes
-          npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev --project-ref "$REF"
+          # A primeira origem é a dos links gerados (convite, recuperação): continua o app atual. Fase 4: o ivo-novo
+          # também chama as Edge Functions.
+          npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev,https://ivo-novo.pages.dev --project-ref "$REF"
           # Fase 3A: chave de servidor do Google (Places New e Routes). Sem ela, a função `enderecos` devolve
           # MAPAS_INDISPONIVEL e o app cai no texto livre (RUNBOOK §Google Maps).
           if [ -n "${GOOGLE_MAPS_CHAVE_SERVIDOR:-}" ]; then
@@ -96,5 +98,27 @@ jobs:
           # Sem barra final: a CSP lista a origem, não o caminho.
           URL_SB="${VITE_SUPABASE_URL%/}"
           headers=$(curl -sfI https://umi-san-transporte.pages.dev)
+          echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${URL_SB}"
+          echo "$headers" | grep -i "strict-transport-security"
+      # Fase 4: o segundo site (ivo-novo), do mesmo commit. Depois do app atual: uma falha aqui não o bloqueia.
+      - name: Build do IVO novo
+        run: |
+          test -n "$VITE_TURNSTILE_SITE_KEY" || { echo "VITE_TURNSTILE_SITE_KEY ausente" >&2; exit 1; }
+          npm run build:novo
+        env:
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR: ${{ vars.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR || secrets.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR }}
+      - name: Nenhum segredo no bundle do IVO novo
+        run: node scripts/varrer-segredos.ts dist-novo
+      - name: Publicar o IVO novo no Cloudflare Pages
+        run: |
+          npx wrangler pages project create ivo-novo --production-branch main || true
+          npx wrangler pages deploy dist-novo --project-name ivo-novo --branch main --commit-hash "${{ github.event.workflow_run.head_sha }}"
+      - name: Verificar CSP publicada do IVO novo
+        run: |
+          set -euo pipefail
+          sleep 20
+          URL_SB="${VITE_SUPABASE_URL%/}"
+          headers=$(curl -sfI https://ivo-novo.pages.dev)
           echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${URL_SB}"
           echo "$headers" | grep -i "strict-transport-security"

@@ -55,8 +55,12 @@ jobs:
       - run: node scripts/env-local.ts
       - run: npm run test:integracao
       - run: npm run build:test
+      # Fase 4: o segundo site (ivo-novo), em dist-novo, servido pelo projeto Playwright `novo`.
+      - run: npm run build:novo:test
       - name: Nenhum segredo no bundle (especificação 9, item 1)
-        run: node scripts/varrer-segredos.ts dist
+        run: |
+          node scripts/varrer-segredos.ts dist
+          node scripts/varrer-segredos.ts dist-novo
       - run: node scripts/orcamento-bundle.ts
       - run: npx playwright install --with-deps chromium
       - name: E2E (mocks + fluxos reais contra o Supabase local)
