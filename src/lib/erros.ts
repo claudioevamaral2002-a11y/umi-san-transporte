@@ -72,6 +72,14 @@ export const MENSAGENS = {
   LIMITE_FOTOS: 'Este serviço já tem 10 fotos.',
   VEICULO_INVALIDO: 'Confira os dados do veículo: modelo, cor, placa, lugares, carga máxima e categorias.',
   PLACA_DUPLICADA: 'Já existe um veículo com esta placa.',
+
+  // Pedido no estilo Uber (fase 4)
+  CATEGORIA_INDISPONIVEL: 'Esta categoria está indisponível no momento. Escolha outra.',
+  AJUSTE_FORA_DO_LIMITE: 'O novo valor precisa ficar entre a metade e o dobro do valor da tabela.',
+  MOTIVO_INVALIDO: 'Informe o motivo do novo valor, com 3 a 200 caracteres.',
+  CENTRO_CUSTO_INVALIDO: 'O centro de custo pode ter até 80 caracteres.',
+  JA_AVALIADO: 'Esta corrida já foi avaliada.',
+  NOTA_INVALIDA: 'Escolha uma nota de 1 a 5 estrelas.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS

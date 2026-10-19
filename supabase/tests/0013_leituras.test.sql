@@ -232,13 +232,13 @@ select ok(current_setting('t.p_a5') not like '%limite_saldo%' and current_settin
 select is(current_setting('t.p_a5')::jsonb -> 'acoes',
   '{"orcar": false, "recusar": false, "pedir_revisao": true, "reprovar": true, "cancelar": true, "aprovar": true,
     "cancelar_agendado": false, "sair": false, "informar_previsao": false, "concluir": false,
-    "enviar_fotos": false}'::jsonb,
+    "enviar_fotos": false, "avaliar": false}'::jsonb,
   'dono: pode pedir revisão, reprovar, cancelar e aprovar');
 select ok((current_setting('t.p_a6')::jsonb ->> 'ok')::boolean
           and current_setting('t.p_a6')::jsonb -> 'acoes'
               = '{"orcar": false, "recusar": false, "pedir_revisao": false, "reprovar": false, "cancelar": false,
                   "aprovar": false, "cancelar_agendado": false, "sair": false, "informar_previsao": false,
-                  "concluir": false, "enviar_fotos": false}'::jsonb,
+                  "concluir": false, "enviar_fotos": false, "avaliar": false}'::jsonb,
   'N3 vê o detalhe, sem ações');
 select is(current_setting('t.p_a4')::jsonb -> 'acoes' -> 'reprovar', 'true'::jsonb, 'N1 decide pelo pedido da empresa');
 select is(current_setting('t.p_a2')::jsonb -> 'orcamento' -> 'entrada', '{"km": 100}'::jsonb, 'motorista: vê a entrada');
@@ -254,7 +254,7 @@ select ok(current_setting('t.p_a2') not like '%limite_saldo%' and current_settin
 select is(current_setting('t.p_a2q2')::jsonb -> 'acoes',
   '{"orcar": true, "recusar": true, "pedir_revisao": false, "reprovar": false, "cancelar": true, "aprovar": false,
     "cancelar_agendado": false, "sair": false, "informar_previsao": false, "concluir": false,
-    "enviar_fotos": false}'::jsonb,
+    "enviar_fotos": false, "avaliar": false}'::jsonb,
   'motorista atribuído pode orçar, recusar e cancelar o SOLICITADA');
 select ok(current_setting('t.p_a2q2')::jsonb -> 'orcamento' = 'null'::jsonb, 'sem orçamento vigente: nulo');
 select is(current_setting('t.p_a1')::jsonb -> 'orcamento' -> 'snapshot',
@@ -306,7 +306,7 @@ select is(pg_temp.ids(current_setting('t.pd_a5'), '$.aguardando_orcamento[*].id'
 select is((current_setting('t.pd_a5')::jsonb -> 'aguardando_aprovacao' -> 0) - 'inicio' - 'duracao_min' - 'destino' - 'numero',
   jsonb_build_object('id', current_setting('t.q1'), 'status', 'ORCADA', 'origem', 'Origem Secreta A1',
                      'prazo', now() + interval '24 hours', 'urgente', false, 'versao', 1, 'total_cent', 37500,
-                     'empresa_nome', null),
+                     'empresa_nome', null, 'categoria_nome', null, 'agora', false),
   'N2: aguardando sua aprovação, com validade e total');
 select ok(current_setting('t.pd_a8')::jsonb -> 'aguardando_aprovacao' = '[]'::jsonb
           and pg_temp.ids(current_setting('t.pd_a8'), '$.aguardando_orcamento[*].id') = pg_temp.lista('q2'),
