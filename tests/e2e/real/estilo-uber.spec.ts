@@ -262,11 +262,20 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
         orcamento: { total_cent: TOTAL_PROPOSTA },
       })
 
-      // ----- 7. Saída: o horário do pedido é puxado para daqui a 20 min (janela de saída; ver o topo do arquivo).
+      // ----- 7. Saída. ÚNICO atalho no banco: o horário do pedido é puxado para daqui a 20 min, para abrir a janela de
+      // saída (a regra FORA_DA_JANELA, "só a partir de 60 min antes do início", é a única contornada; o relógio do CI não é
+      // nosso). O bloco da agenda anda junto, na mesma instrução, com a mesma duração, para o estado ser o de um pedido
+      // feito para esse horário. `prazo_orcar_ate` também precisa descer: a constraint atividades_prazo exige
+      // prazo_orcar_ate <= inicio e o prazo original (horas depois da criação) passaria do novo início.
       await comBanco((db) =>
         db.query(
-          `update app.atividades set inicio = date_trunc('minute', now()) + interval '20 minutes',
-                  prazo_orcar_ate = least(prazo_orcar_ate, date_trunc('minute', now())) where id = $1`,
+          `with novo as (select date_trunc('minute', now()) + interval '20 minutes' as t),
+                a as (update app.atividades x set inicio = (select t from novo),
+                             prazo_orcar_ate = least(x.prazo_orcar_ate, (select t from novo))
+                       where x.id = $1 returning x.inicio)
+           update app.agenda_blocos b set periodo = tstzrange(
+                    (select t from novo), (select t from novo) + (upper(b.periodo) - lower(b.periodo)), '[)')
+            where b.atividade_id = $1 and b.ativo`,
           [id],
         ),
       )
@@ -288,24 +297,36 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
 
       // ----- 8. Posições: o cliente passa a acompanhar e recebe o sinal (GPS do navegador; sem leitura, 3 posições pela RPC).
       await veComRecarga(pc, pc.getByRole('heading', { name: 'Acompanhando a corrida' }), 30_000)
-      const comGps = await expect(pm.getByTestId('selo-localizacao'))
-        .toHaveText('Compartilhando sua localização', { timeout: 15_000 })
-        .then(() => true, () => false)
-      if (!comGps) {
-        test.info().annotations.push({ type: 'aviso', description: 'GPS simulado sem leitura no CI; 3 posições enviadas pela RPC' })
+      // A posição precisa sair da tela da viagem (geolocalização simulada do contexto, movida a cada 3 s): sem pelo
+      // menos uma gravada pelo app, o teste falha. A RPC só completa até 3 depois disso (e fica anotada).
+      const contar = () =>
+        comBanco(async (db) => Number((await db.query<{ n: string }>('select count(*) as n from app.posicoes where atividade_id = $1', [id])).rows[0]!.n))
+      let passo = 0
+      await expect
+        .poll(
+          async () => {
+            passo++
+            await pm.bringToFront()
+            await ctxMot.setGeolocation({ latitude: -26.91 + passo / 2000, longitude: -48.67, accuracy: 10 })
+            return contar()
+          },
+          { timeout: 60_000, intervals: [3_000], message: 'nenhuma posição gravada pela tela da viagem' },
+        )
+        .toBeGreaterThanOrEqual(1)
+      await expect(pm.getByTestId('selo-localizacao')).toHaveText('Compartilhando sua localização')
+      const doApp = await contar()
+      if (doApp < 3) {
+        test.info().annotations.push({ type: 'aviso', description: `${doApp} posição(ões) do app; ${3 - doApp} completada(s) pela RPC` })
         await pc.waitForTimeout(2_000)
-        for (let seq = 1; seq <= 3; seq++) {
+        for (let i = doApp; i < 3; i++) {
           expect(
-            await rpc(motorista, 'enviar_posicao', { p_atividade: id, p: { lat: -26.91 + seq / 1000, lng: -48.67, precisao: 10, seq } }),
+            await rpc(motorista, 'enviar_posicao', { p_atividade: id, p: { lat: -26.92 + i / 1000, lng: -48.67, precisao: 10, seq: 1000 + i } }),
           ).toMatchObject({ ok: true })
           await pc.waitForTimeout(1_500)
         }
       }
       await expect(pc.getByTestId('sinal-motorista')).toHaveText(/Atualizado (agora|há \d+ s)/, { timeout: 30_000 })
-      const posicoes = await comBanco(
-        async (db) => (await db.query<{ n: string }>('select count(*) as n from app.posicoes where atividade_id = $1', [id])).rows[0]!.n,
-      )
-      expect(Number(posicoes)).toBeGreaterThanOrEqual(comGps ? 1 : 3)
+      expect(await contar()).toBeGreaterThanOrEqual(3)
 
       // ----- 9. Conclusão: o motorista conclui, o cliente vê o resumo e o trajeto é apagado.
       await pm.getByRole('button', { name: 'Concluir serviço' }).click()
