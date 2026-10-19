@@ -5,9 +5,10 @@ import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
-import { ACOES, detalheComoTexto, nomeAcao, PAPEIS } from '../../lib/administracao.ts'
+import { ACOES, detalheComoTexto, nomeAcao } from '../../lib/administracao.ts'
 import { api, type FiltroAuditoria, type RegistroAuditoria } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
+import { useRotulos, type Rotulos } from '../../lib/rotulos.tsx'
 import { formatarDataHora, inicioDoDia } from '../../lib/valores.ts'
 
 const RESULTADOS = {
@@ -31,8 +32,8 @@ function Resultado({ r }: { r: RegistroAuditoria['resultado'] }) {
   )
 }
 
-function quem(r: RegistroAuditoria) {
-  if (r.usuario_nome) return `${r.usuario_nome}${r.papel ? ` (${PAPEIS[r.papel]})` : ''}`
+function quem(r: RegistroAuditoria, rotulos: Rotulos) {
+  if (r.usuario_nome) return `${r.usuario_nome}${r.papel ? ` (${rotulos.papeis[r.papel]})` : ''}`
   return r.usuario_id ? 'Usuário removido' : 'Sistema'
 }
 
@@ -89,6 +90,7 @@ export function Auditoria() {
   const [abertos, setAbertos] = useState<Set<number>>(new Set())
   const [erroPeriodo, setErroPeriodo] = useState<string | undefined>()
   const usuarios = useConsulta('auditoria-usuarios', api.usuarios)
+  const rotulos = useRotulos()
   const { dados, erro, carregando, recarregar } = useConsulta(`auditoria:${JSON.stringify(filtro)}`, () => api.auditoria(filtro))
 
   const mudar = (campo: keyof Rascunho, valor: string) => setRascunho((r) => ({ ...r, [campo]: valor }))
@@ -196,7 +198,7 @@ export function Auditoria() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-bold">{nomeAcao(r.acao)}</p>
-                      <p className="ivo-legenda text-texto-suave">{quem(r)}</p>
+                      <p className="ivo-legenda text-texto-suave">{quem(r, rotulos)}</p>
                     </div>
                     <Resultado r={r.resultado} />
                   </div>
@@ -233,7 +235,7 @@ export function Auditoria() {
                   <Fragment key={r.id}>
                     <tr className="border-b border-borda">
                       <td className="px-4 py-2.5 text-sm whitespace-nowrap tabular-nums">{formatarDataHora(r.em)}</td>
-                      <td className="px-4 py-2.5 text-sm">{quem(r)}</td>
+                      <td className="px-4 py-2.5 text-sm">{quem(r, rotulos)}</td>
                       <td className="px-4 py-2.5 text-sm font-semibold">
                         {nomeAcao(r.acao)}
                         {r.codigo && <span className="block text-xs font-medium text-texto-suave">{r.codigo}</span>}

@@ -1,11 +1,13 @@
-import { createBrowserRouter } from 'react-router'
+import type { ComponentType } from 'react'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { CarregandoPickup } from '../design/componentes/CarregandoPickup.tsx'
 import type { Perfil } from '../lib/estadoSessao.ts'
+import { gereEquipe } from '../lib/administracao.ts'
 import { Guarda } from '../lib/guardas.tsx'
 import { ErroGeral } from '../telas/ErroGeral.tsx'
 import { Raiz } from '../telas/Raiz.tsx'
 import { vePainelEmpresa } from './componentes/Menu.tsx'
-import { GuardaPerfil, MolduraNova, TelaDeMapa } from './MolduraNova.tsx'
+import { GuardaPerfil, MolduraNova, TelaDeMapa, TelaDePagina } from './MolduraNova.tsx'
 import { CorridaCliente } from './telas/cliente/Corrida.tsx'
 import { InicioCliente } from './telas/cliente/InicioCliente.tsx'
 import { Chamada } from './telas/motorista/Chamada.tsx'
@@ -28,16 +30,76 @@ function InicioDoPerfil() {
   return <InicioProvisorio />
 }
 
-/** Telas de página que chegam nas próximas tarefas (11 e 14), por enquanto "em breve", cada uma com a sua guarda. */
+/** Telas de página ainda por fazer ("em breve"), cada uma com a sua guarda. O Painel da empresa chega na Tarefa 14. */
 const PROVISORIAS: Array<{ path: string; titulo: string; permite: (p: Perfil) => boolean }> = [
-  { path: 'adm/categorias', titulo: 'Categorias e preços', permite: ehAdm },
-  { path: 'adm/veiculos', titulo: 'Veículos', permite: ehAdm },
   { path: 'empresa', titulo: 'Painel da empresa', permite: vePainelEmpresa },
-  { path: 'veiculos', titulo: 'Meus veículos', permite: ehMotorista },
-  { path: 'corridas-do-mes', titulo: 'Corridas do mês', permite: ehMotorista },
   { path: 'locais', titulo: 'Locais salvos', permite: ehCliente },
-  { path: 'perfil', titulo: 'Perfil e segurança', permite: todos },
   { path: 'ajuda', titulo: 'Ajuda', permite: todos },
+]
+
+/** Carrega sob demanda o componente `nome` do módulo (as telas de página e as do app atual reusadas). */
+const tela =
+  <M extends Record<string, unknown>>(carregar: () => Promise<M>, nome: keyof M & string) =>
+  async () => ({ Component: (await carregar())[nome] as ComponentType })
+
+/** Cadastrar/editar veículo pelo ADM (escolhe o motorista ao cadastrar). */
+const veiculoDoAdm = async () => {
+  const { CadastrarVeiculo } = await import('./telas/motorista/CadastrarVeiculo.tsx')
+  return { Component: () => <CadastrarVeiculo adm /> }
+}
+
+/**
+ * Telas do app atual reusadas dentro da moldura nova, na mesma origem (Ruling R12): Pedidos, Agenda, Extrato
+ * (Carteira), Equipe e as /adm/* do ADM, com as mesmas guardas de hoje. O banco filtra o que cada um vê.
+ */
+const TELAS_DO_APP_ATUAL = [
+  { path: 'pedidos', lazy: tela(() => import('../telas/pedidos/Pedidos.tsx'), 'Pedidos') },
+  // O pedido novo do app novo é o Início (sobre o mapa).
+  { path: 'pedidos/novo', element: <Navigate to="/" replace /> },
+  { path: 'pedidos/:id', lazy: tela(() => import('./telas/PedidoNoAppNovo.tsx'), 'PedidoNoAppNovo') },
+  { path: 'agenda', lazy: tela(() => import('../telas/agenda/Agenda.tsx'), 'Agenda') },
+  {
+    element: <GuardaPerfil permite={ehCliente} />,
+    children: [{ path: 'extrato', lazy: tela(() => import('../telas/extrato/Extrato.tsx'), 'Extrato') }],
+  },
+  {
+    element: <GuardaPerfil permite={gereEquipe} />,
+    children: [{ path: 'equipe', lazy: tela(() => import('../telas/pessoas/Pessoas.tsx'), 'Equipe') }],
+  },
+  {
+    path: 'adm',
+    element: <GuardaPerfil permite={ehAdm} />,
+    children: [
+      { path: 'painel', lazy: tela(() => import('../telas/adm/Painel.tsx'), 'Painel') },
+      { path: 'contratos', lazy: tela(() => import('../telas/adm/Contratos.tsx'), 'Contratos') },
+      { path: 'contratos/:alvo', lazy: tela(() => import('../telas/adm/Contratos.tsx'), 'ContratoDetalhe') },
+      { path: 'creditos', lazy: tela(() => import('../telas/adm/Creditos.tsx'), 'Creditos') },
+      { path: 'creditos/:empresa', lazy: tela(() => import('../telas/adm/Creditos.tsx'), 'CreditoEmpresa') },
+      { path: 'usuarios', lazy: tela(() => import('../telas/pessoas/Pessoas.tsx'), 'Usuarios') },
+      { path: 'empresas', lazy: tela(() => import('../telas/adm/Empresas.tsx'), 'Empresas') },
+      { path: 'configuracoes', lazy: tela(() => import('../telas/adm/Configuracoes.tsx'), 'Configuracoes') },
+      { path: 'auditoria', lazy: tela(() => import('../telas/adm/Auditoria.tsx'), 'Auditoria') },
+      // Telas novas do ADM (Tarefa 11).
+      { path: 'categorias', lazy: tela(() => import('./telas/adm/CategoriasPrecos.tsx'), 'CategoriasPrecos') },
+      { path: 'veiculos', lazy: tela(() => import('./telas/adm/Veiculos.tsx'), 'Veiculos') },
+      { path: 'veiculos/novo', lazy: veiculoDoAdm },
+      { path: 'veiculos/:id', lazy: veiculoDoAdm },
+    ],
+  },
+]
+
+/** Telas novas de página do motorista (Tarefa 11) e "Perfil e segurança" de todos (Ruling R15). */
+const TELAS_NOVAS = [
+  {
+    element: <GuardaPerfil permite={ehMotorista} />,
+    children: [
+      { path: 'veiculos', lazy: tela(() => import('./telas/motorista/MeusVeiculos.tsx'), 'MeusVeiculos') },
+      { path: 'veiculos/novo', lazy: tela(() => import('./telas/motorista/CadastrarVeiculo.tsx'), 'CadastrarVeiculo') },
+      { path: 'veiculos/:id', lazy: tela(() => import('./telas/motorista/CadastrarVeiculo.tsx'), 'CadastrarVeiculo') },
+      { path: 'corridas-do-mes', lazy: tela(() => import('./telas/motorista/CorridasDoMes.tsx'), 'CorridasDoMes') },
+    ],
+  },
+  { path: 'perfil', lazy: tela(() => import('./telas/PerfilSeguranca.tsx'), 'PerfilSeguranca') },
 ]
 
 /**
@@ -92,6 +154,11 @@ export const roteadorNovo = createBrowserRouter([
       {
         element: <Guarda permitidos={['pronto']} />,
         children: [
+          // Orçar de hoje (tela cheia, fora da moldura): o detalhe reusado leva a ele (diária do motorista, ADM).
+          {
+            element: <GuardaPerfil permite={(p) => ehMotorista(p) || ehAdm(p)} />,
+            children: [{ path: 'pedidos/:id/orcar', lazy: tela(() => import('../telas/pedidos/Orcar.tsx'), 'Orcar') }],
+          },
           {
             element: <MolduraNova />,
             children: [
@@ -117,10 +184,17 @@ export const roteadorNovo = createBrowserRouter([
                 element: <GuardaPerfil permite={ehMotorista} />,
                 children: [{ path: 'chamada/:id/propor', Component: ProporValor }],
               },
-              ...PROVISORIAS.map(({ path, titulo, permite }) => ({
-                element: <GuardaPerfil permite={permite} />,
-                children: [{ path, element: <EmBreve titulo={titulo} /> }],
-              })),
+              {
+                element: <TelaDePagina />,
+                children: [
+                  ...TELAS_DO_APP_ATUAL,
+                  ...TELAS_NOVAS,
+                  ...PROVISORIAS.map(({ path, titulo, permite }) => ({
+                    element: <GuardaPerfil permite={permite} />,
+                    children: [{ path, element: <EmBreve titulo={titulo} /> }],
+                  })),
+                ],
+              },
             ],
           },
         ],

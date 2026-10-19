@@ -7,7 +7,8 @@ import { Icone, type NomeIcone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
-import { filtrarUsuarios, LISTA_NIVEIS, motivoValido, NIVEIS, NIVEIS_AJUDA, PAPEIS } from '../../lib/administracao.ts'
+import { filtrarUsuarios, LISTA_NIVEIS, motivoValido, NIVEIS_AJUDA } from '../../lib/administracao.ts'
+import { useRotulos } from '../../lib/rotulos.tsx'
 import { api, type Empresa, type Usuario } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
@@ -77,6 +78,8 @@ function Situacao({ u }: { u: Usuario }) {
 }
 
 function SeletorNivel({ nivel, onNivel }: { nivel: Nivel; onNivel: (n: Nivel) => void }) {
+  // Rótulos do app em que a tela abre (o app novo troca os nomes dos níveis, Ruling R13).
+  const { niveis: NIVEIS } = useRotulos()
   return (
     <CampoSelecao
       rotulo="Nível na empresa"
@@ -114,6 +117,8 @@ function SeletorPapel({
   erroEmpresa?: string
   desabilitarPapel?: boolean
 }) {
+  // Rótulos do app em que a tela abre (o app novo troca os nomes dos níveis, Ruling R13).
+  const { papeis: PAPEIS } = useRotulos()
   return (
     <>
       <CampoSelecao
@@ -297,6 +302,7 @@ function Gerenciar({
   onConcluido: (texto: string) => void
 }) {
   const equipe = modo === 'equipe'
+  const { papeis: PAPEIS, niveis: NIVEIS } = useRotulos()
   const [visao, setVisao] = useState<Visao>('menu')
   const [enviando, setEnviando] = useState(false)
   const [falha, setFalha] = useState<string | null>(null)
@@ -522,12 +528,16 @@ function Gerenciar({
 // ------------------------------------------------------------------------------------------------
 
 function Perfil({ u, modo }: { u: Usuario; modo: Modo }) {
+  // Rótulos do app em que a tela abre (o app novo troca os nomes dos níveis, Ruling R13).
+  const { papeis: PAPEIS, niveis: NIVEIS } = useRotulos()
   if (modo === 'equipe') return <>{u.nivel ? NIVEIS[u.nivel] : PAPEIS[u.papel]}</>
   return <>{PAPEIS[u.papel]}</>
 }
 
 /** ADM: empresa e nível do cliente. */
 function Detalhe({ u }: { u: Usuario }) {
+  // Rótulos do app em que a tela abre (o app novo troca os nomes dos níveis, Ruling R13).
+  const { niveis: NIVEIS } = useRotulos()
   return (
     <>
       {u.empresa_nome}
@@ -538,6 +548,7 @@ function Detalhe({ u }: { u: Usuario }) {
 
 function GestaoPessoas({ modo }: { modo: Modo }) {
   const equipe = modo === 'equipe'
+  const { papeis: PAPEIS } = useRotulos()
   const { email: meuEmail, perfil } = useSessao()
   const { dados, erro, carregando, recarregar } = useConsulta(equipe ? 'equipe' : 'adm-usuarios', async () => {
     // A equipe não precisa da lista de empresas: o servidor usa a empresa do gestor.

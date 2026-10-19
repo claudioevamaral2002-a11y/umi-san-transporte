@@ -21,10 +21,10 @@ export function InicioProvisorio() {
   )
 }
 
-/** Tela de página ainda por fazer (Categorias e preços, Veículos, Painel da empresa…), com o título do menu. */
+/** Tela de página ainda por fazer (Locais salvos, Painel da empresa, Ajuda), com o título do menu. */
 export function EmBreve({ titulo }: { titulo: string }) {
   return (
-    <main className="mx-auto max-w-md p-4 pt-[calc(env(safe-area-inset-top)+5rem)]">
+    <main className="mx-auto max-w-md p-4">
       <Cartao className="space-y-2">
         <h1 className="ivo-h2">{titulo}</h1>
         <p className="ivo-corpo text-texto-suave">Esta tela chega em breve.</p>

@@ -5,7 +5,6 @@ import { expect, test, type Page, type Route } from '@playwright/test'
 import { simularMapas } from './apoio/mapasFalsos.ts'
 import { comSessaoFalsa, type PerfilFalso } from './apoio/sessaoFalsa.ts'
 
-const APP_ATUAL = 'https://umi-san-transporte.pages.dev'
 const AAL2 = { aal: 'aal2' as const }
 const N1: PerfilFalso = { papel: 'CLIENTE', nivel: 1, nome: 'Marina Souza', empresa_nome: 'Umi San' }
 const N2: PerfilFalso = { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
@@ -85,8 +84,9 @@ test('cliente N1: Minhas corridas, Agenda, Carteira da empresa, Locais salvos, E
     'Perfil e segurança',
     'Ajuda',
   ])
-  await expect(menu.getByRole('link', { name: 'Equipe' })).toHaveAttribute('href', `${APP_ATUAL}/equipe`)
-  await expect(menu.getByRole('link', { name: 'Carteira da empresa' })).toHaveAttribute('href', `${APP_ATUAL}/extrato`)
+  // As telas de hoje abrem dentro do app novo, na mesma origem (Ruling R12).
+  await expect(menu.getByRole('link', { name: 'Equipe' })).toHaveAttribute('href', '/equipe')
+  await expect(menu.getByRole('link', { name: 'Carteira da empresa' })).toHaveAttribute('href', '/extrato')
   await expect(menu.getByRole('button', { name: 'Sair' })).toBeVisible()
 
   // Diálogo de verdade: Esc fecha e o foco volta ao botão ☰.
@@ -163,7 +163,7 @@ test('motorista: "Disponível para chamadas" (só no aparelho), Meus veículos e
   await expect(page.getByRole('heading', { name: 'Meus veículos' })).toBeVisible()
 })
 
-test('ADM: "Categorias e preços" e "Veículos" no app novo; as telas de hoje no app atual', async ({ page }) => {
+test('ADM: "Categorias e preços", "Veículos" e as telas de hoje, todas no app novo', async ({ page }) => {
   await abrir(page, ADM, AAL2)
   const menu = await abrirMenu(page)
   await expect(menu.getByRole('link', { name: 'Categorias e preços' })).toHaveAttribute('href', '/adm/categorias')
@@ -178,7 +178,7 @@ test('ADM: "Categorias e preços" e "Veículos" no app novo; as telas de hoje no
     ['Configurações', '/adm/configuracoes'],
     ['Auditoria', '/adm/auditoria'],
   ] as const) {
-    await expect(menu.getByRole('link', { name: rotulo })).toHaveAttribute('href', `${APP_ATUAL}${caminho}`)
+    await expect(menu.getByRole('link', { name: rotulo })).toHaveAttribute('href', caminho)
   }
   await menu.getByRole('link', { name: 'Categorias e preços' }).click()
   await expect(page).toHaveURL(/\/adm\/categorias$/)

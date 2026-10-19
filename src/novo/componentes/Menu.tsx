@@ -2,23 +2,22 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Icone, type NomeIcone } from '../../design/componentes/Icone.tsx'
 import { Interruptor } from '../../design/componentes/Interruptor.tsx'
-import { gereEquipe, NIVEIS, PAPEIS } from '../../lib/administracao.ts'
+import { gereEquipe } from '../../lib/administracao.ts'
 import type { Perfil } from '../../lib/estadoSessao.ts'
+import { rotuloCurto, useRotulos, type Rotulos } from '../../lib/rotulos.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 import { gravarDisponivel, lerDisponivel } from '../disponivel.ts'
 
-/** O app atual: as telas que o app novo ainda não tem abrem lá (outra origem: a pessoa entra de novo lá). */
+/** O app atual (outra origem). No app novo, só o gestor de frota é mandado para lá (Ruling R13). */
 export const APP_ATUAL = 'https://umi-san-transporte.pages.dev'
 
 export interface ItemMenu {
   rotulo: string
   icone: NomeIcone
-  /** Caminho do app novo, ou endereço completo do app atual (`externo`). */
+  /** Caminho do app novo. As telas de hoje (pedidos, agenda, extrato, equipe, /adm/*) abrem aqui dentro (Ruling R12). */
   para: string
-  externo?: boolean
 }
 
-const atual = (caminho: string) => ({ para: `${APP_ATUAL}${caminho}`, externo: true })
 const PERFIL_E_SEGURANCA: ItemMenu = { rotulo: 'Perfil e segurança', icone: 'escudo', para: '/perfil' }
 const AJUDA: ItemMenu = { rotulo: 'Ajuda', icone: 'conversa', para: '/ajuda' }
 const PAINEL_EMPRESA: ItemMenu = { rotulo: 'Painel da empresa', icone: 'grafico', para: '/empresa' }
@@ -31,20 +30,18 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
   switch (p.papel) {
     case 'CLIENTE':
       return [
-        { rotulo: 'Minhas corridas', icone: 'lista', ...atual('/pedidos') },
-        { rotulo: 'Agenda', icone: 'calendario', ...atual('/agenda') },
-        { rotulo: 'Carteira da empresa', icone: 'dinheiro', ...atual('/extrato') },
+        { rotulo: 'Minhas corridas', icone: 'lista', para: '/pedidos' },
+        { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
+        { rotulo: 'Carteira da empresa', icone: 'dinheiro', para: '/extrato' },
         { rotulo: 'Locais salvos', icone: 'local', para: '/locais' },
-        ...(gereEquipe(p)
-          ? [{ rotulo: 'Equipe', icone: 'usuarios', ...atual('/equipe') } satisfies ItemMenu, PAINEL_EMPRESA]
-          : []),
+        ...(gereEquipe(p) ? [{ rotulo: 'Equipe', icone: 'usuarios', para: '/equipe' } satisfies ItemMenu, PAINEL_EMPRESA] : []),
         PERFIL_E_SEGURANCA,
         AJUDA,
       ]
     case 'MOTORISTA':
       return [
-        { rotulo: 'Minhas corridas e Pendências', icone: 'lista', ...atual('/pedidos') },
-        { rotulo: 'Agenda', icone: 'calendario', ...atual('/agenda') },
+        { rotulo: 'Minhas corridas e Pendências', icone: 'lista', para: '/pedidos' },
+        { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
         { rotulo: 'Meus veículos', icone: 'caminhao', para: '/veiculos' },
         { rotulo: 'Corridas do mês', icone: 'grafico', para: '/corridas-do-mes' },
         PERFIL_E_SEGURANCA,
@@ -52,13 +49,13 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
       ]
     case 'ADM':
       return [
-        { rotulo: 'Painel e Corridas em andamento', icone: 'grafico', ...atual('/adm/painel') },
-        { rotulo: 'Contratos', icone: 'tabela', ...atual('/adm/contratos') },
-        { rotulo: 'Créditos', icone: 'dinheiro', ...atual('/adm/creditos') },
-        { rotulo: 'Usuários', icone: 'usuarios', ...atual('/adm/usuarios') },
-        { rotulo: 'Empresas', icone: 'predio', ...atual('/adm/empresas') },
-        { rotulo: 'Configurações', icone: 'chave', ...atual('/adm/configuracoes') },
-        { rotulo: 'Auditoria', icone: 'lista', ...atual('/adm/auditoria') },
+        { rotulo: 'Painel e Corridas em andamento', icone: 'grafico', para: '/adm/painel' },
+        { rotulo: 'Contratos', icone: 'tabela', para: '/adm/contratos' },
+        { rotulo: 'Créditos', icone: 'dinheiro', para: '/adm/creditos' },
+        { rotulo: 'Usuários', icone: 'usuarios', para: '/adm/usuarios' },
+        { rotulo: 'Empresas', icone: 'predio', para: '/adm/empresas' },
+        { rotulo: 'Configurações', icone: 'chave', para: '/adm/configuracoes' },
+        { rotulo: 'Auditoria', icone: 'lista', para: '/adm/auditoria' },
         { rotulo: 'Categorias e preços', icone: 'tabela', para: '/adm/categorias' },
         { rotulo: 'Veículos', icone: 'caminhao', para: '/adm/veiculos' },
         PAINEL_EMPRESA,
@@ -66,13 +63,8 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
         AJUDA,
       ]
     case 'GESTOR_FROTA':
-      // As telas do ADM no app atual são só do ADM; o gestor de frota fica com as corridas e a agenda.
-      return [
-        { rotulo: 'Corridas', icone: 'lista', ...atual('/pedidos') },
-        { rotulo: 'Agenda', icone: 'calendario', ...atual('/agenda') },
-        PERFIL_E_SEGURANCA,
-        AJUDA,
-      ]
+      // Sem telas no app novo (Ruling R13): a moldura mostra "Sem acesso a este app".
+      return []
   }
 }
 
@@ -85,10 +77,10 @@ function iniciais(nome: string): string {
   return (primeira + ultima).toUpperCase()
 }
 
-function subtitulo(p: Perfil): string {
-  if (p.papel !== 'CLIENTE') return PAPEIS[p.papel]
-  const nivel = p.nivel ? NIVEIS[p.nivel] : PAPEIS.CLIENTE
-  return p.empresa_nome ? `${p.empresa_nome} · ${nivel}` : nivel
+/** "Master", "Motorista" ou "Umi San · Administrador" (rótulos do app novo, Ruling R13). */
+function subtitulo(p: Perfil, rotulos: Rotulos): string {
+  const rotulo = rotuloCurto(rotulos, p.papel, p.nivel)
+  return p.papel === 'CLIENTE' && p.empresa_nome ? `${p.empresa_nome} · ${rotulo}` : rotulo
 }
 
 const CLASSE_ITEM = 'flex min-h-12 w-full items-center gap-3.5 border-b border-borda py-1 font-semibold text-texto'
@@ -103,7 +95,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
   const botao = useRef<HTMLButtonElement>(null)
   const local = useLocation()
   const idTitulo = useId()
-  const idExterno = useId()
+  const rotulos = useRotulos()
   const [disponivel, setDisponivel] = useState(lerDisponivel)
   const itens = itensDoMenu(perfil)
 
@@ -162,7 +154,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
           </div>
           <div id={idTitulo} className="mt-2.5 mb-3">
             <p className="ivo-h3">{perfil.nome}</p>
-            <p className="ivo-legenda text-texto-suave">{subtitulo(perfil)}</p>
+            <p className="ivo-legenda text-texto-suave">{subtitulo(perfil, rotulos)}</p>
           </div>
 
           <ul aria-label="Itens do menu">
@@ -172,32 +164,15 @@ export function Menu({ perfil }: { perfil: Perfil }) {
                 <Interruptor ligado={disponivel} rotulo="Disponível para chamadas" onAlternar={alternarDisponivel} />
               </li>
             )}
-            {itens.map((item) => {
-              const conteudo = (
-                <>
+            {itens.map((item) => (
+              <li key={item.rotulo}>
+                <Link to={item.para} className={CLASSE_ITEM}>
                   <Icone nome={item.icone} tamanho={20} className="text-texto-suave" />
                   <span className="flex-1">{item.rotulo}</span>
-                  {item.externo && <Icone nome="externo" tamanho={16} className="text-texto-suave" />}
-                </>
-              )
-              return (
-                <li key={item.rotulo}>
-                  {item.externo ? (
-                    <a href={item.para} aria-describedby={idExterno} className={CLASSE_ITEM}>
-                      {conteudo}
-                    </a>
-                  ) : (
-                    <Link to={item.para} className={CLASSE_ITEM}>
-                      {conteudo}
-                    </Link>
-                  )}
-                </li>
-              )
-            })}
+                </Link>
+              </li>
+            ))}
           </ul>
-          <p id={idExterno} className="sr-only">
-            Abre o app atual
-          </p>
 
           <button
             type="button"
