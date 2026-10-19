@@ -28,7 +28,7 @@ Nas palavras do dono: *"uma plataforma com menos texto, mais mapas, mais focada 
 | Motoristas | **Só o Ivo** por enquanto. A chamada vai para ele. Vários motoristas vêm numa atualização futura, no modelo "um por vez, o mais perto primeiro" (escolha do dono no esboço) |
 | Preço | O motorista **pode propor outro valor**. O cliente aceita ou recusa |
 | Categorias | **IVO Passageiros, IVO Carga Leve e IVO Carga Pesada** (exemplos do dono), **cada uma com o seu preço**. A tabela do contrato é adaptada |
-| Quando | **Agendar é o mais comum**: a tela abre em "Agendar", e "Agora" é uma opção |
+| Quando | **Agendar é o mais comum**: a tela abre em "Agendar", e "Agora" é uma opção, que vale como "o mais cedo possível, a partir de 1 hora" (§6.1) |
 | Centro de custo | **Digitado** pelo cliente, ao confirmar a corrida |
 | Menu | **Ícone no canto superior esquerdo**, com Perfil, Carteira, Agenda e outros itens |
 | Veículos | O motorista **cadastra os veículos** e as **categorias que cada um atende** |
@@ -144,7 +144,11 @@ Princípio: **o mapa na frente, uma ação por vez, o resto em "Detalhes"**. Cor
 6. Botão **"Pedir IVO Passageiros · qua 08:30"**. O pedido nasce SOLICITADA com pré-reserva na agenda, como hoje.
 7. Tela de espera: "**Enviado ao Ivo.** Ele responde até HH:MM". O prazo vem de `prazo_orcar_horas` do contrato.
 
-> **"Agora": pergunta aberta ao dono.** Hoje o banco só aceita pedido com início no futuro, e a saída abre 60 min antes do início. Um "Agora" de verdade pede regras novas: a hora que vale como início, quanto tempo o Ivo tem para responder e o cliente para confirmar. A resposta do dono entra aqui antes do plano.
+> **"Agora" (decisão do dono, 19/10):** significa **"o mais cedo possível, a partir de 1 hora"**.
+> - O início gravado é o primeiro horário livre do Ivo a partir de agora + 60 min, arredondado aos passos da agenda.
+> - O Ivo tem **15 min** para responder (`prazo_orcar_ate`), e o cliente tem **15 min** para confirmar a proposta (validade do orçamento nesse caso).
+> - A janela de saída (60 min antes do início) não muda. Então, para um "Agora", o Ivo pode sair assim que o cliente confirmar.
+> - Esses dois prazos de 15 min valem só para o "Agora". Os agendados seguem os prazos do contrato.
 
 ### 6.2 Motorista responde (Ivo)
 
