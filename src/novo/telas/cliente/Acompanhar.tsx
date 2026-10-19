@@ -4,14 +4,15 @@ import { Icone } from '../../../design/componentes/Icone.tsx'
 import type { RespostaPedido } from '../../../lib/pedidos.ts'
 import { horaDe } from '../../../lib/tempo.ts'
 import { textoDoSinal } from '../../../telas/execucao/MapaAoVivo.tsx'
+import type { Chegada } from '../../../lib/acompanhamento.ts'
 import type { Acompanhamento } from '../../acompanhamento.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { iniciais } from '../../formatos.ts'
 import { TrilhoCorrida } from './Aguardando.tsx'
 
-/** Texto de "Compartilhar": sem link de rastreio no MVP, só a chegada prevista. */
-export function textoParaCompartilhar(chegada: string | null): string {
-  return chegada ? `IVO a caminho, chegada ~${horaDe(chegada)}` : 'IVO a caminho'
+/** Texto de "Compartilhar": sem link de rastreio no MVP. Só a chegada que o motorista transmitiu entra; estimativa não. */
+export function textoParaCompartilhar(chegada: Chegada | null): string {
+  return chegada && !chegada.estimada ? `IVO a caminho, chegada ~${horaDe(chegada.iso)}` : 'IVO a caminho'
 }
 
 /**
@@ -47,14 +48,16 @@ export function Acompanhar({ r, a }: { r: RespostaPedido; a: Acompanhamento }) {
       <h1 className="sr-only">Acompanhando a corrida</h1>
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="ivo-legenda font-semibold text-texto-suave">Chegada prevista</p>
+          <p className="ivo-legenda font-semibold text-texto-suave">
+            {a.chegada?.estimada ? 'Chegada estimada' : 'Chegada prevista'}
+          </p>
           <p
             className={`ivo-valor ${perdido ? 'text-texto-suave' : ''}`}
             data-testid="chegada-cliente"
             aria-live="polite"
             aria-atomic="true"
           >
-            {a.chegada ? `~${horaDe(a.chegada)}` : '—'}
+            {a.chegada ? `${a.chegada.estimada ? 'Estimativa ' : ''}~${horaDe(a.chegada.iso)}` : '—'}
           </p>
         </div>
         {p.saiu_em && <p className="text-right ivo-legenda text-texto-suave">saiu {horaDe(p.saiu_em)}</p>}

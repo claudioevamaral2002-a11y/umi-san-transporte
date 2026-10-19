@@ -5,6 +5,7 @@ import { expect, test, type Page, type Route } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { simularBlocosDoMapa, simularMapas } from './apoio/mapasFalsos.ts'
 import { detalheFalso, ID_PEDIDO, instanteSp, orcamentoCliente, SEM_ACOES, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { codificarPolyline } from './apoio/polyline.ts'
 import { simularRealtime } from './apoio/realtimeFalso.ts'
 import { comSessaoFalsa, json, URL_SUPABASE, type PerfilFalso } from './apoio/sessaoFalsa.ts'
 
@@ -76,6 +77,8 @@ function concluida(extra: Record<string, unknown> = {}, acoes: Record<string, bo
 interface Abrir {
   detalhes: unknown[]
   perfil?: PerfilFalso
+  /** A rota do Google chega só depois deste atraso (ms). */
+  atrasoRota?: number
   /** Resposta de `avaliar`. */
   avaliar?: Record<string, unknown>
 }
@@ -85,7 +88,7 @@ async function abrir(page: Page, o: Abrir) {
   await simularApi(page)
   const realtime = await simularRealtime(page)
   const chamadas = await simularPedidos(page, { detalhes: o.detalhes })
-  await simularMapas(page, { rota: { km: 42, minutos: 55 } })
+  await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: POLYLINE, atrasoRota: o.atrasoRota })
   await simularBlocosDoMapa(page)
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/avaliar`, (route: Route) => {
     chamadas.push({ rpc: 'avaliar', corpo: (route.request().postDataJSON() ?? {}) as Record<string, unknown> })
@@ -107,6 +110,12 @@ async function abrir(page: Page, o: Abrir) {
   return { chamadas, realtime }
 }
 
+const POLYLINE = codificarPolyline([
+  [-26.8986, -48.6542],
+  [-26.903, -48.659],
+  [-26.9078, -48.6619],
+])
+
 const carro = (page: Page) => page.getByTestId('mapa-base')
 
 test.describe('acompanhar', () => {
@@ -117,10 +126,8 @@ test.describe('acompanhar', () => {
     await expect(page.locator('.marcador-carro.perdido')).toHaveCount(1)
     const sinal = page.getByTestId('sinal-motorista')
     await expect(sinal).toContainText('Sinal do motorista perdido')
-    // A chegada prevista nunca fica em branco: saída + tempo da rota (30 min atrás + 55 min).
-    const chegada = page.getByTestId('chegada-cliente')
-    await expect(chegada).toHaveText(/^~\d\d:\d\d$/)
-    await expect(chegada).not.toHaveText('—')
+    // Sem sinal e sem chegada do motorista, a estimativa (saída + rota) some: nada inventado.
+    await expect(page.getByTestId('chegada-cliente')).toHaveText('—')
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   })
 
@@ -157,6 +164,45 @@ test.describe('acompanhar', () => {
     await page.getByRole('button', { name: 'Compartilhar' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Texto copiado' })).toBeVisible()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`IVO a caminho, chegada ~${hhmm(eta)}`)
+  })
+})
+
+test.describe('chegada estimada e enquadramento', () => {
+  test('sem chegada do motorista, a estimativa aparece rotulada, não vai no Compartilhar e some se já passou', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await abrir(page, { detalhes: [emAndamento({}, { lat: -26.9, lng: -48.655, em: new Date().toISOString() })] })
+    const chegada = page.getByTestId('chegada-cliente')
+    await expect(chegada).toHaveText(/^Estimativa ~[0-9]{2}:[0-9]{2}$/)
+    await expect(page.getByTestId('folha-mapa')).toContainText('Chegada estimada')
+    await page.getByRole('button', { name: 'Compartilhar' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Texto copiado' })).toBeVisible()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('IVO a caminho')
+  })
+
+  test('estimativa já no passado (motorista atrasado): mostra "—", não um horário que passou', async ({ page }) => {
+    const saiu = new Date(Date.now() - 120 * MIN).toISOString()
+    await abrir(page, { detalhes: [emAndamento({ saiu_em: saiu }, { lat: -26.9, lng: -48.655, em: new Date().toISOString() })] })
+    await expect(page.getByTestId('sinal-motorista')).toContainText('Atualizado agora')
+    await expect(page.getByTestId('chegada-cliente')).toHaveText('—')
+  })
+
+  test('o carro fora do trajeto continua no mapa depois que a rota chega (o enquadramento inclui o carro)', async ({ page }) => {
+    // Posição gravada a ~25 km ao norte do trajeto; a rota só chega 2 s depois do carro.
+    await abrir(page, {
+      detalhes: [emAndamento({}, { lat: -26.68, lng: -48.62, em: new Date().toISOString() })],
+      atrasoRota: 2000,
+    })
+    await expect(page.locator('.marcador-carro')).toHaveCount(1)
+    await expect(page.locator('path.rota-mapa')).toHaveCount(1)
+    const dentro = async () => {
+      const mapa = await page.getByTestId('mapa-base').boundingBox()
+      const marca = await page.locator('.marcador-carro').boundingBox()
+      if (!mapa || !marca) return false
+      return (
+        marca.x >= mapa.x && marca.y >= mapa.y && marca.x + marca.width <= mapa.x + mapa.width && marca.y + marca.height <= mapa.y + mapa.height
+      )
+    }
+    await expect.poll(dentro).toBe(true)
   })
 })
 

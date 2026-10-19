@@ -14,13 +14,26 @@ export function posicaoGravada(u: DetalhePedido['ultima_posicao']): Posicao | nu
   return { lat: u.lat, lng: u.lng, seq: -1, recebidaEm: em, eta: null }
 }
 
+export interface Chegada {
+  iso: string
+  /** Saída + tempo da rota, não a chegada do motorista: a tela a rotula como estimativa. */
+  estimada: boolean
+}
+
 /**
- * Chegada prevista (ISO): a do motorista, quando ele a transmitiu; senão, a saída mais o tempo da rota (uma estimativa,
- * para a tela não ficar em branco quando se abre no meio da viagem). `null` sem nenhuma das duas.
+ * Chegada prevista: a que o motorista transmitiu (real, mesmo que já tenha passado); senão, a saída mais o tempo da
+ * rota, marcada como estimada. A estimativa que já passou (motorista atrasado) não é mostrada: `null`.
  */
-export function chegadaPrevista(eta: string | null, saiuEm: string | null | undefined, minutosDaRota: number | null): string | null {
-  if (eta) return eta
+export function chegadaPrevista(
+  eta: string | null,
+  saiuEm: string | null | undefined,
+  minutosDaRota: number | null,
+  agora: number,
+): Chegada | null {
+  if (eta) return { iso: eta, estimada: false }
   if (!saiuEm || minutosDaRota === null) return null
   const saiu = Date.parse(saiuEm)
-  return Number.isNaN(saiu) ? null : new Date(saiu + minutosDaRota * MIN).toISOString()
+  if (Number.isNaN(saiu)) return null
+  const estimada = saiu + minutosDaRota * MIN
+  return estimada > agora ? { iso: new Date(estimada).toISOString(), estimada: true } : null
 }

@@ -15,14 +15,20 @@ describe('posicaoGravada', () => {
 })
 
 describe('chegadaPrevista', () => {
-  it('prefere a do motorista', () => {
-    expect(chegadaPrevista('2026-10-19T12:30:00Z', '2026-10-19T12:00:00Z', 55)).toBe('2026-10-19T12:30:00Z')
+  const agora = Date.parse('2026-10-19T12:10:00Z')
+  it('a do motorista é real (estimada: false), mesmo que já tenha passado', () => {
+    expect(chegadaPrevista('2026-10-19T12:30:00Z', '2026-10-19T12:00:00Z', 55, agora)).toEqual({ iso: '2026-10-19T12:30:00Z', estimada: false })
+    expect(chegadaPrevista('2026-10-19T12:05:00Z', null, null, agora)).toEqual({ iso: '2026-10-19T12:05:00Z', estimada: false })
   })
-  it('sem ela, a saída mais o tempo da rota', () => {
-    expect(chegadaPrevista(null, '2026-10-19T12:00:00Z', 55)).toBe('2026-10-19T12:55:00.000Z')
+  it('sem ela, saída + tempo da rota, marcada como estimada', () => {
+    expect(chegadaPrevista(null, '2026-10-19T12:00:00Z', 55, agora)).toEqual({ iso: '2026-10-19T12:55:00.000Z', estimada: true })
+  })
+  it('estimativa que já passou vira nada (o motorista está atrasado: não se mostra um horário vencido)', () => {
+    expect(chegadaPrevista(null, '2026-10-19T10:00:00Z', 55, agora)).toBeNull()
+    expect(chegadaPrevista(null, '2026-10-19T11:15:00Z', 55, agora)).toBeNull()
   })
   it('sem nenhuma das duas, nada', () => {
-    expect(chegadaPrevista(null, null, 55)).toBeNull()
-    expect(chegadaPrevista(null, '2026-10-19T12:00:00Z', null)).toBeNull()
+    expect(chegadaPrevista(null, null, 55, agora)).toBeNull()
+    expect(chegadaPrevista(null, '2026-10-19T12:00:00Z', null, agora)).toBeNull()
   })
 })

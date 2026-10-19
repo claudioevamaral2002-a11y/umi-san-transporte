@@ -138,12 +138,20 @@ export function MapaBase({
   const carroLng = carro?.lng ?? null
   const carroPerdido = carro?.perdido ?? false
 
+  // Última posição do carro, lida pelo enquadramento da rota (que não deve refazer-se a cada passo do carro).
+  const carroAtual = useRef<Ponto | null>(null)
+  useEffect(() => {
+    carroAtual.current = carroLat !== null && carroLng !== null ? { lat: carroLat, lng: carroLng } : null
+  }, [carroLat, carroLng])
+
   // Rota e destino (e o enquadramento: o trajeto inteiro, ou o centro pedido).
   useEffect(() => {
     const m = mapa.current
     if (!L || !m) return
     const grupo = L.layerGroup().addTo(m)
     const enquadrar: Ponto[] = [...pontosRota]
+    // O carro entra junto com o trajeto: a rota pode chegar depois da posição gravada, e o carro não pode ficar de fora.
+    if (carroAtual.current) enquadrar.push(carroAtual.current)
     if (pontosRota.length > 1) {
       L.polyline(
         pontosRota.map((p) => [p.lat, p.lng] as [number, number]),
