@@ -102,10 +102,19 @@ Colunas novas em `app.atividades`:
 
 ### 5.4 Proposta de outro valor
 
-- O motorista propõe um **total diferente** do calculado pela tabela.
-- O orçamento ganha uma linha nova **`AJUSTE_MOTORISTA`**, positiva ou negativa, com **motivo obrigatório** (até 200 caracteres). O memorial fica transparente: "Pela tabela R$ 180,00 · Ajuste do motorista + R$ 40,00 (pedágio extra) · Total R$ 220,00".
-- **Limite do ajuste:** fica a meu critério, e o construtor confirma no plano. Proposta: de −50% a +100% do valor da tabela, conferido no banco.
-- O cliente vê o valor proposto e o motivo e **aceita ou recusa**:
+**Ajustado em 19/10, a pedido do dono:** a contraproposta é feita na **calculadora**, como no "Orçar" de hoje. Um teclado de valor livre obrigaria o motorista a fazer a conta por fora.
+
+- **"Propor outro valor"** abre a calculadora com os itens do contrato:
+  - km rodados, com o botão − / + e o km da rota como referência;
+  - espera em horas;
+  - pedágio/balsa;
+  - hospedagem em diárias;
+  - "Outros" (descrição e valor, até 5, que já existe no cálculo).
+- O reboque fica fixo pela categoria.
+- O total é **recalculado pelo banco** a cada mudança (`calcular_orcamento`, sem gravar). A tela mostra "Pela tabela R$ X" e o novo total, com a diferença.
+- **O cliente vê o memorial linha a linha** (km, retorno, espera, pedágio, outros…), então o que mudou fica explicado sem motivo à parte.
+- **No banco, nada muda em relação ao que já está pronto:** o envio é o `enviar_orcamento` com as quantidades. A linha `AJUSTE_MOTORISTA` (valor livre com motivo, de −50% a +100%) continua aceita pelo banco, mas **a tela não a usa** nesta versão.
+- O cliente vê o valor proposto e **aceita ou recusa**:
   - aceitar é a aprovação de hoje, com reserva no saldo;
   - recusar é "pedir revisão" (volta ao motorista) ou "reprovar" (encerra). Os dois já existem.
 
@@ -157,14 +166,14 @@ Princípio: **o mapa na frente, uma ação por vez, o resto em "Detalhes"**. Cor
   - mapa com o trajeto, categoria, empresa, dia e hora;
   - km, tempo estimado e **valor pela tabela**;
   - o veículo sugerido, que dá para trocar.
-- **Botões:** **"Aceitar por R$ 180"** e **"Propor outro valor"**. Esse segundo abre um teclado de valor e o motivo, e mostra o total novo antes de enviar.
+- **Botões:** **"Aceitar por R$ 180"** e **"Propor outro valor"**. Esse segundo abre a **calculadora** (§5.4) com o total recalculado pelo contrato a cada mudança.
 - **Recusar** continua existindo, com motivo (`recusar_pedido`), num item secundário.
 - **Com o app fechado**, a chamada fica na lista de **Pendências** ao abrir. Push só na fase 5.
 - **Os km:** vêm da rota, e o motorista pode ajustar como hoje no Orçar. Espera, pedágio e hospedagem ficam num "Mais itens" recolhido.
 
 ### 6.3 Cliente confirma
 
-- **Folha com:** foto e nome do motorista, veículo (modelo, cor e placa), dia e hora, e o **valor**. Se houver ajuste, mostra "Pela tabela R$ 180 · Proposta do Ivo R$ 220 (motivo)".
+- **Folha com:** foto e nome do motorista, veículo (modelo, cor e placa), dia e hora, e o **valor**. Se o Ivo propôs outro valor, mostra "Pela tabela R$ 180 · Proposta do Ivo R$ 220", o resumo do que mudou (por exemplo, "48 km, 1 h de espera, pedágio") e "Ver o cálculo".
 - **Campo "Centro de custo"**: texto livre, com o último valor que a pessoa usou já preenchido. **Opcional** no MVP. *(Decisão minha. Torná-lo obrigatório por empresa pode vir depois.)*
 - **"Disponível no saldo: R$ X"**. O saldo insuficiente aparece antes do botão, com a mesma regra de hoje.
 - **Botões:** **"Confirmar corrida"** (aprovação com reserva), "Pedir outro valor" (revisão) e "Recusar" (reprovar).
@@ -242,7 +251,7 @@ Acrescentado em 19/10, depois da aprovação, a pedido do dono. A referência é
   - nenhuma UI otimista em dinheiro (aceitar, confirmar, sair);
   - o livro-razão é imutável;
   - a reconciliação diária continua.
-- **O ajuste do motorista** é limitado e auditado no banco (§5.4), com o motivo visível para o cliente.
+- **A contraproposta** sai sempre do contrato (calculadora, §5.4). O ajuste livre continua limitado e auditado no banco, mas não é usado pela tela.
 - **Localização:**
   - só durante a corrida, como na 3B. "Disponível para chamadas" **não** envia posição;
   - o aviso de LGPD da 3B continua antes da primeira viagem;

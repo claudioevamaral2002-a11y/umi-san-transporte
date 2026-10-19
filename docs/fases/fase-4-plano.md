@@ -360,7 +360,7 @@ O banco só é verificado no CI, porque não há Docker na máquina do dono. Cad
   - "Agendar" é o padrão; o botão diz "Pedir IVO Passageiros · qua 08:30";
   - "Agora" envia `agora:true` e `inicio` = primeiro livre ≥ +60 min;
   - depois do envio, aparece "Enviado ao Ivo" com o prazo;
-  - na confirmação com ajuste, aparece "Pela tabela R$ 180,00" e "Proposta do Ivo + R$ 40,00" com o motivo;
+  - na confirmação de uma contraproposta, aparece "Pela tabela R$ 180,00", "Proposta do Ivo R$ 220,00" e "Ver o cálculo", que abre as linhas do memorial;
   - o centro de custo vem preenchido com o último usado (`localStorage` `ivo:ultimo-centro-custo`);
   - **sem UI otimista:** "Confirmar corrida · R$ 220" fica ocupado até a resposta, e `SALDO_INSUFICIENTE` mostra a mensagem de hoje;
   - "Pedir outro valor" chama `pedir_revisao`; "Recusar" chama `reprovar_orcamento`;
@@ -394,10 +394,11 @@ O banco só é verificado no CI, porque não há Docker na máquina do dono. Cad
 ### Tarefa 10: motorista (chamada, contraproposta e viagem)
 
 **Arquivos:**
+- Reusar: a lógica de `montarEntrada` (`src/lib/orcar.ts`) e os campos do `Orcar.tsx` do app atual para a calculadora.
 - Criar:
   - `src/novo/telas/motorista/InicioMotorista.tsx`: mapa, próxima corrida e `TrilhoSair` (reusar `SaidaMotorista`);
   - `src/novo/telas/motorista/Chamada.tsx` (mockup 5);
-  - `src/novo/telas/motorista/ProporValor.tsx` (mockup 6);
+  - `src/novo/telas/motorista/ProporValor.tsx` (mockup 6: calculadora);
   - `src/novo/telas/motorista/ViagemNoMapa.tsx` (mockup 7).
 - Reusar: o envio de posição e o Wake Lock de `ViagemMotorista.tsx`, extraídos para um hook `useEnvioDePosicao(pedido)` em `src/telas/execucao/` **sem mudar o comportamento** do app atual (o `execucao.spec.ts` continua verde). Reusar também `FolhaConcluir`.
 - Teste: `tests/e2e/novo-motorista.spec.ts`.
@@ -405,11 +406,12 @@ O banco só é verificado no CI, porque não há Docker na máquina do dono. Cad
 - [ ] **Passo 1: escrever os testes:**
   - pedido SOLICITADA com categoria → a chamada mostra o valor pela tabela (`calcular_orcamento`), a barra de prazo e o veículo sugerido;
   - "Aceitar por R$ 180" envia `enviar_orcamento` com `veiculo_id` e **sem** `ajuste_cent`;
-  - "Propor outro valor":
-    - mostra "+ R$ 40,00 (+22%)";
-    - motivo vazio deixa o envio desabilitado;
-    - valor acima do limite mostra o máximo;
-    - envia com `ajuste_cent:"4000"` e o motivo;
+  - "Propor outro valor" (calculadora, especificação §5.4, ajustada em 19/10):
+    - abre os itens km (− / +, com o km da rota como referência), espera, pedágio/balsa, hospedagem e "Outros" (até 5);
+    - cada mudança chama `calcular_orcamento` (sem gravar) e mostra "Pela tabela R$ 180,00" e o novo total com a diferença;
+    - o reboque fica fixo pela categoria;
+    - "Enviar proposta · R$ 220" chama `enviar_orcamento` com as quantidades, `veiculo_id` e **sem** `ajuste_cent`;
+    - não há teclado de valor livre;
   - com a chamada aberta, chega `status` no tópico `equipe` → toca o som (`HTMLAudioElement.play` chamado) e mostra a chamada;
   - viagem: a rota (`polyline` falsa) aparece desenhada e a chegada prevista fica grande;
   - **não existe** o botão "Nova previsão de término";

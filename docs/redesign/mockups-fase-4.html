@@ -315,14 +315,14 @@ body[data-tema=escuro] .tel {
           <div class="alca"></div>
           <div class="mot"><span class="foto-m">IB</span><div><p class="h3" style="margin:0">Ivo Barbosa</p><p class="leg" style="margin:0">Hilux branca · <span class="placa">ABC1D23</span></p></div></div>
           <div style="display:flex;justify-content:space-between;align-items:end;margin:12px 0 4px"><span class="valor-g">R$ 220,00</span><span class="leg">qua 22/10, 08:30</span></div>
-          <p class="memo" style="margin:0 0 10px">Pela tabela <b>R$ 180,00</b> · Proposta do Ivo <b>+ R$ 40,00</b>: "pedágio e espera no porto"</p>
+          <p class="memo" style="margin:0 0 10px">Pela tabela <b>R$ 180,00</b> · Proposta do Ivo <b>R$ 220,00</b> (48 km, 1 h de espera, pedágio) · <b>Ver o cálculo ▸</b></p>
           <div class="campo"><span class="r">Centro de custo</span><span class="forte">Operações 4.100</span></div>
           <p class="leg" style="margin:8px 2px">Disponível no saldo: R$ 7.820,00</p>
           <button class="btn btn-acao">Confirmar corrida · R$ 220</button>
           <div class="duas" style="margin-top:8px"><button class="btn btn-sec" style="min-height:44px;font-size:14px">Pedir outro valor</button><button class="btn btn-sec" style="min-height:44px;font-size:14px">Recusar</button></div>
         </div>
       </div></div>
-      <figcaption><b>4. Confirmar.</b> Motorista, veículo, valor e, quando há ajuste, o valor da tabela e o motivo. O centro de custo é digitado aqui, já com o último usado. Confirmar reserva o valor no saldo.</figcaption>
+      <figcaption><b>4. Confirmar.</b> Motorista, veículo, valor e, quando o Ivo propôs outro valor, o valor da tabela e o resumo do que mudou, com o cálculo linha a linha. O centro de custo é digitado aqui, já com o último usado. Confirmar reserva o valor no saldo.</figcaption>
     </figure>
   </div>
 
@@ -352,15 +352,23 @@ body[data-tema=escuro] .tel {
         <div class="sb"><span>08:06</span><span class="ilha"></span><span>●●●</span></div>
         <div class="rolo">
           <p class="h3" style="margin:4px 0 2px">Propor outro valor</p>
-          <p class="leg" style="margin:0 0 14px">Pela tabela: R$ 180,00</p>
-          <div class="valor-g" style="text-align:center;margin:6px 0">R$ 220,00</div>
-          <p class="leg" style="text-align:center;margin:0 0 12px">+ R$ 40,00 (+22%)</p>
-          <div class="campo"><span class="r">Motivo (o cliente vê)</span><span class="forte">pedágio e espera no porto</span></div>
-          <div class="teclado"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>,</span><span>0</span><span>⌫</span></div>
+          <p class="leg" style="margin:0 0 10px">Ajuste os itens; o preço de cada um vem do contrato.</p>
+          <div class="cartao" style="padding:6px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span><span class="forte">Km rodados</span><br><span class="leg">rota: 42 km</span></span><span style="display:flex;gap:10px;align-items:center"><span class="pilula">−</span><b>48</b><span class="pilula">+</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span class="forte">Espera (horas)</span><span style="display:flex;gap:10px;align-items:center"><span class="pilula">−</span><b>1</b><span class="pilula">+</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span class="forte">Pedágio / balsa</span><b>R$ 12,40</b></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span class="forte">Hospedagem (diárias)</span><span style="display:flex;gap:10px;align-items:center"><span class="pilula">−</span><b>0</b><span class="pilula">+</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px"><span class="forte">Outros</span><span class="leg" style="color:var(--texto);font-weight:700">+ Adicionar item</span></div>
+          </div>
+          <div class="cartao" style="margin-top:10px">
+            <p class="memo" style="margin:0">Pela tabela <b>R$ 180,00</b></p>
+            <div style="display:flex;justify-content:space-between;align-items:end"><span class="valor-g" style="font-size:28px">R$ 220,00</span><span class="leg">+ R$ 40,00</span></div>
+            <p class="leg" style="margin:4px 0 0">Ver o cálculo ▸</p>
+          </div>
         </div>
         <div class="rodape"><button class="btn btn-acao">Enviar proposta · R$ 220</button></div>
       </div></div>
-      <figcaption><b>6. Contraproposta.</b> Total novo, diferença e motivo obrigatório. O limite do ajuste é conferido no banco. Vira uma linha "Ajuste do motorista" no memorial.</figcaption>
+      <figcaption><b>6. Contraproposta (calculadora).</b> Ajustado em 19/10 a pedido do dono: o motorista mexe nos itens (km, espera, pedágio, hospedagem, outros) e o total é recalculado pelo contrato, sem conta por fora. O cliente vê cada linha no memorial.</figcaption>
     </figure>
 
     <figure class="peca">
