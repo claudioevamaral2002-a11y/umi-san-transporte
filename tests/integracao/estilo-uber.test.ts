@@ -103,10 +103,26 @@ function corpoDoAppAtual(inicio: string): Record<string, unknown> {
 }
 
 /** Pedido do app atual já orçado pelo motorista (km informado); devolve o pedido e o orçamento vigente. */
+/** Entrada do orçamento como `montarEntrada` (src/lib/orcar.ts) a monta hoje para VEICULO_PROPRIO. */
+function entradaDoAppAtual(km: number): Record<string, unknown> {
+  return {
+    modalidade: 'VEICULO_PROPRIO',
+    km,
+    usa_reboque: false,
+    espera_horas: 0,
+    pedagio_cent: 0,
+    hospedagem_diarias: 0,
+  }
+}
+
 async function orcado(dias: number, km: number, extra: Record<string, unknown> = {}) {
   const p = await rpc(n2, 'criar_pedido', { p: corpoDoAppAtual(horario(dias)) })
   expect(p, 'criar_pedido').toMatchObject({ ok: true })
-  const e = await rpc(motorista, 'enviar_orcamento', { p_atividade: p.id, p: { km, ...extra } })
+  const e = await rpc(motorista, 'enviar_orcamento', {
+    p_atividade: p.id,
+    p: { ...entradaDoAppAtual(km), ...extra },
+    p_horario_sugerido: null,
+  })
   expect(e, 'enviar_orcamento').toMatchObject({ ok: true })
   const o = (await rpc(n2, 'pedido', { p_id: p.id })).orcamento as { versao: number; hash: string }
   return { id: p.id as string, o, enviado: e }
@@ -190,6 +206,21 @@ describe('confirmar_corrida: concorrência real', () => {
     expect(cc).toBe('Obra 7')
   })
 
+  it('controle: confirmar_corrida sozinho, num pedido preparado igual, dá certo', async () => {
+    const { id, o } = await orcado(47, 100)
+    expect(
+      await rpc(n2, 'confirmar_corrida', {
+        p_atividade: id,
+        p_versao: o.versao,
+        p_hash: o.hash,
+        p_chave: randomUUID(),
+        p_dispositivo: 'vitest',
+      }),
+    ).toMatchObject({ ok: true })
+    expect(await statusDe(id)).toBe('AGENDADA')
+    expect(await lancamentos(id)).toEqual(['RESERVA:37500'])
+  })
+
   it('confirmar × cancelar simultâneos: um só vence', async () => {
     for (let i = 0; i < 4; i++) {
       const { id, o } = await orcado(43 + i, 100)
@@ -205,6 +236,8 @@ describe('confirmar_corrida: concorrência real', () => {
       ])
       const vencedores = [confirmar, cancelar].filter((r: Resultado) => r.ok)
       expect(vencedores, `confirmar=${JSON.stringify(confirmar)} cancelar=${JSON.stringify(cancelar)}`).toHaveLength(1)
+      const perdedor = confirmar.ok ? cancelar : confirmar
+      expect(perdedor.codigo, 'o perdedor é recusado por estado').toBe('STATUS_INVALIDO')
       if (confirmar.ok) {
         expect(await statusDe(id)).toBe('AGENDADA')
         expect(await lancamentos(id)).toEqual(['RESERVA:37500'])
