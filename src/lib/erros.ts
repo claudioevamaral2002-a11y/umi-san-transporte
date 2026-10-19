@@ -70,6 +70,8 @@ export const MENSAGENS = {
   LIMITE_ETA: 'A previsão de chegada já foi recalculada o máximo de vezes nesta viagem.',
   FOTO_INVALIDA: 'Foto inválida. Envie uma imagem JPEG, PNG ou WebP de até 5 MB.',
   LIMITE_FOTOS: 'Este serviço já tem 10 fotos.',
+  VEICULO_INVALIDO: 'Confira os dados do veículo: modelo, cor, placa, lugares, carga máxima e categorias.',
+  PLACA_DUPLICADA: 'Já existe um veículo com esta placa.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
