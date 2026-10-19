@@ -6,7 +6,7 @@ import { Folha } from '../../../design/componentes/Folha.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
-import { categorias } from '../../../lib/categorias.ts'
+import { categorias, kmDaRota, toleranciaKm } from '../../../lib/categorias.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { corrida, resumoDaProposta } from '../../../lib/corrida.ts'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
@@ -18,7 +18,7 @@ import { useSessao } from '../../../lib/sessao.tsx'
 import { Memorial } from '../../../telas/pedidos/componentes.tsx'
 import { SaldoInsuficiente, type Aprovacao } from '../../../telas/pedidos/Aprovar.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
-import { iniciais, kmDaRota, quandoCompleto, reaisCurto } from '../../formatos.ts'
+import { iniciais, quandoCompleto, reaisCurto } from '../../formatos.ts'
 import { gravarUltimoCentroCusto, lerUltimoCentroCusto } from '../../preferencias.ts'
 
 const MUDOU = ['ORCAMENTO_ALTERADO', 'ORCAMENTO_VENCIDO', 'STATUS_INVALIDO', 'HORARIO_OCUPADO']
@@ -157,8 +157,13 @@ export function ConfirmarCorrida({
     )
   }
   const total = completo.total_cent
-  const contraproposta = tabela !== null && tabela.total_cent !== total
-  const resumo = contraproposta ? resumoDaProposta(tabela.linhas as LinhaOrcamento[], completo.linhas) : []
+  // Só é contraproposta quando dá para dizer o que mudou: total diferente sem explicação (ou só a rota que andou um
+  // pouco, dentro da tolerância de km) não vira "Pela tabela × Proposta".
+  const resumo =
+    tabela !== null && km !== null && tabela.total_cent !== total
+      ? resumoDaProposta(tabela.linhas as LinhaOrcamento[], completo.linhas, { toleranciaKm: toleranciaKm(kmDaRota(km)) })
+      : []
+  const contraproposta = tabela !== null && resumo.length > 0
   const confirmando = estado.fase === 'confirmando'
   const nomeMotorista = primeiroNome(p.motorista_nome)
 
@@ -207,12 +212,12 @@ export function ConfirmarCorrida({
         <Dinheiro centavos={total} className="text-3xl font-extrabold" />
         <span className="ivo-legenda text-texto-suave tabular-nums">{quandoCompleto(p.inicio)}</span>
       </div>
-      <p className="ivo-legenda text-texto-suave" data-testid="comparacao">
+      <p className="ivo-legenda text-texto-suave" data-testid="comparacao" data-tabela={tabela ? 'sim' : 'nao'}>
         {contraproposta && (
           <>
             Pela tabela <b className="text-texto">{formatarCentavos(tabela.total_cent)}</b> · Proposta do {nomeMotorista}{' '}
             <b className="text-texto">{formatarCentavos(total)}</b>
-            {resumo.length > 0 && ` (${resumo.join(', ')})`}
+            {` (${resumo.join(', ')})`}
             {' · '}
           </>
         )}

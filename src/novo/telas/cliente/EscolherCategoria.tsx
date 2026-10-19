@@ -9,6 +9,7 @@ import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import {
   categorias,
   comPreenchimento,
+  kmDaRota,
   pedidoDaCategoria,
   primeiroHorarioAgora,
   type CategoriaComPreco,
@@ -22,7 +23,7 @@ import { pedidos } from '../../../lib/pedidos.ts'
 import { diaDe, formatarDuracao, hoje, somarDias } from '../../../lib/tempo.ts'
 import { CaixaChip, Contador } from '../../../telas/pedidos/componentes.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
-import { diaCurto, formatarKm, kmDaRota, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
+import { diaCurto, formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
 import { gravarUltimaCategoria, lerUltimaCategoria } from '../../preferencias.ts'
 import { useRota } from '../../useRota.ts'

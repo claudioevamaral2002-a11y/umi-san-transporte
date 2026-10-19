@@ -56,8 +56,3 @@ export function iniciais(nome: string): string {
 export function formatarKm(km: number): string {
   return `${km.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km`
 }
-
-/** Km da rota com uma casa (o banco aceita até uma casa decimal em `categorias_disponiveis`). */
-export function kmDaRota(km: number): number {
-  return Math.round(km * 10) / 10
-}

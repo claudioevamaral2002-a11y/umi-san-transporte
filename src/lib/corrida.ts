@@ -74,12 +74,22 @@ function falaDaLinha(l: LinhaOrcamento): string | null {
  * Resumo do que a proposta do motorista mudou em relação à tabela (mesma categoria e mesma rota): as linhas que não
  * existem na tabela ou mudaram de quantidade ou valor. Só exibição; o cálculo linha a linha vem do banco.
  */
-export function resumoDaProposta(tabela: readonly LinhaOrcamento[], proposta: readonly LinhaOrcamento[]): string[] {
+export function resumoDaProposta(
+  tabela: readonly LinhaOrcamento[],
+  proposta: readonly LinhaOrcamento[],
+  opcoes: { toleranciaKm?: number } = {},
+): string[] {
+  const tolerancia = opcoes.toleranciaKm ?? 0
+  // Km que só andou um pouco (rota recalculada, arredondamento): não conta como mudança.
+  const kmParecido = (l: LinhaOrcamento) =>
+    (l.codigo === 'KM' || l.codigo === 'KM_COM_REBOQUE') &&
+    l.quantidade !== null &&
+    tabela.some((t) => t.codigo === l.codigo && t.quantidade !== null && Math.abs(t.quantidade - l.quantidade!) <= tolerancia)
   const igual = (a: LinhaOrcamento, b: LinhaOrcamento) =>
     a.codigo === b.codigo && a.quantidade === b.quantidade && a.valor_cent === b.valor_cent && a.descricao === b.descricao
   const falas: string[] = []
   for (const l of proposta) {
-    if (tabela.some((t) => igual(t, l))) continue
+    if (tabela.some((t) => igual(t, l)) || kmParecido(l)) continue
     const fala = falaDaLinha(l)
     if (fala && !falas.includes(fala)) falas.push(fala)
   }

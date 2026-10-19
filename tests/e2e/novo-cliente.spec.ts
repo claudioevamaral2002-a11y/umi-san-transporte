@@ -96,6 +96,8 @@ interface Abrir {
   pesadaDisponivel?: boolean
   respostas?: Record<string, unknown[]>
   caminho?: string
+  /** O Google não acha rota (km nulo). */
+  semRota?: boolean
 }
 
 async function abrir(page: Page, o: Abrir = {}) {
@@ -103,7 +105,7 @@ async function abrir(page: Page, o: Abrir = {}) {
   await comSessaoFalsa(page, o.perfil ?? N2)
   await simularApi(page)
   const chamadas = await simularPedidos(page, { detalhes: o.detalhes, respostas: o.respostas })
-  const mapas = await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: POLYLINE })
+  const mapas = await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: POLYLINE, semRota: o.semRota })
   await simularBlocosDoMapa(page)
   await horariosLivres(page)
   const categorias: Array<Record<string, unknown>> = []
@@ -301,15 +303,15 @@ async function confirmarControlado(page: Page) {
   return { corpos, responder: (r: unknown) => responder(r) }
 }
 
-async function abrirConfirmacao(page: Page, detalhes: unknown[], centro?: string) {
+async function abrirConfirmacao(page: Page, detalhes: unknown[], centro?: string, extra: Partial<Abrir> = {}) {
   if (centro !== undefined) {
     await page.addInitScript((v) => localStorage.setItem('ivo:ultimo-centro-custo', v), centro)
   }
-  return abrir(page, { detalhes, caminho: `/corrida/${ID_PEDIDO}` })
+  return abrir(page, { detalhes, caminho: `/corrida/${ID_PEDIDO}`, ...extra })
 }
 
 test.describe('confirmar', () => {
-  test('contraproposta: "Pela tabela" × "Proposta do Ivo", o resumo do que mudou e "Ver o cálculo"', async ({ page }) => {
+  test('contraproposta de verdade (+6 km e 1 h de espera): "Pela tabela" × "Proposta do Ivo", o resumo e "Ver o cálculo"', async ({ page }) => {
     const { categorias } = await abrirConfirmacao(page, [orcada()])
     const folha = page.getByTestId('folha-mapa')
     await expect(folha).toContainText('Ivo Barbosa')
@@ -332,6 +334,35 @@ test.describe('confirmar', () => {
     await expect(memorial).toContainText('Espera (horas)')
     await expect(memorial).toContainText('Pedágio/balsa (estimado)')
     await expect(folha).toContainText('Disponível no saldo: R$ 2.490,00')
+  })
+
+  test('sem rota: nenhuma comparação, só o valor e "Ver o cálculo"', async ({ page }) => {
+    const { categorias } = await abrirConfirmacao(page, [orcada()], undefined, { semRota: true })
+    const folha = page.getByTestId('folha-mapa')
+    await expect(page.getByRole('button', { name: 'Ver o cálculo' })).toBeVisible()
+    await expect(folha).toContainText('R$ 220,00')
+    await expect(folha).not.toContainText('Pela tabela')
+    await expect(folha).not.toContainText('Proposta do')
+    expect(categorias).toEqual([])
+  })
+
+  test('o Ivo aceitou pela tabela com a rota diferente em menos de 1 km: nenhuma comparação', async ({ page }) => {
+    // Rota de hoje: 42 km (tabela R$ 180,00). O Ivo orçou 42,6 km pela tabela: total diferente, sem contraproposta.
+    const aceitou = orcada()
+    aceitou.orcamento = {
+      ...aceitou.orcamento,
+      linhas: [linha('KM', 'Km rodados (trecho único)', 42.6, 300, 12780), linha('RETORNO', 'Retorno (50%)', null, null, 5480)],
+      total_cent: 18260,
+    }
+    const { categorias } = await abrirConfirmacao(page, [aceitou])
+    const folha = page.getByTestId('folha-mapa')
+    await expect(page.getByRole('button', { name: 'Confirmar corrida · R$ 182,60' })).toBeVisible()
+    await expect.poll(() => categorias.length).toBeGreaterThan(0)
+    // A tabela já chegou (e foi comparada) antes de conferir que a comparação não aparece.
+    await expect(page.getByTestId('comparacao')).toHaveAttribute('data-tabela', 'sim')
+    await expect(page.getByRole('button', { name: 'Ver o cálculo' })).toBeVisible()
+    await expect(folha).not.toContainText('Pela tabela')
+    await expect(folha).not.toContainText('Proposta do')
   })
 
   test('centro de custo vem com o último usado; confirmar só muda a tela depois da resposta', async ({ page }) => {

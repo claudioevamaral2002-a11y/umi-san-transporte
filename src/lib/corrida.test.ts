@@ -78,3 +78,22 @@ describe('resumoDaProposta', () => {
     ])
   })
 })
+
+describe('resumoDaProposta com tolerância de km', () => {
+  const l = (codigo: string, quantidade: number | null, valor: number) => ({
+    codigo,
+    descricao: codigo,
+    quantidade,
+    unitario_cent: null,
+    percentual_bp: null,
+    base_cent: null,
+    valor_cent: valor,
+  })
+  const tabela = [l('KM', 42, 12600), l('RETORNO', null, 6300)]
+  it('km dentro da tolerância não é mudança', () => {
+    expect(resumoDaProposta(tabela, [l('KM', 42.6, 12780), l('RETORNO', null, 6390)], { toleranciaKm: 1 })).toEqual([])
+  })
+  it('km além da tolerância continua no resumo', () => {
+    expect(resumoDaProposta(tabela, [l('KM', 48, 14400)], { toleranciaKm: 1 })).toEqual(['48 km'])
+  })
+})

@@ -32,6 +32,19 @@ export function comPreenchimento(c: CategoriaComPreco): (CategoriaComPreco & { c
   return p ? { ...c, ...p } : null
 }
 
+/**
+ * Km da rota com uma casa: o mesmo arredondamento em todo lugar que pede preço por km da rota (categorias do cliente,
+ * "Pela tabela" da confirmação e o "Aceitar" do motorista). O banco aceita até uma casa em `categorias_disponiveis`.
+ */
+export function kmDaRota(km: number): number {
+  return Math.round(km * 10) / 10
+}
+
+/** Diferença de km que não conta como contraproposta (a rota muda um pouco entre aparelhos e horários): 1 km ou 1%. */
+export function toleranciaKm(kmRota: number): number {
+  return Math.max(1, kmRota * 0.01)
+}
+
 /** "Agora" = primeiro horário livre a partir de agora + 60 min. */
 export const MARGEM_AGORA_MIN = 60
 

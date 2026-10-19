@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diaCurto, iniciais, kmDaRota, prazoAte, quandoCompleto, quandoCurto, reaisCurto } from './formatos.ts'
+import { diaCurto, iniciais, prazoAte, quandoCompleto, quandoCurto, reaisCurto } from './formatos.ts'
 
 // 2026-10-21 é uma quarta-feira; 11:30Z = 08:30 em São Paulo.
 const QUARTA = '2026-10-21T11:30:00.000Z'
@@ -24,9 +24,8 @@ describe('formatos do app novo', () => {
     expect(reaisCurto(123400).replace(/\s/g, ' ')).toBe('R$ 1.234')
   })
 
-  it('iniciais e km da rota', () => {
+  it('iniciais', () => {
     expect(iniciais('Ivo Barbosa')).toBe('IB')
     expect(iniciais('Ivo')).toBe('I')
-    expect(kmDaRota(42.37)).toBe(42.4)
   })
 })
