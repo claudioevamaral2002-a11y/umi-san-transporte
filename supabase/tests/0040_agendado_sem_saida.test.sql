@@ -66,10 +66,11 @@ reset role;
 select is((select count(*)::int from app.atividades a join casos c on a.id = current_setting('t.' || c.nome)::uuid
             where a.status = 'AGENDADA'), 6, '6 pedidos AGENDADA');
 
-update app.atividades set inicio = now() - interval '3 hours'
+update app.atividades set inicio = now() - interval '3 hours', prazo_orcar_ate = now() - interval '4 hours'
  where id in (current_setting('t.vencido')::uuid, current_setting('t.longo')::uuid,
               current_setting('t.atraso')::uuid, current_setting('t.preso')::uuid);
-update app.atividades set inicio = now() - interval '30 minutes' where id = current_setting('t.cedo')::uuid;
+update app.atividades set inicio = now() - interval '30 minutes', prazo_orcar_ate = now() - interval '4 hours'
+ where id = current_setting('t.cedo')::uuid;
 update app.atividades set atraso_anterior_ate = now() - interval '10 minutes' where id = current_setting('t.atraso')::uuid;
 -- "preso" só entra na segunda rodada (com a viagem em andamento)
 update app.atividades set inicio = now() + interval '28 hours' where id = current_setting('t.preso')::uuid;
