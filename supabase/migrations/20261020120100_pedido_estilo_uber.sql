@@ -596,9 +596,9 @@ end $$;
 
 -- A viagem `a` termina em p_fim. Se passar do início do próximo bloco que ocupa a agenda do mesmo motorista, o próximo
 -- pedido fica com atraso_anterior_ate = p_fim; se voltar para antes, a marcação é limpa. Só remarca quando o valor
--- muda mais de 5 min (a posição chega a cada ~5 s). Marcação antiga em outro pedido (de uma previsão anterior) é
+-- muda mais que p_limiar: 0 na previsão manual (igual a antes), 5 min no automático (a posição chega a cada ~5 s). Marcação antiga em outro pedido (de uma previsão anterior) é
 -- desfeita. Cada pedido alterado é avisado no tópico dele. {conflito, proximo_id}
-create function interno.marcar_atraso(a app.atividades, p_fim timestamptz) returns jsonb
+create function interno.marcar_atraso(a app.atividades, p_fim timestamptz, p_limiar interval) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
   v_ini timestamptz;
@@ -633,7 +633,7 @@ begin
     select x.atraso_anterior_ate into v_atual from app.atividades x where x.id = prox.atividade_id;
     v_novo := case when v_conflito then p_fim end;
     if (v_novo is null and v_atual is not null)
-       or (v_novo is not null and (v_atual is null or abs(extract(epoch from (v_novo - v_atual))) > 300)) then
+       or (v_novo is not null and (v_atual is null or abs(extract(epoch from (v_novo - v_atual))) > extract(epoch from p_limiar))) then
       pa := null;
       update app.atividades set atraso_anterior_ate = v_novo
        where id = prox.atividade_id and status in ('SOLICITADA', 'ORCADA', 'AGENDADA')
@@ -713,8 +713,8 @@ begin
   end;
   update app.atividades set fim_previsto = p_fim, atualizada_em = now() where id = a.id returning * into a;
 
-  -- fase 4: a marcação do atraso no próximo pedido (a mesma do atraso automático).
-  v_marca := interno.marcar_atraso(a, p_fim);
+  -- fase 4: a marcação do atraso no próximo pedido (a mesma do atraso automático, sem limiar: toda mudança vale).
+  v_marca := interno.marcar_atraso(a, p_fim, interval '0');
   v_conflito := (v_marca ->> 'conflito')::boolean;
   v_proximo := (v_marca ->> 'proximo_id')::uuid;
   perform interno.publicar_atividade(a, 'previsao');
@@ -813,7 +813,7 @@ begin
     if a.fim_previsto is not null and a.fim_previsto > v_fim then
       v_fim := a.fim_previsto;
     end if;
-    perform interno.marcar_atraso(a, v_fim);
+    perform interno.marcar_atraso(a, v_fim, interval '5 minutes');
   end if;
   return jsonb_build_object('ok', true);
 end $$;
@@ -1115,7 +1115,7 @@ revoke all on function
   interno.linhas_do_pedido(app.contratos_versoes, app.atividades, jsonb),
   interno.entrada_sem_corrida(jsonb),
   interno.validade_orcamento(app.contratos_versoes, app.atividades),
-  interno.marcar_atraso(app.atividades, timestamptz)
+  interno.marcar_atraso(app.atividades, timestamptz, interval)
 from public, anon, authenticated;
 revoke all on function
   api.confirmar_corrida(uuid, int, text, uuid, text, text),

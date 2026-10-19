@@ -8,7 +8,7 @@
 -- Compatibilidade do app atual (pedido e orçamento sem os campos novos) também é conferida.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(85);
+select plan(87);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -304,6 +304,16 @@ select ok((current_setting('t.v_n1')::jsonb #>> '{pedido,ultima_posicao,lat}')::
           and (current_setting('t.v_n1')::jsonb #>> '{pedido,ultima_posicao,em}') is not null,
   'N1 em andamento: última posição gravada');
 select is(current_setting('t.v_n3')::jsonb #> '{pedido,ultima_posicao}', 'null'::jsonb, 'N3: sem última posição');
+-- previsão manual (ADM ou motorista): toda mudança remarca, mesmo de 2 min (sem o limiar do automático)
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca2'), true);
+select set_config('t.pm1', api.informar_previsao(current_setting('t.pc')::uuid, now() + interval '70 minutes', null)::text, true);
+select set_config('t.pm2', api.informar_previsao(current_setting('t.pc')::uuid, now() + interval '72 minutes', null)::text, true);
+reset role;
+select ok((current_setting('t.pm1')::jsonb ->> 'conflito')::boolean and (current_setting('t.pm2')::jsonb ->> 'conflito')::boolean,
+  'previsão manual depois do início do próximo: conflito');
+select is((select atraso_anterior_ate from app.atividades where id = current_setting('t.pa')::uuid),
+  now() + interval '72 minutes', 'previsão manual 2 min depois: próximo remarcado com o valor novo');
 
 ------------------------------------------------------------------ 5. pendências
 set local role authenticated;
