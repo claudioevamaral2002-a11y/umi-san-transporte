@@ -80,6 +80,7 @@ export const MENSAGENS = {
   CENTRO_CUSTO_INVALIDO: 'O centro de custo pode ter até 80 caracteres.',
   JA_AVALIADO: 'Esta corrida já foi avaliada.',
   NOTA_INVALIDA: 'Escolha uma nota de 1 a 5 estrelas.',
+  TELEFONE_INVALIDO: 'Informe o telefone com DDD, por exemplo (47) 99999-1234.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
