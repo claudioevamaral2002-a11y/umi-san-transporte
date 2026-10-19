@@ -1,6 +1,6 @@
 # Handoff — IVO Transportes (app da Umi San)
 
-Estado em **09/10/2026**. Este documento é o ponto de partida para quem continuar o projeto, seja pessoa ou agente.
+Estado em **19/10/2026**. Este documento é o ponto de partida para quem continuar o projeto, seja pessoa ou agente.
 
 ## 1. O que é
 
@@ -39,6 +39,7 @@ GitHub Actions: CI (pgTAP + integração + e2e real) → Deploy (config push →
 | 1 | Convite por **link curto** imune a pré-visualização (`/c/<código>`), senha forte + HIBP, 2FA, perfis, auditoria imutável, rate limit, Auth como código |
 | 1B | **Contrato por empresa**, publicado só pelo ADM a partir de uma tabela modelo; papéis **ADM / Gestor de frota / Motorista**; cliente **N1 (gestor da empresa) / N2 (solicitante) / N3 (visualizador)**; visibilidade por perfil |
 | 2A | **Novo pedido** em 4 passos com calendário e horários livres; pré-reserva com bloqueio de conflito no banco; **orçamento-calculadora** do motorista (quantidades × preço travado do contrato); revisão, reprovação, recusa, cancelamento; agenda mês/dia; pendências; tempo real |
+| 3B | **Execução e rastreio** (18/10): "deslize para sair" com débito, viagem em andamento com a posição do motorista ao vivo para o cliente, nova previsão e aviso de atraso, conclusão com fotos, **Corridas em andamento** no Painel do ADM. Especificação, plano e roteiro: `docs/fases/fase-3b-*.md`; operação: RUNBOOK §17 |
 | 3A | **Endereços reais** (Google Places New, pela função `enderecos`, chave só no servidor), **locais da empresa** primeiro, **marcar no mapa** (Leaflet + Map Tiles, sem afrouxar a CSP), **km e tempo da rota**, **prévia do orçamento** para N1/N2 e **km preenchidos no Orçar**. Teto diário por empresa em Configurações |
 | 2B | **Motor de saldo**: recarga, ajuste e estorno (só ADM), reserva, **aprovação** com limite de crédito, **cancelamento de agendado com multa** pelas faixas do snapshot (valor travado entre prévia e confirmação), extrato (CSV/PDF), **painel do ADM**, reconciliação diária |
 
@@ -46,16 +47,17 @@ Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~2
 
 ## 4. Pendências imediatas (para o dono)
 
-> **Fase 3A em produção desde 15/10.** Estado, próximos passos e cuidados: [`docs/HANDOFF-fase-3a.md`](docs/HANDOFF-fase-3a.md).
+> **Fases 3A e 3B em produção** (15/10 e 18/10, deploys verdes). Até 19/10 ninguém tinha usado o app depois da 3B, e não havia erros na auditoria. Estado, cuidados e ajustes adiados: [`docs/HANDOFF-fase-3a.md`](docs/HANDOFF-fase-3a.md).
+>
+> **Testar no celular, nesta ordem:** [`fase-3a-o-que-testar.md`](docs/fases/fase-3a-o-que-testar.md), depois [`fase-3b-o-que-testar.md`](docs/fases/fase-3b-o-que-testar.md). A 3B precisa de um pedido aprovado e do motorista no celular.
 
 1. **Rodar o roteiro de produção** [`docs/fases/roteiro-producao-1b-2a-2b.md`](docs/fases/roteiro-producao-1b-2a-2b.md), com 26 passos. No dia seguinte, conferir a reconciliação das 03:00 no Painel do ADM.
-2. **Revisar os PRs do Dependabot** #2–#5 (versões das ações do GitHub). Ver a issue correspondente.
+2. **Revisar os PRs do Dependabot** #2, #4, #23, #27, #29 e #30 (versões de ações e dependências). O #23 (TypeScript 7) é o mais arriscado; deixe por último.
 3. **Contas do negócio** (bloqueante antes de clientes reais): e-mail dedicado, 2 administradores com 2FA, repositório transferido para uma organização. Ver especificação §11 e a issue.
 4. **Domínio próprio** (adiado por decisão do dono): habilita o endereço por cliente (A9) e o e-mail automático (Resend).
 
 ## 5. Próximas fases (backlog em issues #11–#20)
 
-- **Fase 3B — Execução e rastreio (PR em revisão, 18/10):** "deslize para sair" com débito, posição do motorista ao vivo para o cliente, nova previsão e atraso, conclusão com fotos. Especificação, plano e roteiro: `docs/fases/fase-3b-*.md`; operação: RUNBOOK §17.
 - **Fase 3 — restante:** retenção das fotos (com o e-mail da fase 5); aditivo; revisão de contrato já aprovado (§4.4); anexos no pedido; "Repetir pedido".
 - **Fase 5 — Operação:** notificações (outbox, push e e-mail), backup diário criptografado no R2, *dead man's switch* (Healthchecks), teste de restauração mensal, monitoramento.
 - **SMS como 2º fator** (A8), para motoristas com pouca familiaridade com tecnologia.

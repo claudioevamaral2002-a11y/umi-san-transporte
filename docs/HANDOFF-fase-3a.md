@@ -1,6 +1,6 @@
 # Handoff: fase 3A (endereços reais, distância e prévia) e o que vem depois
 
-Estado em **18/10/2026**. Este documento passa o projeto de um chat (ou pessoa) para o próximo. Leia antes o [`HANDOFF.md`](../HANDOFF.md), com as regras de ouro e a forma de trabalhar.
+Estado em **19/10/2026**. Este documento passa o projeto de um chat (ou pessoa) para o próximo. Leia antes o [`HANDOFF.md`](../HANDOFF.md), com as regras de ouro e a forma de trabalhar.
 
 ## 1. Onde estamos
 
@@ -10,8 +10,10 @@ Estado em **18/10/2026**. Este documento passa o projeto de um chat (ou pessoa) 
 | **Correções do redesign** (fim do "pisca" e cache entre contas) | Em produção, junto com o PR #26. Não tinham entrado no PR #25 porque nunca tinham sido enviadas ao GitHub. |
 | **Chaves do Google** | Cadastradas pelo dono no ambiente `producao`: `GOOGLE_MAPS_CHAVE_SERVIDOR` (segredo) e `VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR` (cadastrada como **segredo**; o deploy aceita variável ou segredo). O deploy de 15/10 mandou a chave de servidor ao Supabase, e o app publicado já tem a chave do mapa. |
 | **Teste do dono no celular** | Busca, km, mapa e prévia funcionaram. No envio, o pedido foi recusado: o celular ainda rodava a versão anterior (em cache), que mandava campos que o banco novo recusa (ver §4.1). Depois de fechar e abrir o app, ele abriu às 01h36 na versão nova. **Falta o dono confirmar que o envio passou** e terminar o roteiro [`fases/fase-3a-o-que-testar.md`](fases/fase-3a-o-que-testar.md). |
-| **Branches** | Nada pendente sem commit. A `fase-3a` e a `fase-3a-termos` já estão na `main`. |
+| **Depois deste handoff (18/10, em outro computador)** | PR #32: o rascunho do Novo pedido atravessa a recarga do app (a melhoria da §4.1). PR #34 e PR #35: **fase 3B inteira** (especificação, execução e rastreio), publicada em 18/10 às 19h58. Migrations `20261018120000_execucao` e `20261018120100_rastreio_fotos` aplicadas em produção. O PR #36, que desfazia a 3B, foi **fechado sem mesclar** por decisão do dono em 19/10. |
+| **PR #33** (aberto) | CI só no push da `main`; nos branches roda pelo PR, sem duplicar. Verde. Falta o merge do dono. |
 | **PRs do Dependabot abertos** | #2, #4, #23, #27, #29 e #30 (versões de ações e dependências). Não revisados. |
+| **Checkout principal no computador do dono** | `C:\dev\umi-san-transporte` está parado na branch `fase-3a`, antiga. Para trabalhar, atualize para a `main` (ver §5). |
 
 ## 2. O que a 3A entregou
 
@@ -40,7 +42,9 @@ Estado em **18/10/2026**. Este documento passa o projeto de um chat (ou pessoa) 
 
 ## 4. Próximo trabalho
 
-### 4.1 Melhoria aprovada pelo dono: pedido depois de uma atualização do app
+### 4.1 Feito no PR #32 (18/10): pedido depois de uma atualização do app
+
+Registro do problema e do desenho, para referência:
 
 **Problema (visto em produção em 15/10):**
 - O app não se atualiza no meio de um formulário, para não apagar o que a pessoa preenche (`src/lib/atualizacao.ts`, `ROTAS_RECARREGAVEIS`).
@@ -82,9 +86,10 @@ Fluxo: TDD, PR para a `main`, merge pelo dono.
 11. A lista de pedidos mostra `total_cent` vindo da memória por um instante.
 12. No `deploy.yml`, falta um `trap` para apagar o arquivo temporário da chave se o `secrets set` falhar.
 
-### 4.4 Fase 3B (rastreio), ainda sem especificação
+### 4.4 Fase 3B: feita (PRs #34 e #35, 18/10)
 
-Antes de implementar: especificação e mockups aprovados pelo dono (`superpowers:brainstorming`). Recomendações do estudo público da Uber, adaptadas ao nosso tamanho; confirmar ao especificar:
+A especificação final está em `docs/fases/fase-3b-desenho-execucao-rastreio.md`, e a operação no RUNBOOK §17. As recomendações abaixo foram a base dela:
+
 - **Amostragem:** `watchPosition` com alta precisão, mas **envio** no máximo a cada ~5 s, ou antes se o motorista andar mais de 50 m. Parado por mais de 60 s: só um heartbeat a cada ~30 s. Descartar leituras com `accuracy` acima de ~100 m.
 - **Envio:** canal privado do Supabase Realtime por viagem, autorizado para o solicitante, o N1, o ADM e o gestor de frota.
   - Payload `{lat,lng,heading,speed,accuracy,ts,seq}`. O cliente ignora `seq` antigo ("a última vence").
@@ -110,7 +115,8 @@ Antes de implementar: especificação e mockups aprovados pelo dono (`superpower
   - pelo MCP do Supabase, no projeto `eoczqrpvhfeulfhjblaw`, **só leitura**;
   - `app.auditoria` (colunas `em`, `acao`, `codigo`, `detalhe`) mostra exatamente qual campo foi recusado;
   - `query_logs` mostra as chamadas do celular.
-- **Terminal do dono:** é o Windows PowerShell 5.1. Não use `&&`; passe um comando por bloco.
+- **Terminal do dono:** é o Windows PowerShell 5.1. Não use `&&`; passe um comando por bloco. Para pôr o checkout principal na `main` atualizada: `git fetch origin`, `git switch main`, `git pull` (um por vez).
+- **Dois computadores:** em 18/10 o trabalho seguiu em outro computador. Antes de começar, rode `git fetch` e veja a `main` e os PRs abertos (`gh pr list`); não confie só no handoff.
 - **Porta 8788:** pode haver um `workerd` órfão de outra sessão servindo um build velho. Confira com `Get-NetTCPConnection -LocalPort 8788` antes de confiar num e2e local.
 - **Scripts:** heredocs com aspas misturadas falham no Bash. Escreva o script num arquivo; o scratchpad fica no **drive D**.
 - **Postgres:** a repetição de regex vai no máximo até 255 (`{1,300}` é inválido). Use `+` com `char_length(...) <= 300`.
