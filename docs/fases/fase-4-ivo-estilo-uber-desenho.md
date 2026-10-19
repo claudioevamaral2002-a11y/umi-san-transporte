@@ -33,6 +33,7 @@ Nas palavras do dono: *"uma plataforma com menos texto, mais mapas, mais focada 
 | Menu | **Ícone no canto superior esquerdo**, com Perfil, Carteira, Agenda e outros itens |
 | Veículos | O motorista **cadastra os veículos** e as **categorias que cada um atende** |
 | "Nova previsão de término" | **Não faz sentido para o motorista**, porque a distância é que dita a chegada. Sai da tela dele (§6.4) |
+| Painel de gestão | **Entra nesta versão** (19/10, depois da aprovação, com a referência do site da Rhino for Business): um painel no computador para quem gerencia a empresa cliente (§6.9) |
 | Repositório | O dono pediu primeiro um repositório novo. Na conversa, com o mesmo banco e o teste num endereço separado, ficou **o repositório atual**: um só lugar para as regras do banco e uma só publicação. Ele pode voltar atrás (§11) |
 
 ## 3. Fora de escopo (MVP)
@@ -203,7 +204,7 @@ Princípio: **o mapa na frente, uma ação por vez, o resto em "Detalhes"**. Cor
 | Agenda | Minhas corridas e Pendências | Os itens de hoje: contratos, créditos, usuários, empresas, configurações, auditoria (telas atuais) |
 | **Carteira da empresa**: saldo, extrato (CSV/PDF com a coluna centro de custo) | Agenda | **Categorias e preços** (tela nova: nome, descrição, ativa, e o preço por km e a taxa de cada categoria numa versão nova do contrato) |
 | Locais salvos | **Meus veículos** | **Veículos** (tela nova: os de todos os motoristas) |
-| Equipe (só N1) | **Corridas do mês** (quantas e o total cobrado dos clientes; não é o repasse ao motorista, que ainda não existe) | Perfil e segurança |
+| Equipe e **Painel da empresa** (só N1) | **Corridas do mês** (quantas e o total cobrado dos clientes; não é o repasse ao motorista, que ainda não existe) | Perfil e segurança |
 | Perfil e segurança (senha, 2FA) | Perfil e segurança | Ajuda |
 | Ajuda | Ajuda | |
 
@@ -212,6 +213,27 @@ Princípio: **o mapa na frente, uma ação por vez, o resto em "Detalhes"**. Cor
 - **Lista** de cartões com modelo, cor, placa, situação e as categorias que cada veículo atende, como etiquetas.
 - **"+ Cadastrar veículo":** modelo, cor, placa, lugares, carga máxima, reboque (opcional) e as categorias. Foto e documento ficam para depois.
 - **Situação:** Ativo, Em manutenção ou Inativo. O veículo em manutenção não aparece na chamada.
+
+### 6.9 Painel de gestão da empresa (N1, no computador)
+
+Acrescentado em 19/10, depois da aprovação, a pedido do dono. A referência é o site da Rhino for Business (vamosrhino.com): resumo do mês, próximas corridas, corridas recentes e pessoas.
+
+- **Quem vê:** o **N1** da empresa, no menu como **"Painel da empresa"**. O ADM vê o de qualquer empresa, escolhendo a empresa no topo. O N2 e o N3 não veem.
+- **Onde:** no app novo, em `/empresa`, com o layout largo pensado para o computador. No celular, as tabelas viram cartões empilhados.
+- **Blocos, de cima para baixo:**
+  1. **Resumo de {mês}:**
+     - "Gasto no mês" = soma dos DÉBITOS do mês menos os ESTORNOS, com a barra de quanto isso representa do total disponível no começo do mês. Proposta minha: total = saldo no início do mês + recargas do mês + limite de crédito;
+     - **"Disponível agora"** = o disponível de hoje (`interno.saldos`);
+     - **"Reservado"** = corridas confirmadas que ainda não saíram;
+     - Sem botão de recarregar, porque a recarga é só do ADM. No lugar, aparece "Para recarregar, fale com a IVO", com o telefone ou WhatsApp das Configurações.
+  2. **Próximas corridas:** SOLICITADA, ORCADA e AGENDADA. Colunas: Quem pediu, Data, Roteiro (hora de saída → origem; hora prevista → destino), Categoria, Centro de custo, Status e Valor (o confirmado; ou "~estimado" quando ainda não há orçamento). "Ver todas" leva à lista filtrada.
+  3. **Corridas recentes:** EM_ANDAMENTO, CONCLUIDA, CANCELADA, RECUSADA, REPROVADA e EXPIRADA dos últimos 30 dias, com as mesmas colunas.
+     - Status com cor: **A caminho** (EM_ANDAMENTO), **Concluída**, **Cancelada**, **Recusada**, **Expirada**.
+     - Tocar numa corrida em andamento abre o acompanhamento no mapa.
+  4. **Pessoas:** "**N** pessoas ainda não fizeram corridas" (N1 e N2 ativos sem pedido nos últimos 90 dias) e "**N** convites não aceitos". O botão **"Reenviar convite"** usa o fluxo de convite que já existe (Equipe). O botão de lembrete por e-mail fica para a fase 5.
+  5. **Exportar:** CSV do mês (data, quem pediu, roteiro, categoria, centro de custo e valor), para conferir a fatura por centro de custo.
+- **Banco:** uma RPC de leitura `api.painel_empresa(p_empresa uuid default null, p_mes date default null)`. O N1 vê só a própria empresa; o ADM informa a empresa. Ela devolve os 4 blocos num JSON só, sem escrever nada.
+- **Fora do escopo:** limite de gasto por pessoa ou por centro de custo, aprovação de corrida por gestor, e roteiro com paradas intermediárias (a Rhino mostra várias paradas, e o IVO tem origem e destino).
 
 ## 7. Segurança e privacidade
 

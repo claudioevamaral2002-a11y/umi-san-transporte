@@ -65,7 +65,8 @@ O banco só é verificado no CI, porque não há Docker na máquina do dono. Cad
 | 10 | Motorista: chamada, contraproposta e viagem com rota | e2e simulado |
 | 11 | Veículos e telas do ADM (categorias e preços) | e2e simulado |
 | 12 | e2e contra o banco real | CI |
-| 13 | Fechamento: segurança, roteiro, RUNBOOK, HANDOFF, PR | revisão |
+| 14 | Painel da empresa (N1, computador) — acrescentado em 19/10 | pgTAP `0030` + e2e simulado |
+| 13 | Fechamento: segurança, roteiro, RUNBOOK, HANDOFF, PR (roda por último, depois da 14) | revisão |
 
 ---
 
@@ -461,6 +462,58 @@ O banco só é verificado no CI, porque não há Docker na máquina do dono. Cad
 - [ ] **Passo 2:** push; o CI fica verde.
 - [ ] **Passo 3:** commit `test(fase 4): e2e real do fluxo no estilo Uber`.
 
+### Tarefa 14: painel da empresa (N1, no computador)
+
+Acrescentada em 19/10 a pedido do dono (especificação §6.9, mockup 14). Roda **depois da 12 e antes da 13**.
+
+**Arquivos:**
+- Criar:
+  - `supabase/migrations/20261020120300_painel_empresa.sql`;
+  - `src/lib/painelEmpresa.ts`;
+  - `src/novo/telas/empresa/PainelEmpresa.tsx` (rota `/empresa`, item "Painel da empresa" no `Menu` para o N1 e o ADM).
+- Teste:
+  - `supabase/tests/0030_painel_empresa.test.sql`;
+  - `src/lib/painelEmpresa.test.ts`;
+  - `tests/e2e/novo-painel-empresa.spec.ts`.
+
+**Interfaces:**
+- Consome: as colunas da Tarefa 2 (`categoria`, `centro_custo`), `interno.saldos`, `app.lancamentos`, `app.convites`, `app.perfis`.
+- Produz `api.painel_empresa(p_empresa uuid default null, p_mes date default null) returns jsonb`:
+  - **Quem:** o N1 (só a própria empresa; `p_empresa` é ignorado) ou o ADM (`p_empresa` obrigatório). Os outros recebem `SEM_PERMISSAO`, auditado. `p_mes` nulo = mês atual no fuso de São Paulo.
+  - **Devolve** `{ok, resumo:{mes, gasto_cent, reservado_cent, disponivel_cent, total_mes_cent, contato_recarga}, proximas:[…], recentes:[…], pessoas:{sem_corridas, convites_pendentes}}`, com:
+    - `gasto_cent` = DEBITO + MULTA − ESTORNO do mês;
+    - `total_mes_cent` = saldo contábil no 1º dia às 00:00 + RECARGA do mês + `limite_saldo_negativo_cent` do contrato vigente;
+    - `proximas` = até 10 pedidos SOLICITADA, ORCADA ou AGENDADA, por `inicio` crescente;
+    - `recentes` = até 10 pedidos EM_ANDAMENTO, CONCLUIDA, CANCELADA, RECUSADA, REPROVADA ou EXPIRADA dos últimos 30 dias, por `inicio` decrescente;
+    - cada pedido traz `{id, numero, solicitante_nome, inicio, fim_previsto, origem, destino, categoria_nome, centro_custo, status, valor_cent, estimado:boolean}`. `valor_cent` vem do orçamento aprovado, do pendente, ou nulo com `estimado=true`; para CANCELADA, é o valor da MULTA;
+    - `sem_corridas` = N1 e N2 ativos sem pedido nos últimos 90 dias;
+    - `convites_pendentes` = convites não usados e não vencidos.
+  - Só leitura.
+- Produz `painelEmpresa.ler(empresa?, mes?)`, `rotuloStatus(status) => 'Aguardando o Ivo'|'Para confirmar'|'Agendada'|'A caminho'|'Concluída'|'Cancelada'|'Recusada'|'Reprovada'|'Expirada'` e `csvDoMes(itens) => string` (colunas: data;quem pediu;origem;destino;categoria;centro de custo;valor).
+- **`contato_recarga`:** vem de uma chave nova de Configurações, `contato_recarga` (texto até 60), editada pelo ADM. Se o padrão do repositório para Configurações (`app.configuracoes`) não comportar a chave, criar a coluna nessa migration.
+
+- [ ] **Passo 1: escrever o `0030`:**
+  - N1 vê só a própria empresa, mesmo passando outra em `p_empresa`;
+  - N2 e N3 recebem `SEM_PERMISSAO`;
+  - ADM sem `p_empresa` recebe `CAMPOS_INVALIDOS`;
+  - `gasto_cent` com 1 débito de 220,00, 1 multa de 33,00 e 1 estorno de 50,00 = 20300;
+  - `reservado_cent` = a RESERVA ativa;
+  - `proximas` em ordem crescente e no máximo 10;
+  - `recentes` sem pedidos com mais de 30 dias;
+  - pedido cancelado com multa traz `valor_cent` = multa;
+  - convite vencido não conta em `convites_pendentes`.
+- [ ] **Passo 2:** push; o CI falha no `0030`.
+- [ ] **Passo 3:** escrever a migration. Push; o CI fica verde.
+- [ ] **Passo 4: escrever os testes de front:**
+  - unidade: `rotuloStatus('EM_ANDAMENTO')` = `'A caminho'`; `csvDoMes` com `;` no centro de custo escapa entre aspas;
+  - e2e: o N1 vê os 4 blocos com os valores do mock;
+  - o N2 não vê "Painel da empresa" no menu;
+  - tocar numa corrida "A caminho" abre o acompanhamento;
+  - "Exportar CSV do mês" baixa um arquivo com o cabeçalho exato;
+  - em 390 px, as tabelas viram cartões, sem rolagem horizontal.
+- [ ] **Passo 5:** implementar a tela; o Vitest e o Playwright passam.
+- [ ] **Passo 6:** commit `feat(fase 4): painel da empresa para o N1 (resumo do mês, corridas, pessoas)`.
+
 ### Tarefa 13: fechamento
 
 - [ ] **Passo 1:** revisão de segurança (superpowers:requesting-code-review), focando em:
@@ -508,7 +561,8 @@ O banco só é verificado no CI, porque não há Docker na máquina do dono. Cad
   | §6.8 | 11 |
   | §7 | 13 |
   | §8 | todas |
-  | §9 | 13 |
+  | §6.9 | 14 |
+| §9 | 13 |
 
 - **Nomes conferidos entre tarefas:**
   - `linhas_da_categoria`, `veiculo_atende`, `confirmar_corrida`;

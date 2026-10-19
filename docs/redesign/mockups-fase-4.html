@@ -498,6 +498,88 @@ body[data-tema=escuro] .tel {
       <figcaption><b>13. Menu do motorista.</b> "Disponível" liga e desliga as chamadas e <b>não</b> compartilha a localização. "Corridas do mês" mostra quantas foram e o total cobrado dos clientes.</figcaption>
     </figure>
   </div>
+
+  <h2>Painel da empresa (N1, no computador)</h2>
+  <p>Acrescentado em 19/10 a pedido do dono, com a referência do site da Rhino for Business. Mostra o resumo do mês, as próximas corridas, as recentes e as pessoas. No celular, as tabelas viram cartões.</p>
+  <style>
+    .web { --fundo:#f6f4ee; --folha:#fff; --texto:#0a2540; --suave:#4b5b70; --linha:#e1e6ed; --suave-sel:#e6edf5; --laranja:#ff6a00;
+      width:1180px; max-width:100%; border-radius:18px; overflow:hidden; background:var(--fundo); color:var(--texto); box-shadow:0 30px 60px -20px rgb(10 37 64/.35); font-size:15px; }
+    body[data-tema=escuro] .web { --fundo:#061a30; --folha:#0c2a49; --texto:#f6f4ee; --suave:#a9b8cc; --linha:#1b3d63; --suave-sel:#173f68; }
+    .web-topo { display:flex; align-items:center; gap:36px; padding:16px 28px; background:var(--folha); border-bottom:1px solid var(--linha); }
+    .web-topo .marca { font-weight:800; font-size:18px; display:flex; gap:8px; align-items:center; }
+    .web-topo .marca i { width:26px; height:26px; border-radius:7px; background:#0a2540; display:inline-block; position:relative; }
+    .web-topo .marca i::after { content:""; position:absolute; left:7px; top:7px; width:12px; height:12px; background:#ff6a00; clip-path:polygon(50% 100%,0 0,100% 0); }
+    .web-topo nav { display:flex; gap:24px; font-weight:600; color:var(--suave); }
+    .web-topo nav b { color:var(--texto); }
+    .web-topo .emp { margin-left:auto; font-weight:700; }
+    .web-corpo { padding:24px 28px 32px; }
+    .web h3 { font-size:24px; letter-spacing:-.02em; margin:22px 0 12px; display:flex; justify-content:space-between; align-items:baseline; }
+    .web h3 a { font-size:13px; font-weight:600; color:var(--suave); }
+    .web .bloco { background:var(--folha); border-radius:16px; padding:20px 22px; box-shadow:0 1px 2px rgb(10 37 64/.06); }
+    .barra { height:12px; border-radius:6px; background:var(--linha); margin:14px 0 10px; overflow:hidden; }
+    .barra i { display:block; height:100%; width:38%; background:#0a2540; border-radius:6px; }
+    body[data-tema=escuro] .barra i { background:#ff6a00; }
+    .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .kpis .n { font-size:32px; font-weight:800; letter-spacing:-.03em; }
+    .tab { width:100%; border-collapse:collapse; font-size:14px; }
+    .tab th { text-align:left; font-weight:600; color:var(--suave); background:var(--fundo); padding:10px 12px; }
+    .tab th:first-child { border-radius:10px 0 0 10px; } .tab th:last-child { border-radius:0 10px 10px 0; }
+    .tab td { padding:12px; border-bottom:1px solid var(--linha); vertical-align:top; }
+    .tab tr:last-child td { border-bottom:0; }
+    .tab .h { color:var(--suave); display:inline-block; width:44px; }
+    .tg { display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; border-radius:7px; }
+    .tg.ag { background:#e6edf5; color:#1e4b7a; } .tg.and { background:#fff1e6; color:#c2410c; } .tg.con { background:#e7f6ec; color:#15803d; }
+    .tg.can { background:#fdeaea; color:#b91c1c; } .tg.aguard { background:#f1f1ef; color:#4b5b70; }
+    .pess { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .pess .q { font-size:13px; font-weight:700; padding:3px 9px; border-radius:7px; background:#fff1e6; color:#c2410c; }
+    .pess .q.b { background:#ece9fb; color:#5b45c4; }
+    .pess .bt { margin-left:auto; border:1.5px solid var(--linha); background:var(--folha); color:var(--texto); border-radius:10px; padding:8px 14px; font:600 13px Manrope; }
+  </style>
+  <div class="fileira">
+    <figure class="peca" style="width:100%">
+      <div class="web">
+        <div class="web-topo"><span class="marca"><i></i>IVO para empresas</span>
+          <nav><b>Painel</b><span>Corridas</span><span>Pessoas</span><span>Carteira</span></nav>
+          <span class="emp">Umi San ▾</span></div>
+        <div class="web-corpo">
+          <h3 style="margin-top:0">Resumo de outubro <a>Extrato ›</a></h3>
+          <div class="bloco">
+            <div class="kpis">
+              <div><div class="leg">Gasto no mês</div><div class="n">R$ 4.380</div></div>
+              <div><div class="leg">Reservado (corridas confirmadas)</div><div class="n" style="color:var(--suave)">R$ 620</div></div>
+              <div style="text-align:right"><div class="leg">Disponível agora</div><div class="n">R$ 7.820</div></div>
+            </div>
+            <div class="barra"><i></i></div>
+            <div style="display:flex;justify-content:space-between" class="leg"><span>38% do total do mês (saldo + recargas + limite de crédito)</span><span>Para recarregar, fale com a IVO · (47) 9 9999-0000</span></div>
+          </div>
+
+          <h3>Próximas corridas <a>Ver todas ›</a></h3>
+          <div class="bloco" style="padding:12px">
+            <table class="tab">
+              <tr><th>Quem pediu</th><th>Data</th><th>Roteiro</th><th>Categoria</th><th>Centro de custo</th><th>Status</th><th>Valor</th></tr>
+              <tr><td>Marina Souza</td><td>qua 22/10</td><td><span class="h">08:30</span>Umi San · Rua Araguaia, 49<br><span class="h">09:25</span>Porto de Itajaí · Portão 3</td><td>Passageiros</td><td>Operações 4.100</td><td><span class="tg ag">Agendada</span></td><td>R$ 220,00</td></tr>
+              <tr><td>Paulo Lima</td><td>qui 23/10</td><td><span class="h">14:00</span>Marina Itajaí · Píer B<br><span class="h">14:40</span>Umi San · Galpão 2</td><td>Carga Pesada</td><td>Manutenção</td><td><span class="tg aguard">Aguardando o Ivo</span></td><td style="color:var(--suave)">~R$ 410,00</td></tr>
+              <tr><td>Marina Souza</td><td>sex 24/10</td><td><span class="h">06:00</span>Umi San · Rua Araguaia, 49<br><span class="h">06:35</span>Aeroporto de Navegantes</td><td>Passageiros</td><td>Diretoria</td><td><span class="tg aguard">Para confirmar</span></td><td>R$ 165,00</td></tr>
+            </table>
+          </div>
+
+          <h3>Corridas recentes <a>Ver todas ›</a></h3>
+          <div class="bloco" style="padding:12px">
+            <table class="tab">
+              <tr><th>Quem pediu</th><th>Data</th><th>Roteiro</th><th>Categoria</th><th>Centro de custo</th><th>Status</th><th>Valor</th></tr>
+              <tr><td>Marina Souza</td><td>hoje</td><td><span class="h">08:41</span>Umi San · Rua Araguaia, 49<br><span class="h">~09:36</span>Porto de Itajaí · Portão 3</td><td>Passageiros</td><td>Operações 4.100</td><td><span class="tg and">A caminho</span></td><td>R$ 220,00</td></tr>
+              <tr><td>Paulo Lima</td><td>ter 21/10</td><td><span class="h">10:00</span>Umi San · Galpão 2<br><span class="h">10:52</span>Porto de Itajaí · Portão 3</td><td>Carga Leve</td><td>Manutenção</td><td><span class="tg con">Concluída</span></td><td>R$ 230,00</td></tr>
+              <tr><td>Marina Souza</td><td>seg 20/10</td><td><span class="h">07:30</span>Umi San · Rua Araguaia, 49<br><span class="h">08:05</span>Aeroporto de Navegantes</td><td>Passageiros</td><td>Diretoria</td><td><span class="tg can">Cancelada</span></td><td>R$ 33,00 <span class="leg">multa</span></td></tr>
+            </table>
+          </div>
+
+          <h3>Pessoas <a>Equipe ›</a></h3>
+          <div class="bloco"><div class="pess"><span class="q">3 pessoas</span><span>ainda não fizeram corridas</span><span class="q b">1 convite</span><span>não aceito</span><button class="bt">Reenviar convite</button><button class="bt" style="margin-left:0">Exportar CSV do mês</button></div></div>
+        </div>
+      </div>
+      <figcaption><b>14. Painel da empresa.</b> Só o N1 (e o ADM, escolhendo a empresa). É só leitura: os valores vêm do livro-razão e dos pedidos. Sem botão de recarga, porque a recarga é do ADM.</figcaption>
+    </figure>
+  </div>
 </div>
 <script>
   const base = document.getElementById('mapa-base')
