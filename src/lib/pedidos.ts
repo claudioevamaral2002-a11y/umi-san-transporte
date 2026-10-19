@@ -231,7 +231,7 @@ export class ErroLeitura extends Error {
   }
 }
 
-async function chamar(nome: string, args: Record<string, unknown>): Promise<RespostaRpc> {
+export async function chamar(nome: string, args: Record<string, unknown>): Promise<RespostaRpc> {
   try {
     const { data, error } = await supabase.rpc(nome, args)
     if (error || !data || typeof data !== 'object' || typeof (data as RespostaRpc).ok !== 'boolean') {
@@ -243,7 +243,7 @@ async function chamar(nome: string, args: Record<string, unknown>): Promise<Resp
   }
 }
 
-async function ler<T>(nome: string, args: Record<string, unknown>): Promise<T> {
+export async function ler<T>(nome: string, args: Record<string, unknown>): Promise<T> {
   const r = await chamar(nome, args)
   if (!r.ok) throw new ErroLeitura(r.codigo ?? 'ERRO_INESPERADO')
   return r as unknown as T
