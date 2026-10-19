@@ -1,0 +1,34 @@
+import { useState } from 'react'
+import { Cartao } from '../../design/componentes/Cartao.tsx'
+import { useSessao } from '../../lib/sessao.tsx'
+import { FolhaMapa } from '../componentes/FolhaMapa.tsx'
+
+function saudacao(agora: Date): string {
+  const h = agora.getHours()
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+}
+
+/** Início provisório sobre o mapa: a tela de cada perfil chega nas Tarefas 8 (cliente) e 10 (motorista). */
+export function InicioProvisorio() {
+  const { perfil } = useSessao()
+  const [ola] = useState(() => saudacao(new Date()))
+  const primeiroNome = perfil?.nome.trim().split(/\s+/)[0] ?? ''
+  return (
+    <FolhaMapa>
+      <h1 className="ivo-h2">{primeiroNome ? `${ola}, ${primeiroNome}` : ola}</h1>
+      <p className="mt-1 ivo-corpo text-texto-suave">As telas novas chegam em breve. O menu ☰ leva às de hoje.</p>
+    </FolhaMapa>
+  )
+}
+
+/** Tela de página ainda por fazer (Categorias e preços, Veículos, Painel da empresa…), com o título do menu. */
+export function EmBreve({ titulo }: { titulo: string }) {
+  return (
+    <main className="mx-auto max-w-md p-4 pt-[calc(env(safe-area-inset-top)+5rem)]">
+      <Cartao className="space-y-2">
+        <h1 className="ivo-h2">{titulo}</h1>
+        <p className="ivo-corpo text-texto-suave">Esta tela chega em breve.</p>
+      </Cartao>
+    </main>
+  )
+}

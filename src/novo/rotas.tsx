@@ -1,21 +1,29 @@
 import { createBrowserRouter } from 'react-router'
 import { CarregandoPickup } from '../design/componentes/CarregandoPickup.tsx'
-import { Cartao } from '../design/componentes/Cartao.tsx'
+import type { Perfil } from '../lib/estadoSessao.ts'
 import { Guarda } from '../lib/guardas.tsx'
 import { ErroGeral } from '../telas/ErroGeral.tsx'
 import { Raiz } from '../telas/Raiz.tsx'
+import { vePainelEmpresa } from './componentes/Menu.tsx'
+import { GuardaPerfil, MolduraNova, TelaDeMapa } from './MolduraNova.tsx'
+import { EmBreve, InicioProvisorio } from './telas/Provisorias.tsx'
 
-/** Início provisório do app novo: as telas próprias chegam nas Tarefas 7 a 11. */
-function EmConstrucao() {
-  return (
-    <main className="mx-auto max-w-md p-4">
-      <Cartao className="space-y-2">
-        <h1 className="ivo-h2">IVO novo — em construção</h1>
-        <p className="ivo-corpo text-texto-suave">As telas novas chegam em breve.</p>
-      </Cartao>
-    </main>
-  )
-}
+const ehAdm = (p: Perfil) => p.papel === 'ADM'
+const ehMotorista = (p: Perfil) => p.papel === 'MOTORISTA'
+const ehCliente = (p: Perfil) => p.papel === 'CLIENTE'
+const todos = () => true
+
+/** Telas de página que chegam nas próximas tarefas (11 e 14), por enquanto "em breve", cada uma com a sua guarda. */
+const PROVISORIAS: Array<{ path: string; titulo: string; permite: (p: Perfil) => boolean }> = [
+  { path: 'adm/categorias', titulo: 'Categorias e preços', permite: ehAdm },
+  { path: 'adm/veiculos', titulo: 'Veículos', permite: ehAdm },
+  { path: 'empresa', titulo: 'Painel da empresa', permite: vePainelEmpresa },
+  { path: 'veiculos', titulo: 'Meus veículos', permite: ehMotorista },
+  { path: 'corridas-do-mes', titulo: 'Corridas do mês', permite: ehMotorista },
+  { path: 'locais', titulo: 'Locais salvos', permite: ehCliente },
+  { path: 'perfil', titulo: 'Perfil e segurança', permite: todos },
+  { path: 'ajuda', titulo: 'Ajuda', permite: todos },
+]
 
 /**
  * Rotas do segundo site (ivo-novo). Entrada e sessão reusam as telas do app atual (src/telas/entrada),
@@ -68,7 +76,18 @@ export const roteadorNovo = createBrowserRouter([
       },
       {
         element: <Guarda permitidos={['pronto']} />,
-        children: [{ index: true, Component: EmConstrucao }],
+        children: [
+          {
+            element: <MolduraNova />,
+            children: [
+              { element: <TelaDeMapa />, children: [{ index: true, Component: InicioProvisorio }] },
+              ...PROVISORIAS.map(({ path, titulo, permite }) => ({
+                element: <GuardaPerfil permite={permite} />,
+                children: [{ path, element: <EmBreve titulo={titulo} /> }],
+              })),
+            ],
+          },
+        ],
       },
       { path: '*', lazy: async () => ({ Component: (await import('../telas/NaoEncontrada.tsx')).NaoEncontrada }) },
     ],
