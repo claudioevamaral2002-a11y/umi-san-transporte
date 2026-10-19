@@ -167,6 +167,25 @@ test.describe('acompanhar', () => {
   })
 })
 
+test.describe('ligar para o motorista (Tarefa 10)', () => {
+  test('com o telefone do motorista no pedido, "Ligar" abre a discagem; sem ele, o botão não aparece', async ({ page }) => {
+    const agora = { lat: -26.9, lng: -48.655, em: new Date().toISOString() }
+    await abrir(page, { detalhes: [emAndamento({ motorista_telefone: '(47) 98888-7777' }, agora)] })
+    const folha = page.getByTestId('folha-mapa')
+    await expect(folha.getByRole('link', { name: 'Ligar' })).toHaveAttribute('href', 'tel:47988887777')
+    await expect(folha.getByRole('button', { name: 'Compartilhar' })).toBeVisible()
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  })
+
+  test('sem telefone (perfil vazio ou antes de AGENDADA): sem "Ligar"', async ({ page }) => {
+    const agora = { lat: -26.9, lng: -48.655, em: new Date().toISOString() }
+    await abrir(page, { detalhes: [emAndamento({ motorista_telefone: null }, agora)] })
+    const folha = page.getByTestId('folha-mapa')
+    await expect(folha.getByRole('button', { name: 'Compartilhar' })).toBeVisible()
+    await expect(folha.getByRole('link', { name: 'Ligar' })).toHaveCount(0)
+  })
+})
+
 test.describe('chegada estimada e enquadramento', () => {
   test('sem chegada do motorista, a estimativa aparece rotulada, não vai no Compartilhar e some se já passou', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])

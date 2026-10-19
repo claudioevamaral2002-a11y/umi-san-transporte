@@ -86,6 +86,8 @@ export interface DetalhePedido {
   avaliacao?: number | null
   /** Última posição gravada (só em andamento, para quem pode ver o rastreio): a tela já abre com ela. */
   ultima_posicao?: { lat: number; lng: number; em: string } | null
+  /** Telefone do motorista (perfil), a partir de AGENDADA, para o botão "Ligar" do cliente (Tarefa 10). */
+  motorista_telefone?: string | null
 }
 
 export interface LinhaOrcamento {

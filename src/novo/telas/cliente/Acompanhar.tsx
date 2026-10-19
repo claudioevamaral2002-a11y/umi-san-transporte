@@ -43,6 +43,8 @@ export function Acompanhar({ r, a }: { r: RespostaPedido; a: Acompanhamento }) {
 
   const perdido = a.sinal === 'perdido'
   const nome = p.motorista_nome ?? 'Motorista'
+  // Telefone do perfil do motorista (o banco só manda a partir de AGENDADA); sem dígitos, sem botão.
+  const telefone = p.motorista_telefone?.replace(/[^\d+]/g, '') || null
   return (
     <FolhaMapa rotulo="Acompanhando a corrida">
       <h1 className="sr-only">Acompanhando a corrida</h1>
@@ -87,9 +89,20 @@ export function Acompanhar({ r, a }: { r: RespostaPedido; a: Acompanhamento }) {
           )}
         </div>
       </div>
-      <Botao className="w-full" onClick={() => void compartilhar()}>
-        Compartilhar
-      </Botao>
+      <div className={telefone ? 'grid grid-cols-2 gap-2' : ''}>
+        {telefone && (
+          <a
+            href={`tel:${telefone}`}
+            className="flex min-h-12 items-center justify-center gap-2 rounded-botao border border-borda bg-superficie px-4 ivo-botao text-texto"
+          >
+            <Icone nome="telefone" tamanho={20} />
+            Ligar
+          </a>
+        )}
+        <Botao className="w-full" onClick={() => void compartilhar()}>
+          Compartilhar
+        </Botao>
+      </div>
       <p role="status" className="mt-1 min-h-5 ivo-legenda text-texto-suave">
         {aviso}
       </p>

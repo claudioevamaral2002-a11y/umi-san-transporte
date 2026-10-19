@@ -8,6 +8,10 @@ import { vePainelEmpresa } from './componentes/Menu.tsx'
 import { GuardaPerfil, MolduraNova, TelaDeMapa } from './MolduraNova.tsx'
 import { CorridaCliente } from './telas/cliente/Corrida.tsx'
 import { InicioCliente } from './telas/cliente/InicioCliente.tsx'
+import { Chamada } from './telas/motorista/Chamada.tsx'
+import { InicioMotorista } from './telas/motorista/InicioMotorista.tsx'
+import { ProporValor } from './telas/motorista/ProporValor.tsx'
+import { ViagemNoMapa } from './telas/motorista/ViagemNoMapa.tsx'
 import { EmBreve, InicioProvisorio } from './telas/Provisorias.tsx'
 import { useSessao } from '../lib/sessao.tsx'
 
@@ -16,10 +20,12 @@ const ehMotorista = (p: Perfil) => p.papel === 'MOTORISTA'
 const ehCliente = (p: Perfil) => p.papel === 'CLIENTE'
 const todos = () => true
 
-/** Início sobre o mapa: o cliente pede (Tarefa 8); motorista e ADM ainda no provisório (Tarefa 10). */
+/** Início sobre o mapa: o cliente pede (Tarefa 8), o motorista responde e dirige (Tarefa 10); o ADM ainda no provisório. */
 function InicioDoPerfil() {
   const { perfil } = useSessao()
-  return perfil?.papel === 'CLIENTE' ? <InicioCliente /> : <InicioProvisorio />
+  if (perfil?.papel === 'CLIENTE') return <InicioCliente />
+  if (perfil?.papel === 'MOTORISTA') return <InicioMotorista />
+  return <InicioProvisorio />
 }
 
 /** Telas de página que chegam nas próximas tarefas (11 e 14), por enquanto "em breve", cada uma com a sua guarda. */
@@ -97,7 +103,19 @@ export const roteadorNovo = createBrowserRouter([
                     element: <GuardaPerfil permite={ehCliente} />,
                     children: [{ path: 'corrida/:id', Component: CorridaCliente }],
                   },
+                  {
+                    element: <GuardaPerfil permite={ehMotorista} />,
+                    children: [
+                      { path: 'chamada/:id', Component: Chamada },
+                      { path: 'viagem/:id', Component: ViagemNoMapa },
+                    ],
+                  },
                 ],
+              },
+              // A calculadora da contraproposta é uma página (mockup 6), fora do mapa.
+              {
+                element: <GuardaPerfil permite={ehMotorista} />,
+                children: [{ path: 'chamada/:id/propor', Component: ProporValor }],
               },
               ...PROVISORIAS.map(({ path, titulo, permite }) => ({
                 element: <GuardaPerfil permite={permite} />,

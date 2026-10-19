@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
           skipWaiting: !novo,
           clientsClaim: !novo,
           cleanupOutdatedCaches: true,
-          globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'],
+          globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico,wav}'],
           // Sem NavigationRoute do precache: um shell velho nunca atende links de acesso
           // (#access_token… não chega ao SW). Toda navegação tenta a rede primeiro.
           navigateFallback: undefined,
