@@ -3,7 +3,7 @@
 -- sozinho, sem multa, com a reserva devolvida; espera enquanto o motorista tem outra viagem em andamento.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(24);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -145,7 +145,10 @@ select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is(api.concluir(current_setting('t.viagem')::uuid, null) ->> 'ok', 'true', 'motorista conclui a viagem');
 reset role;
 select set_config('request.jwt.claims', '', true);
-select is(interno.cancelar_agendados_sem_saida(), 1, 'depois da conclusão, o vencido é cancelado');
+select is(interno.cancelar_agendados_sem_saida(), 0, 'concluiu há pouco: 1 h para sair no próximo');
+-- passada 1 h da conclusão: o vencido e o que tinha atraso (a conclusão apaga a marca) são cancelados
+update app.atividades set concluiu_em = now() - interval '61 minutes' where id = current_setting('t.viagem')::uuid;
+select is(interno.cancelar_agendados_sem_saida(), 2, '1 h depois da conclusão, os vencidos são cancelados');
 
 ------------------------------------------------------------------ 5. reconciliação
 select is(interno.reconciliar() -> 'divergencias', '[]'::jsonb, 'reconciliação sem divergências');

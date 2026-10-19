@@ -1,7 +1,8 @@
 -- Pedido AGENDADO que chegou ao fim do horário reservado sem o motorista sair (decisão do dono, 19/10/2026):
 --   * prazo: início + duração prevista, no mínimo 1 h depois do início. Se o serviço anterior do motorista atrasou
 --     (atraso_anterior_ate), o prazo conta a partir dessa hora;
---   * enquanto o motorista tiver outra viagem EM_ANDAMENTO, espera (ele ainda pode estar terminando a anterior);
+--   * enquanto o motorista tiver outra viagem EM_ANDAMENTO, espera (ele ainda pode estar terminando a anterior), e
+--     depois de concluir uma viagem ele tem 1 h para sair na próxima (a conclusão apaga o atraso_anterior_ate);
 --   * cancela SEM multa (a falha é do prestador): libera a reserva inteira e passa a CANCELADA, com o motivo
 --     no histórico. AGENDADA → EXPIRADA não está em app.transicoes_permitidas (imutável), e "cancelado
 --     automaticamente" é o que o dono pediu.
@@ -35,7 +36,8 @@ begin
       continue;
     end if;
     if exists (select 1 from app.atividades o
-                where o.motorista_id = a.motorista_id and o.status = 'EM_ANDAMENTO') then
+                where o.motorista_id = a.motorista_id
+                  and (o.status = 'EM_ANDAMENTO' or o.concluiu_em > now() - interval '1 hour')) then
       continue;
     end if;
 

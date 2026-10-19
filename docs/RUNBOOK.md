@@ -387,7 +387,7 @@ Configurações (ADM), cartão **Busca de endereços**: quantas chamadas ao Goog
 ### Pedido agendado sem saída (cancelamento automático)
 - Se o motorista não deslizar para sair até o **fim do horário reservado** (início + duração prevista, no mínimo 1 h depois do início), o pedido é **cancelado sozinho** (cron `cancelar-sem-saida`, a cada 15 min).
 - **Sem multa:** a reserva volta inteira ao saldo da empresa. No histórico do pedido aparece "Cancelado automaticamente: o motorista não saiu no horário". Na Auditoria, ação `CANCELAR_SEM_SAIDA`.
-- Se o serviço anterior do motorista atrasou, o prazo conta a partir do atraso. Enquanto o motorista tiver outra viagem em andamento, o pedido espera.
+- Se o serviço anterior do motorista atrasou, o prazo conta a partir do atraso. Enquanto o motorista tiver outra viagem em andamento, o pedido espera; depois de concluir a viagem anterior, o motorista ainda tem **1 h** para sair.
 - Decisão do dono em 19/10/2026. O status fica **Cancelado**, e não Expirado, porque a passagem de agendado para expirado não existe no banco.
 
 ### Problemas comuns
