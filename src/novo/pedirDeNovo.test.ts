@@ -1,9 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { DetalhePedido } from '../lib/pedidos.ts'
-
-vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
-
-const { lerPedirDeNovo, pedirDeNovoDe } = await import('./pedirDeNovo.ts')
+import { lerPedirDeNovo, pedirDeNovoDe } from './pedirDeNovo.ts'
 
 const pedido = (extra: Partial<DetalhePedido> = {}) =>
   ({

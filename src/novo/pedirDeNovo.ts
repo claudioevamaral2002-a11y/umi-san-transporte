@@ -2,8 +2,10 @@
 // categoria, sem data. Vai pelo estado da navegação, só com o que o pedido já guarda (nome e place_id do Google, ou as
 // coordenadas de um ponto marcado no mapa): nenhum endereço do Google é guardado a mais.
 import type { Local } from '../lib/enderecos.ts'
-import { pontoDaRota } from '../lib/enderecosRemoto.ts'
 import type { DetalhePedido } from '../lib/pedidos.ts'
+
+/** Dá para traçar a rota: place_id do Google, ou coordenadas de um ponto marcado no mapa (mesma regra de `pontoDaRota`). */
+const temPonto = (l: Pick<Local, 'lat' | 'lng' | 'place_id'>) => !!l.place_id || (l.lat !== null && l.lng !== null)
 
 export interface PedirDeNovo {
   origem: { texto: string; local: Local }
@@ -24,7 +26,7 @@ const local = (p: DetalhePedido, lado: 'origem' | 'destino'): Local => ({
 export function pedirDeNovoDe(p: DetalhePedido): PedirDeNovo | null {
   const origem = local(p, 'origem')
   const destino = local(p, 'destino')
-  if (!pontoDaRota(origem) || !pontoDaRota(destino)) return null
+  if (!temPonto(origem) || !temPonto(destino)) return null
   return {
     origem: { texto: p.origem, local: origem },
     destino: { texto: p.destino, local: destino },
@@ -49,7 +51,7 @@ export function lerPedirDeNovo(estado: unknown): PedirDeNovo | null {
   }
   const origem = par(e.origem)
   const destino = par(e.destino)
-  if (!origem || !destino || !pontoDaRota(origem.local) || !pontoDaRota(destino.local)) return null
+  if (!origem || !destino || !temPonto(origem.local) || !temPonto(destino.local)) return null
   return {
     origem,
     destino,
