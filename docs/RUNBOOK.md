@@ -407,8 +407,8 @@ O **IVO novo** é a interface no estilo Uber (mapa na frente, categorias, calcul
 
 ### 18.2 Categorias e preços
 - As categorias são **IVO Passageiros**, **IVO Carga Leve** e **IVO Carga Pesada**. Cada uma tem o seu preço por km (a Carga Pesada também tem a taxa fixa do reboque).
-- **Só se publica pelo app novo:** entre em https://ivo-novo.pages.dev como Master (ADM), menu ☰ › **Categorias e preços**, ajuste e toque em **Publicar nova versão**. Cria uma versão nova do contrato, imutável como sempre.
-- **Cuidado:** publicar pela tela **Contratos do app atual** cria uma versão **sem** os preços por categoria, e os pedidos de categoria voltam a usar os preços antigos (km sem reboque, km com reboque e taxa). Para evitar surpresa, **use sempre o app novo** para publicar contratos.
+- **Preço por categoria muda pelo app novo:** entre em https://ivo-novo.pages.dev como Master (ADM), menu ☰ › **Categorias e preços**, ajuste e toque em **Publicar nova versão**. Cria uma versão nova do contrato, imutável como sempre.
+- Publicar pela tela **Contratos do app atual** também pode: a versão nova **herda** os preços por categoria da versão anterior da mesma empresa (ou do modelo). Para **mudar** o preço de uma categoria, use o app novo.
 - Contratos antigos, sem preço por categoria, não mudam de valor: Passageiros e Carga Leve usam o km sem reboque; Carga Pesada usa o km com reboque mais a taxa do reboque.
 - A taxa fixa só vale para a Carga Pesada; nas outras categorias ela é ignorada.
 
@@ -474,4 +474,4 @@ Para o **Administrador** da empresa (N1) e para o Master (que escolhe a empresa 
 1. dash.cloudflare.com › **Workers & Pages** › **Create** › **Pages** › **Upload assets** (envio direto).
 2. Nome do projeto: `ivo-novo`. Crie (pode enviar uma pasta qualquer, o Deploy sobrescreve) e rode o Deploy de novo (**Re-run failed jobs**).
 
-**(d) URL de retorno do Supabase.** **Não há nada para fazer**: o Deploy aplica `https://ivo-novo.pages.dev/**` em Auth › URL Configuration › Redirect URLs a partir do `supabase/config.toml` (passo `config push`). Para conferir: https://supabase.com/dashboard › seu projeto › **Authentication** › **URL Configuration**: a lista **Redirect URLs** deve ter `https://ivo-novo.pages.dev/**`. Se não tiver depois de um Deploy verde, avise.
+**(d) URL de retorno do Supabase.** **Não há nada para fazer**: o Deploy aplica `https://ivo-novo.pages.dev/definir-senha` (só o caminho dos links de convite e recuperação) em Auth › URL Configuration › Redirect URLs a partir do `supabase/config.toml` (passo `config push`). Para conferir: https://supabase.com/dashboard › seu projeto › **Authentication** › **URL Configuration**: a lista **Redirect URLs** deve ter `https://ivo-novo.pages.dev/definir-senha`. Se não tiver depois de um Deploy verde, avise.

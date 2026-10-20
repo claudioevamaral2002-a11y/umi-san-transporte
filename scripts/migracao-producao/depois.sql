@@ -1,4 +1,5 @@
--- Confere as migrações das fases 1B, 2A e 2B aplicadas sobre o estado de antes.sql (CI). Qualquer divergência aborta.
+-- Confere as migrações das fases 1B, 2A e 2B aplicadas sobre o estado de antes.sql e as da fase 4 aplicadas sobre o
+-- pedido orçado de antes-fase4.sql (CI). Qualquer divergência aborta.
 do $$
 declare
   esperado jsonb := '{"km_sem_reboque_cent":350,"km_com_reboque_cent":480,"taxa_fixa_reboque_cent":15000,
@@ -13,6 +14,7 @@ declare
   umi uuid := (select id from app.empresas where nome = 'Umi San');
   r jsonb;
   n int;
+  v_pedido uuid;
 begin
   -- modelo v1 e Umi San v1, vigentes, com os mesmos valores e o mesmo autor
   for r in select to_jsonb(c) from app.contratos_versoes c where c.empresa_id is null or c.empresa_id = umi loop
@@ -83,9 +85,10 @@ begin
     raise exception 'exclusão anti-conflito da agenda ausente';
   end if;
   if not exists (select 1 from app.transicoes_permitidas) then raise exception 'transições não semeadas'; end if;
-  if exists (select 1 from app.atividades) or exists (select 1 from app.orcamentos)
-     or exists (select 1 from app.agenda_blocos) then
-    raise exception 'pedidos/orçamentos/agenda deveriam nascer vazios';
+  -- Só o pedido semeado por antes-fase4.sql (antes da fase 4): um pedido, um orçamento e um bloco de agenda.
+  if (select count(*) from app.atividades) <> 1 or (select count(*) from app.orcamentos) <> 1
+     or (select count(*) from app.agenda_blocos) <> 1 then
+    raise exception 'esperava só o pedido semeado antes da fase 4 (1 pedido, 1 orçamento, 1 bloco)';
   end if;
   if to_regclass('app.prova_canal') is not null
      or exists (select 1 from pg_policy where polrelid = 'realtime.messages'::regclass and polname = 'prova_assinar') then
@@ -109,5 +112,29 @@ begin
   if (select count(*) from cron.job where jobname in ('expirar-vencidos', 'reconciliar-saldos') and active) <> 2 then
     raise exception 'jobs agendados inativos ou duplicados';
   end if;
-  raise notice 'migração das fases 1B, 2A e 2B conferida sobre dados de produção';
+
+  -- fase 4 (Ruling R18): o pedido orçado antes da fase 4 atravessou as migrations igual e continua legível
+  select a.id into v_pedido from app.atividades a;
+  if not exists (select 1 from app.atividades a join app.orcamentos o on o.atividade_id = a.id
+                  where a.id = v_pedido and a.status = 'ORCADA' and o.status = 'PENDENTE' and o.total_cent = 5250
+                    and a.categoria is null and a.veiculo_id is null and not a.agora and a.centro_custo is null
+                    and a.avaliacao is null and a.atraso_anterior_ate is null) then
+    raise exception 'pedido de antes da fase 4 mudou: %', (select to_jsonb(a) from app.atividades a where a.id = v_pedido);
+  end if;
+  if to_regclass('app.categorias') is null or to_regclass('app.contratos_categorias') is null
+     or to_regclass('app.veiculos') is null then
+    raise exception 'tabela da fase 4 ausente';
+  end if;
+  if exists (select 1 from app.contratos_categorias) then
+    raise exception 'contratos de antes da fase 4 não deveriam ganhar preço por categoria';
+  end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f2',
+    'role', 'authenticated', 'aal', 'aal1')::text, true);
+  r := api.pedido(v_pedido);
+  if not coalesce((r ->> 'ok')::boolean, false) or r #>> '{pedido,status}' <> 'ORCADA'
+     or (r #> '{pedido,categoria}') <> 'null'::jsonb or (r #> '{pedido,motorista_telefone}') <> 'null'::jsonb
+     or (r #>> '{orcamento,total_cent}')::bigint <> 5250 or not coalesce((r #>> '{acoes,aprovar}')::boolean, false) then
+    raise exception 'api.pedido da fase 4 sobre o pedido antigo divergiu: %', r;
+  end if;
+  raise notice 'migração das fases 1B, 2A, 2B e 4 conferida sobre dados de produção';
 end $$;
