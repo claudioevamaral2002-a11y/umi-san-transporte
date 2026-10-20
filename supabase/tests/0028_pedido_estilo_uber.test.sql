@@ -125,8 +125,18 @@ select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is((api.calcular_orcamento(current_setting('t.pc')::uuid,
   '{"km": 10, "veiculo_id": "00000000-0000-0000-0000-0000000000b1"}') ->> 'total_cent')::bigint, 4500::bigint,
   'prévia do Orçar com categoria: preço da categoria (10 × 300 + retorno), chaves da corrida ignoradas');
+-- R18 (20261020120400): sem veiculo_id o banco usa o veículo ativo que atende a categoria; com o único em manutenção,
+-- nenhum atende e a recusa continua.
+reset role;
+update app.veiculos set situacao = 'MANUTENCAO' where id = '00000000-0000-0000-0000-0000000000b1';
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is(api.enviar_orcamento(current_setting('t.pc')::uuid, '{"km": 10}', null) ->> 'codigo', 'VEICULO_INVALIDO',
-  'pedido com categoria sem veículo: VEICULO_INVALIDO');
+  'pedido com categoria sem veículo e nenhum veículo ativo que a atenda: VEICULO_INVALIDO');
+reset role;
+update app.veiculos set situacao = 'ATIVO' where id = '00000000-0000-0000-0000-0000000000b1';
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca2'), true);
 select is(api.enviar_orcamento(current_setting('t.pc')::uuid,
   '{"km": 10, "veiculo_id": "00000000-0000-0000-0000-0000000000b2"}', null) ->> 'codigo', 'VEICULO_INVALIDO',
   'veículo de outra categoria: VEICULO_INVALIDO');

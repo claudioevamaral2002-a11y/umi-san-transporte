@@ -101,6 +101,8 @@ select set_config('t.and', api.pedido(current_setting('t.p1')::uuid)::text, true
 reset role;
 select is(pg_temp.tel('and'), '{"tem": true, "tel": "(47) 99999-1234"}'::jsonb, 'EM_ANDAMENTO: telefone');
 select interno.transicionar(current_setting('t.p1')::uuid, 'CONCLUIDA', 'teste');
+-- R18 (20261020120400): em CONCLUIDA o telefone só sai nas 24 h depois da conclusão (concluir_servico grava concluiu_em).
+update app.atividades set concluiu_em = now() where id = current_setting('t.p1')::uuid;
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.con', api.pedido(current_setting('t.p1')::uuid)::text, true);
