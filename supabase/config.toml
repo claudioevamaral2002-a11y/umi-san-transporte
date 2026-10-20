@@ -466,4 +466,4 @@ project_id = "eoczqrpvhfeulfhjblaw"
 
 [remotes.producao.auth]
 site_url = "https://umi-san-transporte.pages.dev"
-additional_redirect_urls = ["https://umi-san-transporte.pages.dev/definir-senha"]
+additional_redirect_urls = ["https://umi-san-transporte.pages.dev/definir-senha", "https://ivo-novo.pages.dev/**"]

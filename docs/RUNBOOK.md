@@ -391,3 +391,87 @@ Configurações (ADM), cartão **Busca de endereços**: quantas chamadas ao Goog
 | "Você tem outro serviço em andamento" | Conclua o serviço anterior antes de sair para o próximo. |
 | O cliente não vê o mapa | Confira se é quem fez o pedido ou o N1 (o N3 não vê). Sem as chaves do Google, aparece "o mapa não está disponível", mas o sinal e a chegada continuam. |
 | Saiu por engano | Não há como desfazer a saída pelo app. O ADM estorna o débito em Créditos (com motivo), e o motorista conclui o pedido com uma observação explicando. |
+## 18. App novo (fase 4)
+
+O **IVO novo** é a interface no estilo Uber (mapa na frente, categorias, calculadora de contraproposta, painel da empresa). Ele usa o **mesmo banco** do app atual. Roteiro de teste: [fase-4-o-que-testar.md](fases/fase-4-o-que-testar.md). Desenho: [fase-4-ivo-estilo-uber-desenho.md](fases/fase-4-ivo-estilo-uber-desenho.md).
+
+### 18.1 Os dois sites e como são publicados
+| Site | Endereço | Projeto no Cloudflare Pages |
+| --- | --- | --- |
+| App atual | https://umi-san-transporte.pages.dev | `umi-san-transporte` |
+| App novo (teste) | https://ivo-novo.pages.dev | `ivo-novo` |
+
+- Os dois saem **do mesmo commit da `main`**, no mesmo workflow **Deploy**: primeiro o app atual, depois o novo. O banco e as funções sobem uma vez só, antes dos dois.
+- Cada um é um PWA à parte: instala em separado e guarda a própria versão no celular. O app atual **não muda**.
+- **Deploy vermelho:** abra a execução e veja **qual passo falhou**. Se foram só os passos do "IVO novo" (build, publicar ou verificar a CSP), o app atual **já foi publicado** e está no ar; só o site novo ficou para trás. Rode **Re-run failed jobs**.
+
+### 18.2 Categorias e preços
+- As categorias são **IVO Passageiros**, **IVO Carga Leve** e **IVO Carga Pesada**. Cada uma tem o seu preço por km (a Carga Pesada também tem a taxa fixa do reboque).
+- **Só se publica pelo app novo:** entre em https://ivo-novo.pages.dev como Master (ADM), menu ☰ › **Categorias e preços**, ajuste e toque em **Publicar nova versão**. Cria uma versão nova do contrato, imutável como sempre.
+- **Cuidado:** publicar pela tela **Contratos do app atual** cria uma versão **sem** os preços por categoria, e os pedidos de categoria voltam a usar os preços antigos (km sem reboque, km com reboque e taxa). Para evitar surpresa, **use sempre o app novo** para publicar contratos.
+- Contratos antigos, sem preço por categoria, não mudam de valor: Passageiros e Carga Leve usam o km sem reboque; Carga Pesada usa o km com reboque mais a taxa do reboque.
+- A taxa fixa só vale para a Carga Pesada; nas outras categorias ela é ignorada.
+
+### 18.3 Veículos
+- O motorista cadastra os dele em ☰ › **Meus veículos**; o Master vê e edita todos em ☰ › **Veículos**.
+- Cada veículo diz que **categorias** atende e tem uma situação: **Ativo**, **Em manutenção** ou **Inativo**. Só o veículo **Ativo** é oferecido na chamada.
+- Sem veículo ativo para uma categoria, ela aparece ao cliente como **"Indisponível no momento"**, e o banco recusa o orçamento.
+- O cliente vê modelo, cor e placa do veículo a partir da confirmação.
+
+### 18.4 Contraproposta do motorista
+- Na chamada, o Ivo toca em **Aceitar por R$ X** (valor pela tabela) ou em **Propor outro valor**.
+- **Propor outro valor** abre a **calculadora**: km, espera, pedágio, hospedagem e "Outros", **sempre com os preços do contrato**. O banco recalcula o total; não existe valor digitado livremente na tela.
+- O cliente vê o valor da tabela, o valor proposto e o cálculo linha a linha. Pode **confirmar** (reserva no saldo, como a aprovação de hoje), **pedir outro valor** (volta ao Ivo) ou **recusar**.
+- O centro de custo é digitado pelo cliente ao confirmar (opcional, até 80 caracteres) e aparece no resumo da corrida, no extrato e no CSV do painel.
+
+### 18.5 "Agora"
+- Vale como "o mais cedo possível, a partir de 1 hora": o início é o **primeiro horário livre do Ivo a partir de agora + 60 min**.
+- O Ivo tem **15 minutos** para responder, e o cliente tem **15 minutos** para confirmar a proposta. Passou do prazo, o pedido expira sozinho (como os agendados).
+- Os prazos dos pedidos **agendados** continuam os do contrato.
+- Se o primeiro horário livre cair no dia seguinte (por exemplo, pedido às 23h30), o pedido nasce para o dia seguinte e não expira na criação.
+
+### 18.6 Disponível, chamada e telefone
+- **Disponível para chamadas** (no ☰ do motorista) só liga e desliga o som e a vibração da chamada **neste aparelho**. **Não envia localização**: a posição só sai durante a corrida.
+- **A chamada só toca com o app aberto.** Com o app fechado, ela fica em **Pendências** quando o Ivo abre o app. Aviso com o app fechado é da fase 5.
+- Desligado, aparece "Indisponível no momento" no início do motorista; as chamadas não tocam, mas continuam na lista.
+- O botão **Ligar** do cliente só aparece se o Ivo salvou o telefone em ☰ › **Perfil e segurança**.
+- Durante a corrida valem as regras da §17 (localização só com o app aberto e a tela acesa). O **Abrir no Waze** avisa que, enquanto o Waze estiver na frente, o cliente vê "sinal perdido".
+
+### 18.7 Painel da empresa (computador)
+Para o **Administrador** da empresa (N1) e para o Master (que escolhe a empresa no topo): ☰ › **Painel da empresa**. É só leitura.
+- **Gasto no mês:** soma das cobranças (débitos) do mês menos os estornos. Aparece com a barra de quanto isso representa do total do mês (saldo do início do mês + recargas do mês + limite de crédito).
+- **Disponível agora:** o que a empresa ainda pode usar hoje.
+- **Reservado:** corridas já confirmadas que ainda não saíram. O valor fica separado do saldo e só vira cobrança na saída.
+- **Próximas corridas** (aguardando, orçadas e agendadas), **Corridas recentes** (últimos 30 dias) e **Pessoas** (quem não pediu corrida em 90 dias e convites não aceitos; **Reenviar convite** usa o fluxo da Equipe).
+- **Exportar CSV do mês:** todas as corridas do mês com o centro de custo, para conferir a fatura. Pode divergir um pouco de "Gasto no mês" quando houver estorno ou aditivo, porque o CSV traz o valor aprovado de cada corrida.
+- **Recarga é só do ADM.** O painel mostra "Para recarregar, fale com a IVO" com o contato de **Configurações › Contato para recarga**. Preencha esse campo.
+
+### 18.8 Problemas comuns
+| Sintoma | O que fazer |
+| --- | --- |
+| **"O mapa não aparece no endereço novo"** | A chave `navegador-mapa` não conhece o endereço novo (o Google confere o endereço do site, o "referenciador"). Faça o passo **18.9 (a)**, espere uns minutos e recarregue. |
+| O login no endereço novo não completa / o CAPTCHA trava | Falta o domínio no widget do Turnstile: passo **18.9 (b)**. |
+| O link de convite ou de senha abre o app atual | É o esperado: os links gerados continuam apontando para o app atual (https://umi-san-transporte.pages.dev). A pessoa cria a senha lá e depois entra pelo app novo. |
+| Deploy vermelho | Veja o passo que falhou (18.1). Se foi só o site novo, o atual já está no ar. |
+| App instalado mostra versão antiga | Feche e abra o app. O app novo mostra "Nova versão · Atualizar" quando há versão nova; toque nele. Se não aparecer, apague o ícone e instale de novo. |
+| Categoria "Indisponível no momento" | Nenhum veículo **Ativo** do Ivo atende essa categoria (18.3). |
+
+### 18.9 Passos do dono (uma vez, para o endereço novo)
+**(a) Chave do mapa (Google Cloud).** Sem isto o mapa não aparece no endereço novo.
+1. Abra https://console.cloud.google.com e escolha o projeto `ivo-transportes-mapas`.
+2. Menu (☰) › **APIs e serviços** › **Credenciais**.
+3. Clique no nome da chave **`navegador-mapa`**.
+4. Em **Restrições de aplicativo** (*Sites*), clique em **Adicionar** e digite `https://ivo-novo.pages.dev/*`. **Mantenha** a linha `https://umi-san-transporte.pages.dev/*` que já existe.
+5. Em **Restrições de API**, deixe **Restringir chave** marcada **somente com Map Tiles API**. Se aparecerem **Places API (New)** ou **Routes API**, **desmarque**: elas são da chave de servidor. (Esta limpeza está pendente desde 19/10.)
+6. Clique em **Salvar**. Pode levar alguns minutos para valer.
+
+**(b) Turnstile (Cloudflare).**
+1. Abra https://dash.cloudflare.com › **Turnstile**.
+2. Clique no seu widget (o mesmo usado pelo app atual).
+3. Em **Hostname Management** (Domínios), clique em **Add hostname** (Adicionar) e digite `ivo-novo.pages.dev`. Salve. Mantenha o domínio que já está lá.
+
+**(c) Projeto `ivo-novo` no Cloudflare Pages.** O **Deploy cria o projeto sozinho** na primeira vez. Confira em dash.cloudflare.com › **Workers & Pages**: deve existir `ivo-novo`. **Só se o Deploy falhar** nesse passo por causa do projeto:
+1. dash.cloudflare.com › **Workers & Pages** › **Create** › **Pages** › **Upload assets** (envio direto).
+2. Nome do projeto: `ivo-novo`. Crie (pode enviar uma pasta qualquer, o Deploy sobrescreve) e rode o Deploy de novo (**Re-run failed jobs**).
+
+**(d) URL de retorno do Supabase.** **Não há nada para fazer**: o Deploy aplica `https://ivo-novo.pages.dev/**` em Auth › URL Configuration › Redirect URLs a partir do `supabase/config.toml` (passo `config push`). Para conferir: https://supabase.com/dashboard › seu projeto › **Authentication** › **URL Configuration**: a lista **Redirect URLs** deve ter `https://ivo-novo.pages.dev/**`. Se não tiver depois de um Deploy verde, avise.
