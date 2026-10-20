@@ -16,7 +16,7 @@ import { useConsulta } from '../../lib/consulta.ts'
 import type { PrecosParaOrcar } from '../../lib/contratos.ts'
 import { formatarRota } from '../../lib/enderecos.ts'
 import { rota } from '../../lib/enderecosRemoto.ts'
-import { mensagemDoCodigo } from '../../lib/erros.ts'
+import { mensagemAoOrcar, mensagemDoCodigo } from '../../lib/erros.ts'
 import {
   DIARIAS_MAX,
   ESPERA_MAX_MEIAS,
@@ -128,7 +128,7 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
     if (resposta.ok) {
       navegar(`/pedidos/${p.id}`, { replace: true, state: { aviso: 'Orçamento enviado. O cliente já pode ver o memorial.' } })
     } else {
-      setErroEnvio(mensagemDoCodigo(resposta.codigo))
+      setErroEnvio(mensagemAoOrcar(resposta.codigo))
     }
   }
 

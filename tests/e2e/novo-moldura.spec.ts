@@ -115,6 +115,18 @@ test('cliente N2 não vê Equipe nem Painel da empresa', async ({ page }) => {
   ])
 })
 
+test('sair da conta apaga o último centro de custo do aparelho (a categoria fica)', async ({ page }) => {
+  await abrir(page, N1)
+  await page.evaluate(() => {
+    localStorage.setItem('ivo:ultimo-centro-custo', 'Obra 12')
+    localStorage.setItem('ivo:ultima-categoria', 'PASSAGEIROS')
+  })
+  const menu = await abrirMenu(page)
+  await menu.getByRole('button', { name: 'Sair' }).click()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ivo:ultimo-centro-custo'))).toBeNull()
+  expect(await page.evaluate(() => localStorage.getItem('ivo:ultima-categoria'))).toBe('PASSAGEIROS')
+})
+
 test('motorista: "Disponível para chamadas" (só no aparelho), Meus veículos e "Corridas do mês"', async ({ page }) => {
   const funcoes: string[] = []
   page.on('request', (r) => {

@@ -9,7 +9,7 @@ import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { kmDaRota } from '../../../lib/categorias.ts'
 import { corrida } from '../../../lib/corrida.ts'
-import { mensagemDoCodigo } from '../../../lib/erros.ts'
+import { mensagemAoOrcar } from '../../../lib/erros.ts'
 import {
   DIARIAS_MAX,
   ESPERA_MAX_MEIAS,
@@ -70,7 +70,7 @@ function Calculadora({ r, km, veiculo }: { r: RespostaPedido; km: number | null;
     const resposta = await corrida.enviarProposta(p.id, entrada, { veiculo_id: veiculo.id })
     setEnviando(false)
     if (resposta.ok) navegar('/', { replace: true, state: { aviso: AVISO_PROPOSTA } })
-    else setErro(mensagemDoCodigo(resposta.codigo))
+    else setErro(mensagemAoOrcar(resposta.codigo))
   }
 
   const nTrechos = trechos(p)

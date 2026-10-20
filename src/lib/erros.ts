@@ -81,6 +81,7 @@ export const MENSAGENS = {
   JA_AVALIADO: 'Esta corrida já foi avaliada.',
   NOTA_INVALIDA: 'Escolha uma nota de 1 a 5 estrelas.',
   TELEFONE_INVALIDO: 'Informe o telefone com DDD, por exemplo (47) 99999-1234.',
+  VALOR_INVALIDO: 'O valor do orçamento precisa ser maior que zero. Confira os km e os valores informados.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
@@ -88,6 +89,14 @@ export type Codigo = keyof typeof MENSAGENS
 export function mensagemDoCodigo(codigo: string | null | undefined): string {
   if (codigo && Object.hasOwn(MENSAGENS, codigo)) return MENSAGENS[codigo as Codigo]
   return MENSAGENS.ERRO_INESPERADO
+}
+
+/** VEICULO_INVALIDO no envio do orçamento (a mensagem de MENSAGENS é a do cadastro do veículo). */
+export const VEICULO_AO_ORCAR = 'Nenhum veículo ativo atende esta categoria. Cadastre ou reative um veículo.'
+
+/** Mensagem da recusa no envio do orçamento (Orçar do app atual, Chamada e Propor valor do app novo). */
+export function mensagemAoOrcar(codigo: string | null | undefined): string {
+  return codigo === 'VEICULO_INVALIDO' ? VEICULO_AO_ORCAR : mensagemDoCodigo(codigo)
 }
 
 /** Erros do Supabase Auth (login e 2FA). O login é sempre genérico: não diz se o e-mail existe. */

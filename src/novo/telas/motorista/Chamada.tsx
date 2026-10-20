@@ -8,7 +8,7 @@ import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { kmDaRota } from '../../../lib/categorias.ts'
 import { corrida } from '../../../lib/corrida.ts'
-import { mensagemDoCodigo } from '../../../lib/erros.ts'
+import { mensagemAoOrcar, mensagemDoCodigo } from '../../../lib/erros.ts'
 import { montarEntrada } from '../../../lib/orcar.ts'
 import { pedidos, type RespostaPedido } from '../../../lib/pedidos.ts'
 import { formatarDuracao } from '../../../lib/tempo.ts'
@@ -136,7 +136,7 @@ function Responder({
     const resposta = await corrida.enviarProposta(p.id, entrada, { veiculo_id: veiculo.id })
     setEnviando(false)
     if (resposta.ok) navegar('/', { replace: true, state: { aviso: AVISO_PROPOSTA } })
-    else setErro(mensagemDoCodigo(resposta.codigo))
+    else setErro(mensagemAoOrcar(resposta.codigo))
   }
 
   return (

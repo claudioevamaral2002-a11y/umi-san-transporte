@@ -24,6 +24,8 @@ function gravar(chave: string, valor: string | null) {
 /** Último centro de custo confirmado neste aparelho (até 80 caracteres, como no banco). */
 export const lerUltimoCentroCusto = () => (ler(CHAVE_CENTRO_CUSTO) ?? '').slice(0, 80)
 export const gravarUltimoCentroCusto = (v: string) => gravar(CHAVE_CENTRO_CUSTO, v.trim() === '' ? null : v.trim().slice(0, 80))
+/** Ao sair da conta: o centro de custo é da empresa de quem saiu e não pode aparecer para a próxima pessoa (R18). */
+export const limparUltimoCentroCusto = () => gravar(CHAVE_CENTRO_CUSTO, null)
 
 /** Última categoria pedida neste aparelho (vem selecionada na próxima vez, se estiver disponível). */
 export const lerUltimaCategoria = () => ler(CHAVE_CATEGORIA)

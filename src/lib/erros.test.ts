@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { MENSAGENS, mensagemDoCodigo, mensagemErroAuth } from './erros.ts'
+import { MENSAGENS, VEICULO_AO_ORCAR, mensagemAoOrcar, mensagemDoCodigo, mensagemErroAuth } from './erros.ts'
 
 /**
  * Códigos conhecidos, levantados por grep em `supabase/migrations` (interno.negar / 'codigo', '…')
@@ -59,6 +59,7 @@ const CODIGOS_CONHECIDOS = [
   'JA_AVALIADO',
   'NOTA_INVALIDA',
   'TELEFONE_INVALIDO',
+  'VALOR_INVALIDO',
   // Edge Functions
   'ERRO_AUTH',
   'ERRO_INESPERADO',
@@ -125,6 +126,17 @@ describe('erros', () => {
     expect(mensagemDoCodigo(undefined)).toBe(MENSAGENS.ERRO_INESPERADO)
     expect(mensagemDoCodigo('toString')).toBe(MENSAGENS.ERRO_INESPERADO)
     expect(mensagemDoCodigo('SENHA_VAZADA')).toBe('Essa senha já apareceu em vazamentos. Escolha outra.')
+  })
+
+  it('envio do orçamento: VEICULO_INVALIDO fala do veículo que atende a categoria; o resto como sempre', () => {
+    expect(mensagemAoOrcar('VEICULO_INVALIDO')).toBe(VEICULO_AO_ORCAR)
+    expect(VEICULO_AO_ORCAR).toBe('Nenhum veículo ativo atende esta categoria. Cadastre ou reative um veículo.')
+    // O cadastro do veículo continua com a mensagem dos campos.
+    expect(mensagemDoCodigo('VEICULO_INVALIDO')).toMatch(/modelo, cor, placa/)
+    expect(mensagemAoOrcar('VALOR_INVALIDO')).toBe(MENSAGENS.VALOR_INVALIDO)
+    expect(MENSAGENS.VALOR_INVALIDO).toMatch(/maior que zero/)
+    expect(mensagemAoOrcar('AJUSTE_FORA_DO_LIMITE')).toBe(MENSAGENS.AJUSTE_FORA_DO_LIMITE)
+    expect(mensagemAoOrcar(undefined)).toBe(MENSAGENS.ERRO_INESPERADO)
   })
 
   it('login é genérico; 2FA e limites têm mensagem própria', () => {

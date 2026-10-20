@@ -240,6 +240,22 @@ test.describe('chamada', () => {
     expect((envios(chamadas)[0]!.corpo.p as Record<string, unknown>).veiculo_id).toBe('00000000-0000-4000-8000-0000000000c4')
   })
 
+  test('VEICULO_INVALIDO no aceite: mensagem do veículo da categoria (não a do cadastro)', async ({ page }) => {
+    await abrir(page, { caminho: `/chamada/${ID_PEDIDO}` })
+    await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 180,00')
+    await page.route(`${URL_SUPABASE}/rest/v1/rpc/enviar_orcamento`, (route: Route) =>
+      json(route, { ok: false, codigo: 'VEICULO_INVALIDO' }),
+    )
+    await page.getByRole('button', { name: 'Aceitar por R$ 180' }).click()
+    await expect(
+      page
+        .getByRole('alert')
+        .or(page.getByRole('status'))
+        .filter({ hasText: 'Nenhum veículo ativo atende esta categoria. Cadastre ou reative um veículo.' }),
+    ).toBeVisible()
+    await expect(page.getByText('Proposta enviada')).toHaveCount(0)
+  })
+
   test('com a tela aberta, chega um status no tópico equipe: toca o som e mostra a chamada', async ({ page }) => {
     const { realtime } = await abrir(page, {
       caminho: '/',

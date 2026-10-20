@@ -165,6 +165,24 @@ test.describe('motorista', () => {
     expect(csp).toEqual([])
   })
 
+  test('orçar: VEICULO_INVALIDO no envio fala do veículo da categoria (não do cadastro)', async ({ page }) => {
+    await comSessaoFalsa(page, MOTORISTA, AAL2)
+    await simularApi(page)
+    await simularPedidos(page, {
+      detalhes: [pedidoSolicitadoMotorista()],
+      respostas: { enviar_orcamento: [{ ok: false, codigo: 'VEICULO_INVALIDO' }] },
+    })
+    await page.goto(`/pedidos/${ID_PEDIDO}`)
+    await page.getByRole('link', { name: 'Orçar este pedido' }).click()
+    await page.getByRole('textbox', { name: 'Quilometragem' }).fill('120')
+    await expect(page.getByTestId('total-ao-vivo')).toContainText(/R\$/)
+    await page.getByRole('button', { name: 'Enviar orçamento' }).click()
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Nenhum veículo ativo atende esta categoria. Cadastre ou reative um veículo.' }),
+    ).toBeVisible()
+    await expect(page.getByText(/modelo, cor, placa/)).toHaveCount(0)
+  })
+
   test('orçar após revisão: pré-preenchido com o orçamento anterior e o motivo do cliente', async ({ page }) => {
     const csp = await vigiarCsp(page)
     await comSessaoFalsa(page, MOTORISTA, AAL2)
