@@ -4,7 +4,7 @@
 -- O N1 vê só a própria empresa (p_empresa ignorado); o ADM informa a empresa; os outros recebem SEM_PERMISSAO, auditado.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(31);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -225,6 +225,19 @@ select is(current_setting('t.n1')::jsonb #> '{recentes,1}' -> 'valor_cent', '330
 select ok(current_setting('t.n1')::jsonb #> '{recentes,3}' -> 'valor_cent' = 'null'::jsonb
       and current_setting('t.n1')::jsonb #> '{recentes,3}' -> 'estimado' = 'false'::jsonb,
   'recusado: sem valor e não estimado');
+
+------------------------------------------------------------------ do mês (CSV)
+select is((select coalesce(string_agg(x ->> 'id', ',' order by o), '')
+             from jsonb_array_elements(current_setting('t.n1')::jsonb -> 'do_mes') with ordinality y(x, o)),
+  (select coalesce(string_agg(a.id::text, ',' order by a.inicio), '') from app.atividades a
+    where a.empresa_id = '00000000-0000-0000-0000-0000000000e1' and a.status in ('EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA')
+      and a.inicio >= current_setting('t.ini')::timestamptz
+      and a.inicio < (current_setting('t.ini')::timestamptz at time zone 'America/Sao_Paulo' + interval '1 month')
+                     at time zone 'America/Sao_Paulo'),
+  'do_mes: as corridas do mês que podem ter cobrança, por início');
+select ok(position(pg_temp.ped(20)::text in current_setting('t.n1')::jsonb ->> 'do_mes') > 0
+      or now() - interval '1 hour' < current_setting('t.ini')::timestamptz,
+  'do_mes traz a corrida em andamento do mês');
 
 ------------------------------------------------------------------ pessoas
 select is((current_setting('t.n1')::jsonb #>> '{pessoas,sem_corridas}')::int, 4,
