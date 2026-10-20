@@ -31,6 +31,15 @@ const PARES: Array<[string, string, number]> = [
   ['--cor-comando-texto', '--cor-comando', 4.5],
   ['--cor-link', '--cor-superficie', 4.5],
   ['--cor-link', '--cor-fundo', 4.5],
+  // Painel da empresa (fase 4): texto sobre o fundo cinza, barra sobre o trilho e etiquetas pálidas.
+  ['--cor-texto', '--cor-painel-fundo', 4.5],
+  ['--cor-texto-suave', '--cor-painel-fundo', 4.5],
+  ['--cor-painel-barra', '--cor-painel-trilho', 3],
+  ['--cor-painel-barra', '--cor-superficie', 3],
+  ['--cor-tag-neutro-texto', '--cor-tag-neutro-fundo', 4.5],
+  ['--cor-tag-azul-texto', '--cor-tag-azul-fundo', 4.5],
+  ['--cor-tag-verde-texto', '--cor-tag-verde-fundo', 4.5],
+  ['--cor-tag-vermelho-texto', '--cor-tag-vermelho-fundo', 4.5],
 ]
 
 for (const modo of ['claro', 'escuro', 'alto'] as const) {

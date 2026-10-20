@@ -30,9 +30,8 @@ function InicioDoPerfil() {
   return <InicioProvisorio />
 }
 
-/** Telas de página ainda por fazer ("em breve"), cada uma com a sua guarda. O Painel da empresa chega na Tarefa 14. */
+/** Telas de página ainda por fazer ("em breve"), cada uma com a sua guarda. */
 const PROVISORIAS: Array<{ path: string; titulo: string; permite: (p: Perfil) => boolean }> = [
-  { path: 'empresa', titulo: 'Painel da empresa', permite: vePainelEmpresa },
   { path: 'locais', titulo: 'Locais salvos', permite: ehCliente },
   { path: 'ajuda', titulo: 'Ajuda', permite: todos },
 ]
@@ -177,6 +176,13 @@ export const roteadorNovo = createBrowserRouter([
                       { path: 'viagem/:id', Component: ViagemNoMapa },
                     ],
                   },
+                ],
+              },
+              // Painel da empresa (Tarefa 14, §6.9): página larga com o menu no topo (fora da TelaDePagina).
+              {
+                element: <GuardaPerfil permite={vePainelEmpresa} />,
+                children: [
+                  { path: 'empresa', lazy: tela(() => import('./telas/empresa/PainelEmpresa.tsx'), 'PainelEmpresa') },
                 ],
               },
               // A calculadora da contraproposta é uma página (mockup 6), fora do mapa.
