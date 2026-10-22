@@ -7,6 +7,7 @@ import type { Perfil } from '../../lib/estadoSessao.ts'
 import { rotuloCurto, useRotulos, type Rotulos } from '../../lib/rotulos.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 import { gravarDisponivel, lerDisponivel } from '../disponivel.ts'
+import { itemAtual } from '../navegacao.ts'
 
 /** O app atual (outra origem). No app novo, só o gestor de frota é mandado para lá (Ruling R13). */
 export const APP_ATUAL = 'https://umi-san-transporte.pages.dev'
@@ -98,6 +99,8 @@ export function Menu({ perfil }: { perfil: Perfil }) {
   const rotulos = useRotulos()
   const [disponivel, setDisponivel] = useState(lerDisponivel)
   const itens = itensDoMenu(perfil)
+  // A página atual fica destacada (especificação §6.4): troca de uma para outra direto pelo ☰.
+  const atual = itemAtual(itens, local.pathname)
 
   // Fecha ao trocar de tela (toque num item do app novo).
   useEffect(() => {
@@ -166,8 +169,12 @@ export function Menu({ perfil }: { perfil: Perfil }) {
             )}
             {itens.map((item) => (
               <li key={item.rotulo}>
-                <Link to={item.para} className={CLASSE_ITEM}>
-                  <Icone nome={item.icone} tamanho={20} className="text-texto-suave" />
+                <Link
+                  to={item.para}
+                  aria-current={item === atual ? 'page' : undefined}
+                  className={`${CLASSE_ITEM} ${item === atual ? 'rounded-xl bg-selecao-suave px-3' : ''}`}
+                >
+                  <Icone nome={item.icone} tamanho={20} className={item === atual ? 'text-laranja' : 'text-texto-suave'} />
                   <span className="flex-1">{item.rotulo}</span>
                 </Link>
               </li>

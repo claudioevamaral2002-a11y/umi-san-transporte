@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Navigate, Outlet, useOutletContext } from 'react-router'
+import { Link, Navigate, Outlet, useLocation, useOutletContext } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
+import { ContextoRotaDePara } from '../design/componentes/RotaDePara.tsx'
 import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { MapaBase, type CarroNoMapa, type Ponto } from './componentes/MapaBase.tsx'
-import { APP_ATUAL, Menu } from './componentes/Menu.tsx'
+import { BarraCliente } from './componentes/BarraCliente.tsx'
+import { APP_ATUAL, itensDoMenu, Menu } from './componentes/Menu.tsx'
+import { temBarraCliente, tituloDaPagina } from './navegacao.ts'
 
 /**
  * Moldura do app novo (especificação §6): sem barra de abas, só o ☰ no canto superior esquerdo. As telas de mapa
@@ -66,13 +69,38 @@ export function GuardaPerfil({ permite }: { permite: (p: Perfil) => boolean }) {
 
 /**
  * Telas de página (fora do mapa): as novas (Veículos, Categorias, Perfil…) e as de hoje reusadas (Pedidos, Agenda,
- * Extrato, Equipe e as /adm/*, Ruling R12). Só abre espaço para o ☰ fixo no canto.
+ * Extrato, Equipe e as /adm/*, Ruling R12). Todas com o cabeçalho "← Início" + título ao lado do ☰ fixo (especificação
+ * §6.4, mockup 4); o cliente ganha a barra Pedir · Corridas · Agenda · Carteira no celular. As rotas das telas de hoje
+ * aparecem como "De → (Parada) → Para".
  */
 export function TelaDePagina() {
+  const { perfil } = useSessao()
+  const { pathname } = useLocation()
+  const titulo = perfil ? tituloDaPagina(itensDoMenu(perfil), pathname) : ''
+  const comBarra = perfil?.papel === 'CLIENTE' && temBarraCliente(pathname)
   return (
-    <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-      <Outlet />
-    </div>
+    <ContextoRotaDePara value>
+      <div
+        className={`pt-[calc(env(safe-area-inset-top)+0.75rem)] ${
+          comBarra
+            ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
+            : 'pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
+        }`}
+      >
+        {/* O ☰ fica fixo à esquerda (size-12 a partir de left-4): o cabeçalho começa depois dele. */}
+        <nav aria-label="Página" className="mb-1 flex min-h-12 items-center gap-3 pr-4 pl-20" data-testid="cabecalho-pagina">
+          <Link
+            to="/"
+            className="-ml-2 inline-flex min-h-12 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-texto hover:bg-borda/60"
+          >
+            <span aria-hidden="true">←</span> Início
+          </Link>
+          {titulo && <p className="min-w-0 truncate ivo-h3">{titulo}</p>}
+        </nav>
+        <Outlet />
+      </div>
+      {comBarra && <BarraCliente />}
+    </ContextoRotaDePara>
   )
 }
 

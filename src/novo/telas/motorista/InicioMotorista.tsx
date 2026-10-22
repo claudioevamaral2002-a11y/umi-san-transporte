@@ -15,6 +15,7 @@ import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useDisponivel } from '../../disponivel.ts'
 import { prazoAte, quandoCompleto } from '../../formatos.ts'
 import somDaChamada from '../../sons/chamada.wav'
+import { RotaDePara } from '../../../design/componentes/RotaDePara.tsx'
 
 /** Som e vibração da chamada (só com o app aberto até a fase 5). O navegador pode recusar o som sem um toque antes. */
 function tocarChamada() {
@@ -58,9 +59,7 @@ function ProximaCorrida({ item }: { item: ItemPendencia }) {
           {quandoCompleto(item.inicio)}
           {item.empresa_nome ? ` · ${item.empresa_nome}` : ''}
         </p>
-        <p className="ivo-legenda text-texto-suave break-words">
-          {item.origem} → {item.destino}
-        </p>
+        <RotaDePara origem={item.origem} destino={item.destino} paradas={item.paradas ?? []} className="mt-1" />
       </div>
       <SaidaMotorista id={item.id} liberadaEm={liberadaEm(item)} aoSair={() => navegar(`/viagem/${item.id}`)} />
     </section>
