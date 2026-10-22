@@ -19,13 +19,17 @@ const FECHAR_APOS_MS = 200
  */
 export function CampoEndereco({
   rotulo,
+  rotuloAcessivel,
   valor,
   aoMudar,
   aoMarcarNoMapa,
   erro,
   placeholder,
 }: {
-  rotulo: 'Origem' | 'Destino'
+  /** App atual: "Origem"/"Destino"; app novo (fase 4.1): "De", "Parada" e "Para". */
+  rotulo: string
+  /** Nome do campo para leitores de tela quando o rótulo visível se repete (ex.: "Parada 2"). */
+  rotuloAcessivel?: string
   valor: ValorEndereco
   aoMudar: (v: ValorEndereco) => void
   aoMarcarNoMapa: () => void
@@ -147,7 +151,7 @@ export function CampoEndereco({
     <ul
       id={idLista}
       role="listbox"
-      aria-label={`Sugestões para ${rotulo}`}
+      aria-label={`Sugestões para ${rotuloAcessivel ?? rotulo}`}
       onMouseDown={(e) => e.preventDefault()}
       className="max-h-[60dvh] space-y-1 overflow-y-auto rounded-cartao border border-borda bg-superficie p-2 shadow-[var(--sombra)]"
     >
@@ -195,6 +199,7 @@ export function CampoEndereco({
     <div>
       <Campo
         rotulo={rotulo}
+        aria-label={rotuloAcessivel}
         value={valor.texto}
         placeholder={placeholder}
         autoComplete="off"

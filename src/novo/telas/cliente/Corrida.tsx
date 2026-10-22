@@ -16,7 +16,8 @@ import type { Aprovacao } from '../../../telas/pedidos/Aprovar.tsx'
 import { useAcompanhamento } from '../../acompanhamento.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
-import { useRota } from '../../useRota.ts'
+import { paradasDoDetalhe } from './paradasDoDetalhe.ts'
+import { useRotaComParadas } from './rotaComParadas.ts'
 import { Acompanhar } from './Acompanhar.tsx'
 import { Aguardando, TrilhoCorrida } from './Aguardando.tsx'
 import { Concluida } from './Concluida.tsx'
@@ -121,7 +122,14 @@ export function CorridaCliente() {
   }, [status, recarregar])
 
   const p = dados?.pedido
-  const { estado: rota } = useRota(p ? ponto(p, 'origem') : null, p ? ponto(p, 'destino') : null)
+  // Fase 4.1: a ida passa pelas paradas do pedido e a volta (ida e volta) é direta; `km` e `kmVolta` vão para a
+  // prévia ("Pela tabela" da confirmação).
+  const { estado: rota, km, kmVolta } = useRotaComParadas(
+    p ? ponto(p, 'origem') : null,
+    p ? ponto(p, 'destino') : null,
+    p ? paradasDoDetalhe(p).pontos : [],
+    !!p && p.levar && p.trazer,
+  )
   const pontos = rota.fase === 'pronta' ? rota.rota.pontos : []
   const destino =
     pontos.at(-1) ?? (p && p.destino_lat != null && p.destino_lng != null ? { lat: p.destino_lat, lng: p.destino_lng } : undefined)
@@ -164,7 +172,8 @@ export function CorridaCliente() {
     return (
       <ConfirmarCorrida
         r={dados}
-        km={rota.fase === 'pronta' ? rota.rota.km : null}
+        km={km}
+        kmVolta={kmVolta}
         aoConfirmado={(a) => {
           setAprovacao(a)
           recarregar()

@@ -67,6 +67,15 @@ async function abrir(page: Page, o: { centro?: string; detalhes?: unknown[]; cam
   const chamadas = await simularPedidos(page, { detalhes: o.detalhes })
   const mapas = await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: '_p~iF~ps|U_ulLnnqC' })
   await simularBlocosDoMapa(page)
+  // A volta direta (Porto → Estaleiro Navegantes, sem paradas) tem outro km; o resto fica com `simularMapas`.
+  await page.route(`${URL_SUPABASE}/functions/v1/enderecos`, (route: Route) => {
+    const c = route.request().postDataJSON() as { acao: string; destino?: { place_id?: string } }
+    if (c.acao === 'rota' && c.destino?.place_id === 'ChIJdef') {
+      mapas.push(c)
+      return json(route, { ok: true, km: 38.64, minutos: 50 })
+    }
+    return route.fallback()
+  })
   // Locais da empresa: contados para provar que nada preenche a origem ao abrir.
   const locais: unknown[] = []
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/locais_da_empresa`, (route: Route) => {
@@ -161,6 +170,21 @@ test.describe('pedir com paradas', () => {
     const p = await criarPedido(chamadas)
     expect(p).toMatchObject({ categoria: 'PASSAGEIROS', modalidade: 'VEICULO_PROPRIO', paradas: [{ texto: 'Estaleiro Detroit', place_id: 'ChIJdet' }] })
     expect(p.horas_estimadas).toBeUndefined()
+  })
+
+  test('ida e volta: a ida passa pelas paradas e a volta direta vai em km_volta', async ({ page }) => {
+    const { mapas, categorias } = await abrir(page)
+    await page.getByRole('button', { name: '+ Adicionar parada' }).click()
+    await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
+    await escolher(page, 'Parada 1', 'Detroit', /Estaleiro Detroit/)
+    await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
+    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
+    await page.getByText('Detalhes da corrida (pessoas, carga, contato)').click()
+    await page.getByRole('checkbox', { name: 'Ida e volta' }).check()
+    await expect.poll(() => categorias.at(-1)).toEqual({ km: 42, km_volta: 38.6, levar: true, trazer: true, paradas: 1 })
+    const volta = mapas.filter((c) => c.acao === 'rota').at(-1)!
+    expect(volta).toMatchObject({ origem: { place_id: 'ChIJpor' }, destino: { place_id: 'ChIJdef' } })
+    expect(volta.paradas).toBeUndefined()
   })
 
   test('da escolha de categoria, "+ Adicionar parada" volta aos endereços com uma parada nova', async ({ page }) => {

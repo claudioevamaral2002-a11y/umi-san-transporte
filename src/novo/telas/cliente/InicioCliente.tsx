@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { Icone } from '../../../design/componentes/Icone.tsx'
 import type { Local } from '../../../lib/enderecos.ts'
-import { buscarSugestoes, pontoDaRota } from '../../../lib/enderecosRemoto.ts'
+import { pontoDaRota } from '../../../lib/enderecosRemoto.ts'
+import { MAX_PARADAS } from '../../../lib/paradas.ts'
 import { useSessao } from '../../../lib/sessao.tsx'
 import { saudacao } from '../../../lib/tempo.ts'
 import { CampoEndereco, type ValorEndereco } from '../../../telas/pedidos/CampoEndereco.tsx'
@@ -18,12 +19,18 @@ const VAZIO: ValorEndereco = { texto: '', local: null }
 
 const temPonto = (v: ValorEndereco): v is EnderecoEscolhido => !!v.local && pontoDaRota(v.local) !== null
 
+/** Todos os pontos com local (origem, cada parada e destino): dá para traçar a rota e ver as categorias. */
+const completo = (o: ValorEndereco, ps: readonly ValorEndereco[], d: ValorEndereco) => temPonto(o) && temPonto(d) && ps.every(temPonto)
+
 const coordenadas = (l: Local | null) => (l && l.lat !== null && l.lng !== null ? { lat: l.lat, lng: l.lng } : undefined)
 
+/** Campo do mapa aberto em "Marcar no mapa": origem, destino ou a parada de índice `n`. */
+type AlvoDoMapa = 'origem' | 'destino' | number
+
 /**
- * Mockup 1: início do cliente sobre o mapa. A origem já vem com o local mais usado da empresa; "Para onde?" busca os
- * locais da empresa primeiro, depois o Google, e "Marcar no mapa". Com os dois pontos, sobem as categorias (mockup 2).
- * O N3 só acompanha: não vê o pedido.
+ * Mockup 1 (fase 4.1): início do cliente sobre o mapa. "De" começa vazio (os locais da empresa aparecem primeiro na
+ * busca), "+ Adicionar parada" (até 3, cada uma com ×) e "Para". Cada campo busca os locais da empresa, depois o
+ * Google, e "Marcar no mapa". Com todos os pontos, sobem as categorias (mockup 2). O N3 só acompanha: não vê o pedido.
  */
 export function InicioCliente() {
   const { perfil } = useSessao()
@@ -36,42 +43,43 @@ export function InicioCliente() {
   const [de] = useState(() => lerPedirDeNovo(state))
   const [origem, setOrigem] = useState<ValorEndereco>(de?.origem ?? VAZIO)
   const [destino, setDestino] = useState<ValorEndereco>(de?.destino ?? VAZIO)
-  const [mapaPara, setMapaPara] = useState<'origem' | 'destino' | null>(null)
+  const [paradas, setParadas] = useState<ValorEndereco[]>([])
+  const [mapaPara, setMapaPara] = useState<AlvoDoMapa | null>(null)
   const [escolhendo, setEscolhendo] = useState(de !== null)
-  const origemMexida = useRef(de !== null)
   const titulo = useRef<HTMLHeadingElement>(null)
-
-  // Origem: o local mais usado da empresa (só os locais da empresa; nenhuma chamada ao Google).
-  useEffect(() => {
-    if (!pode) return
-    let vivo = true
-    void buscarSugestoes('', 'inicio').then((r) => {
-      const l = r.sugestoes.find((s) => s.daEmpresa)
-      if (!vivo || !l || !l.daEmpresa || origemMexida.current) return
-      setOrigem({ texto: l.nome, local: { nome: l.nome, endereco: l.endereco, lat: l.lat, lng: l.lng, place_id: l.place_id } })
-    })
-    return () => {
-      vivo = false
-    }
-  }, [pode])
+  const campos = useRef<HTMLDivElement>(null)
 
   useCamadasDoMapa(escolhendo ? {} : { centro: coordenadas(origem.local), destino: coordenadas(destino.local) })
 
-  function mudarOrigem(v: ValorEndereco) {
-    origemMexida.current = true
-    setOrigem(v)
-    if (temPonto(v) && temPonto(destino)) setEscolhendo(true)
+  function mudar(o: ValorEndereco, ps: ValorEndereco[], d: ValorEndereco) {
+    setOrigem(o)
+    setParadas(ps)
+    setDestino(d)
+    if (completo(o, ps, d)) setEscolhendo(true)
   }
-  function mudarDestino(v: ValorEndereco) {
-    setDestino(v)
-    if (temPonto(v) && temPonto(origem)) setEscolhendo(true)
+  const mudarOrigem = (v: ValorEndereco) => mudar(v, paradas, destino)
+  const mudarDestino = (v: ValorEndereco) => mudar(origem, paradas, v)
+  const mudarParada = (i: number, v: ValorEndereco) => mudar(origem, paradas.map((p, j) => (j === i ? v : p)), destino)
+
+  /** Abre um campo de parada vazio (até 3) e põe o foco nele. */
+  function adicionarParada() {
+    if (paradas.length >= MAX_PARADAS) return
+    const n = paradas.length + 1
+    setParadas((ps) => [...ps, VAZIO])
+    setEscolhendo(false)
+    requestAnimationFrame(() => campos.current?.querySelector<HTMLInputElement>(`input[aria-label="Parada ${n}"]`)?.focus())
+  }
+  function removerParada(i: number) {
+    setParadas((ps) => ps.filter((_, j) => j !== i))
   }
 
-  if (pode && !indisponivel && escolhendo && temPonto(origem) && temPonto(destino)) {
+  if (pode && !indisponivel && escolhendo && temPonto(origem) && temPonto(destino) && paradas.every(temPonto)) {
     return (
       <EscolherCategoria
         origem={origem}
         destino={destino}
+        paradas={paradas.filter(temPonto)}
+        aoAdicionarParada={paradas.length < MAX_PARADAS ? adicionarParada : undefined}
         categoriaInicial={de?.categoria ?? undefined}
         idaEVoltaInicial={de?.idaEVolta}
         semData={de !== null}
@@ -83,7 +91,8 @@ export function InicioCliente() {
     )
   }
 
-  const prontos = temPonto(origem) && temPonto(destino)
+  const prontos = completo(origem, paradas, destino)
+  const semLocal = [origem, ...paradas, destino].some((v) => v.texto.trim() !== '' && !v.local)
   return (
     <FolhaMapa rotulo="Pedir uma corrida">
       <h1 ref={titulo} tabIndex={-1} className="mb-3 ivo-h2 outline-none">
@@ -99,27 +108,58 @@ export function InicioCliente() {
           <p className="ivo-corpo">{indisponivel}</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div ref={campos} className="space-y-3">
           <CampoEndereco
-            rotulo="Destino"
-            placeholder="Para onde?"
-            valor={destino}
-            aoMudar={mudarDestino}
-            aoMarcarNoMapa={() => setMapaPara('destino')}
-          />
-          <CampoEndereco
-            rotulo="Origem"
+            rotulo="De"
             placeholder="De onde sai?"
             valor={origem}
             aoMudar={mudarOrigem}
             aoMarcarNoMapa={() => setMapaPara('origem')}
           />
+          {paradas.map((p, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <div className="min-w-0 flex-1">
+                <CampoEndereco
+                  rotulo="Parada"
+                  rotuloAcessivel={`Parada ${i + 1}`}
+                  placeholder="Onde parar?"
+                  valor={p}
+                  aoMudar={(v) => mudarParada(i, v)}
+                  aoMarcarNoMapa={() => setMapaPara(i)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removerParada(i)}
+                aria-label={`Remover parada ${i + 1}`}
+                className="mt-7 flex size-12 shrink-0 items-center justify-center rounded-xl text-texto-suave"
+              >
+                <Icone nome="fechar" tamanho={20} />
+              </button>
+            </div>
+          ))}
+          <CampoEndereco
+            rotulo="Para"
+            placeholder="Para onde?"
+            valor={destino}
+            aoMudar={mudarDestino}
+            aoMarcarNoMapa={() => setMapaPara('destino')}
+          />
+          {paradas.length < MAX_PARADAS && (
+            <button
+              type="button"
+              onClick={adicionarParada}
+              className="flex min-h-12 items-center font-semibold text-link underline underline-offset-4"
+            >
+              + Adicionar parada
+            </button>
+          )}
           {prontos ? (
             <Botao variante="principal" className="w-full" onClick={() => setEscolhendo(true)}>
               Ver categorias
             </Botao>
           ) : (
-            (origem.texto.trim() !== '' && !origem.local) || (destino.texto.trim() !== '' && !destino.local) ? (
+            semLocal ? (
               <p className="ivo-legenda text-texto-suave">Escolha um local da lista ou marque no mapa para ver o trajeto.</p>
             ) : null
           )}
@@ -132,7 +172,8 @@ export function InicioCliente() {
         aoUsar={(local) => {
           const v = { texto: local.nome, local }
           if (mapaPara === 'origem') mudarOrigem(v)
-          else mudarDestino(v)
+          else if (mapaPara === 'destino') mudarDestino(v)
+          else if (mapaPara !== null) mudarParada(mapaPara, v)
           setMapaPara(null)
         }}
       />

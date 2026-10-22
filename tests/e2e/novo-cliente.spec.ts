@@ -117,10 +117,13 @@ async function abrir(page: Page, o: Abrir = {}) {
   return { chamadas, mapas, categorias }
 }
 
-/** Do início até as categorias: origem já vem da empresa; o destino é o Porto de Itajaí (Google). */
+/** Do início até as categorias: a origem (vazia ao abrir, fase 4.1) é o local da empresa; o destino, o Porto de Itajaí (Google). */
 async function escolherDestino(page: Page) {
-  await expect(page.getByRole('combobox', { name: 'Origem' })).toHaveValue('Estaleiro Navegantes')
-  const destino = page.getByRole('combobox', { name: 'Destino' })
+  const origem = page.getByRole('combobox', { name: 'De', exact: true })
+  await expect(origem).toHaveValue('')
+  await origem.fill('Estaleiro Navegantes')
+  await page.getByRole('option', { name: /Estaleiro Navegantes/ }).first().click()
+  const destino = page.getByRole('combobox', { name: 'Para', exact: true })
   await expect(destino).toHaveAttribute('placeholder', 'Para onde?')
   await destino.fill('Porto')
   await page.getByRole('option', { name: /Porto de Itajaí/ }).click()
@@ -236,7 +239,7 @@ test.describe('pedir', () => {
   test('o N3 não vê o botão de pedir', async ({ page }) => {
     await abrir(page, { perfil: N3 })
     await expect(page.getByTestId('folha-mapa')).toContainText('Carla')
-    await expect(page.getByRole('combobox', { name: 'Destino' })).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Pedir/ })).toHaveCount(0)
   })
 })

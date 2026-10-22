@@ -300,7 +300,8 @@ test.describe('fim', () => {
     await expect(page).toHaveURL(/\/$/)
     const folha = page.getByTestId('folha-mapa')
     await expect(folha).toContainText('Estaleiro Navegantes')
-    await expect(folha).toContainText('até Porto de Itajaí')
+    // Fase 4.1 (Tarefa 6): o percurso aparece em De → Para.
+    await expect(page.getByTestId('rota-de-para')).toContainText('Porto de Itajaí')
     await expect(page.getByRole('radio', { name: /IVO Carga Leve/ })).toBeChecked()
     // Sem data: nenhum horário escolhido e nada de "Pedir" até a pessoa escolher.
     await expect(page.getByRole('button', { name: /^Agendar · escolha/ })).toBeVisible()
