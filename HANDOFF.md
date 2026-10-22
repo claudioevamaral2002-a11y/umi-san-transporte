@@ -54,6 +54,7 @@ Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~2
 ## 5. Próximas fases (backlog em issues #11–#20)
 
 - **Fase 4 — IVO novo, estilo Uber (PR aberto, em teste no `ivo-novo.pages.dev`):** ver a seção 5B.
+- **Fase 4.1 — categorias livres, paradas e ajustes (PR aberto):** ver a seção 5C.
 - **Fase 3B — Execução e rastreio (PR em revisão, 18/10):** "deslize para sair" com débito, posição do motorista ao vivo para o cliente, nova previsão e atraso, conclusão com fotos. Especificação, plano e roteiro: `docs/fases/fase-3b-*.md`; operação: RUNBOOK §17.
 - **Fase 3 — restante:** retenção das fotos (com o e-mail da fase 5); aditivo; revisão de contrato já aprovado (§4.4); anexos no pedido; "Repetir pedido".
 - **Fase 5 — Operação:** notificações (outbox, push e e-mail), backup diário criptografado no R2, *dead man's switch* (Healthchecks), teste de restauração mensal, monitoramento.
@@ -89,6 +90,44 @@ O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deplo
 - app nativo do motorista (rastreio em segundo plano e voz curva a curva): opções e custos na §10 do desenho da fase 4;
 - trocar o endereço principal: servir o app novo em `umi-san-transporte.pages.dev` quando o dono aprovar (revisar o endereço fixo do app atual no menu e o `APP_ORIGENS`);
 - os itens menores adiados nas revisões ficam triados na revisão final da fase.
+
+## 5C. Fase 4.1 (categorias livres, paradas e ajustes): estado e pendências
+
+**Estado:** no PR (branch `fase-4-1`), **ainda não mesclado**. O merge é do dono (dispara o Deploy). Desenho: `docs/fases/fase-4-1-categorias-paradas-desenho.md` (com "Desvios na implementação" no fim); roteiro: `docs/fases/fase-4-1-o-que-testar.md`; operação: RUNBOOK §19.
+
+**O que foi construído:**
+- **Categorias livres com tabela própria** (`app.tarifas_categoria`, 8 campos, zerado = não cobra); o Master cria, renomeia, ativa e desativa; **Publicar tabela** (`publicar_tarifas`) com revisão do que muda e avisos. Iniciais: Passageiros, Carga Leve (com reboque) e **IVO Motorista** (por hora, veículo do cliente); Carga Pesada desativada.
+- **Até 3 paradas** (trajeto inteiro pelo km + taxa por parada), **horas estimadas** e **centro de custo** ao pedir; calculadora do motorista só com o que a tabela cobra; rota e Waze pelas paradas.
+- **Navegação:** cabeçalho com "← Início" e título em toda página, barra do cliente, página atual destacada. **Painel da empresa em abas** (Painel, Corridas, Pessoas, Carteira). **Agenda** com rolagem lateral personalizada. Listas **De → Para**. Cadastro de veículo com os nomes de categoria do banco; origem sem pré-preenchimento.
+- Migrations `20261022120000` a `20261022120300`; pgTAP `0041` em diante; e2e real da corrida por hora e da corrida com paradas.
+
+**Rulings da execução:**
+- **F1:** `categorias_disponiveis` já devolve `veiculo_cliente`, `cobra_hora` e `cobra_parada` por categoria (a tela do Master e a do cliente dependem deles).
+- **F2:** T3, T8 e T10 rodaram em paralelo, cada uma em worktree e branch próprios, e foram mescladas depois da revisão de cada uma.
+- **F3:** T5, T6, T7 e T9 também em paralelo, com arquivos disjuntos.
+- **F4 (km em ida e volta com paradas):** km = ida pelas paradas + volta direta; `categorias_disponiveis` ganhou `km_volta` (migration `20261022120300`), enviado só quando há paradas, e o motorista arredonda a soma uma vez, como o `kmDoPedido`.
+
+**Pendências do dono:**
+1. Depois do merge e do Deploy, **publicar a tabela de cada categoria** (☰ › Categorias e preços › Publicar tabela), incluindo o **valor por hora da IVO Motorista**. Até lá, os preços são os de hoje e a IVO Motorista fica "Indisponível no momento" (RUNBOOK §19.2).
+2. Conferir a taxa de **reboque da Carga Leve**: depois da publicação ela passa a ser cobrada.
+3. Atualizar o app nos celulares (aviso "Nova versão · Atualizar").
+4. Rodar o roteiro `docs/fases/fase-4-1-o-que-testar.md`.
+
+**Desvios conhecidos (aceitos; também no desenho):**
+- O **☰ fica à esquerda** (casca fixa do app inteiro); o mockup o mostrava à direita.
+- O painel da empresa usa **`<nav>`** com links, não `tablist` (cada aba é uma rota).
+- **"Pedir de novo" não leva as paradas nem as horas**: abre só com a rota e a categoria.
+- **Sem pinos nas paradas** no mapa (a linha da rota passa por elas).
+- A **previsão de chegada do motorista é otimista** até a última parada (calculada para o destino final).
+
+**Menores adiados (triagem da revisão final):**
+- `tarifa_inicial` preenche taxa fixa de Passageiros e Carga Leve, que hoje não é cobrada (comentar ou forçar 0).
+- `publicar_tarifas` parte da versão vigente, enquanto `publicar_contrato` parte da última (uma versão futura pendente pode ser perdida).
+- `salvar_categoria` muda `veiculo_cliente` e reboque sem publicação; falta recusar `veiculo_cliente` em categoria que já tem veículos.
+- Um erro diferente de `VALOR_INVALIDO` numa categoria derruba a lista toda em `categorias_disponiveis`.
+- `linhas_da_tarifa` recusa `diarias` (o caminho de categoria já as descarta antes; só importa se alguém chamar a função direto).
+- `interno.tarifa_da_categoria` ficou sem uso; falta teste de fallback com preços por categoria da fase 4 (inclusive Carga Pesada inativa).
+- Na migration `20261022120000`, a seção 10 vem antes da 9 (cosmético).
 
 ## 6. Onde está cada coisa
 
