@@ -8,7 +8,7 @@
 -- sem tarifa fica indisponível; categorias_adm com a tarifa da versão ou a inicial.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(56);
+select plan(61);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -289,6 +289,46 @@ select ok(pg_temp.cat(current_setting('t.d2')::jsonb, 'GUINCHO') @> '{"disponive
 select ok((pg_temp.cat(current_setting('t.adm1')::jsonb, 'PASSAGEIROS') -> 'tarifa') @> '{"inicial": false, "taxa_fixa_cent": 4000}'
       and (pg_temp.cat(current_setting('t.adm1')::jsonb, 'GUINCHO') -> 'tarifa') @> '{"inicial": true}',
   'categorias_adm: tarifa da versão vigente; a categoria nova vem com a inicial');
+
+------------------------------------------------------------------ 10. revisão: Carga Leve pedida pelo app da fase 4 (reboque NAO)
+select set_config('t.i_' || n, to_char((now() + d) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), true)
+from (values ('cl1', interval '3 hours'), ('cl2', interval '5 hours')) x(n, d);
+select set_config('t.equip', '{"duracao_min": 30, "origem": "Porto de Itajaí", "destino": "Base Navegantes", "levar": true,
+  "trazer": false, "carga": "EQUIPAMENTO", "equipamento_desc": "Gerador portátil", "modalidade": "VEICULO_PROPRIO",
+  "categoria": "CARGA_LEVE"}', true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.cl1', api.criar_pedido(current_setting('t.equip')::jsonb
+  || jsonb_build_object('inicio', current_setting('t.i_cl1'), 'reboque', 'NAO'))::text, true);
+select set_config('t.cl2', api.criar_pedido(current_setting('t.equip')::jsonb
+  || jsonb_build_object('inicio', current_setting('t.i_cl2'), 'reboque', 'SIM'))::text, true);
+reset role;
+select ok((current_setting('t.cl1')::jsonb ->> 'ok')::boolean
+          and (select reboque::text || ':' || carga::text from app.atividades
+                where id = (current_setting('t.cl1')::jsonb ->> 'id')::uuid) = 'SIM:EQUIPAMENTO',
+  'Carga Leve com reboque NAO (app da fase 4 em cache): aceita e gravada com o reboque da categoria');
+select ok((current_setting('t.cl2')::jsonb ->> 'ok')::boolean
+          and (select reboque::text || ':' || carga::text from app.atividades
+                where id = (current_setting('t.cl2')::jsonb ->> 'id')::uuid) = 'SIM:EQUIPAMENTO',
+  'Carga Leve com reboque SIM: aceita e gravada com o reboque da categoria');
+
+------------------------------------------------------------------ 11. revisão: tarifa que nunca dá preço fica indisponível
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca1'), true);
+select set_config('t.v5', api.publicar_tarifas('00000000-0000-0000-0000-0000000000e1', current_setting('t.tar')::jsonb
+  || '{"GUINCHO": {"taxa_fixa_cent": 0, "km_cent": 0, "hora_cent": 0, "hora_espera_cent": 0, "parada_cent": 0,
+                   "retorno_bp": 0, "reboque_cent": 0, "hospedagem_diaria_cent": 0}}'::jsonb, now())::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.d3', api.categorias_disponiveis('{"km":48,"levar":true,"trazer":false}'::jsonb)::text, true);
+select set_config('t.d4', api.categorias_disponiveis('{"km":48,"levar":true,"trazer":false,"horas":4}'::jsonb)::text, true);
+reset role;
+select ok(current_setting('t.v5')::jsonb ->> 'ok' = 'true'
+          and pg_temp.cat(current_setting('t.d3')::jsonb, 'GUINCHO') @> '{"disponivel": false, "total_cent": null}',
+  'tarifa toda zerada (com veículo): indisponível');
+select ok(pg_temp.cat(current_setting('t.d3')::jsonb, 'MOTORISTA') @> '{"disponivel": true, "total_cent": null, "cobra_hora": true}',
+  'IVO Motorista só com valor por hora e sem horas: disponível, preço pendente');
+select is(pg_temp.cat(current_setting('t.d4')::jsonb, 'MOTORISTA') -> 'total_cent', '36000'::jsonb,
+  'IVO Motorista com horas 4: com preço');
 
 select * from finish();
 rollback;
