@@ -1114,7 +1114,7 @@ declare
   v_saldo jsonb;
   v_categoria text;
   v_agora boolean;
-  k app.categorias;
+  v_cat app.categorias;
 begin
   if not (select app.pode_fazer('CRIAR_PEDIDO')) then
     return interno.negar('CRIAR_PEDIDO', 'pedido', 'SEM_PERMISSAO');
@@ -1152,7 +1152,7 @@ begin
 
   -- 4.1: com categoria, carga e reboque gravados são os da categoria (não os que o aparelho mandou).
   if v_categoria is not null then
-    select * into k from app.categorias x where x.codigo = v_categoria;
+    select * into v_cat from app.categorias x where x.codigo = v_categoria;
   end if;
 
   v_inicio := (p ->> 'inicio')::timestamptz;
@@ -1184,10 +1184,10 @@ begin
     values (
       v.empresa_id, v.usuario_id, v_motorista, v_inicio, (p ->> 'duracao_min')::int,
       btrim(p ->> 'origem'), btrim(p ->> 'destino'), (p ->> 'levar')::boolean, (p ->> 'trazer')::boolean,
-      coalesce(k.carga, (p ->> 'carga')::app.tipo_carga),
+      coalesce(v_cat.carga, (p ->> 'carga')::app.tipo_carga),
       (p ->> 'pessoas_qtd')::int, nullif(btrim(p ->> 'equipamento_desc'), ''), (p ->> 'peso_kg')::numeric,
       nullif(btrim(p ->> 'dimensoes'), ''),
-      (p ->> 'modalidade')::app.modalidade, coalesce(k.reboque, (p ->> 'reboque')::app.reboque),
+      (p ->> 'modalidade')::app.modalidade, coalesce(v_cat.reboque, (p ->> 'reboque')::app.reboque),
       nullif(btrim(p ->> 'contato_nome'), ''), nullif(btrim(p ->> 'contato_telefone'), ''),
       nullif(p ->> 'observacoes', ''), v_prazo,
       (p ->> 'origem_lat')::numeric, (p ->> 'origem_lng')::numeric,
