@@ -1,5 +1,8 @@
 // Fase 4: veículos do motorista (o ADM vê e cadastra de todos). O banco confere dono, placa e categorias.
-import type { CodigoCategoria } from './categorias.ts'
+import type { CategoriaAdm } from './categoriasAdm.ts'
+
+/** Código de qualquer categoria do banco (fase 4.1: o Master cria novas). */
+export type CodigoDaCategoria = string
 import { chamar, ler } from './pedidos.ts'
 
 export type SituacaoVeiculo = 'ATIVO' | 'MANUTENCAO' | 'INATIVO'
@@ -13,7 +16,7 @@ export interface Veiculo {
   lugares: number
   carga_max_kg: number
   reboque_desc: string | null
-  categorias: CodigoCategoria[]
+  categorias: CodigoDaCategoria[]
   situacao: SituacaoVeiculo
   criado_em: string
   /** Só para o ADM. */
@@ -28,7 +31,7 @@ export interface EntradaVeiculo {
   lugares: number
   carga_max_kg: number
   reboque_desc?: string | null
-  categorias: CodigoCategoria[]
+  categorias: CodigoDaCategoria[]
   /** Só o ADM, ao criar. */
   motorista_id?: string
 }
@@ -45,8 +48,26 @@ export const veiculos = {
     chamar('mudar_situacao_veiculo', { p_id: id, p_situacao: situacao }),
 }
 
-/** Nome curto da categoria nas etiquetas do veículo (mockups 8 e 9). */
-export const NOMES_CATEGORIA: Record<CodigoCategoria, string> = {
+/** As categorias que um veículo pode atender: ativas e que usam veículo da IVO (não a de veículo do cliente). */
+export function categoriasDeVeiculo<T extends Pick<CategoriaAdm, 'ativa' | 'veiculo_cliente'>>(cats: readonly T[]): T[] {
+  return cats.filter((c) => c.ativa && !c.veiculo_cliente)
+}
+
+/** `{codigo: nome}` das categorias do banco (`categoriasAdm.listar()` ou `categorias_disponiveis`). */
+export function nomesDasCategorias(cats: readonly Pick<CategoriaAdm, 'codigo' | 'nome'>[]): Record<string, string> {
+  return Object.fromEntries(cats.map((c) => [c.codigo, c.nome]))
+}
+
+/** Nome da categoria nas etiquetas do veículo; sem a categoria na lista, o próprio código. */
+export function nomeDaCategoria(codigo: string, nomes: Readonly<Record<string, string>>): string {
+  return Object.hasOwn(nomes, codigo) ? (nomes[codigo] ?? codigo) : codigo
+}
+
+/**
+ * @deprecated Lista fixa de antes da 4.1: os nomes vêm do banco (`nomesDasCategorias` + `nomeDaCategoria`).
+ * Fica só até a Tarefa 5 trocar `CadastrarVeiculo.tsx` e `MeusVeiculos.tsx`; a Tarefa 5 apaga.
+ */
+export const NOMES_CATEGORIA: Record<string, string> = {
   PASSAGEIROS: 'Passageiros',
   CARGA_LEVE: 'Carga Leve',
   CARGA_PESADA: 'Carga Pesada',
@@ -69,7 +90,7 @@ export interface FormVeiculo {
   lugares: string
   cargaMaxKg: string
   reboqueDesc: string
-  categorias: CodigoCategoria[]
+  categorias: CodigoDaCategoria[]
 }
 
 export const FORM_VEICULO_VAZIO: FormVeiculo = {

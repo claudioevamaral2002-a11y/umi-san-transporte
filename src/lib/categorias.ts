@@ -3,17 +3,30 @@
 import type { LinhaOrcamento } from './pedidos.ts'
 import { ler } from './pedidos.ts'
 import { type FormPedido, montarPedido } from './novoPedido.ts'
+import { type Parada, paraPedido } from './paradas.ts'
 import type { Carga, Reboque } from './situacao.ts'
 
+/** As três categorias de antes da 4.1 (preços e telas antigos). Categorias novas usam `string`: ver `CategoriaComPreco`. */
 export type CodigoCategoria = 'PASSAGEIROS' | 'CARGA_LEVE' | 'CARGA_PESADA'
 
 export interface CategoriaComPreco {
-  codigo: CodigoCategoria
+  /** Fase 4.1: o Master cria categorias; o código é gerado do nome ("IVO Motorista" vira `MOTORISTA`) e nunca muda. */
+  codigo: string
   nome: string
   descricao_curta: string
   disponivel: boolean
+  /** `null` = "Indisponível no momento" ou preço pendente (categoria por hora sem as horas). */
   total_cent: number | null
   linhas?: LinhaOrcamento[] | null
+  /** O banco devolve como a categoria preenche o pedido (as antigas sem isso caem em `PREENCHIMENTO`). */
+  carga?: Carga
+  reboque?: Reboque
+  /** Ivo dirige o carro da empresa: não exige veículo da IVO e a modalidade do pedido é VEICULO_CLIENTE. */
+  veiculo_cliente: boolean
+  /** A tarifa tem valor por hora: a tela pede "Horas estimadas". */
+  cobra_hora: boolean
+  /** A tarifa tem valor por parada. */
+  cobra_parada: boolean
 }
 
 /**
@@ -26,10 +39,30 @@ export const PREENCHIMENTO: Record<CodigoCategoria, { carga: Carga; reboque: Reb
   CARGA_PESADA: { carga: 'EQUIPAMENTO', reboque: 'SIM' },
 }
 
-/** A categoria com o preenchimento dela; `null` para um código que esta versão do app não conhece. */
+/**
+ * A categoria com o preenchimento dela: o que o banco devolveu (categorias criadas pelo Master) ou, sem isso, o das três
+ * de antes da 4.1; `null` se não há nenhum dos dois.
+ */
 export function comPreenchimento(c: CategoriaComPreco): (CategoriaComPreco & { carga: Carga; reboque: Reboque }) | null {
-  const p = Object.hasOwn(PREENCHIMENTO, c.codigo) ? PREENCHIMENTO[c.codigo] : null
+  if (c.carga && c.reboque) return { ...c, carga: c.carga, reboque: c.reboque }
+  const p = Object.hasOwn(PREENCHIMENTO, c.codigo) ? PREENCHIMENTO[c.codigo as CodigoCategoria] : null
   return p ? { ...c, ...p } : null
+}
+
+/** Horas estimadas (categoria cobrada por hora): de 0,5 a 24, de meia em meia hora. */
+export const HORAS_MIN = 0.5
+export const HORAS_MAX = 24
+export const PASSO_HORAS = 0.5
+/** Centro de custo: texto livre, opcional, até 80 caracteres. */
+export const MAX_CENTRO_CUSTO = 80
+
+export function horasValidas(h: number): boolean {
+  return Number.isFinite(h) && h >= HORAS_MIN && h <= HORAS_MAX && h * 2 === Math.trunc(h * 2)
+}
+
+/** Botões − / +: `sentido` 1 ou -1, um passo de 0,5, preso entre 0,5 e 24. */
+export function mudarHoras(horas: number, sentido: 1 | -1): number {
+  return Math.min(HORAS_MAX, Math.max(HORAS_MIN, horas + sentido * PASSO_HORAS))
 }
 
 /**
@@ -64,20 +97,40 @@ export function toleranciaKm(kmRota: number): number {
 export const MARGEM_AGORA_MIN = 60
 
 export const categorias = {
-  /** `km` vai como número JSON (o banco confere o formato); categorias inativas nem vêm. */
-  disponiveis: (p: { km: number; levar: boolean; trazer: boolean }) =>
-    ler<{ categorias: CategoriaComPreco[] }>('categorias_disponiveis', { p }),
+  /**
+   * `km` vai como número JSON (o banco confere o formato); categorias inativas nem vêm. `paradas` é a quantidade (0 a 3)
+   * e `horas` as horas estimadas; sem eles, o preço sai sem essas linhas. Chaves vazias não vão.
+   */
+  disponiveis: (p: { km: number; levar: boolean; trazer: boolean; paradas?: number | null; horas?: number | null }) => {
+    const corpo: Record<string, unknown> = { km: p.km, levar: p.levar, trazer: p.trazer }
+    if (p.paradas !== undefined && p.paradas !== null) corpo.paradas = p.paradas
+    if (p.horas !== undefined && p.horas !== null) corpo.horas = p.horas
+    return ler<{ categorias: CategoriaComPreco[] }>('categorias_disponiveis', { p: corpo })
+  },
 }
 
-/** Corpo de `api.criar_pedido(p)` para a categoria escolhida: veículo do prestador, carga e reboque da categoria. */
+/**
+ * Corpo de `api.criar_pedido(p)` para a categoria escolhida: carga e reboque da categoria; modalidade VEICULO_CLIENTE
+ * na categoria de veículo do cliente (IVO Motorista), VEICULO_PROPRIO nas demais. `paradas` (até 3), `horas`
+ * (→ `horas_estimadas`) e `centroCusto` (aparado, vazio não vai) só entram quando informados.
+ */
 export function pedidoDaCategoria(
   c: CategoriaComPreco & { carga: Carga; reboque: Reboque },
   base: FormPedido,
-  opcoes: { agora?: boolean } = {},
+  opcoes: { agora?: boolean; paradas?: readonly Parada[]; horas?: number | null; centroCusto?: string | null } = {},
 ): Record<string, unknown> {
-  const p = montarPedido({ ...base, modalidade: 'VEICULO_PROPRIO', carga: c.carga, reboque: c.reboque })
+  const p = montarPedido({
+    ...base,
+    modalidade: c.veiculo_cliente ? 'VEICULO_CLIENTE' : 'VEICULO_PROPRIO',
+    carga: c.carga,
+    reboque: c.reboque,
+  })
   p.categoria = c.codigo
   if (opcoes.agora) p.agora = true
+  if (opcoes.paradas && opcoes.paradas.length > 0) p.paradas = paraPedido(opcoes.paradas)
+  if (opcoes.horas !== undefined && opcoes.horas !== null) p.horas_estimadas = opcoes.horas
+  const cc = opcoes.centroCusto?.trim()
+  if (cc) p.centro_custo = cc
   return p
 }
 
