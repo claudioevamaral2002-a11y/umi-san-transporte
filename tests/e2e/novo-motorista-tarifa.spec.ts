@@ -48,7 +48,7 @@ const TARIFA_PASSAGEIROS: Tarifa = { ...ZERADA, taxa_fixa_cent: 1000, km_cent: 3
  * maiores que zero; sem `horas`/`paradas` na entrada, valem as do pedido; `diarias` é recusado aqui (a calculadora nova
  * não pode depender de o banco ignorá-lo).
  */
-function calcularPelaTarifa(t: Tarifa, pedido: { horas_estimadas?: number | null; paradas?: unknown[] }, e: Record<string, unknown>) {
+function calcularPelaTarifa(t: Tarifa, pedido: Record<string, unknown>, e: Record<string, unknown>) {
   if ('diarias' in e) return { ok: false, codigo: 'CAMPOS_INVALIDOS' }
   const linhas: Array<Record<string, unknown>> = []
   const linha = (codigo: string, descricao: string, quantidade: number | null, unitario: number | null, valor: number) =>
@@ -56,7 +56,7 @@ function calcularPelaTarifa(t: Tarifa, pedido: { horas_estimadas?: number | null
   const km = Number(e.km ?? 0)
   const horas = e.horas === undefined || e.horas === null ? Number(pedido.horas_estimadas ?? 0) : Number(e.horas)
   const espera = Number(e.espera_horas ?? 0)
-  const paradas = e.paradas === undefined || e.paradas === null ? (pedido.paradas ?? []).length : Number(e.paradas)
+  const paradas = e.paradas === undefined || e.paradas === null ? ((pedido.paradas as unknown[] | undefined) ?? []).length : Number(e.paradas)
   const pedagio = Number(e.pedagio_cent ?? 0)
   const hosp = Number(e.hospedagem_diarias ?? 0)
   if (t.taxa_fixa_cent > 0) linha('TAXA_FIXA', 'Taxa fixa', 1, t.taxa_fixa_cent, t.taxa_fixa_cent)
