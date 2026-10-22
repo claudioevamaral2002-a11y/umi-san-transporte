@@ -1,8 +1,12 @@
 name: CI
 
+# Push só na main (é o que o Deploy espera); branches de trabalho rodam pelo PR, sem duplicar a execução.
+# Branch sem PR: gh workflow run ci.yml --ref <branch> (workflow_dispatch nunca publica: o Deploy só aceita push).
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
