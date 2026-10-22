@@ -5,7 +5,7 @@ import { Cartao } from '../../../design/componentes/Cartao.tsx'
 import { Interruptor } from '../../../design/componentes/Interruptor.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
-import { ErroAoCarregar } from '../../../design/componentes/Tela.tsx'
+import { ErroAoCarregar, useTituloNaTela } from '../../../design/componentes/Tela.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { api, type ContratoListado } from '../../../lib/api.ts'
 import type { CodigoCategoria } from '../../../lib/categorias.ts'
@@ -173,6 +173,8 @@ function PrecosDoContrato({
  * taxa de cada uma numa versão nova do contrato (imutável, como hoje), publicada por `publicar_contrato_categorias`.
  */
 export function CategoriasPrecos() {
+  // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
+  useTituloNaTela('visivel')
   const lista = useConsulta('novo-categorias-adm', () => categoriasAdm.ler(null, null))
   const contratos = useConsulta('novo-contratos-adm', api.contratos)
   const [alvoId, setAlvoId] = useState<string>('modelo')

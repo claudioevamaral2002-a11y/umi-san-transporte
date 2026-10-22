@@ -21,6 +21,7 @@ import { formatarKm, prazoAte, quandoCompleto, reaisCurto } from '../../formatos
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
 import type { EstadoRota } from '../../useRota.ts'
 import { formDaTabela, rotuloVeiculo, useChamada } from './chamada.ts'
+import { RotaDePara } from '../../../design/componentes/RotaDePara.tsx'
 
 /** Depois de enviar: o início mostra este aviso (o pedido segue para o cliente confirmar). */
 export const AVISO_PROPOSTA = 'Proposta enviada. O cliente confirma ou pede outro valor; você é avisado aqui.'
@@ -151,9 +152,7 @@ function Responder({
       <h1 ref={titulo} tabIndex={-1} className="mt-2 ivo-h3 outline-none">
         {p.empresa_nome} · {quandoCompleto(p.inicio)}
       </h1>
-      <p className="ivo-legenda text-texto-suave">
-        {p.origem} → {p.destino}
-      </p>
+      <RotaDePara origem={p.origem} destino={p.destino} className="mt-1" />
       <p className="ivo-legenda font-semibold text-texto-suave" aria-live="polite">
         Responda até {prazoAte(p.prazo_orcar_ate, agora)}
       </p>

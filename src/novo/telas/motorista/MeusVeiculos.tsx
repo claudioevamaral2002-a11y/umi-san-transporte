@@ -5,7 +5,7 @@ import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Segmentado } from '../../../design/componentes/Segmentado.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
-import { EstadoVazio, ErroAoCarregar } from '../../../design/componentes/Tela.tsx'
+import { EstadoVazio, ErroAoCarregar, useTituloNaTela } from '../../../design/componentes/Tela.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
 import { NOMES_CATEGORIA, SITUACOES, veiculos, type SituacaoVeiculo, type Veiculo } from '../../../lib/veiculos.ts'
@@ -96,6 +96,8 @@ function CartaoVeiculo({
 
 /** Lista de veículos: os do motorista (Meus veículos) ou os de todos os motoristas (Veículos do ADM). */
 export function ListaDeVeiculos({ adm = false }: { adm?: boolean }) {
+  // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
+  useTituloNaTela('visivel')
   const { dados, erro, recarregar } = useConsulta(adm ? 'novo-veiculos-adm' : 'novo-meus-veiculos', () => veiculos.meus())
   const local = useLocation()
   const [aviso, setAviso] = useState<string | null>(() => (local.state as { aviso?: string } | null)?.aviso ?? null)

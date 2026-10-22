@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { Dinheiro } from '../../design/componentes/Dinheiro.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { MarcaAgora } from '../../design/componentes/MarcaAgora.tsx'
+import { RotaDePara, useRotaDePara } from '../../design/componentes/RotaDePara.tsx'
 import { StatusBadge, type Status } from '../../design/componentes/StatusBadge.tsx'
 import type { ItemPedido, LinhaOrcamento } from '../../lib/pedidos.ts'
 import { ETAPAS, etapaDoPedido, statusExibido } from '../../lib/situacao.ts'
@@ -160,8 +161,24 @@ export function Contagem({
   )
 }
 
-/** Origem → destino com a linha da rota (anel marinho → triângulo laranja). */
-export function Rota({ origem, destino, compacta = false }: { origem: string; destino: string; compacta?: boolean }) {
+/**
+ * Origem → destino com a linha da rota (anel marinho → triângulo laranja). No app novo (contexto ligado), vira
+ * "De → (Parada) → Para" em linhas (especificação §6.6).
+ */
+export function Rota({
+  origem,
+  destino,
+  paradas,
+  compacta = false,
+}: {
+  origem: string
+  destino: string
+  /** Só no app novo (o app atual mostra origem e destino, como hoje). */
+  paradas?: readonly string[] | null
+  compacta?: boolean
+}) {
+  const dePara = useRotaDePara()
+  if (dePara) return <RotaDePara origem={origem} destino={destino} paradas={paradas ?? []} />
   return (
     <div className="flex gap-3" data-testid="rota">
       <div aria-hidden="true" className="flex w-3.5 flex-col items-center pt-1.5">
@@ -222,7 +239,7 @@ export function CartaoPedido({ item, mostrarEmpresa = false }: { item: ItemPedid
         <StatusBadge status={statusExibido(item.status, item.prazo_vencido)} />
       </div>
       <div className="mt-3">
-        <Rota origem={item.origem} destino={item.destino} compacta />
+        <Rota origem={item.origem} destino={item.destino} paradas={item.paradas} compacta />
       </div>
       {(prazo || item.total_cent !== null) && (
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-borda pt-3">

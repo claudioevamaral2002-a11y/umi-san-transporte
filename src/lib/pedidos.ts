@@ -14,6 +14,8 @@ export interface ItemPedido {
   duracao_min: number
   origem: string
   destino: string
+  /** Fase 4.1: endereços das paradas, na ordem (até 3), quando houver. */
+  paradas?: string[] | null
   levar: boolean
   trazer: boolean
   modalidade: Modalidade
@@ -204,6 +206,8 @@ export interface ItemPendencia {
   duracao_min: number
   origem: string
   destino: string
+  /** Fase 4.1: endereços das paradas, na ordem (até 3), quando houver. */
+  paradas?: string[] | null
   /** Prazo para orçar (aguardando orçamento) ou validade do orçamento (aguardando aprovação). */
   prazo?: string
   urgente?: boolean

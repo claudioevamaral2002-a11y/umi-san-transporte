@@ -10,6 +10,7 @@ import { mensagemDoCodigo } from '../../lib/erros.ts'
 import { contato, formatarTelefone, mascararTelefoneDoPerfil, normalizarTelefone } from '../../lib/perfilContato.ts'
 import { rotuloCurto, useRotulos } from '../../lib/rotulos.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
+import { useTituloNaTela } from '../../design/componentes/Tela.tsx'
 
 function Telefone({ atual, aoSalvar }: { atual: string | null; aoSalvar: () => void }) {
   const [texto, setTexto] = useState(() => formatarTelefone(atual))
@@ -72,6 +73,8 @@ function Telefone({ atual, aoSalvar }: { atual: string | null; aoSalvar: () => v
  * editável (para o "Ligar") e a situação da verificação em duas etapas.
  */
 export function PerfilSeguranca() {
+  // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
+  useTituloNaTela('visivel')
   const { perfil, email } = useSessao()
   const rotulos = useRotulos()
   const tel = useConsulta('novo-meu-telefone', () => contato.meuTelefone())
