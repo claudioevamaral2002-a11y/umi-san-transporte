@@ -79,6 +79,10 @@ export function criarManipuladorEnderecos(deps: {
       tipo = 'DETALHAR'
     } else if (c.acao === 'rota') {
       if (!pontoValido(c.origem) || !pontoValido(c.destino)) return INVALIDO
+      // Paradas intermediárias (opcionais, no máximo 3), cada uma no mesmo formato de origem e destino.
+      if (c.paradas !== undefined) {
+        if (!Array.isArray(c.paradas) || c.paradas.length > 3 || !c.paradas.every(pontoValido)) return INVALIDO
+      }
       tipo = 'ROTA'
     } else {
       return INVALIDO
@@ -137,6 +141,7 @@ export function criarManipuladorEnderecos(deps: {
     // Rota: falha, tempo esgotado ou nenhuma rota de carro viram km null (o pedido segue sem prévia).
     const o = c.origem as PontoRota
     const d = c.destino as PontoRota
+    const paradas = (c.paradas as PontoRota[] | undefined) ?? []
     const r = (await chamar(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
       {
@@ -144,6 +149,7 @@ export function criarManipuladorEnderecos(deps: {
         body: JSON.stringify({
           origin: paraGoogle(o),
           destination: paraGoogle(d),
+          ...(paradas.length > 0 ? { intermediates: paradas.map(paraGoogle) } : {}),
           travelMode: 'DRIVE',
           languageCode: 'pt-BR',
           units: 'METRIC',

@@ -40,6 +40,21 @@ export function kmDaRota(km: number): number {
   return Math.round(km * 10) / 10
 }
 
+/**
+ * Km do pedido: só ida (ou sem retorno) é a ida; ida e volta soma a ida (com paradas) e a volta direta.
+ * `null` quando falta a ida.
+ */
+export function kmDoPedido(p: {
+  ida: { km: number } | null
+  volta?: { km: number } | null
+  levar: boolean
+  trazer: boolean
+}): number | null {
+  if (!p.ida) return null
+  if (p.levar && p.trazer && p.volta) return kmDaRota(p.ida.km + p.volta.km)
+  return kmDaRota(p.ida.km)
+}
+
 /** Diferença de km que não conta como contraproposta (a rota muda um pouco entre aparelhos e horários): 1 km ou 1%. */
 export function toleranciaKm(kmRota: number): number {
   return Math.max(1, kmRota * 0.01)
