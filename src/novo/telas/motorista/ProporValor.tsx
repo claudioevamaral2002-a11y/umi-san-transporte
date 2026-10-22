@@ -8,7 +8,6 @@ import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { kmDaRota } from '../../../lib/categorias.ts'
-import { corrida } from '../../../lib/corrida.ts'
 import { mensagemAoOrcar } from '../../../lib/erros.ts'
 import {
   DIARIAS_MAX,
@@ -17,8 +16,6 @@ import {
   MAX_OUTROS,
   kmParaTexto,
   meiasParaTexto,
-  montarEntrada,
-  type FormOrcamento,
 } from '../../../lib/orcar.ts'
 import type { RespostaPedido } from '../../../lib/pedidos.ts'
 import type { Veiculo } from '../../../lib/veiculos.ts'
@@ -26,10 +23,33 @@ import { Contador, Memorial } from '../../../telas/pedidos/componentes.tsx'
 import { usePrevia } from '../../../telas/pedidos/usePrevia.ts'
 import { formatarKm, reaisCurto } from '../../formatos.ts'
 import { AVISO_PROPOSTA } from './Chamada.tsx'
-import { formDaCalculadora, formDaTabela, rotuloVeiculo, trechos, useChamada } from './chamada.ts'
+import {
+  entradaDaChamada,
+  enviarProposta,
+  formDaCalculadora,
+  formDaTabela,
+  HORAS_MAX_MEIAS,
+  HORAS_MIN_MEIAS,
+  paradasDoPedido,
+  rotuloVeiculo,
+  trechos,
+  useChamada,
+  useItensDaTarifa,
+  veiculoDoCliente,
+  type FormCalculadora,
+  type ItensDaTarifa,
+  type PedidoDaChamada,
+} from './chamada.ts'
 
 /** Passo do km: 1 km (em décimos). */
 const PASSO_KM = 10
+
+/** "rota: 42 km", com as paradas e a volta quando houver. */
+function textoDaRota(km: number, nParadas: number, nTrechos: 1 | 2, kmVolta: number | null): string {
+  const paradas = nParadas > 0 ? ' pelas paradas' : ''
+  if (nTrechos === 2 && kmVolta !== null) return `rota: ${formatarKm(kmDaRota(km))}${paradas} + volta ${formatarKm(kmDaRota(kmVolta))}`
+  return `rota: ${formatarKm(kmDaRota(km))}${paradas}${nTrechos === 2 ? ' por trecho (ida e volta)' : ''}`
+}
 
 /** "+ R$ 40,00", "− R$ 6,00" ou "igual à tabela". */
 function textoDiferenca(diferenca: number): string {
@@ -37,27 +57,45 @@ function textoDiferenca(diferenca: number): string {
   return `${diferenca > 0 ? '+' : '−'} ${formatarCentavos(Math.abs(diferenca))}`
 }
 
-function Calculadora({ r, km, veiculo }: { r: RespostaPedido; km: number | null; veiculo: Veiculo }) {
-  const p = r.pedido
+function Calculadora({
+  r,
+  km,
+  kmVolta,
+  veiculo,
+  itens,
+}: {
+  r: RespostaPedido
+  km: number | null
+  kmVolta: number | null
+  /** `null` na categoria de veículo do cliente (IVO Motorista): nenhum veículo da IVO. */
+  veiculo: Veiculo | null
+  /** O que a tarifa da categoria cobra: só esses itens aparecem (zerado = não cobra). */
+  itens: ItensDaTarifa
+}) {
+  const p = r.pedido as PedidoDaChamada
+  const doCliente = veiculoDoCliente(p)
+  const nParadas = paradasDoPedido(p).length
   const navegar = useNavigate()
   const idCalculo = useId()
   const titulo = useRef<HTMLHeadingElement>(null)
   useEffect(() => titulo.current?.focus(), [])
-  const [f, setF] = useState<FormOrcamento>(() => formDaCalculadora(p, r.orcamento_anterior?.entrada ?? null, km))
+  const [f, setF] = useState<FormCalculadora>(() => formDaCalculadora(p, r.orcamento_anterior?.entrada ?? null, km, kmVolta))
   const [verCalculo, setVerCalculo] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
   // "Pela tabela": a mesma entrada do "Aceitar" da chamada (só os km da rota), recalculada pelo banco.
-  const montadoTabela = km !== null ? montarEntrada(formDaTabela(p, km)) : null
+  const kmTabela = km ?? (doCliente ? 0 : null)
+  const montadoTabela = kmTabela !== null ? entradaDaChamada(formDaTabela(p, kmTabela, kmVolta), p) : null
   const tabela = usePrevia(p.id, montadoTabela?.ok ? montadoTabela.entrada : null, 0)
-  const montado = montarEntrada(f)
+  // A MESMA entrada mostra o total e vai no envio (o banco recalcula pela tarifa e grava esse total).
+  const montado = entradaDaChamada(f, p, itens)
   const entrada = montado.ok ? montado.entrada : null
   const previa = usePrevia(p.id, entrada)
   const total = previa?.estado === 'ok' ? previa.total : null
   const totalTabela = tabela?.estado === 'ok' ? tabela.total : null
 
-  const mudar = (x: Partial<FormOrcamento>) => {
+  const mudar = (x: Partial<FormCalculadora>) => {
     setF((a) => ({ ...a, ...x }))
     setErro(null)
   }
@@ -67,7 +105,7 @@ function Calculadora({ r, km, veiculo }: { r: RespostaPedido; km: number | null;
     setEnviando(true)
     setErro(null)
     // Só as quantidades e o veículo: nenhum ajuste livre (Ruling R11). O banco recalcula e grava o mesmo total.
-    const resposta = await corrida.enviarProposta(p.id, entrada, { veiculo_id: veiculo.id })
+    const resposta = await enviarProposta(p.id, entrada, veiculo?.id ?? null)
     setEnviando(false)
     if (resposta.ok) navegar('/', { replace: true, state: { aviso: AVISO_PROPOSTA } })
     else setErro(mensagemAoOrcar(resposta.codigo))
@@ -84,33 +122,52 @@ function Calculadora({ r, km, veiculo }: { r: RespostaPedido; km: number | null;
           <p className="ivo-legenda text-texto-suave">Ajuste os itens; o preço de cada um vem do contrato.</p>
           <p className="mt-1 ivo-legenda text-texto-suave">
             {p.categoria_nome ? `${p.categoria_nome} · ` : ''}
-            {rotuloVeiculo(veiculo)}
+            {veiculo ? rotuloVeiculo(veiculo) : 'carro da empresa do cliente'}
           </p>
         </div>
 
         <Cartao className="divide-y divide-borda py-1" data-testid="itens-proposta">
-          <Contador
-            rotulo="Km rodados"
-            valor={f.kmDecimos}
-            min={0}
-            max={KM_MAX_DECIMOS}
-            passo={PASSO_KM}
-            aoMudar={(kmDecimos) => mudar({ kmDecimos })}
-            formatar={kmParaTexto}
-            detalhe={
-              km !== null
-                ? `rota: ${formatarKm(kmDaRota(km))}${nTrechos === 2 ? ' por trecho (ida e volta)' : ''}`
-                : 'rota indisponível agora'
-            }
-          />
-          <Contador
-            rotulo="Espera (horas)"
-            valor={f.esperaMeias}
-            min={0}
-            max={ESPERA_MAX_MEIAS}
-            aoMudar={(esperaMeias) => mudar({ esperaMeias })}
-            formatar={meiasParaTexto}
-          />
+          {itens.km && (
+            <Contador
+              rotulo="Km rodados"
+              valor={f.kmDecimos}
+              min={0}
+              max={KM_MAX_DECIMOS}
+              passo={PASSO_KM}
+              aoMudar={(kmDecimos) => mudar({ kmDecimos })}
+              formatar={kmParaTexto}
+              detalhe={km !== null ? textoDaRota(km, nParadas, nTrechos, kmVolta) : 'rota indisponível agora'}
+            />
+          )}
+          {itens.horas && (
+            <Contador
+              rotulo="Horas"
+              valor={f.horasMeias ?? 0}
+              min={HORAS_MIN_MEIAS}
+              max={HORAS_MAX_MEIAS}
+              aoMudar={(horasMeias) => mudar({ horasMeias: Math.max(HORAS_MIN_MEIAS, horasMeias) })}
+              formatar={(v) => (v === 0 ? '—' : meiasParaTexto(v))}
+              detalhe={
+                typeof p.horas_estimadas === 'number' ? `estimadas pelo cliente: ${meiasParaTexto(p.horas_estimadas * 2)} h` : undefined
+              }
+            />
+          )}
+          {itens.espera && (
+            <Contador
+              rotulo="Espera (horas)"
+              valor={f.esperaMeias}
+              min={0}
+              max={ESPERA_MAX_MEIAS}
+              aoMudar={(esperaMeias) => mudar({ esperaMeias })}
+              formatar={meiasParaTexto}
+            />
+          )}
+          {itens.paradas && nParadas > 0 && (
+            <p className="flex items-center gap-2 py-3 ivo-legenda text-texto-suave">
+              <Icone nome="cadeado" tamanho={16} />
+              Paradas: {nParadas} (do pedido)
+            </p>
+          )}
           <div className="py-3">
             <Campo
               rotulo="Pedágio / balsa"
@@ -123,17 +180,21 @@ function Calculadora({ r, km, veiculo }: { r: RespostaPedido; km: number | null;
               ajuda="Valor estimado, cobrado como informado."
             />
           </div>
-          <Contador
-            rotulo="Hospedagem (diárias)"
-            valor={f.hospedagemDiarias}
-            min={0}
-            max={DIARIAS_MAX}
-            aoMudar={(hospedagemDiarias) => mudar({ hospedagemDiarias })}
-          />
-          <p className="flex items-center gap-2 py-3 ivo-legenda text-texto-suave">
-            <Icone nome="cadeado" tamanho={16} />
-            Reboque: {f.usaReboque ? 'com reboque' : 'sem reboque'} (fixo pela categoria)
-          </p>
+          {itens.hospedagem && (
+            <Contador
+              rotulo="Hospedagem (diárias)"
+              valor={f.hospedagemDiarias}
+              min={0}
+              max={DIARIAS_MAX}
+              aoMudar={(hospedagemDiarias) => mudar({ hospedagemDiarias })}
+            />
+          )}
+          {!doCliente && (
+            <p className="flex items-center gap-2 py-3 ivo-legenda text-texto-suave">
+              <Icone nome="cadeado" tamanho={16} />
+              {itens.reboque ? 'Reboque: cobrado pela tabela da categoria' : 'Reboque: não cobrado pela tabela da categoria'}
+            </p>
+          )}
         </Cartao>
 
         <Cartao className="space-y-3" data-testid="outros">
@@ -261,9 +322,15 @@ export function ProporValor() {
   const { r, erro, recarregar, rota, veiculos } = useChamada(id)
   const veiculo = veiculos?.find((v) => v.id === busca.get('veiculo')) ?? veiculos?.[0] ?? null
   const esperandoRota = rota.fase === 'carregando'
+  const p = r?.pedido as PedidoDaChamada | undefined
+  const doCliente = p ? veiculoDoCliente(p) : false
+  // Os itens da tarifa (sondagem no banco) só quando a calculadora pode abrir.
+  const podeOrcar = Boolean(r?.acoes.orcar) && (r?.pedido.modalidade === 'VEICULO_PROPRIO' || doCliente)
+  const comVeiculo = doCliente || veiculo !== null
+  const itens = useItensDaTarifa(podeOrcar && comVeiculo ? p : undefined)
 
   let conteudo
-  if (r === undefined || veiculos === undefined || esperandoRota) {
+  if (r === undefined || veiculos === undefined || esperandoRota || (podeOrcar && comVeiculo && !itens)) {
     conteudo = erro ? (
       <div className="mx-auto max-w-lg space-y-3 p-4 pt-[calc(env(safe-area-inset-top)+5rem)]">
         <Mensagem tipo="erro">Não foi possível abrir a calculadora agora.</Mensagem>
@@ -280,12 +347,12 @@ export function ProporValor() {
         <Skeleton className="h-64" />
       </div>
     )
-  } else if (!r.acoes.orcar || r.pedido.modalidade !== 'VEICULO_PROPRIO' || !veiculo) {
+  } else if (!podeOrcar || !comVeiculo || !itens) {
     conteudo = (
       <div className="mx-auto max-w-lg space-y-3 p-4 pt-[calc(env(safe-area-inset-top)+5rem)]">
         <h1 className="ivo-h2">Propor outro valor</h1>
         <Mensagem tipo="info">
-          {!veiculo && r.acoes.orcar
+          {!comVeiculo && podeOrcar
             ? 'Nenhum veículo ativo atende esta corrida. Ative ou cadastre um em Meus veículos.'
             : 'Esta chamada não espera mais resposta.'}
         </Mensagem>
@@ -295,7 +362,15 @@ export function ProporValor() {
       </div>
     )
   } else {
-    conteudo = <Calculadora r={r} km={rota.fase === 'pronta' ? rota.rota.km : null} veiculo={veiculo} />
+    conteudo = (
+      <Calculadora
+        r={r}
+        km={rota.fase === 'pronta' ? rota.rota.km : null}
+        kmVolta={rota.fase === 'pronta' ? rota.rota.kmVolta : null}
+        veiculo={doCliente ? null : veiculo}
+        itens={itens}
+      />
+    )
   }
   return <main className="min-h-dvh bg-fundo">{conteudo}</main>
 }

@@ -7,9 +7,7 @@ import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { kmDaRota } from '../../../lib/categorias.ts'
-import { corrida } from '../../../lib/corrida.ts'
 import { mensagemAoOrcar, mensagemDoCodigo } from '../../../lib/erros.ts'
-import { montarEntrada } from '../../../lib/orcar.ts'
 import { pedidos, type RespostaPedido } from '../../../lib/pedidos.ts'
 import { formatarDuracao } from '../../../lib/tempo.ts'
 import { useTempoReal } from '../../../lib/tempoReal.ts'
@@ -19,8 +17,17 @@ import { usePrevia } from '../../../telas/pedidos/usePrevia.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { formatarKm, prazoAte, quandoCompleto, reaisCurto } from '../../formatos.ts'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
-import type { EstadoRota } from '../../useRota.ts'
-import { formDaTabela, rotuloVeiculo, useChamada } from './chamada.ts'
+import {
+  entradaDaChamada,
+  enviarProposta,
+  formDaTabela,
+  paradasDoPedido,
+  rotuloVeiculo,
+  useChamada,
+  veiculoDoCliente,
+  type EstadoRotaDaChamada,
+  type PedidoDaChamada,
+} from './chamada.ts'
 import { RotaDePara } from '../../../design/componentes/RotaDePara.tsx'
 
 /** Depois de enviar: o início mostra este aviso (o pedido segue para o cliente confirmar). */
@@ -108,11 +115,13 @@ function Responder({
   lista,
 }: {
   r: RespostaPedido
-  rota: EstadoRota
+  rota: EstadoRotaDaChamada
   tentarDeNovo: () => void
   lista: Veiculo[]
 }) {
-  const p = r.pedido
+  const p = r.pedido as PedidoDaChamada
+  // IVO Motorista (veículo do cliente): o Ivo dirige o carro da empresa, nenhum veículo da IVO é pedido nem enviado.
+  const doCliente = veiculoDoCliente(p)
   const navegar = useNavigate()
   const agora = useAgora(30_000)
   const titulo = useRef<HTMLHeadingElement>(null)
@@ -123,18 +132,20 @@ function Responder({
   const [erro, setErro] = useState<string | null>(null)
   const [recusando, setRecusando] = useState(false)
 
-  const km = rota.fase === 'pronta' ? rota.rota.km : null
-  const montado = km !== null ? montarEntrada(formDaTabela(p, km)) : null
+  // IVO Motorista (cobrada por hora): o aceite não espera a rota; sem ela, km 0.
+  const km = rota.fase === 'pronta' ? rota.rota.km : doCliente ? 0 : null
+  const kmVolta = rota.fase === 'pronta' ? rota.rota.kmVolta : null
+  const montado = km !== null ? entradaDaChamada(formDaTabela(p, km, kmVolta), p) : null
   // A MESMA entrada mostra o preço e vai no "Aceitar": o valor enviado é o que o motorista viu.
   const entrada = montado?.ok ? montado.entrada : null
   const tabela = usePrevia(p.id, entrada, 0)
   const total = tabela?.estado === 'ok' ? tabela.total : null
 
   async function aceitar() {
-    if (!entrada || total === null || !veiculo) return
+    if (!entrada || total === null || (!doCliente && !veiculo)) return
     setEnviando(true)
     setErro(null)
-    const resposta = await corrida.enviarProposta(p.id, entrada, { veiculo_id: veiculo.id })
+    const resposta = await enviarProposta(p.id, entrada, doCliente ? null : (veiculo?.id ?? null))
     setEnviando(false)
     if (resposta.ok) navegar('/', { replace: true, state: { aviso: AVISO_PROPOSTA } })
     else setErro(mensagemAoOrcar(resposta.codigo))
@@ -152,7 +163,7 @@ function Responder({
       <h1 ref={titulo} tabIndex={-1} className="mt-2 ivo-h3 outline-none">
         {p.empresa_nome} · {quandoCompleto(p.inicio)}
       </h1>
-      <RotaDePara origem={p.origem} destino={p.destino} className="mt-1" />
+      <RotaDePara origem={p.origem} destino={p.destino} paradas={paradasDoPedido(p).map((x) => x.texto)} className="mt-1" />
       <p className="ivo-legenda font-semibold text-texto-suave" aria-live="polite">
         Responda até {prazoAte(p.prazo_orcar_ate, agora)}
       </p>
@@ -202,7 +213,7 @@ function Responder({
         </div>
       )}
 
-      {lista.length > 0 ? (
+      {doCliente ? null : lista.length > 0 ? (
         <CampoSelecao rotulo="Veículo" value={veiculo?.id ?? ''} onChange={(e) => setEscolhido(e.target.value)}>
           {lista.map((v) => (
             <option key={v.id} value={v.id}>
@@ -226,14 +237,14 @@ function Responder({
           variante="principal"
           className="w-full"
           onClick={() => void aceitar()}
-          disabled={total === null || !veiculo || enviando}
+          disabled={total === null || (!doCliente && !veiculo) || enviando}
           aria-busy={enviando}
         >
           {total !== null ? `Aceitar por ${reaisCurto(total)}` : 'Aceitar pela tabela'}
         </Botao>
-        {veiculo ? (
+        {doCliente || veiculo ? (
           <Link
-            to={`/chamada/${p.id}/propor?veiculo=${encodeURIComponent(veiculo.id)}`}
+            to={`/chamada/${p.id}/propor${!doCliente && veiculo ? `?veiculo=${encodeURIComponent(veiculo.id)}` : ''}`}
             className="flex min-h-12 w-full items-center justify-center rounded-botao border border-borda bg-superficie px-5 ivo-botao text-texto"
           >
             Propor outro valor
@@ -295,8 +306,9 @@ export function Chamada() {
       </FolhaMapa>
     )
   }
-  if (r.pedido.modalidade !== 'VEICULO_PROPRIO') {
-    // Diárias do motorista (veículo do cliente) só no Orçar do app atual (fora do MVP do app novo).
+  if (r.pedido.modalidade !== 'VEICULO_PROPRIO' && !veiculoDoCliente(r.pedido)) {
+    // Diárias do motorista (veículo do cliente sem categoria, do app atual) só no Orçar do app atual. A categoria de
+    // veículo do cliente (IVO Motorista, 4.1) é cobrada pela tarifa e orçada aqui.
     return (
       <FolhaMapa rotulo="Chamada">
         <h1 className="ivo-h2">Orce este pedido no app atual</h1>
