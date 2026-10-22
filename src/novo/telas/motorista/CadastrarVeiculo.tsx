@@ -6,23 +6,22 @@ import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { ErroAoCarregar } from '../../../design/componentes/Tela.tsx'
 import { api } from '../../../lib/api.ts'
-import type { CodigoCategoria } from '../../../lib/categorias.ts'
-import { CODIGOS } from '../../../lib/categoriasAdm.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
 import {
+  categoriasDeVeiculo,
   formDoVeiculo,
   FORM_VEICULO_VAZIO,
-  NOMES_CATEGORIA,
   validarVeiculo,
   veiculos,
+  type CategoriaDoVeiculo,
   type ErrosVeiculo,
   type FormVeiculo,
   type Veiculo,
 } from '../../../lib/veiculos.ts'
 
 /** Etiqueta marcável (mockup 9): um checkbox de verdade, com a cara das etiquetas da lista. */
-function EtiquetaCategoria({ codigo, marcada, aoMudar }: { codigo: CodigoCategoria; marcada: boolean; aoMudar: (m: boolean) => void }) {
+function EtiquetaCategoria({ nome, marcada, aoMudar }: { nome: string; marcada: boolean; aoMudar: (m: boolean) => void }) {
   return (
     <label
       className={`relative inline-flex min-h-12 cursor-pointer items-center rounded-full border-[1.5px] px-4 font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-acao ${
@@ -35,12 +34,12 @@ function EtiquetaCategoria({ codigo, marcada, aoMudar }: { codigo: CodigoCategor
         checked={marcada}
         onChange={(e) => aoMudar(e.target.checked)}
       />
-      {NOMES_CATEGORIA[codigo]}
+      {nome}
     </label>
   )
 }
 
-function Formulario({ adm, atual }: { adm: boolean; atual: Veiculo | null }) {
+function Formulario({ adm, atual, categorias }: { adm: boolean; atual: Veiculo | null; categorias: CategoriaDoVeiculo[] }) {
   const navegar = useNavigate()
   const [f, setF] = useState<FormVeiculo>(() => (atual ? formDoVeiculo(atual) : FORM_VEICULO_VAZIO))
   const [motorista, setMotorista] = useState('')
@@ -52,6 +51,9 @@ function Formulario({ adm, atual }: { adm: boolean; atual: Veiculo | null }) {
     adm && !atual ? (await api.usuarios()).filter((u) => u.papel === 'MOTORISTA' && u.ativo) : [],
   )
   const lista = adm ? '/adm/veiculos' : '/veiculos'
+  // Só as ativas que usam veículo da IVO, com os nomes atuais do banco (renomear muda o rótulo).
+  const opcoes = categoriasDeVeiculo(categorias)
+  const codigos = opcoes.map((c) => c.codigo)
   const mudar = <K extends keyof FormVeiculo>(campo: K, valor: FormVeiculo[K]) => setF((x) => ({ ...x, [campo]: valor }))
 
   async function salvar(e: FormEvent) {
@@ -163,13 +165,19 @@ function Formulario({ adm, atual }: { adm: boolean; atual: Veiculo | null }) {
       <fieldset aria-describedby={erros.categorias ? 'erro-categorias' : undefined} className="space-y-2">
         <legend className="mb-1 font-semibold">Atende quais categorias?</legend>
         <div className="flex flex-wrap gap-2">
-          {CODIGOS.map((c) => (
+          {opcoes.map((c) => (
             <EtiquetaCategoria
-              key={c}
-              codigo={c}
-              marcada={f.categorias.includes(c)}
+              key={c.codigo}
+              nome={c.nome}
+              marcada={f.categorias.includes(c.codigo)}
               aoMudar={(m) =>
-                mudar('categorias', m ? CODIGOS.filter((x) => x === c || f.categorias.includes(x)) : f.categorias.filter((x) => x !== c))
+                mudar(
+                  'categorias',
+                  // Na ordem da lista; uma categoria já marcada que saiu da lista (desativada) continua no veículo.
+                  m
+                    ? [...f.categorias.filter((x) => !codigos.includes(x)), ...codigos.filter((x) => x === c.codigo || f.categorias.includes(x))]
+                    : f.categorias.filter((x) => x !== c.codigo),
+                )
               }
             />
           ))}
@@ -197,9 +205,13 @@ function Formulario({ adm, atual }: { adm: boolean; atual: Veiculo | null }) {
 /** Mockup 9: cadastrar (ou editar, com `:id`) um veículo. O ADM escolhe o motorista ao cadastrar. */
 export function CadastrarVeiculo({ adm = false }: { adm?: boolean }) {
   const { id } = useParams()
-  const { dados, erro, recarregar } = useConsulta(id ? `novo-veiculo-${id}` : 'novo-veiculo-novo', async () =>
-    id ? ((await veiculos.meus()).find((v) => v.id === id) ?? null) : null,
-  )
+  const { dados, erro, recarregar } = useConsulta(id ? `novo-veiculo-${id}` : 'novo-veiculo-novo', async () => {
+    const [categorias, atual] = await Promise.all([
+      veiculos.categorias(),
+      id ? veiculos.meus().then((l) => l.find((v) => v.id === id) ?? null) : Promise.resolve(null),
+    ])
+    return { categorias, atual }
+  })
   return (
     <main className="mx-auto max-w-xl space-y-4 px-4">
       <h1 className="ivo-h2">{id ? 'Editar veículo' : 'Novo veículo'}</h1>
@@ -215,10 +227,10 @@ export function CadastrarVeiculo({ adm = false }: { adm?: boolean }) {
             <Skeleton className="h-12" />
           </div>
         )
-      ) : id && dados === null ? (
+      ) : id && dados.atual === null ? (
         <Mensagem tipo="erro">Não encontramos este veículo. Volte à lista e tente de novo.</Mensagem>
       ) : (
-        <Formulario adm={adm} atual={dados} />
+        <Formulario adm={adm} atual={dados.atual} categorias={dados.categorias} />
       )}
     </main>
   )

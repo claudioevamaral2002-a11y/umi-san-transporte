@@ -108,10 +108,8 @@ test('cada categoria em cartão com a tabela; Reboque só na categoria com reboq
   await expect(cartao(page, 'IVO Motorista').getByLabel('Diária de hospedagem', { exact: true })).toHaveValue('180,00')
   await expect(page.getByText(/preenchida com os preços de hoje/).first()).toBeVisible()
   // Veículo do cliente e inativa à vista no cartão.
-  await expect(cartao(page, 'IVO Motorista').getByRole('switch', { name: 'IVO Motorista: veículo do cliente' })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  )
+  await expect(cartao(page, 'IVO Motorista').getByRole('list', { name: 'Marcações' })).toContainText('Veículo do cliente')
+  await expect(cartao(page, 'IVO Carga Leve').getByRole('list', { name: 'Marcações' })).toContainText('Com reboque')
   await expect(cartao(page, 'IVO Carga Pesada').getByRole('switch', { name: 'IVO Carga Pesada ativa' })).toHaveAttribute(
     'aria-checked',
     'false',
@@ -165,9 +163,6 @@ test('editar nome e "ativa" chama salvar_categoria com o código', async ({ page
       descricao_curta: 'descrição de IVO Carga Leve',
       ordem: 2,
       ativa: false,
-      veiculo_cliente: false,
-      reboque: 'SIM',
-      carga: 'AMBOS',
     },
   })
 })

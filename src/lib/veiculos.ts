@@ -41,7 +41,12 @@ export function normalizarPlaca(s: string): string {
   return s.replace(/[\s-]/g, '').toUpperCase()
 }
 
+/** Uma categoria em `api.categorias_veiculo` (motorista e ADM): só o nome e as marcações, nenhum preço. */
+export type CategoriaDoVeiculo = Pick<CategoriaAdm, 'codigo' | 'nome' | 'ordem' | 'ativa' | 'veiculo_cliente'>
+
 export const veiculos = {
+  /** Todas as categorias do banco (também as inativas e a de veículo do cliente), com os nomes atuais, na ordem. */
+  categorias: async () => (await ler<{ categorias: CategoriaDoVeiculo[] }>('categorias_veiculo', {})).categorias,
   meus: async () => (await ler<{ veiculos: Veiculo[] }>('meus_veiculos', {})).veiculos,
   salvar: (p: EntradaVeiculo) => chamar('salvar_veiculo', { p: { ...p, placa: normalizarPlaca(p.placa) } }),
   mudarSituacao: (id: string, situacao: SituacaoVeiculo) =>
@@ -61,16 +66,6 @@ export function nomesDasCategorias(cats: readonly Pick<CategoriaAdm, 'codigo' | 
 /** Nome da categoria nas etiquetas do veículo; sem a categoria na lista, o próprio código. */
 export function nomeDaCategoria(codigo: string, nomes: Readonly<Record<string, string>>): string {
   return Object.hasOwn(nomes, codigo) ? (nomes[codigo] ?? codigo) : codigo
-}
-
-/**
- * @deprecated Lista fixa de antes da 4.1: os nomes vêm do banco (`nomesDasCategorias` + `nomeDaCategoria`).
- * Fica só até a Tarefa 5 trocar `CadastrarVeiculo.tsx` e `MeusVeiculos.tsx`; a Tarefa 5 apaga.
- */
-export const NOMES_CATEGORIA: Record<string, string> = {
-  PASSAGEIROS: 'Passageiros',
-  CARGA_LEVE: 'Carga Leve',
-  CARGA_PESADA: 'Carga Pesada',
 }
 
 export const SITUACOES: Record<SituacaoVeiculo, string> = {
