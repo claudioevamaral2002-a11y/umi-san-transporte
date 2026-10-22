@@ -125,7 +125,8 @@ export function CampoEndereco({
   }
 
   const contagem = sugestoes.length === 1 ? '1 sugestão' : sugestoes.length === 0 ? 'Nenhuma sugestão' : `${sugestoes.length} sugestões`
-  const testid = `endereco-${rotulo.toLowerCase()}`
+  // Sem `rotuloAcessivel` (app atual), o mesmo de sempre; com ele, um por campo ("endereco-parada-2").
+  const testid = `endereco-${(rotuloAcessivel ?? rotulo).toLowerCase().replace(/\s+/g, '-')}`
 
   const item = (opcao: Sugestao, i: number) => (
     <li

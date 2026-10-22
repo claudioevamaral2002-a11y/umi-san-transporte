@@ -368,11 +368,12 @@ test.describe('confirmar', () => {
     await expect(folha).not.toContainText('Proposta do')
   })
 
-  test('centro de custo vem com o último usado; confirmar só muda a tela depois da resposta', async ({ page }) => {
+  test('centro de custo vem o do pedido (vazio, sem o do aparelho); confirmar só muda a tela depois da resposta', async ({ page }) => {
     const controle = await confirmarControlado(page)
     await abrirConfirmacao(page, [orcada(), agendada()], 'Operações 4.100')
     const centro = page.getByRole('textbox', { name: 'Centro de custo' })
-    await expect(centro).toHaveValue('Operações 4.100')
+    // Fase 4.1 (Tarefa 6): pedido por categoria usa o centro de custo do pedido (aqui vazio), não o último do aparelho.
+    await expect(centro).toHaveValue('')
     await centro.fill('Obra Norte')
     const confirmar = page.getByRole('button', { name: 'Confirmar corrida · R$ 220' })
     await confirmar.click()

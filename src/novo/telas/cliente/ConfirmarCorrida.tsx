@@ -159,7 +159,9 @@ export function ConfirmarCorrida({
   const idCalculo = useId()
   const [verCalculo, setVerCalculo] = useState(false)
   // O centro de custo informado ao pedir; sem ele, o último usado neste aparelho.
-  const [centro, setCentro] = useState(() => p.centro_custo ?? lerUltimoCentroCusto())
+  // Pedido por categoria (app novo): o centro de custo informado ao pedir, mesmo vazio — quem confirma não aplica sem
+  // ver o último deste aparelho. Pedido sem categoria (app atual): o último usado neste aparelho, como antes.
+  const [centro, setCentro] = useState(() => (p.categoria ? (p.centro_custo ?? '') : (p.centro_custo ?? lerUltimoCentroCusto())))
   const [estado, setEstado] = useState<Estado>({ fase: 'pronto' })
   const [resposta, setResposta] = useState<'revisao' | 'recusar' | null>(null)
   const [intencao] = useState(() => new Intencao())

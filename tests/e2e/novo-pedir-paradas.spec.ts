@@ -59,8 +59,8 @@ function categoriasFalsas(p: { paradas?: number; horas?: number }) {
   }
 }
 
-async function abrir(page: Page, o: { centro?: string; detalhes?: unknown[]; caminho?: string } = {}) {
-  await page.setViewportSize(TELA)
+async function abrir(page: Page, o: { centro?: string; detalhes?: unknown[]; caminho?: string; largura?: number } = {}) {
+  await page.setViewportSize({ ...TELA, width: o.largura ?? TELA.width })
   if (o.centro !== undefined) await page.addInitScript(([k, v]) => localStorage.setItem(k!, v!), [CHAVE_CC, o.centro])
   await comSessaoFalsa(page, { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' })
   await simularApi(page)
@@ -140,13 +140,21 @@ test.describe('pedir com paradas', () => {
     await adicionar.click()
     await expect(page.getByRole('combobox', { name: /^Parada \d$/ })).toHaveCount(3)
     await expect(adicionar).toHaveCount(0)
-    await page.getByRole('button', { name: 'Remover parada 3' }).click()
+    // × na do meio: o foco vai para a parada seguinte (agora a 2ª); na última, para "+ Adicionar parada".
+    await page.getByRole('combobox', { name: 'Parada 3', exact: true }).fill('terceira')
+    await page.getByRole('button', { name: 'Remover parada 2' }).click()
+    const segunda = page.getByRole('combobox', { name: 'Parada 2', exact: true })
+    await expect(segunda).toBeFocused()
+    await expect(segunda).toHaveValue('terceira')
     await page.getByRole('button', { name: 'Remover parada 2' }).click()
     await expect(page.getByRole('combobox', { name: /^Parada \d$/ })).toHaveCount(1)
     await expect(adicionar).toBeVisible()
+    await expect(adicionar).toBeFocused()
 
     await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
     await escolher(page, 'Parada 1', 'Detroit', /Estaleiro Detroit/)
+    // Cada parada tem o próprio endereço (testid por campo).
+    await expect(page.getByTestId('endereco-parada-1')).toContainText('Rodovia Jorge Lacerda')
     await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
     await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
 
@@ -185,6 +193,18 @@ test.describe('pedir com paradas', () => {
     const volta = mapas.filter((c) => c.acao === 'rota').at(-1)!
     expect(volta).toMatchObject({ origem: { place_id: 'ChIJpor' }, destino: { place_id: 'ChIJdef' } })
     expect(volta.paradas).toBeUndefined()
+  })
+
+  test('ida e volta sem paradas: uma chamada de rota só e sem km_volta (o banco dobra a ida, como o motorista)', async ({ page }) => {
+    const { mapas, categorias } = await abrir(page)
+    await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
+    await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
+    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
+    await page.getByText('Detalhes da corrida (pessoas, carga, contato)').click()
+    await page.getByRole('checkbox', { name: 'Ida e volta' }).check()
+    await expect.poll(() => categorias.at(-1)).toEqual({ km: 42, levar: true, trazer: true })
+    await expect(page.getByRole('radio', { name: /IVO Passageiros/ })).toContainText('~R$ 180')
+    expect(mapas.filter((c) => c.acao === 'rota')).toHaveLength(1)
   })
 
   test('da escolha de categoria, "+ Adicionar parada" volta aos endereços com uma parada nova', async ({ page }) => {
@@ -289,8 +309,75 @@ test.describe('pedir com paradas', () => {
     expect(confirmar[0]).toMatchObject({ p_centro_custo: 'Obra Sul' })
   })
 
-  test('390 px com 3 paradas e a agenda aberta: nada rola de lado; sem violações do axe', async ({ page }) => {
-    await abrir(page)
+  test('confirmação: apagar o centro de custo do pedido manda vazio (limpa), e o vazio do pedido não vira o do aparelho', async ({ page }) => {
+    const base = {
+      ok: true,
+      historico: [],
+      orcamento: {
+        id: '00000000-0000-4000-8000-0000000000b1',
+        versao: 2,
+        status: 'PENDENTE',
+        modalidade: 'VEICULO_PROPRIO',
+        valido_ate: new Date(Date.now() + 20 * 60 * 60_000).toISOString(),
+        horario_sugerido: null,
+        enviado_em: new Date().toISOString(),
+        linhas: [],
+        total_cent: 18000,
+        hash: 'b'.repeat(64),
+      },
+      acoes: { ...SEM_ACOES, aprovar: true },
+    }
+    const pedido = (centro_custo: string | null) =>
+      detalheFalso({
+        status: 'ORCADA',
+        categoria: 'PASSAGEIROS',
+        categoria_nome: 'IVO Passageiros',
+        origem_place_id: 'ChIJdef',
+        destino_place_id: 'ChIJpor',
+        centro_custo,
+      })
+    const { confirmar } = await abrir(page, {
+      centro: 'Do aparelho',
+      detalhes: [{ ...base, pedido: pedido('Obra Norte') }],
+      caminho: `/corrida/${ID_PEDIDO}`,
+    })
+    const centro = page.getByRole('textbox', { name: 'Centro de custo (opcional)' })
+    await expect(centro).toHaveValue('Obra Norte')
+    await centro.fill('')
+    await page.getByRole('button', { name: /^Confirmar corrida/ }).click()
+    await expect.poll(() => confirmar.length).toBe(1)
+    expect(confirmar[0]).toMatchObject({ p_centro_custo: '' })
+  })
+
+  test('confirmação: pedido sem centro de custo começa vazio, mesmo com um guardado no aparelho', async ({ page }) => {
+    const orcada = {
+      ok: true,
+      pedido: detalheFalso({ status: 'ORCADA', categoria: 'PASSAGEIROS', categoria_nome: 'IVO Passageiros', centro_custo: null }),
+      historico: [],
+      orcamento: {
+        id: '00000000-0000-4000-8000-0000000000b1',
+        versao: 2,
+        status: 'PENDENTE',
+        modalidade: 'VEICULO_PROPRIO',
+        valido_ate: new Date(Date.now() + 20 * 60 * 60_000).toISOString(),
+        horario_sugerido: null,
+        enviado_em: new Date().toISOString(),
+        linhas: [],
+        total_cent: 18000,
+        hash: 'b'.repeat(64),
+      },
+      acoes: { ...SEM_ACOES, aprovar: true },
+    }
+    const { confirmar } = await abrir(page, { centro: 'Do aparelho', detalhes: [orcada], caminho: `/corrida/${ID_PEDIDO}` })
+    await expect(page.getByRole('textbox', { name: 'Centro de custo (opcional)' })).toHaveValue('')
+    await page.getByRole('button', { name: /^Confirmar corrida/ }).click()
+    await expect.poll(() => confirmar.length).toBe(1)
+    expect(confirmar[0]).toMatchObject({ p_centro_custo: null })
+  })
+
+  for (const largura of [390, 375]) {
+  test(`${largura} px com 3 paradas e a agenda aberta: nada rola de lado; sem violações do axe`, async ({ page }) => {
+    await abrir(page, { largura })
     const adicionar = page.getByRole('button', { name: '+ Adicionar parada' })
     for (let i = 0; i < 3; i++) await adicionar.click()
     await expect(adicionar).toHaveCount(0)
@@ -309,4 +396,5 @@ test.describe('pedir com paradas', () => {
     expect(await semRolagemLateral(page)).toBe(true)
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   })
+  }
 })

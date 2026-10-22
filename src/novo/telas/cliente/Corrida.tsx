@@ -123,12 +123,12 @@ export function CorridaCliente() {
 
   const p = dados?.pedido
   // Fase 4.1: a ida passa pelas paradas do pedido e a volta (ida e volta) é direta; `km` e `kmVolta` vão para a
-  // prévia ("Pela tabela" da confirmação).
+  // prévia ("Pela tabela" da confirmação). Só a confirmação usa a volta: nas outras etapas ela nem é buscada.
   const { estado: rota, km, kmVolta } = useRotaComParadas(
     p ? ponto(p, 'origem') : null,
     p ? ponto(p, 'destino') : null,
     p ? paradasDoDetalhe(p).pontos : [],
-    !!p && p.levar && p.trazer,
+    !!p && p.status === 'ORCADA' && p.levar && p.trazer,
   )
   const pontos = rota.fase === 'pronta' ? rota.rota.pontos : []
   const destino =

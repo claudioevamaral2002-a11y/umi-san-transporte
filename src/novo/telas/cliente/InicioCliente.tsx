@@ -44,6 +44,9 @@ export function InicioCliente() {
   const [origem, setOrigem] = useState<ValorEndereco>(de?.origem ?? VAZIO)
   const [destino, setDestino] = useState<ValorEndereco>(de?.destino ?? VAZIO)
   const [paradas, setParadas] = useState<ValorEndereco[]>([])
+  // Identidade estável de cada campo de parada (a `key`): remover a do meio não troca o estado dos outros campos.
+  const [idsParadas, setIdsParadas] = useState<number[]>([])
+  const proximoId = useRef(0)
   const [mapaPara, setMapaPara] = useState<AlvoDoMapa | null>(null)
   const [escolhendo, setEscolhendo] = useState(de !== null)
   const titulo = useRef<HTMLHeadingElement>(null)
@@ -66,11 +69,20 @@ export function InicioCliente() {
     if (paradas.length >= MAX_PARADAS) return
     const n = paradas.length + 1
     setParadas((ps) => [...ps, VAZIO])
+    setIdsParadas((ids) => [...ids, proximoId.current++])
     setEscolhendo(false)
     requestAnimationFrame(() => campos.current?.querySelector<HTMLInputElement>(`input[aria-label="Parada ${n}"]`)?.focus())
   }
+  /** Tira a parada `i` e leva o foco à parada seguinte (que passa a ser a `i`) ou, sem ela, ao "+ Adicionar parada". */
   function removerParada(i: number) {
+    const seguinte = i + 1 < paradas.length
     setParadas((ps) => ps.filter((_, j) => j !== i))
+    setIdsParadas((ids) => ids.filter((_, j) => j !== i))
+    requestAnimationFrame(() =>
+      campos.current
+        ?.querySelector<HTMLElement>(seguinte ? `input[aria-label="Parada ${i + 1}"]` : '[data-adicionar-parada]')
+        ?.focus(),
+    )
   }
 
   if (pode && !indisponivel && escolhendo && temPonto(origem) && temPonto(destino) && paradas.every(temPonto)) {
@@ -117,7 +129,7 @@ export function InicioCliente() {
             aoMarcarNoMapa={() => setMapaPara('origem')}
           />
           {paradas.map((p, i) => (
-            <div key={i} className="flex items-start gap-1.5">
+            <div key={idsParadas[i] ?? `p${i}`} className="flex items-start gap-1.5">
               <div className="min-w-0 flex-1">
                 <CampoEndereco
                   rotulo="Parada"
@@ -149,6 +161,7 @@ export function InicioCliente() {
             <button
               type="button"
               onClick={adicionarParada}
+              data-adicionar-parada
               className="flex min-h-12 items-center font-semibold text-link underline underline-offset-4"
             >
               + Adicionar parada
