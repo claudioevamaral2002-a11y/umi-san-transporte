@@ -100,9 +100,11 @@ describe('reboque pelo banco nas categorias novas (4.1)', () => {
 })
 
 describe('km com paradas em ida e volta', () => {
-  it('ida pelas paradas + volta direta, cada uma com uma casa', () => {
-    expect(kmDecimosDaRota(30.04, 2, 21.06)).toBe(300 + 211)
-    expect(kmDecimosDaRota(30.04, 1, 21.06)).toBe(300)
+  it('ida pelas paradas + volta direta, somadas e arredondadas uma vez (como kmDoPedido)', () => {
+    // 30,04 + 21,04 = 51,08 → 51,1 (cada trecho arredondado daria 30,0 + 21,0 = 51,0).
+    expect(kmDecimosDaRota(30.04, 2, 21.04)).toBe(511)
+    expect(kmDecimosDaRota(30.04, 1, 21.04)).toBe(300)
+    expect(kmDecimosDaRota(30.04, 2)).toBe(600)
   })
 })
 
@@ -168,6 +170,15 @@ describe('entrada da calculadora (4.1)', () => {
       pedagio_cent: 0,
       hospedagem_diarias: 0,
     })
+  })
+  it('pedido antigo sem horas estimadas: nenhuma hora vai até o motorista mexer no contador', () => {
+    const antigo = motorista({ horas_estimadas: null })
+    const f = formDaTabela(antigo, 42)
+    expect(f.horasMeias).toBeNull()
+    const m = entradaDaChamada(f, antigo, { horas: true })
+    expect(m.ok && m.entrada).not.toHaveProperty('horas')
+    const mexido = entradaDaChamada({ ...f, horasMeias: 1 }, antigo, { horas: true })
+    expect(mexido.ok && mexido.entrada).toMatchObject({ horas: 0.5 })
   })
   it('revisão da IVO Motorista: começa do orçamento anterior, com as horas dele', () => {
     const f = formDaCalculadora(motorista(), { modalidade: 'VEICULO_CLIENTE', km: 42, horas: 5, hospedagem_diarias: 1, diarias: 2 }, 40)

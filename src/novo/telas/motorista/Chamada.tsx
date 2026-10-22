@@ -132,7 +132,8 @@ function Responder({
   const [erro, setErro] = useState<string | null>(null)
   const [recusando, setRecusando] = useState(false)
 
-  const km = rota.fase === 'pronta' ? rota.rota.km : null
+  // IVO Motorista (cobrada por hora): o aceite não espera a rota; sem ela, km 0.
+  const km = rota.fase === 'pronta' ? rota.rota.km : doCliente ? 0 : null
   const kmVolta = rota.fase === 'pronta' ? rota.rota.kmVolta : null
   const montado = km !== null ? entradaDaChamada(formDaTabela(p, km, kmVolta), p) : null
   // A MESMA entrada mostra o preço e vai no "Aceitar": o valor enviado é o que o motorista viu.

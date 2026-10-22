@@ -85,7 +85,8 @@ function Calculadora({
   const [erro, setErro] = useState<string | null>(null)
 
   // "Pela tabela": a mesma entrada do "Aceitar" da chamada (só os km da rota), recalculada pelo banco.
-  const montadoTabela = km !== null ? entradaDaChamada(formDaTabela(p, km, kmVolta), p) : null
+  const kmTabela = km ?? (doCliente ? 0 : null)
+  const montadoTabela = kmTabela !== null ? entradaDaChamada(formDaTabela(p, kmTabela, kmVolta), p) : null
   const tabela = usePrevia(p.id, montadoTabela?.ok ? montadoTabela.entrada : null, 0)
   // A MESMA entrada mostra o total e vai no envio (o banco recalcula pela tarifa e grava esse total).
   const montado = entradaDaChamada(f, p, itens)
@@ -141,11 +142,11 @@ function Calculadora({
           {itens.horas && (
             <Contador
               rotulo="Horas"
-              valor={f.horasMeias}
+              valor={f.horasMeias ?? 0}
               min={HORAS_MIN_MEIAS}
               max={HORAS_MAX_MEIAS}
-              aoMudar={(horasMeias) => mudar({ horasMeias })}
-              formatar={meiasParaTexto}
+              aoMudar={(horasMeias) => mudar({ horasMeias: Math.max(HORAS_MIN_MEIAS, horasMeias) })}
+              formatar={(v) => (v === 0 ? '—' : meiasParaTexto(v))}
               detalhe={
                 typeof p.horas_estimadas === 'number' ? `estimadas pelo cliente: ${meiasParaTexto(p.horas_estimadas * 2)} h` : undefined
               }
@@ -191,7 +192,7 @@ function Calculadora({
           {!doCliente && (
             <p className="flex items-center gap-2 py-3 ivo-legenda text-texto-suave">
               <Icone nome="cadeado" tamanho={16} />
-              Reboque: {itens.reboque ? 'com reboque' : 'sem reboque'} (fixo pela categoria)
+              {itens.reboque ? 'Reboque: cobrado pela tabela da categoria' : 'Reboque: não cobrado pela tabela da categoria'}
             </p>
           )}
         </Cartao>

@@ -4,7 +4,7 @@
 // Fase 4.1 (Tarefa 7): os itens seguem a tarifa da categoria (zerado = não cobra), a categoria de veículo do cliente
 // (IVO Motorista) não usa veículo da IVO, as horas entram na calculadora e a rota passa pelas paradas do pedido.
 import { useCallback, useEffect, useState } from 'react'
-import { HORAS_MAX, HORAS_MIN, kmDaRota, PREENCHIMENTO, type CodigoCategoria } from '../../../lib/categorias.ts'
+import { HORAS_MAX, HORAS_MIN, kmDaRota, kmDoPedido, PREENCHIMENTO, type CodigoCategoria } from '../../../lib/categorias.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { corrida } from '../../../lib/corrida.ts'
 import { pontoDaRota, type PontoRota } from '../../../lib/enderecosRemoto.ts'
@@ -110,11 +110,14 @@ export function trechos(p: Pick<DetalhePedido, 'levar' | 'trazer' | 'trechos_km'
 /**
  * Km pela rota, em décimos, com o MESMO arredondamento do cliente (`kmDaRota`, uma casa por trecho): assim o "Aceitar"
  * do motorista dá o mesmo total que o cliente viu, e a confirmação não mostra uma contraproposta que não existe.
- * 4.1: com paradas em ida e volta, a ida passa pelas paradas e a volta é direta (`kmVolta`), cada uma com uma casa.
+ * 4.1 (Ruling F4): com paradas em ida e volta, a ida passa pelas paradas e a volta é direta (`kmVolta`); a soma é
+ * arredondada UMA vez, como `kmDoPedido` (a prévia do cliente).
  */
 export function kmDecimosDaRota(kmRota: number, nTrechos: 1 | 2, kmVolta: number | null = null): number {
-  const ida = Math.round(kmDaRota(kmRota) * 10)
-  const total = nTrechos === 2 && kmVolta !== null ? ida + Math.round(kmDaRota(kmVolta) * 10) : ida * nTrechos
+  const total =
+    nTrechos === 2 && kmVolta !== null
+      ? Math.round((kmDoPedido({ ida: { km: kmRota }, volta: { km: kmVolta }, levar: true, trazer: true }) ?? 0) * 10)
+      : Math.round(kmDaRota(kmRota) * 10) * nTrechos
   return Math.min(KM_MAX_DECIMOS, total)
 }
 
@@ -174,8 +177,11 @@ export function itensPadrao(p: PedidoDaChamada): ItensDaTarifa {
   }
 }
 
-/** Formulário da calculadora: o de hoje mais as horas (em meias horas, como a espera). */
-export type FormCalculadora = FormOrcamento & { horasMeias: number }
+/**
+ * Formulário da calculadora: o de hoje mais as horas (em meias horas, como a espera). `null` = sem horas (pedido antigo
+ * sem horas estimadas): nada vai na entrada até o motorista mexer no contador, e o total fica igual ao da tabela.
+ */
+export type FormCalculadora = FormOrcamento & { horasMeias: number | null }
 
 export const HORAS_MIN_MEIAS = HORAS_MIN * 2
 export const HORAS_MAX_MEIAS = HORAS_MAX * 2
@@ -187,8 +193,8 @@ function meiasDeHoras(h: unknown): number | null {
   return Number.isInteger(m) && m >= HORAS_MIN_MEIAS && m <= HORAS_MAX_MEIAS ? m : null
 }
 
-/** As horas do pedido (horas estimadas pelo cliente), em meias horas; sem elas, o mínimo. */
-export const horasDoPedido = (p: PedidoDaChamada): number => meiasDeHoras(p.horas_estimadas) ?? HORAS_MIN_MEIAS
+/** As horas do pedido (horas estimadas pelo cliente), em meias horas; sem elas, `null`. */
+export const horasDoPedido = (p: PedidoDaChamada): number | null => meiasDeHoras(p.horas_estimadas)
 
 /** A tabela pura: só os km da rota, sem espera, pedágio, hospedagem ou outros (as horas e paradas são as do pedido). */
 export function formDaTabela(p: PedidoDaChamada, kmRota: number | null, kmVolta: number | null = null): FormCalculadora {
@@ -238,7 +244,7 @@ export function entradaDaChamada(
     entrada.modalidade = 'VEICULO_CLIENTE'
     entrada.usa_reboque = false
   }
-  if (itens?.horas) entrada.horas = f.horasMeias / 2
+  if (itens?.horas && f.horasMeias !== null) entrada.horas = f.horasMeias / 2
   return { ok: true, entrada }
 }
 

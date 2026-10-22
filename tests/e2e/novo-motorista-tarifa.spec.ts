@@ -76,6 +76,22 @@ function calcularPelaTarifa(t: Tarifa, pedido: Record<string, unknown>, e: Recor
 
 const PARADA_1 = { texto: 'Estaleiro Detroit', place_id: null, lat: -26.95, lng: -48.7 }
 const PARADA_2 = { texto: 'Armazém Itajaí', place_id: null, lat: -27, lng: -48.75 }
+/** Parada escolhida no Google: só o place_id (o ponto vem do "detalhar", na memória). */
+const PARADA_GOOGLE = { texto: 'Estaleiro Navship', place_id: 'ChIJnav', lat: null, lng: null }
+
+const VEICULO_HILUX = {
+  id: '00000000-0000-4000-8000-0000000000c1',
+  motorista_id: '00000000-0000-4000-8000-000000000001',
+  modelo: 'Hilux',
+  cor: 'branca',
+  placa: 'ABC1D23',
+  lugares: 4,
+  carga_max_kg: 800,
+  reboque_desc: null,
+  categorias: ['PASSAGEIROS'],
+  situacao: 'ATIVO',
+  criado_em: new Date(Date.now() - 10 * 24 * 60 * 60_000).toISOString(),
+}
 
 const pedidoMotorista = (extra: Record<string, unknown> = {}) =>
   pedidoSolicitadoMotorista({
@@ -147,6 +163,7 @@ async function abrir(
 
 const envios = (chamadas: Chamadas) => chamadas.filter((c) => c.rpc === 'enviar_orcamento')
 const rotas = (mapas: ChamadaMapas[]) => mapas.filter((c) => c.acao === 'rota')
+const detalhes = (mapas: ChamadaMapas[]) => mapas.filter((c) => c.acao === 'detalhar' && c.place_id === 'ChIJnav').length
 
 test.describe('IVO Motorista (veículo do cliente, cobrada por hora)', () => {
   test('a chamada não pede veículo; aceitar envia veiculo_id nulo e nenhuma diária', async ({ page }) => {
@@ -298,7 +315,7 @@ test.describe('viagem com paradas', () => {
       saida_liberada_em: new Date(Date.now() - 70 * MIN).toISOString(),
       pode_ver_rastreio: true,
       fotos_qtd: 0,
-      paradas: [PARADA_1, PARADA_2],
+      paradas: [PARADA_1, PARADA_2, PARADA_GOOGLE],
     }),
     historico: [],
     orcamento: orcamentoCliente({ status: 'APROVADO', total_cent: 22000 }),
@@ -315,12 +332,20 @@ test.describe('viagem com paradas', () => {
     const folha = page.getByTestId('folha-mapa')
     await expect(folha.getByTestId('selo-localizacao')).toHaveText('Compartilhando sua localização')
     const percurso = folha.getByTestId('rota-de-para')
-    await expect(percurso.locator('dt')).toHaveText(['De', 'Parada', 'Parada', 'Para'])
+    await expect(percurso.locator('dt')).toHaveText(['De', 'Parada', 'Parada', 'Parada', 'Para'])
     await expect(page.locator('path.rota-mapa')).toHaveCount(1)
-    // A rota desenhada passa pelas duas paradas, na ordem.
+    // A rota desenhada passa pelas três paradas, na ordem (a do Google pelo place_id).
     await expect
-      .poll(() => rotas(mapas).some((r) => JSON.stringify(r.paradas) === JSON.stringify([{ lat: -26.95, lng: -48.7 }, { lat: -27, lng: -48.75 }])))
+      .poll(() =>
+        rotas(mapas).some(
+          (r) =>
+            JSON.stringify(r.paradas) ===
+            JSON.stringify([{ lat: -26.95, lng: -48.7 }, { lat: -27, lng: -48.75 }, { place_id: 'ChIJnav' }]),
+        ),
+      )
       .toBe(true)
+    // Um "detalhar" só, para saber quando passou pela parada do Google.
+    await expect.poll(() => detalhes(mapas)).toBe(1)
 
     const waze = folha.getByRole('link', { name: 'Abrir no Waze' })
     await expect(waze).toHaveAttribute('href', 'https://waze.com/ul?ll=-26.95,-48.7&navigate=yes')
@@ -331,18 +356,78 @@ test.describe('viagem com paradas', () => {
     await context.setGeolocation({ latitude: -26.9518, longitude: -48.7, accuracy: 8 })
     await page.waitForTimeout(800)
     await expect(waze).toHaveAttribute('href', 'https://waze.com/ul?ll=-26.95,-48.7&navigate=yes')
-    // A 140 m: conta como passada; o Waze vai para a 2ª parada e a rota segue só por ela.
+    // A 140 m: conta como passada; o Waze vai para a 2ª parada e a rota segue só pelas que faltam.
     await context.setGeolocation({ latitude: -26.95126, longitude: -48.7, accuracy: 8 })
     await expect(waze).toHaveAttribute('href', 'https://waze.com/ul?ll=-27,-48.75&navigate=yes')
     await expect(folha).toContainText('Armazém Itajaí')
     await expect
-      .poll(() => rotas(mapas).some((r) => JSON.stringify(r.paradas) === JSON.stringify([{ lat: -27, lng: -48.75 }])))
+      .poll(() =>
+        rotas(mapas).some((r) => JSON.stringify(r.paradas) === JSON.stringify([{ lat: -27, lng: -48.75 }, { place_id: 'ChIJnav' }])),
+      )
       .toBe(true)
 
-    // Passou da 2ª: o Waze vai para o destino.
+    // Recarregar longe das paradas: a 1ª continua passada.
+    await context.setGeolocation({ latitude: -26.9, longitude: -48.655, accuracy: 8 })
+    await page.reload()
+    await expect(folha.getByTestId('selo-localizacao')).toHaveText('Compartilhando sua localização')
+    await expect(waze).toHaveAttribute('href', 'https://waze.com/ul?ll=-27,-48.75&navigate=yes')
+
+    // Passou da 2ª: a próxima é a do Google, e o Waze recebe só o nome (nada de coordenadas do Google).
     await context.setGeolocation({ latitude: -27.0005, longitude: -48.75, accuracy: 8 })
+    await expect(waze).toHaveAttribute('href', 'https://waze.com/ul?q=Estaleiro%20Navship&navigate=yes')
+    expect(await waze.getAttribute('href')).not.toContain('ll=')
+    await expect(folha).toContainText('Estaleiro Navship')
+
+    // A 150 m do ponto do "detalhar" (só na memória): passou; o Waze vai para o destino.
+    await context.setGeolocation({ latitude: -26.8805, longitude: -48.6612, accuracy: 8 })
     await expect(waze).toHaveAttribute('href', 'https://waze.com/ul?ll=-26.9078,-48.6619&navigate=yes')
     await expect(folha).toContainText('Chegada ao destino')
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  })
+})
+
+test.describe('ida e volta e sondagem', () => {
+  test('ida e volta com paradas: ida pelas paradas + volta direta, somadas e arredondadas uma vez', async ({ page }) => {
+    const { mapas } = await abrir(page, {
+      caminho: `/chamada/${ID_PEDIDO}`,
+      detalhe: pedidoPassageiros({ levar: true, trazer: true, trechos_km: 2 }),
+      tarifa: TARIFA_PASSAGEIROS,
+      veiculos: [VEICULO_HILUX],
+    })
+    // Ida 42 km (pelas paradas) + volta 42 km (direta) = 84 km: R$ 10 + 84 × R$ 3 + 2 × R$ 25 = R$ 312.
+    await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 312,00')
+    expect(rotas(mapas)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ origem: { place_id: 'ChIJdef' }, destino: { place_id: 'ChIJpor' }, paradas: expect.any(Array) }),
+      ]),
+    )
+    const volta = rotas(mapas).find((r) => (r.origem as { place_id?: string }).place_id === 'ChIJpor')
+    expect(volta).toMatchObject({ destino: { place_id: 'ChIJdef' } })
+    expect(volta).not.toHaveProperty('paradas')
+    await page.getByRole('link', { name: 'Propor outro valor' }).click()
+    await expect(page.getByRole('group', { name: 'Km rodados' }).locator('output')).toHaveText('84')
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 312,00')
+  })
+
+  test('a sondagem falhou: a calculadora mostra os itens de antes e as horas do pedido', async ({ page }) => {
+    const { chamadas } = await abrir(page, {
+      caminho: `/chamada/${ID_PEDIDO}/propor`,
+      detalhe: pedidoMotorista(),
+      tarifa: TARIFA_MOTORISTA,
+    })
+    await page.route(`${URL_SUPABASE}/rest/v1/rpc/calcular_orcamento`, (route: Route) => {
+      const corpo = (route.request().postDataJSON() ?? {}) as Record<string, unknown>
+      chamadas.push({ rpc: 'calcular_orcamento', corpo })
+      const e = (corpo.p ?? {}) as Record<string, unknown>
+      if (e.paradas === 1 && e.hospedagem_diarias === 1) return json(route, { ok: false, codigo: 'ERRO_INESPERADO' })
+      return json(route, calcularPelaTarifa(TARIFA_MOTORISTA, pedidoMotorista().pedido, e))
+    })
+    await page.reload()
+    const itens = page.getByTestId('itens-proposta')
+    await expect(itens.getByRole('group', { name: 'Km rodados' })).toBeVisible()
+    await expect(itens.getByRole('group', { name: 'Horas', exact: true }).locator('output')).toHaveText('4')
+    await expect(itens.getByRole('group', { name: 'Espera (horas)' })).toBeVisible()
+    await expect(itens.getByRole('group', { name: 'Hospedagem (diárias)' })).toBeVisible()
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 360,00')
   })
 })
