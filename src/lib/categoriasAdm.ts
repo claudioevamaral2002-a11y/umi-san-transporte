@@ -4,6 +4,8 @@
 import type { CodigoCategoria } from './categorias.ts'
 import type { ValoresContrato } from './contratos.ts'
 import { chamar, ler } from './pedidos.ts'
+import type { Carga, Reboque } from './situacao.ts'
+import type { Tarifa } from './tarifas.ts'
 import { centavosParaTexto, reaisParaCentavos } from './valores.ts'
 
 export const CODIGOS: readonly CodigoCategoria[] = ['PASSAGEIROS', 'CARGA_LEVE', 'CARGA_PESADA']
@@ -12,12 +14,37 @@ export const CODIGOS: readonly CodigoCategoria[] = ['PASSAGEIROS', 'CARGA_LEVE',
 export const COM_TAXA: CodigoCategoria = 'CARGA_PESADA'
 
 export interface CategoriaAdm {
-  codigo: CodigoCategoria
+  /** Fase 4.1: qualquer categoria do banco (as três antigas e as que o Master criar). */
+  codigo: string
   nome: string
   descricao_curta: string
   ordem: number
   ativa: boolean
+  /** Fase 4.1 (opcionais: o banco anterior não devolvia). */
+  carga?: Carga
+  reboque?: Reboque
+  /** Ivo dirige o carro da empresa (IVO Motorista): sem veículo da IVO e sem reboque. */
+  veiculo_cliente?: boolean
+  /**
+   * Tarifa da versão pedida (ou da vigente). `inicial: true` = a versão ainda não tem tarifa desta categoria e os
+   * valores são os preços de hoje; `null` = sem contrato.
+   */
+  tarifa?: (Tarifa & { inicial: boolean }) | null
 }
+
+/** O que `api.salvar_categoria` aceita. Sem `codigo`, cria (o banco gera o código e o devolve em `codigo`). */
+export interface EntradaCategoria {
+  codigo?: string | null
+  nome: string
+  descricao_curta: string
+  ordem: number
+  ativa?: boolean
+  veiculo_cliente?: boolean
+  reboque?: Reboque
+  carga?: Carga
+}
+
+const CHAVES_ENTRADA = ['codigo', 'nome', 'descricao_curta', 'ordem', 'ativa', 'veiculo_cliente', 'reboque', 'carga'] as const
 
 export interface PrecoCategoria {
   km_cent: number
@@ -80,7 +107,25 @@ export const categoriasAdm = {
       p_empresa: empresa,
       p_versao: versao,
     }),
-  salvar: (c: CategoriaAdm) => chamar('salvar_categoria', { p: c }),
+  /** Só as chaves que o banco aceita vão (a leitura traz `tarifa`, que ele recusaria). Sem `codigo`, cria. */
+  salvar: (c: EntradaCategoria | CategoriaAdm) => {
+    const p: Record<string, unknown> = {}
+    for (const k of CHAVES_ENTRADA) if (c[k] !== undefined && c[k] !== null) p[k] = c[k]
+    return chamar('salvar_categoria', { p })
+  },
+  /** Todas as categorias (também as inativas), com a tarifa da versão (ou da vigente). */
+  listar: async (empresa: string | null = null, versao: number | null = null) =>
+    (await categoriasAdm.ler(empresa, versao)).categorias,
+  /**
+   * Publica a tabela de preço (fase 4.1): uma versão nova do contrato com a tarifa de TODAS as categorias ativas
+   * (`{CODIGO: Tarifa}`). `empresa` nulo = tabela modelo. Sem atualização otimista.
+   */
+  publicarTarifas: (empresa: string | null, tarifas: Record<string, Tarifa>, vigenteDesde: Date) =>
+    chamar('publicar_tarifas', {
+      p_empresa: empresa,
+      p_tarifas: tarifas,
+      p_vigente_desde: vigenteDesde.toISOString(),
+    }),
   /** Sem atualização otimista: a tela só muda com a resposta do servidor. */
   publicar: (empresa: string | null, valores: ValoresContrato, precos: PrecosCategorias, vigenteDesde: Date) =>
     chamar('publicar_contrato_categorias', {
