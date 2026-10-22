@@ -411,7 +411,7 @@ O **IVO novo** é a interface no estilo Uber (mapa na frente, categorias, calcul
 - Cada um é um PWA à parte: instala em separado e guarda a própria versão no celular. O app atual **não muda**.
 - **Deploy vermelho:** abra a execução e veja **qual passo falhou**. Se foram só os passos do "IVO novo" (build, publicar ou verificar a CSP), o app atual **já foi publicado** e está no ar; só o site novo ficou para trás. Rode **Re-run failed jobs**.
 
-### 18.2 Categorias e preços
+### 18.2 Categorias e preços (fase 4; veja a §19 para a 4.1)
 - As categorias são **IVO Passageiros**, **IVO Carga Leve** e **IVO Carga Pesada**. Cada uma tem o seu preço por km (a Carga Pesada também tem a taxa fixa do reboque).
 - **Preço por categoria muda pelo app novo:** entre em https://ivo-novo.pages.dev como Master (ADM), menu ☰ › **Categorias e preços**, ajuste e toque em **Publicar nova versão**. Cria uma versão nova do contrato, imutável como sempre.
 - Publicar pela tela **Contratos do app atual** também pode: a versão nova **herda** os preços por categoria da versão anterior da mesma empresa (ou do modelo). Para **mudar** o preço de uma categoria, use o app novo.
@@ -481,3 +481,59 @@ Para o **Administrador** da empresa (N1) e para o Master (que escolhe a empresa 
 2. Nome do projeto: `ivo-novo`. Crie (pode enviar uma pasta qualquer, o Deploy sobrescreve) e rode o Deploy de novo (**Re-run failed jobs**).
 
 **(d) URL de retorno do Supabase.** **Não há nada para fazer**: o Deploy aplica `https://ivo-novo.pages.dev/definir-senha` (só o caminho dos links de convite e recuperação) em Auth › URL Configuration › Redirect URLs a partir do `supabase/config.toml` (passo `config push`). Para conferir: https://supabase.com/dashboard › seu projeto › **Authentication** › **URL Configuration**: a lista **Redirect URLs** deve ter `https://ivo-novo.pages.dev/definir-senha`. Se não tiver depois de um Deploy verde, avise.
+
+## 19. Categorias e preços (4.1)
+
+Roteiro de teste: [fase-4-1-o-que-testar.md](fases/fase-4-1-o-que-testar.md). Desenho: [fase-4-1-categorias-paradas-desenho.md](fases/fase-4-1-categorias-paradas-desenho.md). Esta seção **substitui** a §18.2 no que diz respeito a categorias e preços.
+
+### 19.1 O que muda para o dono
+- **Cada categoria tem a sua tabela** de preço: taxa fixa, por km, **por hora**, hora de espera, **por parada**, retorno de trecho único (%), reboque e diária de hospedagem. **Zerado = não cobra.**
+- Categorias iniciais: **IVO Passageiros**, **IVO Carga Leve** (agora **com reboque**) e **IVO Motorista** (Ivo dirige o carro da empresa, cobrada **por hora**, sem veículo da IVO). A **Carga Pesada** foi desativada (não some do histórico; o Master pode reativar).
+- O Master **cria, renomeia, ativa e desativa** categorias em ☰ › **Categorias e preços** (**+ Nova categoria**). O código é gerado do nome e **nunca muda**; categoria usada em pedido não é apagada, só desativada.
+- **Publicar tabela** cria uma versão nova do contrato com a tabela de **todas as categorias ativas**. Antes, uma revisão mostra o que muda. Vale para o modelo (empresa vazia) ou só para a empresa escolhida no topo.
+- **Paradas:** até **3** por corrida. O trajeto inteiro é cobrado pelo km, mais a taxa por parada. Em ida e volta, a ida passa pelas paradas e a volta vai direto.
+- **IVO Motorista (por hora):** o cliente informa as **horas estimadas** (0,5 a 24, de meia em meia hora); o Ivo ajusta na calculadora. Fica **disponível sempre que houver motorista ativo**, mesmo sem veículo cadastrado.
+- **Centro de custo** é digitado ao pedir (até 80 caracteres, opcional) e pode ser trocado na confirmação.
+- **Reboque** só é cobrado se a categoria está marcada "com reboque" **e** a taxa de reboque é maior que zero. **Carga Leve passa a cobrar reboque** depois da publicação.
+
+### 19.2 Depois do deploy: o dono precisa publicar a tabela
+1. Entre no app novo como Master › ☰ › **Categorias e preços**.
+2. Confira os valores (já vêm preenchidos com os preços de hoje), preencha o **valor por hora da IVO Motorista** e a **taxa por parada** onde quiser cobrar.
+3. Toque em **Publicar tabela**, leia a revisão e confirme.
+
+**Enquanto não publicar:**
+- os preços de Passageiros e Carga Leve continuam os **de hoje** (caminho de fallback do contrato);
+- a **IVO Motorista fica "Indisponível no momento"**, porque ainda não tem tabela;
+- **toda categoria criada depois da última publicação** também fica "Indisponível no momento" até a próxima publicação.
+
+Se a revisão avisar que uma categoria passa a cobrar por hora, é porque o app do cliente de antes da 4.1 (em cache) não manda as horas e o pedido dessa categoria seria recusado até ele atualizar. Para Passageiros e Carga Leve, o normal é deixar o valor por hora **zerado**.
+
+### 19.3 Migrations e RPCs novas
+| Migration | O que faz |
+| --- | --- |
+| `20261022120000_categorias_tarifas.sql` | Categorias livres (`veiculo_cliente`, código gerado), `app.tarifas_categoria`, funções de cálculo, `publicar_tarifas`, `salvar_categoria` (cria e edita), `categorias_adm` com tarifa; semente (Carga Leve com reboque, Carga Pesada desativada, MOTORISTA nova) |
+| `20261022120100_paradas_pedido.sql` | `app.atividades_paradas` (até 3), `horas_estimadas` e centro de custo em `criar_pedido`, `meus_pedidos` e pendências com as paradas |
+| `20261022120200_categorias_veiculo.sql` | `api.categorias_veiculo()`: nomes das categorias para o cadastro e a lista de veículos (Master e motorista) |
+| `20261022120300_km_volta.sql` | `km_volta` opcional em `categorias_disponiveis` (km da ida pelas paradas + volta direta) |
+
+- **RPCs novas:** `api.publicar_tarifas`, `api.categorias_veiculo`; `api.categorias_disponiveis` aceita `km_volta`, `paradas` e `horas` e devolve `veiculo_cliente`, `cobra_hora` e `cobra_parada`.
+- Nenhuma migration antiga foi editada. A migração sobre dados de produção do CI já cobre o padrão `2026102*`.
+- Auditoria nova: `PUBLICAR_TARIFAS`. `publicar_contrato` e `publicar_contrato_categorias` copiam as tarifas da versão anterior.
+
+### 19.4 Compatibilidade no deploy (app em cache e app atual)
+- **App atual** (pedidos sem categoria, `publicar_contrato`, `enviar_orcamento` sem as chaves novas): continua igual.
+- **`diarias` é ignorada** no caminho de categoria: o Orçar do app atual manda `diarias` para a IVO Motorista, e o banco aceita e descarta (a diária de hospedagem vem da tabela).
+- **Carga Leve com reboque é aceita de app em cache:** o app da fase 4 já publicado continua conseguindo pedir a Carga Leve; o pedido é aceito e o reboque passa a ser cobrado pela tabela.
+- **App da fase 4 em cache não manda `horas_estimadas`:** se o valor por hora de uma categoria for maior que zero, o `criar_pedido` recusa com CAMPOS_INVALIDOS até o app atualizar. Por isso o valor por hora só deve ficar preenchido na IVO Motorista (que o app antigo não conhecia).
+
+### 19.5 Atualização do service worker
+O app novo é um PWA e guarda a versão no aparelho. Depois do deploy, **cada celular precisa pegar a versão nova** (aviso **"Nova versão · Atualizar"**; se não aparecer, feche e abra o app, ou apague o ícone e instale de novo). Antes de anunciar a publicação da tabela aos clientes, confira o seu próprio celular e o do Ivo. Sem a versão nova, não aparecem paradas, horas, centro de custo ao pedir nem os nomes novos das categorias.
+
+### 19.6 Problemas comuns
+| Sintoma | O que fazer |
+| --- | --- |
+| IVO Motorista (ou categoria nova) "Indisponível no momento" | Falta publicar a tabela (19.2). A IVO Motorista também exige ao menos um motorista ativo |
+| Pedido recusado para uma categoria com valor por hora | O celular está com a versão antiga (19.4 e 19.5). Atualize o app |
+| Preço de uma categoria "mudou sozinho" | Foi a publicação: confira a revisão e a versão do contrato em Contratos |
+| Quarta parada não deixa adicionar | O limite é 3 paradas |
+| Publicar pela tela **Contratos** do app atual | A versão nova **herda** as tarifas da anterior; para mudar preço, use **Categorias e preços** |

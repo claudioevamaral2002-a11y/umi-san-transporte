@@ -229,3 +229,17 @@ Até isso, os preços continuam os de hoje.
   - a tabela modelo não se propaga para as empresas, como hoje.
 - **CSV:** ganha as colunas "Paradas" e "Horas". "De" e "Para" ficam nessa ordem.
 - **Último centro de custo:** guardado no aparelho, como hoje. O limite de 80 caracteres é conferido no banco.
+
+## 11. Desvios na implementação
+
+Notas do que saiu diferente do aprovado. As decisões acima não foram alteradas.
+
+- **Menu ☰ na esquerda (§6.4):** fica à esquerda, porque a casca do app é fixa em todas as telas; o mockup o mostrava à direita.
+- **Abas do painel (§6.5):** são `<nav>` com links (uma rota por aba), e não `tablist`.
+- **"Pedir de novo":** não carrega paradas nem horas; abre com a rota e a categoria.
+- **Paradas no mapa (§6.2):** a rota passa por elas, mas não há pinos nas paradas.
+- **Previsão de chegada do motorista:** é otimista até a última parada, porque é calculada para o destino final.
+- **Km em ida e volta (§4.3 e §5):** `categorias_disponiveis` ganhou `km_volta` opcional (migration `20261022120300`), para a prévia do cliente bater com o orçamento do motorista. O cliente só manda a volta quando há paradas.
+- **Nomes de categoria para veículos (§6.2):** nova leitura `api.categorias_veiculo()` (migration `20261022120200`), porque `categorias_adm` é só do Master.
+- **Compatibilidade de app em cache:** `diarias` é ignorada no caminho de categoria; a Carga Leve com reboque é aceita do app da fase 4; o app da fase 4 não manda horas (ver RUNBOOK §19.4).
+- **Aviso ao publicar (§6.3):** a revisão avisa quando Passageiros ou Carga Leve passam a cobrar por hora, pelo motivo acima.
