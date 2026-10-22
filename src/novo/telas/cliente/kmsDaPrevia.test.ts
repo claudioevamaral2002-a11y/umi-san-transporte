@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { kmDoPedido } from '../../../lib/categorias.ts'
 import { kmsDaPrevia } from './kmsDaPrevia.ts'
+
+// categorias.ts importa o cliente do Supabase; no CI não há VITE_SUPABASE_URL para os testes de unidade.
+vi.mock('../../../lib/supabase.ts', () => ({ supabase: { rpc: vi.fn() } }))
 
 describe('kmsDaPrevia', () => {
   it('trecho único: só a ida, com uma casa', () => {
