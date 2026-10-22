@@ -27,8 +27,11 @@ export default defineConfig({
       use: { ...devices['iPhone 15'], defaultBrowserType: 'chromium' },
     },
     // Fluxos contra o Supabase real (CI): exigem E2E_BACKEND_REAL=1 e o .env.test; sem Docker local, ficam de fora.
+    // Um worker só: os arquivos dividem UM banco e o motorista que atende pedidos novos é o ativo mais antigo (cada
+    // arquivo envelhece o seu). `fullyParallel: false` só serializa dentro de cada arquivo; com 2+ workers (runner de
+    // 4 vCPUs, repositório público) dois arquivos rodavam juntos e um recebia os pedidos do outro.
     ...(process.env.E2E_BACKEND_REAL === '1'
-      ? [{ name: 'real', testMatch: /[\\/]real[\\/].*\.spec\.ts$/, fullyParallel: false, use: { ...devices['Pixel 7'] } }]
+      ? [{ name: 'real', testMatch: /[\\/]real[\\/].*\.spec\.ts$/, fullyParallel: false, workers: 1, use: { ...devices['Pixel 7'] } }]
       : []),
   ],
   // wrangler pages dev aplica o _headers igual ao Cloudflare Pages.
