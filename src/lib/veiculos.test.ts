@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const rpc = vi.fn()
 vi.mock('./supabase.ts', () => ({ supabase: { rpc: (...a: unknown[]) => rpc(...a) } }))
 
-const { FORM_VEICULO_VAZIO, normalizarPlaca, validarVeiculo, veiculos } = await import('./veiculos.ts')
+const { FORM_VEICULO_VAZIO, categoriasDeVeiculo, nomeDaCategoria, nomesDasCategorias, normalizarPlaca, validarVeiculo, veiculos } =
+  await import('./veiculos.ts')
 
 beforeEach(() => rpc.mockReset())
 
@@ -58,5 +59,27 @@ describe('validarVeiculo', () => {
     const r = validarVeiculo({ ...cheio, placa: 'AB-123', lugares: '61', cargaMaxKg: 'x', modelo: '', categorias: [] })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(Object.keys(r.erros).sort()).toEqual(['cargaMaxKg', 'categorias', 'lugares', 'modelo', 'placa'])
+  })
+})
+
+describe('categorias do banco (fase 4.1)', () => {
+  const cats = [
+    { codigo: 'PASSAGEIROS', nome: 'IVO Passageiros', descricao_curta: '', ordem: 1, ativa: true, veiculo_cliente: false },
+    { codigo: 'CARGA_LEVE', nome: 'IVO Carga Leve', descricao_curta: '', ordem: 2, ativa: true, veiculo_cliente: false },
+    { codigo: 'MOTORISTA', nome: 'IVO Motorista', descricao_curta: '', ordem: 3, ativa: true, veiculo_cliente: true },
+    { codigo: 'CARGA_PESADA', nome: 'IVO Carga Pesada', descricao_curta: '', ordem: 4, ativa: false, veiculo_cliente: false },
+  ]
+  it('o cadastro de veículo só oferece as ativas que usam veículo da IVO', () => {
+    expect(categoriasDeVeiculo(cats).map((c) => c.codigo)).toEqual(['PASSAGEIROS', 'CARGA_LEVE'])
+  })
+  it('nomes vêm do banco; sem a categoria, o próprio código', () => {
+    const nomes = nomesDasCategorias(cats)
+    expect(nomes.MOTORISTA).toBe('IVO Motorista')
+    expect(nomeDaCategoria('PASSAGEIROS', nomes)).toBe('IVO Passageiros')
+    expect(nomeDaCategoria('NOVA', nomes)).toBe('NOVA')
+  })
+  it('renomear no banco muda o rótulo', () => {
+    const renomeadas = cats.map((c) => (c.codigo === 'PASSAGEIROS' ? { ...c, nome: 'Executivo' } : c))
+    expect(nomeDaCategoria('PASSAGEIROS', nomesDasCategorias(renomeadas))).toBe('Executivo')
   })
 })
