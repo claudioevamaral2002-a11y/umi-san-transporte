@@ -90,6 +90,10 @@ describe('pedidoDaCategoria (fase 4.1)', () => {
     const p = pedidoDaCategoria(motorista, base, { horas: 4.5 })
     expect(p).toMatchObject({ categoria: 'MOTORISTA', modalidade: 'VEICULO_CLIENTE', horas_estimadas: 4.5, reboque: 'NAO' })
   })
+  it('categoria que não cobra por hora não manda horas_estimadas', () => {
+    const p = pedidoDaCategoria({ ...motorista, codigo: 'PASSAGEIROS', veiculo_cliente: false, cobra_hora: false }, base, { horas: 4 })
+    expect(p).not.toHaveProperty('horas_estimadas')
+  })
   it('categoria com veículo da IVO continua em VEICULO_PROPRIO', () => {
     const p = pedidoDaCategoria({ ...motorista, codigo: 'PASSAGEIROS', veiculo_cliente: false }, base)
     expect(p.modalidade).toBe('VEICULO_PROPRIO')
@@ -158,6 +162,15 @@ describe('categorias.disponiveis', () => {
     const r = await categorias.disponiveis({ km: 12.5, levar: true, trazer: false })
     expect(rpc).toHaveBeenCalledWith('categorias_disponiveis', { p: { km: 12.5, levar: true, trazer: false } })
     expect(r.categorias).toEqual(cats)
+  })
+  it('paradas presas a 0..3 e horas inválidas não vão', async () => {
+    rpc.mockResolvedValue({ data: { ok: true, categorias: [] }, error: null })
+    await categorias.disponiveis({ km: 10, levar: true, trazer: false, paradas: 3, horas: 24.5 })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 10, levar: true, trazer: false, paradas: 3 } })
+    await categorias.disponiveis({ km: 10, levar: true, trazer: false, paradas: 7 })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 10, levar: true, trazer: false, paradas: 3 } })
+    await categorias.disponiveis({ km: 10, levar: true, trazer: false, paradas: -2 })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 10, levar: true, trazer: false, paradas: 0 } })
   })
   it('manda paradas (quantidade) e horas só quando existem', async () => {
     rpc.mockResolvedValue({ data: { ok: true, categorias: [] }, error: null })

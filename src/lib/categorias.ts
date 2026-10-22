@@ -3,7 +3,7 @@
 import type { LinhaOrcamento } from './pedidos.ts'
 import { ler } from './pedidos.ts'
 import { type FormPedido, montarPedido } from './novoPedido.ts'
-import { type Parada, paraPedido } from './paradas.ts'
+import { MAX_PARADAS, type Parada, paraPedido } from './paradas.ts'
 import type { Carga, Reboque } from './situacao.ts'
 
 /** As três categorias de antes da 4.1 (preços e telas antigos). Categorias novas usam `string`: ver `CategoriaComPreco`. */
@@ -103,8 +103,10 @@ export const categorias = {
    */
   disponiveis: (p: { km: number; levar: boolean; trazer: boolean; paradas?: number | null; horas?: number | null }) => {
     const corpo: Record<string, unknown> = { km: p.km, levar: p.levar, trazer: p.trazer }
-    if (p.paradas !== undefined && p.paradas !== null) corpo.paradas = p.paradas
-    if (p.horas !== undefined && p.horas !== null) corpo.horas = p.horas
+    if (p.paradas !== undefined && p.paradas !== null && Number.isFinite(p.paradas)) {
+      corpo.paradas = Math.min(MAX_PARADAS, Math.max(0, Math.trunc(p.paradas)))
+    }
+    if (p.horas !== undefined && p.horas !== null && horasValidas(p.horas)) corpo.horas = p.horas
     return ler<{ categorias: CategoriaComPreco[] }>('categorias_disponiveis', { p: corpo })
   },
 }
@@ -128,7 +130,7 @@ export function pedidoDaCategoria(
   p.categoria = c.codigo
   if (opcoes.agora) p.agora = true
   if (opcoes.paradas && opcoes.paradas.length > 0) p.paradas = paraPedido(opcoes.paradas)
-  if (opcoes.horas !== undefined && opcoes.horas !== null) p.horas_estimadas = opcoes.horas
+  if (c.cobra_hora && opcoes.horas !== undefined && opcoes.horas !== null) p.horas_estimadas = opcoes.horas
   const cc = opcoes.centroCusto?.trim()
   if (cc) p.centro_custo = cc
   return p

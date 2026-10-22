@@ -51,6 +51,15 @@ describe('doFormulario', () => {
       expect(Object.keys(r.campos).sort()).toEqual(['hora', 'km'])
     }
   })
+  it('limites do retorno, zero e casas decimais', () => {
+    const t = (f: Parameters<typeof doFormulario>[0]) => doFormulario(f)
+    expect(t({ retorno: '100' })).toMatchObject({ retorno_bp: 10000 })
+    expect('erro' in t({ retorno: '100,01' })).toBe(true)
+    expect('erro' in t({ retorno: '-5' })).toBe(true)
+    expect(t({ km: '0' })).toMatchObject({ km_cent: 0 })
+    expect(t({ km: '3.5' })).toMatchObject({ km_cent: 350 })
+    expect('erro' in t({ km: '3,505' })).toBe(true)
+  })
   it('retorno acima de 100% é erro', () => {
     const r = doFormulario({ retorno: '101' })
     expect('erro' in r).toBe(true)

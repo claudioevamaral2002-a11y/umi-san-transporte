@@ -1,9 +1,9 @@
 // Fase 4: veículos do motorista (o ADM vê e cadastra de todos). O banco confere dono, placa e categorias.
 import type { CategoriaAdm } from './categoriasAdm.ts'
+import { chamar, ler } from './pedidos.ts'
 
 /** Código de qualquer categoria do banco (fase 4.1: o Master cria novas). */
 export type CodigoDaCategoria = string
-import { chamar, ler } from './pedidos.ts'
 
 export type SituacaoVeiculo = 'ATIVO' | 'MANUTENCAO' | 'INATIVO'
 
