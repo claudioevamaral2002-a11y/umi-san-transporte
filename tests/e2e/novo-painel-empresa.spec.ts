@@ -161,6 +161,7 @@ test.describe('no computador', () => {
     const [agendada, aguardando, confirmar] = [1, 2, 3].map((i) => proximas.getByRole('row').nth(i))
     await expect(agendada!).toContainText('Marina Souza')
     await expect(agendada!).toContainText('08:30')
+    await expect(agendada!).toContainText('09:25')
     await expect(agendada!).toContainText('DeUmi San · Rua Araguaia, 49ParaPorto de Itajaí · Portão 3')
     await expect(agendada!).toContainText('Passageiros')
     await expect(agendada!).not.toContainText('IVO Passageiros')

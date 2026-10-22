@@ -12,13 +12,12 @@ import { BOTAO_CONTORNO, CARTAO, useContextoPainel } from './componentes.tsx'
  */
 export function AbaCarteira() {
   const { perfil } = useSessao()
-  const { ehAdm, empresa, semEmpresa } = useContextoPainel()
+  const { ehAdm, empresa, semEmpresa, nomeEmpresa } = useContextoPainel()
   useTituloNaTela('oculto')
   const id = ehAdm ? empresa : (perfil?.empresa_id ?? null)
-  const nome = ehAdm ? 'Empresa' : (perfil?.empresa_nome ?? 'Empresa')
 
   return (
-    <main className="mx-auto max-w-[1200px] space-y-6 px-4 pt-7 md:px-8">
+    <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <h1 className="sr-only">Carteira</h1>
       {semEmpresa ? (
         <p className={`${CARTAO} p-6`}>Nenhuma empresa cadastrada.</p>
@@ -38,7 +37,7 @@ export function AbaCarteira() {
             </p>
           )}
           <h2 className="nao-imprimir text-xl font-bold tracking-[-0.02em] md:text-2xl">Extrato</h2>
-          <ExtratoEmpresa empresa={ehAdm ? id : null} empresaIdTopico={id} empresaNome={nome} adm={false} />
+          <ExtratoEmpresa empresa={ehAdm ? id : null} empresaIdTopico={id} empresaNome={nomeEmpresa} adm={false} />
         </div>
       )}
     </main>

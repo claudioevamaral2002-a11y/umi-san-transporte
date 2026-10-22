@@ -6,6 +6,6 @@ import { useContextoPainel } from './componentes.tsx'
  * Master vê a lista de Usuários de todas as empresas (a mesma tela do ADM).
  */
 export function AbaPessoas() {
-  const { ehAdm } = useContextoPainel()
-  return ehAdm ? <Usuarios /> : <Equipe />
+  const { ehAdm, empresa } = useContextoPainel()
+  return ehAdm ? <Usuarios empresa={empresa ?? undefined} /> : <Equipe />
 }

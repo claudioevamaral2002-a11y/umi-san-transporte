@@ -74,7 +74,7 @@ export function AbaCorridas() {
   const filtradas = corridas.filter((p) => (!statusAtual || p.status === statusAtual) && (!centroAtual || p.centro_custo === centroAtual))
 
   return (
-    <main className="mx-auto max-w-[1200px] space-y-6 px-4 pt-7 md:px-8">
+    <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <h1 className="sr-only">Corridas</h1>
       <div className={`${CARTAO} grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end`}>
         <Filtro

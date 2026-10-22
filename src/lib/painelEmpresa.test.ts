@@ -61,6 +61,12 @@ describe('csvDoMes', () => {
       '22/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;Posto | Cliente;Porto de Itajaí · Portão 3;IVO Passageiros;2,5;Operações 4.100;220,00',
     )
   })
+  it('endereço com aspas e quebra de linha vai entre aspas (aspas dobradas)', () => {
+    const csv = csvDoMes([pedido({ origem: 'Rua "A"\nfundos' })])
+    expect(csv.split('\r\n')[1]).toBe(
+      '22/10/2026;Marina Souza;"Rua ""A""\nfundos";;Porto de Itajaí · Portão 3;IVO Passageiros;;Operações 4.100;220,00',
+    )
+  })
   it('sem valor (cancelada sem multa) fica de fora; campos vazios ficam vazios', () => {
     const csv = csvDoMes([
       pedido({ id: 'a', valor_cent: null, status: 'CANCELADA' }),

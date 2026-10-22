@@ -13,6 +13,8 @@ export interface ContextoPainel {
   /** Master: a empresa escolhida no topo (nula enquanto a lista carrega). O Administrador não escolhe: o banco usa a dele. */
   empresa: string | null
   semEmpresa: boolean
+  /** Nome da empresa em exibição (a do Master escolhida no topo ou a própria). */
+  nomeEmpresa: string
   erroEmpresas: boolean
   recarregarEmpresas: () => void
 }

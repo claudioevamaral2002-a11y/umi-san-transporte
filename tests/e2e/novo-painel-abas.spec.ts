@@ -86,11 +86,27 @@ function painel(doMes: unknown[]) {
   }
 }
 
+const pessoa = (nome: string, empresa: typeof EMPRESA_UMI) => ({
+  usuario_id: `00000000-0000-4000-8000-${String(nome.length).padStart(4, '0')}${empresa.id.slice(-8)}`,
+  nome,
+  email: `${nome.split(' ')[0]!.toLowerCase()}@exemplo.com.br`,
+  telefone: null,
+  papel: 'CLIENTE',
+  nivel: 3,
+  empresa_id: empresa.id,
+  empresa_nome: empresa.nome,
+  ativo: true,
+  senha_pendente: false,
+  tem_2fa: false,
+  criado_em: '2026-10-02T00:00:00Z',
+})
+const USUARIOS_DAS_EMPRESAS = [pessoa('Carla Dias', EMPRESA_UMI), pessoa('Fábio Reis', EMPRESA_PORTO)]
+
 async function abrir(page: Page, perfil: PerfilFalso, caminho = '/empresa') {
   await comSessaoFalsa(page, perfil, perfil.papel === 'CLIENTE' ? {} : { aal: 'aal2' })
   await simularMapas(page)
   await page.route('https://tile.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
-  await simularApi(page, { empresas: [EMPRESA_UMI, EMPRESA_PORTO] })
+  await simularApi(page, { empresas: [EMPRESA_UMI, EMPRESA_PORTO], usuarios: USUARIOS_DAS_EMPRESAS })
   await simularPedidos(page, {})
   const chamadas: Array<Record<string, unknown>> = []
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/painel_empresa`, (r) => {
@@ -140,10 +156,28 @@ test.describe('no computador', () => {
   })
 
   test('cada aba abre direto pelo endereço, com uma só marcação de página atual e um só h1', async ({ page }) => {
-    await abrir(page, N1, '/empresa/carteira')
-    await expect(abas(page).locator('[aria-current="page"]')).toHaveCount(1)
-    await expect(abas(page).getByRole('link', { name: 'Carteira' })).toHaveAttribute('aria-current', 'page')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+    await abrir(page, N1, '/empresa')
+    for (const [aba, caminho] of [
+      ['Painel', '/empresa'],
+      ['Corridas', '/empresa/corridas'],
+      ['Pessoas', '/empresa/pessoas'],
+      ['Carteira', '/empresa/carteira'],
+    ] as const) {
+      await page.goto(caminho)
+      await expect(abas(page).locator('[aria-current="page"]')).toHaveCount(1)
+      await expect(abas(page).getByRole('link', { name: aba })).toHaveAttribute('aria-current', 'page')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+    }
+  })
+
+  test('o Master vê na aba Pessoas só as pessoas da empresa escolhida', async ({ page }) => {
+    await abrir(page, ADM, '/empresa/pessoas')
+    await expect(page.getByRole('combobox', { name: 'Empresa' })).toHaveValue(EMPRESA_UMI.id)
+    await expect(page.getByRole('table').getByText('Carla Dias')).toBeVisible()
+    await expect(page.getByText('Fábio Reis')).toHaveCount(0)
+    await page.getByRole('combobox', { name: 'Empresa' }).selectOption(EMPRESA_PORTO.id)
+    await expect(page.getByRole('table').getByText('Fábio Reis')).toBeVisible()
+    await expect(page.getByText('Carla Dias')).toHaveCount(0)
   })
 
   test('o menu ☰ "Painel da empresa" leva ao painel e continua marcado nas abas', async ({ page }) => {
@@ -254,8 +288,14 @@ for (const tema of ['light', 'dark'] as const) {
       const csp = await vigiarCsp(page)
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.setViewportSize({ width: 1440, height: 900 })
-      await abrir(page, N1, '/empresa/corridas')
+      await abrir(page, N1, '/empresa')
+      await expect(page.getByRole('heading', { name: 'Resumo de outubro' })).toBeVisible()
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+      await abas(page).getByRole('link', { name: 'Corridas' }).click()
       await expect(page.getByRole('table', { name: 'Corridas do mês' })).toBeVisible()
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+      await abas(page).getByRole('link', { name: 'Pessoas' }).click()
+      await expect(page.getByRole('heading', { name: 'Equipe' })).toBeVisible()
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
       await abas(page).getByRole('link', { name: 'Carteira' }).click()
       await expect(page.getByText('Disponível para novos pedidos')).toBeVisible()

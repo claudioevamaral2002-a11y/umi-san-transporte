@@ -125,7 +125,7 @@ export function AbaPainel() {
   const aba = (a: '' | '/corridas' | '/pessoas' | '/carteira') => enderecoDaAba(a, ehAdm, empresa)
 
   return (
-    <main className="mx-auto max-w-[1200px] space-y-9 px-4 pt-7 md:px-8">
+    <main className="mx-auto max-w-5xl space-y-9 p-4 md:p-6">
       <h1 className="sr-only">Painel da empresa</h1>
       {semEmpresa ? (
         <p className={`${CARTAO} p-6`}>Nenhuma empresa cadastrada.</p>

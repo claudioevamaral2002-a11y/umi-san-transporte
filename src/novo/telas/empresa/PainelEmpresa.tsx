@@ -103,12 +103,13 @@ export function PainelEmpresa() {
     ehAdm,
     empresa,
     semEmpresa,
+    nomeEmpresa: (ehAdm ? listaEmpresas.dados?.find((e) => e.id === empresa)?.nome : perfil?.empresa_nome) ?? 'Empresa',
     erroEmpresas: !!listaEmpresas.erro,
     recarregarEmpresas: listaEmpresas.recarregar,
   }
 
   return (
-    <div className="min-h-dvh bg-painel-fundo pb-[calc(2rem+env(safe-area-inset-bottom))]">
+    <div className="bg-painel-fundo pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <BarraDoPainel
         ehAdm={ehAdm}
         empresas={ehAdm ? (listaEmpresas.dados ?? []) : null}
