@@ -82,6 +82,9 @@ export const MENSAGENS = {
   NOTA_INVALIDA: 'Escolha uma nota de 1 a 5 estrelas.',
   TELEFONE_INVALIDO: 'Informe o telefone com DDD, por exemplo (47) 99999-1234.',
   VALOR_INVALIDO: 'O valor do orçamento precisa ser maior que zero. Confira os km e os valores informados.',
+
+  // Categorias livres (fase 4.1)
+  CATEGORIA_DUPLICADA: 'Já existe uma categoria ativa com este nome.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS

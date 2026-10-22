@@ -55,7 +55,7 @@ reset role;
 
 select is((select string_agg((x ->> 'codigo') || ':' || (x ->> 'ativa'), ',')
              from jsonb_array_elements(current_setting('t.r1')::jsonb -> 'categorias') x),
-  'PASSAGEIROS:true,CARGA_LEVE:true,CARGA_PESADA:false', 'todas as categorias, na ordem, também a inativa');
+  'PASSAGEIROS:true,CARGA_LEVE:true,CARGA_PESADA:false,MOTORISTA:true', 'todas as categorias, na ordem, também a inativa');
 select ok(current_setting('t.r1')::jsonb #>> '{categorias,0,nome}' = 'IVO Passageiros'
       and current_setting('t.r1')::jsonb #>> '{categorias,0,descricao_curta}' = 'até 4 pessoas', 'com nome e descrição');
 select is(current_setting('t.r1')::jsonb -> 'precos', 'null'::jsonb, 'sem versão: precos nulo');

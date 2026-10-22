@@ -18,11 +18,11 @@ export interface CategoriaComPreco {
 
 /**
  * Como cada categoria preenche o pedido de hoje (o mesmo de `app.categorias`, conferido de novo pelo banco):
- * Passageiros = pessoas; Carga Leve = equipamento; Carga Pesada = equipamento com reboque.
+ * Passageiros = pessoas; Carga Leve = equipamento com reboque (fase 4.1); Carga Pesada = equipamento com reboque.
  */
 export const PREENCHIMENTO: Record<CodigoCategoria, { carga: Carga; reboque: Reboque }> = {
   PASSAGEIROS: { carga: 'PESSOAS', reboque: 'NAO' },
-  CARGA_LEVE: { carga: 'EQUIPAMENTO', reboque: 'NAO' },
+  CARGA_LEVE: { carga: 'EQUIPAMENTO', reboque: 'SIM' },
   CARGA_PESADA: { carga: 'EQUIPAMENTO', reboque: 'SIM' },
 }
 

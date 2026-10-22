@@ -204,8 +204,8 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
       await expect(categorias.getByRole('radio', { name: /IVO Passageiros/ })).toContainText(
         new RegExp(`~${reais(kmComRetorno(KM_ROTA, PRECOS.PASSAGEIROS))}`),
       )
-      // Ninguém tem veículo com reboque: a Carga Pesada fica indisponível.
-      await expect(categorias.getByRole('radio', { name: /IVO Carga Pesada/ })).toContainText('Indisponível no momento')
+      // Fase 4.1: a Carga Pesada foi desligada; a IVO Motorista ainda não tem tabela publicada, então fica indisponível.
+      await expect(categorias.getByRole('radio', { name: /IVO Motorista/ })).toContainText('Indisponível no momento')
       await categorias.getByRole('radio', { name: /IVO Carga Leve/ }).click()
       // Carga pede a descrição (nos detalhes da corrida).
       await pc.getByText('Detalhes da corrida (pessoas, carga, contato)').click()

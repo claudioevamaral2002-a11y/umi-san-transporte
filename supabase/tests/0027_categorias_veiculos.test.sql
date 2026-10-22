@@ -35,11 +35,14 @@ select set_config('t.c' || u, json_build_object('sub', '00000000-0000-0000-0000-
                                                  'aal', case when u in ('a1', 'a4', 'a7') then 'aal2' else 'aal1' end)::text, true)
 from unnest(array['a1', 'a4', 'a5', 'a6', 'a7', 'a8']) u;
 
--- as 3 categorias da semente
-select is((select string_agg(codigo || ':' || carga::text || ':' || reboque::text || ':' || descricao_curta, '|' order by ordem)
+-- as 3 categorias da semente (fase 4.1, 20261022120000: a Carga Leve ganhou reboque e entrou a MOTORISTA, na ordem 3)
+select is((select string_agg(codigo || ':' || carga::text || ':' || reboque::text || ':' || descricao_curta, '|' order by ordem, codigo)
              from app.categorias),
-  'PASSAGEIROS:PESSOAS:NAO:até 4 pessoas|CARGA_LEVE:EQUIPAMENTO:NAO:até 800 kg|CARGA_PESADA:EQUIPAMENTO:SIM:com reboque',
-  'semente: 3 categorias com carga, reboque e descrição');
+  'PASSAGEIROS:PESSOAS:NAO:até 4 pessoas|CARGA_LEVE:EQUIPAMENTO:SIM:até 800 kg|CARGA_PESADA:EQUIPAMENTO:SIM:com reboque'
+  || '|MOTORISTA:PESSOAS:NAO:Ivo dirige o carro da sua empresa',
+  'semente: categorias com carga, reboque e descrição');
+-- Este teste é da fase 4: volta às 3 categorias ativas de então (a 4.1 desligou a Carga Pesada e criou a MOTORISTA).
+update app.categorias set ativa = (codigo <> 'MOTORISTA');
 
 ------------------------------------------------------------------ 1. sem veículo: nada disponível
 set local role authenticated;
@@ -216,7 +219,7 @@ select is((select string_agg(x ->> 'codigo', ',') from jsonb_array_elements(
   'PASSAGEIROS,CARGA_PESADA', 'categoria inativa sai da lista');
 reset role;
 select is((select nome || '|' || descricao_curta || '|' || carga::text || '|' || reboque::text from app.categorias where codigo = 'CARGA_LEVE'),
-  'IVO Carga Leve|até 900 kg|EQUIPAMENTO|NAO', 'categoria alterada; carga e reboque intocados');
+  'IVO Carga Leve|até 900 kg|EQUIPAMENTO|SIM', 'categoria alterada; carga e reboque intocados');
 
 ------------------------------------------------------------------ 7. imutabilidade
 select throws_ok($$update app.contratos_categorias set km_cent = 1$$, '42501', null, 'contratos_categorias é imutável (update)');

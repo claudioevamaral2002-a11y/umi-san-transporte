@@ -26,9 +26,10 @@ describe('km da rota (mesmo arredondamento do cliente)', () => {
 })
 
 describe('reboque fixo pela categoria', () => {
-  it('Carga Pesada com reboque; Passageiros e Carga Leve sem, mesmo que o pedido diga outra coisa', () => {
+  it('Carga Pesada e Carga Leve (4.1) com reboque; Passageiros sem, mesmo que o pedido diga outra coisa', () => {
     expect(usaReboque(pedido({ categoria: 'CARGA_PESADA', reboque: 'NAO' }))).toBe(true)
-    expect(usaReboque(pedido({ categoria: 'CARGA_LEVE', reboque: 'SIM' }))).toBe(false)
+    expect(usaReboque(pedido({ categoria: 'CARGA_LEVE', reboque: 'NAO' }))).toBe(true)
+    expect(usaReboque(pedido({ categoria: 'PASSAGEIROS', reboque: 'SIM' }))).toBe(false)
   })
   it('sem categoria (pedido do app atual): o que o cliente pediu', () => {
     expect(usaReboque(pedido({ categoria: null, reboque: 'SIM' }))).toBe(true)
