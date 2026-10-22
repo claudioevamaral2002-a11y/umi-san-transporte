@@ -8,7 +8,14 @@ import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { EstadoVazio, ErroAoCarregar, useTituloNaTela } from '../../../design/componentes/Tela.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
-import { NOMES_CATEGORIA, SITUACOES, veiculos, type SituacaoVeiculo, type Veiculo } from '../../../lib/veiculos.ts'
+import {
+  nomeDaCategoria,
+  nomesDasCategorias,
+  SITUACOES,
+  veiculos,
+  type SituacaoVeiculo,
+  type Veiculo,
+} from '../../../lib/veiculos.ts'
 
 const OPCOES_SITUACAO = (Object.keys(SITUACOES) as SituacaoVeiculo[]).map((valor) => ({ valor, rotulo: SITUACOES[valor] }))
 
@@ -25,10 +32,12 @@ function resumo(v: Veiculo): string {
 function CartaoVeiculo({
   v,
   adm,
+  nomes,
   aoMudar,
 }: {
   v: Veiculo
   adm: boolean
+  nomes: Readonly<Record<string, string>>
   aoMudar: (texto: string) => void
 }) {
   const [enviando, setEnviando] = useState(false)
@@ -72,7 +81,7 @@ function CartaoVeiculo({
               key={c}
               className={`rounded-full border px-2.5 py-0.5 ivo-legenda font-bold ${parado ? 'border-borda text-texto-suave' : 'border-marinho-2 text-texto'}`}
             >
-              {NOMES_CATEGORIA[c]}
+              {nomeDaCategoria(c, nomes)}
             </li>
           ))}
         </ul>
@@ -99,6 +108,9 @@ export function ListaDeVeiculos({ adm = false }: { adm?: boolean }) {
   // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
   useTituloNaTela('visivel')
   const { dados, erro, recarregar } = useConsulta(adm ? 'novo-veiculos-adm' : 'novo-meus-veiculos', () => veiculos.meus())
+  // Nomes atuais das categorias (do banco). Sem eles (falha na leitura), a etiqueta mostra o código.
+  const categorias = useConsulta('novo-categorias-veiculo', () => veiculos.categorias())
+  const nomes = nomesDasCategorias(categorias.dados ?? [])
   const local = useLocation()
   const [aviso, setAviso] = useState<string | null>(() => (local.state as { aviso?: string } | null)?.aviso ?? null)
   const novo = adm ? '/adm/veiculos/novo' : '/veiculos/novo'
@@ -137,6 +149,7 @@ export function ListaDeVeiculos({ adm = false }: { adm?: boolean }) {
               key={v.id}
               v={v}
               adm={adm}
+              nomes={nomes}
               aoMudar={(t) => {
                 setAviso(t)
                 recarregar()
