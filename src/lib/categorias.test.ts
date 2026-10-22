@@ -77,6 +77,7 @@ describe('kmDoPedido', () => {
     expect(kmDoPedido({ ida: { km: 48.2 }, volta: { km: 41.0 }, levar: true, trazer: true })).toBe(89.2)
     expect(kmDoPedido({ ida: { km: 48.2 }, levar: true, trazer: false })).toBe(48.2)
     expect(kmDoPedido({ ida: { km: 48.2 }, volta: null, levar: true, trazer: true })).toBe(48.2)
+    expect(kmDoPedido({ ida: { km: 48.2 }, volta: { km: 41.0 }, levar: true, trazer: false })).toBe(48.2)
     expect(kmDoPedido({ ida: null, levar: true, trazer: false })).toBeNull()
   })
 })

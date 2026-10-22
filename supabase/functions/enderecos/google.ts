@@ -7,7 +7,6 @@ type Uso = (tipo: TipoUso) => Promise<{ ok: boolean; codigo?: string }>
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const PLACE = /^[A-Za-z0-9_-]{1,300}$/
-const ENTRADA_INVALIDA: Corpo = { ok: false, codigo: 'ENTRADA_INVALIDA' }
 const INVALIDO: Corpo = { ok: false, codigo: 'CAMPOS_INVALIDOS' }
 const INDISPONIVEL: Corpo = { ok: false, codigo: 'MAPAS_INDISPONIVEL' }
 const SEM_ROTA: Corpo = { ok: true, km: null, minutos: null }
@@ -82,7 +81,7 @@ export function criarManipuladorEnderecos(deps: {
       if (!pontoValido(c.origem) || !pontoValido(c.destino)) return INVALIDO
       // Paradas intermediárias (opcionais, no máximo 3), cada uma no mesmo formato de origem e destino.
       if (c.paradas !== undefined) {
-        if (!Array.isArray(c.paradas) || c.paradas.length > 3 || !c.paradas.every(pontoValido)) return ENTRADA_INVALIDA
+        if (!Array.isArray(c.paradas) || c.paradas.length > 3 || !c.paradas.every(pontoValido)) return INVALIDO
       }
       tipo = 'ROTA'
     } else {

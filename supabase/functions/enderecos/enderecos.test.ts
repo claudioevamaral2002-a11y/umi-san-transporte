@@ -127,7 +127,7 @@ describe('enderecos', () => {
     })
   })
 
-  it('rota: paradas vão como intermediates e a máscara mantém a linha; mais de 3 é ENTRADA_INVALIDA', async () => {
+  it('rota: paradas vão como intermediates e a máscara mantém a linha; mais de 3 é CAMPOS_INVALIDOS', async () => {
     const pedidos: Array<{ corpo: Record<string, unknown>; init: RequestInit }> = []
     const buscar = (async (_u: string, init: RequestInit) => {
       pedidos.push({ corpo: JSON.parse(String(init.body)), init })
@@ -146,9 +146,13 @@ describe('enderecos', () => {
     expect(new Headers(pedidos[0]!.init.headers).get('X-Goog-FieldMask')).toContain('routes.polyline.encodedPolyline')
     expect(await m({ acao: 'rota', origem: o, destino: d })).toMatchObject({ ok: true })
     expect(pedidos[1]!.corpo.intermediates).toBeUndefined()
-    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [p, p, p, p] })).toEqual({ ok: false, codigo: 'ENTRADA_INVALIDA' })
-    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [{ lat: 40, lng: -48 }] })).toEqual({ ok: false, codigo: 'ENTRADA_INVALIDA' })
-    expect(pedidos).toHaveLength(2)
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [p, p, p, p] })).toEqual({ ok: false, codigo: 'CAMPOS_INVALIDOS' })
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [{ lat: 40, lng: -48 }] })).toEqual({ ok: false, codigo: 'CAMPOS_INVALIDOS' })
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: 'x' })).toEqual({ ok: false, codigo: 'CAMPOS_INVALIDOS' })
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [{ lat: '-26', lng: -48 }] })).toEqual({ ok: false, codigo: 'CAMPOS_INVALIDOS' })
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [] })).toMatchObject({ ok: true })
+    expect(pedidos[2]!.corpo.intermediates).toBeUndefined()
+    expect(pedidos).toHaveLength(3)
   })
 
   it('rota: Google com tempo esgotado ou erro devolve km null (o pedido segue sem prévia)', async () => {
