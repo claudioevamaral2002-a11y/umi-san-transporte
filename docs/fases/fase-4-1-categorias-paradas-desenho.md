@@ -1,6 +1,6 @@
 # Fase 4.1: categorias livres com tabela própria, paradas e ajustes do app novo
 
-Estado: **especificação para revisão do dono** (22/10/2026). As decisões vieram do primeiro teste do dono no app novo (ivo-novo.pages.dev), feito no mesmo dia. Mockups: [`../redesign/mockups-fase-4-1.html`](../redesign/mockups-fase-4-1.html). Base: fase 4, já em produção ([`fase-4-ivo-estilo-uber-desenho.md`](fase-4-ivo-estilo-uber-desenho.md)).
+Estado: **aprovada pelo dono em 22/10/2026**, com os mockups. As decisões vieram do primeiro teste do dono no app novo (ivo-novo.pages.dev), feito no mesmo dia. Mockups: [`../redesign/mockups-fase-4-1.html`](../redesign/mockups-fase-4-1.html). Base: fase 4, já em produção ([`fase-4-ivo-estilo-uber-desenho.md`](fase-4-ivo-estilo-uber-desenho.md)).
 
 ## 1. O que o dono pediu (22/10)
 
