@@ -70,7 +70,8 @@ jobs:
       # Por último (recria o banco): aplica as migrations novas sobre um estado igual ao de produção, como o
       # `db push` do deploy fará. Os testes acima partem de banco vazio e não exercitam a migração de dados.
       # Fase 4 (Ruling R18): para as migrations da fase 4 rodarem sobre um pedido de verdade, sobe primeiro só até a
-      # fase 3B (as da fase 4 em diante saem da pasta), semeia um pedido orçado pelas RPCs de hoje e então aplica o resto.
+      # fase 3B (as da fase 4 em diante, 2026102*, inclusive as da 4.1, saem da pasta), semeia um pedido orçado pelas RPCs
+      # de hoje e então aplica o resto.
       - name: Migração sobre dados de produção (fases 1B, 2A, 2B e 4)
         run: |
           set -euo pipefail
@@ -78,7 +79,7 @@ jobs:
           eval "$(npx supabase status -o env | grep '^DB_URL=')"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/migracao-producao/antes.sql
           mkdir -p "$RUNNER_TEMP/fase4"
-          mv supabase/migrations/20261020*.sql "$RUNNER_TEMP/fase4/"
+          mv supabase/migrations/2026102*.sql "$RUNNER_TEMP/fase4/"
           npx supabase migration up
           psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/migracao-producao/antes-fase4.sql
           mv "$RUNNER_TEMP/fase4/"*.sql supabase/migrations/
