@@ -19,7 +19,7 @@ Estado: **especificação para revisão do dono** (22/10/2026). As decisões vie
 
 | Tema | Decisão |
 |---|---|
-| Categorias | Livres. O Master cria, renomeia, ativa e desativa. Uma categoria já usada em pedidos **não é apagada**, só desativada |
+| Categorias | Livres. O Master **cria novas** (dono, 22/10), renomeia, ativa e desativa. Iniciais: IVO Passageiros, IVO Carga Leve (com reboque) e IVO Motorista; Carga Pesada desligada. Uma categoria já usada em pedidos **não é apagada**, só desativada |
 | Tabela por categoria | **Os mesmos campos em toda categoria**: taxa fixa, valor por km, valor por hora, hora de espera, taxa por parada, retorno de trecho único (%), taxa de reboque e diária de hospedagem. **Zerado = não cobrado** (dono) |
 | IVO Motorista | Cobrada **por hora**, com o carro do cliente (dono). Em termos de cadastro, é uma categoria com "veículo do cliente" marcado e valor por hora preenchido |
 | Paradas | Trajeto inteiro pelo km + taxa fixa por parada (dono). **Até 3 paradas** *(decisão minha)* |
@@ -45,8 +45,9 @@ Estado: **especificação para revisão do dono** (22/10/2026). As decisões vie
   - acrescenta `veiculo_cliente boolean not null default false`, que vale true para a IVO Motorista: não exige veículo da IVO e não cobra reboque;
   - mantém `carga` e `reboque`, que continuam preenchendo os campos do pedido como hoje.
 - **Dados iniciais** (aplicados por migration):
-  - IVO Passageiros e IVO Carga Leve continuam como estão;
-  - a antiga `CARGA_PESADA` (que o dono renomeou para "IVO Motorista" na tela, mas ainda é "com reboque") é **desativada** e mantida para o histórico;
+  - IVO Passageiros continua como está;
+  - **IVO Carga Leve passa a usar reboque** (dono, 22/10: "carga leve que usará reboque"): fica marcada "com reboque", e a taxa de reboque entra na tabela dela;
+  - a antiga `CARGA_PESADA` (que o dono renomeou para "IVO Motorista" na tela, mas ainda é "com reboque") é **desativada** (dono: "no momento off") e mantida para o histórico. Pode ser reativada pelo Master;
   - entra uma categoria nova, **`MOTORISTA`** ("IVO Motorista", "Ivo dirige o carro da sua empresa"), com `veiculo_cliente = true`;
   - os pedidos antigos continuam válidos.
 - `api.salvar_categoria(p)` passa a **criar** categorias (sem `codigo`: ele é gerado do nome) e a editar, incluindo `veiculo_cliente`. Só o Master.
