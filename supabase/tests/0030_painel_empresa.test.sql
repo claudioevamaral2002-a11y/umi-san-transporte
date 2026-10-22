@@ -202,11 +202,10 @@ select is((select string_agg(x ->> 'id', ',' order by o) from jsonb_array_elemen
            with ordinality y(x, o)),
   (select string_agg(pg_temp.ped(n)::text, ',' order by n) from generate_series(1, 10) n),
   'proximas: no máximo 10, por início crescente');
-select is((current_setting('t.n1')::jsonb #> '{proximas,0}') - 'numero' - 'inicio' - 'fim_previsto'
-            - 'paradas' - 'horas_estimadas',  -- fase 4.1 (0042)
+select is((current_setting('t.n1')::jsonb #> '{proximas,0}') - 'numero' - 'inicio' - 'fim_previsto',
   jsonb_build_object('id', pg_temp.ped(1), 'solicitante_nome', 'Gestora A', 'origem', 'Umi San · Rua Araguaia, 49',
     'destino', 'Porto de Itajaí · Portão 3', 'categoria_nome', 'IVO Passageiros', 'centro_custo', 'Operações 4.100',
-    'status', 'AGENDADA', 'valor_cent', 22000, 'estimado', false),
+    'status', 'AGENDADA', 'valor_cent', 22000, 'estimado', false, 'paradas', '[]'::jsonb, 'horas_estimadas', null),
   'pedido agendado: os campos e o valor do orçamento aprovado');
 select ok((current_setting('t.n1')::jsonb #>> '{proximas,0,numero}')::bigint > 0
       and (current_setting('t.n1')::jsonb #>> '{proximas,0,fim_previsto}')::timestamptz

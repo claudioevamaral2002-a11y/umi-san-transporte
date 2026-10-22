@@ -4,7 +4,7 @@
 -- devolvem as paradas. Compatibilidade: o pedido do app atual (sem categoria e sem as chaves novas) não muda.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(44);
+select plan(48);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -105,7 +105,8 @@ select set_config('t.m2', api.criar_pedido(current_setting('t.mot')::jsonb
 select set_config('t.m3', api.criar_pedido(current_setting('t.mot')::jsonb
   || jsonb_build_object('inicio', current_setting('t.i_m2'), 'horas_estimadas', 24.5))::text, true);
 select set_config('t.m4', api.criar_pedido(current_setting('t.mot')::jsonb
-  || jsonb_build_object('inicio', current_setting('t.i_m4'), 'horas_estimadas', 2.5, 'modalidade', 'VEICULO_CLIENTE'))::text, true);
+  || jsonb_build_object('inicio', current_setting('t.i_m4'), 'horas_estimadas', 4, 'modalidade', 'VEICULO_CLIENTE',
+                        'centro_custo', 'Obra 15'))::text, true);
 select set_config('t.dm', api.categorias_disponiveis('{"km":30,"levar":true,"trazer":false,"horas":4}'::jsonb)::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca4'), true);
 select set_config('t.cm1', api.calcular_orcamento((current_setting('t.m1')::jsonb ->> 'id')::uuid, '{}'::jsonb)::text, true);
@@ -287,6 +288,35 @@ select ok(current_setting('t.eap')::jsonb @> '{"ok": true, "total_cent": 18000}'
 select is(current_setting('t.cap')::jsonb ->> 'codigo', 'CAMPOS_INVALIDOS', 'sem categoria, paradas na entrada não valem');
 select ok(current_setting('t.vn')::jsonb @> '{"ok": false, "codigo": "CATEGORIA_INDISPONIVEL"}',
   'categoria criada depois da última publicação: CATEGORIA_INDISPONIVEL, mesmo com veículo');
+
+------------------------------------------------------------------ 7. revisão: Orçar do app atual na IVO Motorista
+-- O Orçar de hoje (src/lib/orcar.ts, montarEntrada) manda `diarias` em todo pedido VEICULO_CLIENTE; com a tabela
+-- publicada ele precisa continuar orçando, pelo preço da prévia (horas estimadas do pedido).
+select set_config('t.orcar_cli', '{"modalidade": "VEICULO_CLIENTE", "diarias": 1, "pedagio_cent": 0,
+  "hospedagem_diarias": 0}', true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca4'), true);
+select set_config('t.cm4', api.calcular_orcamento((current_setting('t.m4')::jsonb ->> 'id')::uuid,
+  current_setting('t.orcar_cli')::jsonb)::text, true);
+select set_config('t.em4', api.enviar_orcamento((current_setting('t.m4')::jsonb ->> 'id')::uuid,
+  current_setting('t.orcar_cli')::jsonb, null)::text, true);
+reset role;
+select set_config('t.h_m4', (select hash from app.orcamentos
+  where atividade_id = (current_setting('t.m4')::jsonb ->> 'id')::uuid and status = 'PENDENTE'), true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.cf4', api.confirmar_corrida((current_setting('t.m4')::jsonb ->> 'id')::uuid, 1,
+  current_setting('t.h_m4'), gen_random_uuid(), '', null)::text, true);
+reset role;
+select ok(current_setting('t.cm4')::jsonb @> '{"ok": true}'
+          and current_setting('t.cm4')::jsonb -> 'total_cent' = pg_temp.cat(current_setting('t.dm')::jsonb, 'MOTORISTA') -> 'total_cent',
+  'Orçar de hoje (VEICULO_CLIENTE, com diarias): calcular_orcamento = prévia (36000)');
+select ok(current_setting('t.em4')::jsonb @> '{"ok": true, "total_cent": 36000}',
+  'Orçar de hoje (VEICULO_CLIENTE, com diarias): enviar_orcamento = prévia (36000)');
+select is(pg_temp.linhas(current_setting('t.cm4')::jsonb), 'HORAS=36000', 'diarias ignorado: só a linha de horas da tarifa');
+select ok((current_setting('t.cf4')::jsonb ->> 'ok')::boolean
+          and (select centro_custo is null from app.atividades where id = (current_setting('t.m4')::jsonb ->> 'id')::uuid),
+  'confirmar_corrida com vazio limpa o centro de custo do pedido');
 
 select * from finish();
 rollback;

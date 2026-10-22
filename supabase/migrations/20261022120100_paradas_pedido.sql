@@ -12,8 +12,8 @@
 --   * interno.linhas_do_pedido (calcular_orcamento e enviar_orcamento): com categoria, interno.linhas_para_categoria —
 --     a tarifa da versão, quando existe; senão o preço de hoje. Assim a prévia do cliente (categorias_disponiveis) e o
 --     orçamento do motorista saem da mesma tabela. Quando a entrada não traz `paradas`/`horas`, valem as do pedido (o
---     Orçar de hoje não as manda); o motorista ajusta mandando-as. Sem categoria, o cálculo de hoje (as chaves novas
---     não valem);
+--     Orçar de hoje não as manda); o motorista ajusta mandando-as; `diarias` do Orçar de hoje (VEICULO_CLIENTE) é
+--     ignorado. Sem categoria, o cálculo de hoje (as chaves novas não valem);
 --   * api.enviar_orcamento: veiculo_id não é exigido na categoria de veículo do cliente;
 --   * api.confirmar_corrida: p_centro_custo não nulo SUBSTITUI o gravado (vazio limpa); nulo mantém. A repetição com a
 --     mesma chave continua não trocando;
@@ -451,7 +451,9 @@ end $$;
 -- Linhas da tabela do pedido (corpo de 20261020120100_pedido_estilo_uber.sql). 4.1: com categoria,
 -- interno.linhas_para_categoria (a tarifa da versão, quando existe; senão o preço de hoje), como em
 -- api.categorias_disponiveis. Sem `paradas` na entrada, vale o número de paradas do pedido; sem `horas`, as horas
--- estimadas. Sem categoria, o cálculo de hoje. `e` já vem sem as chaves da corrida.
+-- estimadas. `diarias` (que o Orçar do app atual manda em todo pedido VEICULO_CLIENTE, como a IVO Motorista) é aceito e
+-- ignorado: a categoria cobra pela tarifa (horas), não por diária. Sem categoria, o cálculo de hoje. `e` já vem sem as
+-- chaves da corrida.
 create or replace function interno.linhas_do_pedido(c app.contratos_versoes, a app.atividades, e jsonb) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare
@@ -462,6 +464,7 @@ begin
     return interno.calcular_linhas(c, a.levar, a.trazer, a.modalidade, e);
   end if;
   if jsonb_typeof(v_e) = 'object' then
+    v_e := v_e - 'diarias';
     if coalesce(jsonb_typeof(v_e -> 'paradas'), 'null') = 'null' then
       select count(*) into n from app.atividades_paradas x where x.atividade_id = a.id;
       v_e := (v_e - 'paradas') || case when n > 0 then jsonb_build_object('paradas', n) else '{}'::jsonb end;
