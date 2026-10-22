@@ -22,7 +22,18 @@ const TITULOS_FORA_DO_MENU: ReadonlyArray<Pick<ItemMenu, 'para' | 'rotulo'>> = [
 
 /** Título do cabeçalho da página ("← Início" + título): o rótulo do item do menu ou, fora dele, um nome genérico. */
 export function tituloDaPagina(itens: readonly ItemMenu[], caminho: string): string {
-  return (itemAtual(itens, caminho) ?? itemAtual(TITULOS_FORA_DO_MENU, caminho))?.rotulo ?? ''
+  const item = itemAtual(itens, caminho) ?? itemAtual(TITULOS_FORA_DO_MENU, caminho)
+  return item ? nomeDaPagina(item) : ''
+}
+
+/** Nome da página de um item do menu: o `titulo` quando o rótulo é uma descrição, senão o próprio rótulo. */
+export const nomeDaPagina = (item: Pick<ItemMenu, 'rotulo' | 'titulo'>) => item.titulo ?? item.rotulo
+
+/** Na própria página do item (não numa subpágina), o nome dela; senão, vazio. */
+export function tituloExato(itens: readonly ItemMenu[], caminho: string): string {
+  const item = itemAtual(itens, caminho)
+  const limpo = caminho.length > 1 ? caminho.replace(/\/+$/, '') : caminho
+  return item && item.para === limpo ? nomeDaPagina(item) : ''
 }
 
 /** Atalhos da barra de baixo do cliente no celular (especificação §6.4, mockup 4). */

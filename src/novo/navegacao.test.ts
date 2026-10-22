@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Nivel, Perfil } from '../lib/estadoSessao.ts'
 import { itensDoMenu, type ItemMenu } from './componentes/Menu.tsx'
-import { ATALHOS_CLIENTE, itemAtual, temBarraCliente, tituloDaPagina } from './navegacao.ts'
+import { ATALHOS_CLIENTE, itemAtual, temBarraCliente, tituloDaPagina, tituloExato } from './navegacao.ts'
 
 const cliente = (nivel: Nivel): Perfil => ({
   nome: 'Marina Souza',
@@ -63,5 +63,19 @@ describe('navegação do app novo', () => {
         expect(caminhos, `${atalho.rotulo} (N${nivel})`).toContain(atalho.para)
       }
     }
+  })
+
+  it('rótulo que é descrição usa o `titulo` do item: no cabeçalho e no h1, só o nome da página', () => {
+    const motorista: Perfil = { ...cliente(1), papel: 'MOTORISTA', nivel: null, empresa_id: null, empresa_nome: null, empresa_tem_contrato: null }
+    const adm: Perfil = { ...motorista, papel: 'ADM' }
+    expect(tituloDaPagina(itensDoMenu(motorista), '/pedidos')).toBe('Minhas corridas')
+    expect(tituloExato(itensDoMenu(motorista), '/pedidos')).toBe('Minhas corridas')
+    expect(tituloDaPagina(itensDoMenu(adm), '/adm/painel')).toBe('Painel')
+    expect(tituloExato(itensDoMenu(adm), '/adm/painel/')).toBe('Painel')
+    // Na subpágina, o h1 é o da própria tela.
+    expect(tituloExato(itensDoMenu(adm), '/adm/contratos/x')).toBe('')
+    expect(tituloDaPagina(itensDoMenu(adm), '/adm/contratos/x')).toBe('Contratos')
+    // O ☰ continua com o rótulo descritivo.
+    expect(itensDoMenu(motorista).map((i) => i.rotulo)).toContain('Minhas corridas e Pendências')
   })
 })

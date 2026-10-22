@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 import { FolhaMapa } from '../componentes/FolhaMapa.tsx'
+import { useTituloNaTela } from '../../design/componentes/Tela.tsx'
 
 function saudacao(agora: Date): string {
   const h = agora.getHours()
@@ -23,6 +24,8 @@ export function InicioProvisorio() {
 
 /** Tela de página ainda por fazer (Locais salvos, Painel da empresa, Ajuda), com o título do menu. */
 export function EmBreve({ titulo }: { titulo: string }) {
+  // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
+  useTituloNaTela('visivel')
   return (
     <main className="mx-auto max-w-md p-4">
       <Cartao className="space-y-2">

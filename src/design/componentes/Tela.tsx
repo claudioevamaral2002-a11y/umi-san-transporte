@@ -1,13 +1,28 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react'
 import { Botao } from './Botao.tsx'
 import { Cartao } from './Cartao.tsx'
 import { Icone, type NomeIcone } from './Icone.tsx'
 
+/** Como a tela mostra o próprio nome: num h1 à vista ou num h1 só para leitores de tela (como o da Agenda). */
+export type TituloNaTela = 'visivel' | 'oculto'
+
 /**
- * Nome da página no app novo (o rótulo do item do ☰ quando a tela é a página do menu). Com ele, o `CabecalhoTela` usa
- * esse nome no h1: a página tem um nome só, igual ao do cabeçalho "← Início" e do menu. Sem ele (app atual), nada muda.
+ * Nome da página no app novo (o do item do ☰, só na própria página do menu) e o registro do h1 da tela. Com ele, o
+ * `CabecalhoTela` usa esse nome no h1 e o cabeçalho "← Início" não repete o nome. Sem ele (app atual), nada muda.
  */
-export const ContextoTituloPagina = createContext('')
+export const ContextoTituloPagina = createContext<{
+  titulo: string
+  registrar: (modo: TituloNaTela) => () => void
+} | null>(null)
+
+/**
+ * A tela avisa que já mostra o nome da página (`modo`), enquanto estiver aberta. `null` não registra. Fora do app novo,
+ * não faz nada.
+ */
+export function useTituloNaTela(modo: TituloNaTela | null) {
+  const registrar = useContext(ContextoTituloPagina)?.registrar
+  useLayoutEffect(() => (registrar && modo ? registrar(modo) : undefined), [registrar, modo])
+}
 
 /** Cabeçalho das telas autenticadas: sobretítulo, título, descrição e ação à direita (desktop). */
 export function CabecalhoTela({
@@ -21,7 +36,8 @@ export function CabecalhoTela({
   descricao?: ReactNode
   acao?: ReactNode
 }) {
-  const tituloDaPagina = useContext(ContextoTituloPagina)
+  const tituloDaPagina = useContext(ContextoTituloPagina)?.titulo ?? ''
+  useTituloNaTela(tituloDaPagina ? 'visivel' : null)
   return (
     <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0 space-y-1">

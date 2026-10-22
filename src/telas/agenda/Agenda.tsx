@@ -26,6 +26,7 @@ import { Rota } from '../pedidos/componentes.tsx'
 import { Calendario } from './Calendario.tsx'
 import { domingoDe, FaixaSemana } from './FaixaSemana.tsx'
 import { GradeHoras } from './GradeHoras.tsx'
+import { useTituloNaTela } from '../../design/componentes/Tela.tsx'
 
 type Visao = 'dia' | 'tres' | 'mes'
 const VISOES: ReadonlyArray<{ valor: Visao; rotulo: string }> = [
@@ -85,6 +86,8 @@ async function carregarDias(dias: string[], hoje: string, cliente: boolean) {
 
 /** Agenda estilo Lark (A7 + redesign): Dia, 3 dias e Mês; todos os perfis. */
 export function Agenda() {
+  // O h1 só para leitores de tela: o cabeçalho "← Início" do app novo mostra o nome sem repeti-lo para eles.
+  useTituloNaTela('oculto')
   const { perfil } = useSessao()
   const hoje = hojeSp()
   const [visao, setVisao] = useState<Visao>(visaoGuardada)

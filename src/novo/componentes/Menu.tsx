@@ -17,6 +17,8 @@ export interface ItemMenu {
   icone: NomeIcone
   /** Caminho do app novo. As telas de hoje (pedidos, agenda, extrato, equipe, /adm/*) abrem aqui dentro (Ruling R12). */
   para: string
+  /** Nome da página (cabeçalho e h1), quando o rótulo do menu é uma descrição ("Minhas corridas e Pendências"). */
+  titulo?: string
 }
 
 const PERFIL_E_SEGURANCA: ItemMenu = { rotulo: 'Perfil e segurança', icone: 'escudo', para: '/perfil' }
@@ -41,7 +43,7 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
       ]
     case 'MOTORISTA':
       return [
-        { rotulo: 'Minhas corridas e Pendências', icone: 'lista', para: '/pedidos' },
+        { rotulo: 'Minhas corridas e Pendências', titulo: 'Minhas corridas', icone: 'lista', para: '/pedidos' },
         { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
         { rotulo: 'Meus veículos', icone: 'caminhao', para: '/veiculos' },
         { rotulo: 'Corridas do mês', icone: 'grafico', para: '/corridas-do-mes' },
@@ -50,7 +52,7 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
       ]
     case 'ADM':
       return [
-        { rotulo: 'Painel e Corridas em andamento', icone: 'grafico', para: '/adm/painel' },
+        { rotulo: 'Painel e Corridas em andamento', titulo: 'Painel', icone: 'grafico', para: '/adm/painel' },
         { rotulo: 'Contratos', icone: 'tabela', para: '/adm/contratos' },
         { rotulo: 'Créditos', icone: 'dinheiro', para: '/adm/creditos' },
         { rotulo: 'Usuários', icone: 'usuarios', para: '/adm/usuarios' },

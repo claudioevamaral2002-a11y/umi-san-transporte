@@ -68,7 +68,9 @@ const CASOS: Array<[PerfilFalso, string, string]> = [
   [N1, '/ajuda', 'Ajuda'],
   [MOTORISTA, '/veiculos', 'Meus veículos'],
   [MOTORISTA, '/corridas-do-mes', 'Corridas do mês'],
-  [MOTORISTA, '/pedidos', 'Minhas corridas e Pendências'],
+  // O rótulo do ☰ é uma descrição; o nome da página é o `titulo` do item.
+  [MOTORISTA, '/pedidos', 'Minhas corridas'],
+  [ADM, '/adm/painel', 'Painel'],
   [ADM, '/adm/contratos', 'Contratos'],
   [ADM, '/adm/categorias', 'Categorias e preços'],
 ]
