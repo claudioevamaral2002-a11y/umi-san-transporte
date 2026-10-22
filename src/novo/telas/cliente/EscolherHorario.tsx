@@ -1,4 +1,4 @@
-import { useId, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
@@ -51,6 +51,12 @@ export function EscolherHorario({
   const livres = useConsulta(`novo-livres-${dia}`, () => pedidos.horariosLivres(dia, DURACAO_PADRAO))
   // Um bloco = a largura visível da faixa; animar ou não vem do CSS (scroll-behavior respeita movimento reduzido).
   const rolar = (sentido: 1 | -1) => faixa.current?.scrollBy({ left: sentido * faixa.current.clientWidth * 0.85 })
+  const [limites, setLimites] = useState({ inicio: true, fim: false })
+  const medir = () => {
+    const el = faixa.current
+    if (el) setLimites({ inicio: el.scrollLeft < 2, fim: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2 })
+  }
+  useEffect(medir, [])
   const horarios = livres.dados?.horarios ?? []
   return (
     <div className="space-y-3">
@@ -59,7 +65,7 @@ export function EscolherHorario({
           Dia
         </p>
         <div className="relative">
-          <button type="button" aria-label="Dias anteriores" onClick={() => rolar(-1)} className="rolagem-seta rolagem-seta-esq">
+          <button type="button" aria-label="Dias anteriores" disabled={limites.inicio} onClick={() => rolar(-1)} className="rolagem-seta rolagem-seta-esq">
             <Icone nome="setaDireitaPequena" tamanho={18} className="rotate-180" />
           </button>
           <div
@@ -67,6 +73,7 @@ export function EscolherHorario({
             role="radiogroup"
             aria-labelledby={idDias}
             onKeyDown={teclasDoGrupo}
+            onScroll={medir}
             className="rolagem-ivo flex min-w-0 gap-2 pb-2"
           >
             {dias.map((d) => (
@@ -85,7 +92,7 @@ export function EscolherHorario({
               </button>
             ))}
           </div>
-          <button type="button" aria-label="Próximos dias" onClick={() => rolar(1)} className="rolagem-seta rolagem-seta-dir">
+          <button type="button" aria-label="Próximos dias" disabled={limites.fim} onClick={() => rolar(1)} className="rolagem-seta rolagem-seta-dir">
             <Icone nome="setaDireitaPequena" tamanho={18} />
           </button>
         </div>
@@ -126,7 +133,7 @@ export function EscolherHorario({
                         type="button"
                         role="radio"
                         aria-checked={h === inicio}
-                        tabIndex={h === inicio || (inicio === null && h === horarios[0]) ? 0 : -1}
+                        tabIndex={h === (inicio && horarios.includes(inicio) ? inicio : horarios[0]) ? 0 : -1}
                         onClick={() => aoMudarInicio(h)}
                         className={`min-h-12 rounded-full border-[1.5px] px-1 font-semibold tabular-nums ${
                           h === inicio ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'

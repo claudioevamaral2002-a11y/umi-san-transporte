@@ -9,7 +9,7 @@ import { comSessaoFalsa, json, URL_SUPABASE } from './apoio/sessaoFalsa.ts'
 const TELA = { width: 390, height: 844 }
 
 /** Horários livres de qualquer dia: 08:00 a 20:00, de hora em hora (manhã, tarde e noite). */
-async function abrirAgenda(page: Page) {
+async function abrirAgenda(page: Page, meiaEmMeia = false) {
   await page.setViewportSize(TELA)
   await comSessaoFalsa(page, { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' })
   await simularApi(page)
@@ -18,7 +18,11 @@ async function abrirAgenda(page: Page) {
   await simularBlocosDoMapa(page)
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/horarios_livres`, (route: Route) => {
     const c = route.request().postDataJSON() as { p_dia: string; p_duracao_min: number }
-    const horarios = Array.from({ length: 13 }, (_, i) => instanteSp(c.p_dia, `${String(8 + i).padStart(2, '0')}:00`))
+    const n = meiaEmMeia ? 36 : 13 // meia em meia hora: 06:00 a 23:30
+    const horarios = Array.from({ length: n }, (_, i) => {
+      const m = meiaEmMeia ? 360 + i * 30 : 480 + i * 60
+      return instanteSp(c.p_dia, `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`)
+    })
     return json(route, { ok: true, dia: c.p_dia, duracao_min: c.p_duracao_min, horarios, dia_cheio: false })
   })
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/categorias_disponiveis`, (route: Route) =>
@@ -77,20 +81,21 @@ test.describe('agenda ajustada', () => {
     await expect(marcado).not.toHaveText(antes)
   })
 
-  test('a folha não passa da altura da tela a 390 × 844 e a página não rola de lado', async ({ page }) => {
-    await abrirAgenda(page)
+  test('com 36 horários a lista rola por dentro e a folha cabe na tela a 390 × 844', async ({ page }) => {
+    await abrirAgenda(page, true)
     await expect(page.locator('[data-periodo="Noite"]')).toBeVisible()
-    const r = await page.evaluate(() => {
-      const lista = document.querySelector('[data-periodo="Noite"]')!.closest('[role="radiogroup"]')!
-      const b = lista.getBoundingClientRect()
-      return {
-        altura: b.height,
-        janela: window.innerHeight,
-        estourou: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-      }
-    })
-    expect(r.altura).toBeLessThanOrEqual(r.janela * 0.4)
-    expect(r.estourou).toBe(false)
+    const lista = page.locator('[data-periodo="Noite"]').locator('xpath=ancestor::*[@role="radiogroup"][1]')
+    const m = await lista.evaluate((el) => ({ rolagem: el.scrollHeight, visivel: el.clientHeight }))
+    expect(m.rolagem).toBeGreaterThan(m.visivel)
+    // A tela rola na vertical (o seletor fica no meio da página): trazido à vista, a lista inteira cabe na janela.
+    await lista.scrollIntoViewIfNeeded()
+    const caixa = await lista.boundingBox()
+    expect(caixa).not.toBeNull()
+    expect(caixa!.y).toBeGreaterThanOrEqual(0)
+    expect(caixa!.y + caixa!.height).toBeLessThanOrEqual(TELA.height)
+    expect(caixa!.height).toBeLessThanOrEqual(TELA.height * 0.4)
+    const estourou = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+    expect(estourou).toBe(false)
   })
 
   test('movimento reduzido: a rolagem não anima; sem redução, anima', async ({ page }) => {
@@ -114,6 +119,7 @@ test.describe('agenda no computador', () => {
     await abrirAgenda(page)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const faixa = page.getByRole('radiogroup', { name: 'Dia' })
+    await expect(page.getByRole('button', { name: 'Dias anteriores' })).toBeDisabled()
     await page.getByRole('button', { name: 'Próximos dias' }).click()
     await expect.poll(() => faixa.evaluate((el) => el.scrollLeft)).toBeGreaterThan(100)
     await page.getByRole('button', { name: 'Dias anteriores' }).click()
