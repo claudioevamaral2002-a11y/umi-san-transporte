@@ -85,6 +85,10 @@ function subtitulo(p: Perfil, rotulos: Rotulos): string {
 }
 
 const CLASSE_ITEM = 'flex min-h-12 w-full items-center gap-3.5 border-b border-borda py-1 font-semibold text-texto'
+/** Item atual: o fundo transborda 0,75 rem para os lados (-mx-3 + px-3), então o ícone e o texto não saem do lugar. */
+const CLASSE_LINK = 'flex min-h-12 items-center gap-3.5 border-b py-1 font-semibold text-texto'
+const CLASSE_LINK_ATUAL = `${CLASSE_LINK} -mx-3 w-[calc(100%+1.5rem)] rounded-xl border-transparent bg-selecao-suave px-3`
+const CLASSE_LINK_OUTRO = `${CLASSE_LINK} w-full border-borda`
 
 /**
  * Menu ☰ do canto superior esquerdo (mockups 12 e 13): botão redondo sobre o mapa e uma gaveta à esquerda.
@@ -172,7 +176,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
                 <Link
                   to={item.para}
                   aria-current={item === atual ? 'page' : undefined}
-                  className={`${CLASSE_ITEM} ${item === atual ? 'rounded-xl bg-selecao-suave px-3' : ''}`}
+                  className={item === atual ? CLASSE_LINK_ATUAL : CLASSE_LINK_OUTRO}
                 >
                   <Icone nome={item.icone} tamanho={20} className={item === atual ? 'text-laranja' : 'text-texto-suave'} />
                   <span className="flex-1">{item.rotulo}</span>

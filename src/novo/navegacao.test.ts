@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import type { ItemMenu } from './componentes/Menu.tsx'
-import { itemAtual, temBarraCliente, tituloDaPagina } from './navegacao.ts'
+import type { Nivel, Perfil } from '../lib/estadoSessao.ts'
+import { itensDoMenu, type ItemMenu } from './componentes/Menu.tsx'
+import { ATALHOS_CLIENTE, itemAtual, temBarraCliente, tituloDaPagina } from './navegacao.ts'
+
+const cliente = (nivel: Nivel): Perfil => ({
+  nome: 'Marina Souza',
+  papel: 'CLIENTE',
+  nivel,
+  empresa_id: 'e1',
+  empresa_nome: 'Umi San',
+  empresa_logo_caminho: null,
+  empresa_tem_contrato: true,
+  ativo: true,
+  senha_pendente: false,
+  tem_2fa: false,
+})
 
 const ITENS: ItemMenu[] = [
   { rotulo: 'Minhas corridas', icone: 'lista', para: '/pedidos' },
@@ -40,5 +54,14 @@ describe('navegação do app novo', () => {
     expect(temBarraCliente('/pedidos/42')).toBe(false)
     expect(temBarraCliente('/perfil')).toBe(false)
     expect(temBarraCliente('/')).toBe(false)
+  })
+
+  it('todo atalho da barra do cliente (fora o Pedir) também está no ☰ de todo nível de cliente', () => {
+    for (const nivel of [1, 2, 3] as const) {
+      const caminhos = itensDoMenu(cliente(nivel)).map((i) => i.para)
+      for (const atalho of ATALHOS_CLIENTE.filter((a) => a.para !== '/')) {
+        expect(caminhos, `${atalho.rotulo} (N${nivel})`).toContain(atalho.para)
+      }
+    }
   })
 })

@@ -31,6 +31,14 @@ async function abrir(page: Page, perfil: PerfilFalso, caminho: string, pedidos: 
 
 const cabecalho = (page: Page) => page.getByRole('navigation', { name: 'Página' })
 const barra = (page: Page) => page.getByRole('navigation', { name: 'Atalhos' })
+/** Texto à vista no cabeçalho ou no conteúdo da página (fora da barra de atalhos, do ☰ e do que é só para leitores de tela). */
+const aVista = (page: Page, texto: string) =>
+  page
+    .locator('main, [data-testid="cabecalho-pagina"]')
+    .getByText(texto, { exact: true })
+    .filter({ visible: true })
+    .and(page.locator(':not(.sr-only)'))
+const noInicio = (page: Page) => expect.poll(() => new URL(page.url()).pathname).toBe('/')
 
 /** Rótulos e endereços de um percurso De → (Parada) → Para, na ordem da tela. */
 async function percurso(rota: Locator) {
@@ -44,42 +52,57 @@ test('cliente: "← Início" e o título em Minhas corridas; o Início é a tela
   const topo = cabecalho(page)
   const inicio = topo.getByRole('link', { name: 'Início', exact: true })
   await expect(inicio).toHaveText('← Início')
-  await expect(topo).toContainText('Minhas corridas')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Minhas corridas')
   await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible()
   await inicio.click()
-  await expect(page).toHaveURL(/:\d+\/$/)
+  await noInicio(page)
   await expect(page.getByTestId('mapa-base')).toBeVisible()
   await expect(cabecalho(page)).toHaveCount(0)
 })
 
-test('toda página do menu tem "← Início" e o título (cliente, motorista e ADM)', async ({ browser }) => {
-  const casos: Array<[PerfilFalso, string, string]> = [
-    [N1, '/agenda', 'Agenda'],
-    [N1, '/extrato', 'Carteira da empresa'],
-    [N1, '/equipe', 'Equipe'],
-    [N1, '/perfil', 'Perfil e segurança'],
-    [N1, '/ajuda', 'Ajuda'],
-    [MOTORISTA, '/veiculos', 'Meus veículos'],
-    [MOTORISTA, '/corridas-do-mes', 'Corridas do mês'],
-    [MOTORISTA, '/pedidos', 'Minhas corridas e Pendências'],
-    [ADM, '/adm/contratos', 'Contratos'],
-    [ADM, '/adm/categorias', 'Categorias e preços'],
-  ]
-  for (const [perfil, caminho, titulo] of casos) {
-    const contexto = await browser.newContext({ ...test.info().project.use })
-    const page = await contexto.newPage()
+const CASOS: Array<[PerfilFalso, string, string]> = [
+  [N1, '/agenda', 'Agenda'],
+  [N1, '/extrato', 'Carteira da empresa'],
+  [N1, '/equipe', 'Equipe'],
+  [N1, '/perfil', 'Perfil e segurança'],
+  [N1, '/ajuda', 'Ajuda'],
+  [MOTORISTA, '/veiculos', 'Meus veículos'],
+  [MOTORISTA, '/corridas-do-mes', 'Corridas do mês'],
+  [MOTORISTA, '/pedidos', 'Minhas corridas e Pendências'],
+  [ADM, '/adm/contratos', 'Contratos'],
+  [ADM, '/adm/categorias', 'Categorias e preços'],
+]
+
+for (const [perfil, caminho, titulo] of CASOS) {
+  test(`${perfil.papel} em ${caminho}: "← Início" e o título "${titulo}", um nome só`, async ({ page }) => {
     await abrir(page, perfil, caminho)
     const topo = cabecalho(page)
-    await expect(topo.getByRole('link', { name: 'Início', exact: true }), caminho).toHaveText('← Início')
-    await expect(topo, caminho).toContainText(titulo)
-    await contexto.close()
+    await expect(topo.getByRole('link', { name: 'Início', exact: true })).toHaveText('← Início')
+    // O título fica no cabeçalho ou, se a tela tem o h1 de mesmo nome, só no h1: nunca dois nomes à vista.
+    await expect(aVista(page, titulo)).toHaveCount(1)
+  })
+}
+
+test('um nome só: em Minhas corridas e na Carteira, o título à vista é o h1 com o nome do menu', async ({ page }) => {
+  for (const [caminho, nome, antigo] of [
+    ['/pedidos', 'Minhas corridas', 'Pedidos'],
+    ['/extrato', 'Carteira da empresa', 'Extrato'],
+  ] as const) {
+    await abrir(page, N1, caminho)
+    const h1 = page.getByRole('heading', { level: 1 })
+    await expect(h1).toHaveText(nome)
+    await expect(aVista(page, nome)).toHaveCount(1)
+    await expect(aVista(page, antigo)).toHaveCount(0)
+    // O cabeçalho não repete o nome (sem um segundo título nem para leitores de tela).
+    await expect(cabecalho(page)).toHaveAccessibleName('Página')
+    expect((await cabecalho(page).innerText()).replace(/\s+/g, ' ').trim()).toBe('← Início')
   }
 })
 
 test('motorista: "← Início" leva ao Início dele', async ({ page }) => {
   await abrir(page, MOTORISTA, '/veiculos')
   await cabecalho(page).getByRole('link', { name: 'Início', exact: true }).click()
-  await expect(page).toHaveURL(/:\d+\/$/)
+  await noInicio(page)
   await expect(page.getByTestId('folha-mapa')).toBeVisible()
   await expect(barra(page)).toHaveCount(0)
 })
@@ -118,20 +141,25 @@ test('cliente no celular: a barra Pedir · Corridas · Agenda · Carteira fica f
   await expect(nav.getByRole('link', { name: 'Agenda' })).toHaveAttribute('aria-current', 'page')
   await nav.getByRole('link', { name: 'Carteira' }).click()
   await expect(page).toHaveURL(/\/extrato$/)
-  await expect(page.getByRole('heading', { name: 'Extrato' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Carteira da empresa' })).toBeVisible()
   await nav.getByRole('link', { name: 'Corridas' }).click()
   await expect(page).toHaveURL(/\/pedidos$/)
   expect(await semRecarregar()).toBe(true)
 
   // O último item da lista não fica escondido atrás da barra.
-  await page.mouse.wheel(0, 5000)
   const ultimo = page.getByTestId('lista-pedidos').locator('li').last()
   await expect(ultimo).toBeVisible()
-  const fimDoItem = (await ultimo.boundingBox())!
-  expect(fimDoItem.y + fimDoItem.height).toBeLessThanOrEqual((await nav.boundingBox())!.y + 1)
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  const topoDaBarra = (await nav.boundingBox())!.y
+  await expect
+    .poll(async () => {
+      const caixa = await ultimo.boundingBox()
+      return caixa ? caixa.y + caixa.height : Number.POSITIVE_INFINITY
+    })
+    .toBeLessThanOrEqual(topoDaBarra + 1)
 
   await nav.getByRole('link', { name: 'Pedir' }).click()
-  await expect(page).toHaveURL(/:\d+\/$/)
+  await noInicio(page)
   expect(await semRecarregar()).toBe(true)
   await expect(barra(page)).toHaveCount(0)
 })

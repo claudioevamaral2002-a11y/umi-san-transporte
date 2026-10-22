@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link, Navigate, Outlet, useLocation, useOutletContext } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
 import { ContextoRotaDePara } from '../design/componentes/RotaDePara.tsx'
+import { ContextoTituloPagina } from '../design/componentes/Tela.tsx'
 import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { MapaBase, type CarroNoMapa, type Ponto } from './componentes/MapaBase.tsx'
 import { BarraCliente } from './componentes/BarraCliente.tsx'
 import { APP_ATUAL, itensDoMenu, Menu } from './componentes/Menu.tsx'
-import { temBarraCliente, tituloDaPagina } from './navegacao.ts'
+import { itemAtual, temBarraCliente, tituloDaPagina } from './navegacao.ts'
 
 /**
  * Moldura do app novo (especificação §6): sem barra de abas, só o ☰ no canto superior esquerdo. As telas de mapa
@@ -68,6 +69,27 @@ export function GuardaPerfil({ permite }: { permite: (p: Perfil) => boolean }) {
 }
 
 /**
+ * A tela aberta já tem um h1 com o mesmo nome do cabeçalho? "visivel" (então o cabeçalho não repete o nome), "oculto"
+ * (h1 só para leitores de tela, como o da Agenda) ou "nenhum". As telas carregam sob demanda: observa o conteúdo.
+ */
+function useH1ComOTitulo(conteudo: RefObject<HTMLElement | null>, titulo: string) {
+  const [estado, setEstado] = useState<'nenhum' | 'oculto' | 'visivel'>('nenhum')
+  useEffect(() => {
+    const raiz = conteudo.current
+    if (!raiz) return
+    const conferir = () => {
+      const h1 = titulo ? [...raiz.querySelectorAll('h1')].find((h) => h.textContent?.trim() === titulo) : undefined
+      setEstado(!h1 ? 'nenhum' : h1.classList.contains('sr-only') ? 'oculto' : 'visivel')
+    }
+    conferir()
+    const vigia = new MutationObserver(conferir)
+    vigia.observe(raiz, { childList: true, subtree: true, characterData: true })
+    return () => vigia.disconnect()
+  }, [conteudo, titulo])
+  return estado
+}
+
+/**
  * Telas de página (fora do mapa): as novas (Veículos, Categorias, Perfil…) e as de hoje reusadas (Pedidos, Agenda,
  * Extrato, Equipe e as /adm/*, Ruling R12). Todas com o cabeçalho "← Início" + título ao lado do ☰ fixo (especificação
  * §6.4, mockup 4); o cliente ganha a barra Pedir · Corridas · Agenda · Carteira no celular. As rotas das telas de hoje
@@ -76,30 +98,45 @@ export function GuardaPerfil({ permite }: { permite: (p: Perfil) => boolean }) {
 export function TelaDePagina() {
   const { perfil } = useSessao()
   const { pathname } = useLocation()
-  const titulo = perfil ? tituloDaPagina(itensDoMenu(perfil), pathname) : ''
+  const itens = perfil ? itensDoMenu(perfil) : []
+  const titulo = tituloDaPagina(itens, pathname)
+  // Na própria página do menu (não numa subpágina), o h1 das telas de hoje usa o mesmo nome do menu.
+  const item = itemAtual(itens, pathname)
+  const tituloExato = item && item.para === pathname.replace(/(.)\/+$/, '$1') ? item.rotulo : ''
   const comBarra = perfil?.papel === 'CLIENTE' && temBarraCliente(pathname)
+  const conteudo = useRef<HTMLDivElement>(null)
+  const h1NaTela = useH1ComOTitulo(conteudo, titulo)
   return (
     <ContextoRotaDePara value>
-      <div
-        className={`pt-[calc(env(safe-area-inset-top)+0.75rem)] ${
-          comBarra
-            ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
-            : 'pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
-        }`}
-      >
-        {/* O ☰ fica fixo à esquerda (size-12 a partir de left-4): o cabeçalho começa depois dele. */}
-        <nav aria-label="Página" className="mb-1 flex min-h-12 items-center gap-3 pr-4 pl-20" data-testid="cabecalho-pagina">
-          <Link
-            to="/"
-            className="-ml-2 inline-flex min-h-12 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-texto hover:bg-borda/60"
-          >
-            <span aria-hidden="true">←</span> Início
-          </Link>
-          {titulo && <p className="min-w-0 truncate ivo-h3">{titulo}</p>}
-        </nav>
-        <Outlet />
-      </div>
-      {comBarra && <BarraCliente />}
+      <ContextoTituloPagina value={tituloExato}>
+        <div
+          ref={conteudo}
+          className={`pt-[calc(env(safe-area-inset-top)+0.75rem)] ${
+            comBarra
+              ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
+              : 'pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
+          }`}
+        >
+          {/* O ☰ fica fixo à esquerda (size-12 a partir de left-4): o cabeçalho começa depois dele. */}
+          <nav aria-label="Página" className="mb-1 flex min-h-12 items-center gap-3 pr-4 pl-20" data-testid="cabecalho-pagina">
+            <Link
+              to="/"
+              className="-ml-2 inline-flex min-h-12 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-texto hover:bg-borda/60"
+            >
+              <span aria-hidden="true">←</span> Início
+            </Link>
+            {/* Um nome só por página: com o h1 visível de mesmo nome, o título daqui sai; com um h1 só para leitores de
+                tela, fica à vista mas escondido deles. */}
+            {titulo && h1NaTela !== 'visivel' && (
+              <p className="min-w-0 truncate ivo-h3" aria-hidden={h1NaTela === 'oculto' || undefined}>
+                {titulo}
+              </p>
+            )}
+          </nav>
+          <Outlet />
+        </div>
+        {comBarra && <BarraCliente />}
+      </ContextoTituloPagina>
     </ContextoRotaDePara>
   )
 }

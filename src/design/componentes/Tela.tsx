@@ -1,7 +1,13 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { Botao } from './Botao.tsx'
 import { Cartao } from './Cartao.tsx'
 import { Icone, type NomeIcone } from './Icone.tsx'
+
+/**
+ * Nome da página no app novo (o rótulo do item do ☰ quando a tela é a página do menu). Com ele, o `CabecalhoTela` usa
+ * esse nome no h1: a página tem um nome só, igual ao do cabeçalho "← Início" e do menu. Sem ele (app atual), nada muda.
+ */
+export const ContextoTituloPagina = createContext('')
 
 /** Cabeçalho das telas autenticadas: sobretítulo, título, descrição e ação à direita (desktop). */
 export function CabecalhoTela({
@@ -15,11 +21,12 @@ export function CabecalhoTela({
   descricao?: ReactNode
   acao?: ReactNode
 }) {
+  const tituloDaPagina = useContext(ContextoTituloPagina)
   return (
     <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0 space-y-1">
         <p className="ivo-legenda font-semibold text-texto-suave">{sobretitulo}</p>
-        <h1 className="ivo-h1">{titulo}</h1>
+        <h1 className="ivo-h1">{tituloDaPagina || titulo}</h1>
         {descricao && <p className="ivo-corpo text-texto-suave">{descricao}</p>}
       </div>
       {acao && <div className="shrink-0">{acao}</div>}
