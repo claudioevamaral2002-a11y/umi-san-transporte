@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { Campo, CampoSelecao } from '../../../design/componentes/Campo.tsx'
+import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { ErroAoCarregar } from '../../../design/componentes/Tela.tsx'
@@ -11,6 +12,8 @@ import { mensagemDoCodigo } from '../../../lib/erros.ts'
 import {
   categoriasDeVeiculo,
   formDoVeiculo,
+  nomeDaCategoria,
+  nomesDasCategorias,
   FORM_VEICULO_VAZIO,
   validarVeiculo,
   veiculos,
@@ -54,6 +57,9 @@ function Formulario({ adm, atual, categorias }: { adm: boolean; atual: Veiculo |
   // Só as ativas que usam veículo da IVO, com os nomes atuais do banco (renomear muda o rótulo).
   const opcoes = categoriasDeVeiculo(categorias)
   const codigos = opcoes.map((c) => c.codigo)
+  // Categoria que o veículo já atende mas saiu da lista (desativada): fica à vista, só para ler ou remover.
+  const nomes = nomesDasCategorias(categorias)
+  const fora = f.categorias.filter((x) => !codigos.includes(x))
   const mudar = <K extends keyof FormVeiculo>(campo: K, valor: FormVeiculo[K]) => setF((x) => ({ ...x, [campo]: valor }))
 
   async function salvar(e: FormEvent) {
@@ -182,6 +188,26 @@ function Formulario({ adm, atual, categorias }: { adm: boolean; atual: Veiculo |
             />
           ))}
         </div>
+        {fora.length > 0 && (
+          <ul aria-label="Categorias fora da lista" className="flex flex-wrap gap-2">
+            {fora.map((c) => (
+              <li
+                key={c}
+                className="inline-flex min-h-12 items-center gap-1 rounded-full border-[1.5px] border-dashed border-borda pl-4 font-semibold text-texto-suave"
+              >
+                {nomeDaCategoria(c, nomes)} · inativa
+                <button
+                  type="button"
+                  aria-label={`Remover ${nomeDaCategoria(c, nomes)}`}
+                  onClick={() => mudar('categorias', f.categorias.filter((x) => x !== c))}
+                  className="flex size-12 items-center justify-center rounded-full hover:bg-borda/60"
+                >
+                  <Icone nome="fechar" tamanho={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {erros.categorias && (
           <p id="erro-categorias" role="alert" className="ivo-legenda font-semibold text-[var(--status-cancelada)]">
             {erros.categorias}

@@ -3,7 +3,7 @@
 // das categorias vindos do banco. Roda no projeto Playwright `novo` (dist-novo). Nada muda antes da resposta.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { simularApi, versaoFalsa } from './apoio/apiFalsa.ts'
+import { EMPRESA_UMI, linhaContrato, simularApi, versaoFalsa } from './apoio/apiFalsa.ts'
 import { simularMapas } from './apoio/mapasFalsos.ts'
 import { simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa, json, URL_SUPABASE, type PerfilFalso } from './apoio/sessaoFalsa.ts'
@@ -56,11 +56,11 @@ async function abrir(
   page: Page,
   perfil: PerfilFalso,
   caminho: string,
-  opcoes: { categorias?: unknown[][]; publicar?: unknown; aal?: boolean } = {},
+  opcoes: { categorias?: unknown[][]; publicar?: unknown; aal?: boolean; contratos?: unknown[]; veiculos?: unknown[] } = {},
 ) {
   await comSessaoFalsa(page, perfil, opcoes.aal === false ? {} : AAL2)
   await simularMapas(page)
-  await simularApi(page, { vigente: [versaoFalsa(3)] })
+  await simularApi(page, { vigente: [versaoFalsa(3)], ...(opcoes.contratos ? { contratos: opcoes.contratos } : {}) })
   await simularPedidos(page)
   const chamadas: Chamada[] = []
   const listas = [...(opcoes.categorias ?? [CATEGORIAS])]
@@ -74,7 +74,8 @@ async function abrir(
   await rota('categorias_veiculo', () => ({ ok: true, categorias: proxima() }))
   await rota('salvar_categoria', () => ({ ok: true, codigo: 'VAN_EXECUTIVA' }))
   await rota('publicar_tarifas', () => opcoes.publicar ?? { ok: true, versao: 4 })
-  await rota('meus_veiculos', () => ({ ok: true, veiculos: [] }))
+  await rota('meus_veiculos', () => ({ ok: true, veiculos: opcoes.veiculos ?? [] }))
+  await rota('salvar_veiculo', () => ({ ok: true }))
   await page.goto(caminho)
   return chamadas
 }
@@ -203,6 +204,7 @@ test('valor ilegível fica no campo e não abre a revisão', async ({ page }) =>
   await campo.fill('abc')
   await page.getByRole('button', { name: 'Publicar tabela' }).click()
   await expect(campo).toHaveAttribute('aria-invalid', 'true')
+  await expect(campo).toBeFocused()
   await expect(page.getByRole('dialog', { name: /Publicar tabela/ })).toHaveCount(0)
   expect(chamadas.filter((c) => c.rpc === 'publicar_tarifas')).toHaveLength(0)
 })
@@ -216,6 +218,90 @@ test('cobrar por hora em Passageiros avisa (sem bloquear) que o app antigo não 
   await folha.getByRole('button', { name: 'Publicar tabela' }).click()
   await expect(page.getByText(/Tabela publicada: versão 4/)).toBeVisible()
   expect((chamadas.find((c) => c.rpc === 'publicar_tarifas')!.corpo.p_tarifas as Record<string, { hora_cent: number }>).PASSAGEIROS!.hora_cent).toBe(5000)
+})
+
+test('cobrar por hora numa tabela que já cobrava por hora não avisa de novo', async ({ page }) => {
+  const publicadas = CATEGORIAS.map((c) =>
+    c.codigo === 'PASSAGEIROS' ? { ...c, tarifa: { ...INI_PASSAGEIROS, hora_cent: 5000, inicial: false } } : c,
+  )
+  await abrir(page, ADM, '/adm/categorias', { categorias: [publicadas] })
+  await cartao(page, 'IVO Passageiros').getByLabel('Por hora', { exact: true }).fill('60,00')
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(page.getByTestId('revisao-tabela')).toContainText('Por hora: R$ 50,00 → R$ 60,00')
+  await expect(page.getByText(/passa a cobrar por hora/)).toHaveCount(0)
+})
+
+test('primeira tabela: a taxa fixa de Passageiros conta como nova; categoria toda zerada avisa', async ({ page }) => {
+  const comTaxa = CATEGORIAS.map((c) =>
+    c.codigo === 'PASSAGEIROS' ? { ...c, tarifa: { ...INI_PASSAGEIROS, taxa_fixa_cent: 4000, inicial: true } } : c,
+  )
+  await abrir(page, ADM, '/adm/categorias', { categorias: [comTaxa] })
+  await cartao(page, 'IVO Motorista').getByLabel('Diária de hospedagem', { exact: true }).fill('0')
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  const revisao = page.getByTestId('revisao-tabela')
+  await expect(revisao).toContainText('Taxa fixa: R$ 0,00 → R$ 40,00')
+  await expect(revisao.locator(':scope > li').filter({ hasText: 'IVO Motorista' })).toContainText('fica indisponível para pedir')
+  await expect(revisao.locator(':scope > li').filter({ hasText: 'IVO Passageiros' })).not.toContainText('indisponível')
+})
+
+test('a vigência parte de "agora + 5 min" a cada abertura; no passado, o foco vai ao campo', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-22T12:00:00-03:00') })
+  const chamadas = await abrir(page, ADM, '/adm/categorias')
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  const folha = page.getByRole('dialog', { name: /Publicar tabela/ })
+  const vigencia = folha.getByLabel('Vale a partir de')
+  const primeira = await vigencia.inputValue()
+  await folha.getByRole('button', { name: 'Voltar e editar' }).click()
+  await expect(folha).toHaveCount(0)
+  // Meia hora depois, a revisão abre com a hora nova (não a da primeira abertura).
+  await page.clock.fastForward('30:00')
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(vigencia).not.toHaveValue(primeira)
+  expect((await vigencia.inputValue()) > primeira).toBe(true)
+  await vigencia.fill('2026-10-01T08:00')
+  await folha.getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(folha.getByText('A vigência precisa ser agora ou no futuro.')).toBeVisible()
+  await expect(vigencia).toBeFocused()
+  expect(chamadas.filter((c) => c.rpc === 'publicar_tarifas')).toHaveLength(0)
+})
+
+test('publicar para uma empresa manda p_empresa e lê as categorias dela', async ({ page }) => {
+  const chamadas = await abrir(page, ADM, '/adm/categorias', { contratos: [linhaContrato(EMPRESA_UMI, versaoFalsa(2))] })
+  await page.getByLabel('Contrato').selectOption({ label: 'Umi San' })
+  await expect
+    .poll(() => chamadas.some((c) => c.rpc === 'categorias_adm' && c.corpo.p_empresa === EMPRESA_UMI.id))
+    .toBe(true)
+  await expect(cartao(page, 'IVO Passageiros')).toBeVisible()
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  const folha = page.getByRole('dialog', { name: /Publicar tabela/ })
+  await expect(folha).toContainText('Umi San')
+  await folha.getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(page.getByText(/Tabela publicada: versão 4/)).toBeVisible()
+  expect(chamadas.find((c) => c.rpc === 'publicar_tarifas')!.corpo.p_empresa).toBe(EMPRESA_UMI.id)
+})
+
+test('as categorias mudaram desde a leitura: CAMPOS_INVALIDOS pede para atualizar a página', async ({ page }) => {
+  const nova = cat('VAN_EXECUTIVA', 'IVO Van Executiva', 5, { tarifa: { ...ZERO, inicial: true } })
+  await abrir(page, ADM, '/adm/categorias', {
+    categorias: [CATEGORIAS, [...CATEGORIAS, nova]],
+    publicar: { ok: false, codigo: 'CAMPOS_INVALIDOS' },
+  })
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  const folha = page.getByRole('dialog', { name: /Publicar tabela/ })
+  await folha.getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(folha.getByText('As categorias mudaram. Atualize a página.')).toBeVisible()
+})
+
+test('Contratos: com a tabela por categoria publicada, o km/taxa por categoria some e aponta para Categorias e preços', async ({
+  page,
+}) => {
+  const publicadas = CATEGORIAS.map((c) => ({ ...c, tarifa: { ...((c as { tarifa?: object }).tarifa), inicial: false } }))
+  await abrir(page, ADM, '/adm/contratos/modelo', { categorias: [publicadas] })
+  await page.getByRole('button', { name: 'Publicar nova versão' }).click()
+  const folha = page.getByRole('dialog', { name: /Publicar nova versão/ })
+  await expect(folha.getByText(/Os preços por categoria agora ficam em/)).toBeVisible()
+  await expect(folha.getByRole('link', { name: 'Categorias e preços' })).toHaveAttribute('href', '/adm/categorias')
+  await expect(folha.getByLabel('IVO Carga Leve: quilômetro')).toHaveCount(0)
 })
 
 test('erro do servidor ao publicar fica na revisão', async ({ page }) => {
@@ -238,6 +324,45 @@ test('cadastro de veículo: nomes do banco, sem a de veículo do cliente nem as 
   expect(chamadas.some((c) => c.rpc === 'categorias_veiculo')).toBe(true)
   // O motorista não lê a tela do Master.
   expect(chamadas.some((c) => c.rpc === 'categorias_adm')).toBe(false)
+})
+
+test('ADM em /adm/veiculos/novo: os mesmos nomes do banco', async ({ page }) => {
+  const renomeadas = CATEGORIAS.map((c) => (c.codigo === 'CARGA_LEVE' ? { ...c, nome: 'IVO Leve Express' } : c))
+  await abrir(page, ADM, '/adm/veiculos/novo', { categorias: [renomeadas] })
+  const grupo = page.getByRole('group', { name: 'Atende quais categorias?' })
+  await expect(grupo.getByRole('checkbox', { name: 'IVO Leve Express', exact: true })).toBeVisible()
+  await expect(grupo.getByRole('checkbox', { name: 'IVO Passageiros', exact: true })).toBeVisible()
+  await expect(grupo.getByRole('checkbox')).toHaveCount(2)
+})
+
+test('editar veículo com categoria desativada: fica à vista como "inativa" e pode ser removida', async ({ page }) => {
+  const id = '00000000-0000-4000-8000-0000000000c9'
+  const chamadas = await abrir(page, MOTORISTA, `/veiculos/${id}`, {
+    veiculos: [
+      {
+        id,
+        motorista_id: '00000000-0000-4000-8000-000000000001',
+        modelo: 'Hilux',
+        cor: 'branca',
+        placa: 'REB4E56',
+        lugares: 2,
+        carga_max_kg: 1000,
+        reboque_desc: 'prancha',
+        categorias: ['CARGA_LEVE', 'CARGA_PESADA'],
+        situacao: 'ATIVO',
+        criado_em: '2026-10-01T12:00:00Z',
+      },
+    ],
+  })
+  const fora = page.getByRole('list', { name: 'Categorias fora da lista' })
+  await expect(fora).toContainText('IVO Carga Pesada · inativa')
+  await fora.getByRole('button', { name: 'Remover IVO Carga Pesada' }).click()
+  await expect(fora).toHaveCount(0)
+  await page.getByRole('button', { name: 'Salvar veículo' }).click()
+  await expect.poll(() => chamadas.some((c) => c.rpc === 'salvar_veiculo')).toBe(true)
+  expect((chamadas.find((c) => c.rpc === 'salvar_veiculo')!.corpo.p as { categorias: string[] }).categorias).toEqual([
+    'CARGA_LEVE',
+  ])
 })
 
 test('Meus veículos: as etiquetas usam os nomes do banco', async ({ page }) => {

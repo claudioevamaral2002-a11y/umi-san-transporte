@@ -59,7 +59,8 @@ function tarifaDeAntes(c: CategoriaAdm): Tarifa | null {
   if (!t) return null
   if (!t.inicial) return t
   if (!DE_ANTES.has(c.codigo)) return null
-  return c.codigo === COM_TAXA ? t : { ...t, reboque_cent: 0 }
+  // Antes da 4.1, Passageiros e Carga Leve cobravam só o km (a taxa fixa ia 0 e o reboque não existia).
+  return c.codigo === COM_TAXA ? t : { ...t, taxa_fixa_cent: 0, reboque_cent: 0 }
 }
 
 /** Nome, descrição e "ativa" de uma categoria; o código, a carga, o reboque e o veículo do cliente não mudam aqui. */
@@ -310,12 +311,23 @@ interface ItemRevisao {
   nome: string
   linhas: string[]
   primeira: boolean
+  /** Todos os campos zerados: o total sai zero e a categoria fica indisponível para pedir. */
+  zerada: boolean
 }
 
 interface Revisao {
   tarifas: Record<string, Tarifa>
   itens: ItemRevisao[]
   avisos: string[]
+}
+
+async function categoriasMudaram(empresa: string | null, enviadas: string[]): Promise<boolean> {
+  try {
+    const ativas = (await categoriasAdm.listar(empresa)).filter((c) => c.ativa).map((c) => c.codigo)
+    return ativas.length !== enviadas.length || ativas.some((c) => !enviadas.includes(c))
+  } catch {
+    return false
+  }
 }
 
 /** A revisão antes de publicar: o que muda em cada categoria ativa, os avisos e a vigência. */
@@ -330,16 +342,19 @@ function RevisarTabela({
   aoFechar: () => void
   aoPublicar: (texto: string) => void
 }) {
+  // Montado de novo a cada abertura (key): a vigência parte de "agora + 5 min" na hora de abrir, nunca do passado.
   const [vigencia, setVigencia] = useState(() => paraEntradaDataHora(new Date(Date.now() + 5 * 60_000)))
   const [erroVigencia, setErroVigencia] = useState<string | undefined>()
   const [falha, setFalha] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const caixa = useRef<HTMLDivElement>(null)
 
   async function publicar() {
     if (!revisao || enviando) return
     const v = validarVigencia(vigencia)
     if ('erro' in v) {
       setErroVigencia(v.erro)
+      requestAnimationFrame(() => caixa.current?.querySelector<HTMLElement>('input[name="vigente_desde"]')?.focus())
       return
     }
     setErroVigencia(undefined)
@@ -348,14 +363,23 @@ function RevisarTabela({
     // Sem atualização otimista: a tela só muda com a confirmação do servidor.
     const r = await categoriasAdm.publicarTarifas(alvo.empresa, revisao.tarifas, v.data)
     setEnviando(false)
-    if (r.ok) aoPublicar(`Tabela publicada: versão ${String(r.versao)}. Vale a partir de ${formatarDataHora(v.data)}.`)
-    else setFalha(mensagemDoCodigo(r.codigo))
+    if (r.ok) {
+      aoPublicar(`Tabela publicada: versão ${String(r.versao)}. Vale a partir de ${formatarDataHora(v.data)}.`)
+      return
+    }
+    // O banco só devolve o código. CAMPOS_INVALIDOS também sai quando as categorias ativas mudaram desde a leitura
+    // (outra pessoa criou ou desativou uma): relê e compara os códigos.
+    if (r.codigo === 'CAMPOS_INVALIDOS' && (await categoriasMudaram(alvo.empresa, Object.keys(revisao.tarifas)))) {
+      setFalha('As categorias mudaram. Atualize a página.')
+    } else {
+      setFalha(mensagemDoCodigo(r.codigo))
+    }
   }
 
   return (
     <Folha aberta={revisao !== null} onFechar={aoFechar} sobretitulo={alvo.nome} titulo="Publicar tabela" largura="md:max-w-2xl">
       {revisao && (
-        <div className="space-y-4">
+        <div ref={caixa} className="space-y-4">
           <p className="ivo-corpo">
             A versão nova do contrato leva a tabela de todas as categorias ativas. Orçamentos já feitos continuam com os
             valores antigos.
@@ -367,6 +391,9 @@ function RevisarTabela({
                   {i.nome}
                   {i.primeira && <span className="ivo-legenda font-semibold text-texto-suave"> · primeira tabela</span>}
                 </p>
+                {i.zerada && (
+                  <p className="ivo-legenda font-semibold">Todos os valores zerados: fica indisponível para pedir.</p>
+                )}
                 {i.linhas.length === 0 ? (
                   <p className="ivo-legenda text-texto-suave">Nada muda.</p>
                 ) : (
@@ -427,13 +454,15 @@ function TabelaDoContrato({
   const [nova, setNova] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [revisao, setRevisao] = useState<Revisao | null>(null)
+  const [abertura, setAbertura] = useState(0)
   const listaRef = useRef<HTMLUListElement>(null)
 
   const cats = lista.dados
   const formDe = (c: CategoriaAdm) => editados[c.codigo] ?? (c.tarifa ? paraFormulario(c.tarifa) : FORM_TARIFA_VAZIO)
   const ativas = (cats ?? []).filter((c) => c.ativa)
   const semContrato = cats !== undefined && cats.every((c) => !c.tarifa)
-  const primeira = ativas.some((c) => c.tarifa?.inicial)
+  // "Ainda não publicada" só pelas três de antes: uma categoria criada depois de uma publicação também vem `inicial`.
+  const primeira = ativas.some((c) => DE_ANTES.has(c.codigo) && c.tarifa?.inicial)
 
   function revisar() {
     if (!cats) return
@@ -451,6 +480,7 @@ function TabelaDoContrato({
       requestAnimationFrame(() => listaRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
       return
     }
+    setAbertura((n) => n + 1)
     setRevisao({
       tarifas,
       itens: ativas.map((c) => ({
@@ -458,10 +488,16 @@ function TabelaDoContrato({
         nome: c.nome,
         linhas: diferencas(tarifaDeAntes(c), tarifas[c.codigo]!),
         primeira: c.tarifa?.inicial ?? true,
+        zerada: Object.values(tarifas[c.codigo]!).every((v) => v === 0),
       })),
       // O app do cliente da fase 4 (ainda em cache) não envia as horas: o pedido seria recusado até ele atualizar.
       avisos: ativas
-        .filter((c) => DE_ANTES.has(c.codigo) && tarifas[c.codigo]!.hora_cent > 0)
+        .filter(
+          (c) =>
+            DE_ANTES.has(c.codigo) &&
+            tarifas[c.codigo]!.hora_cent > 0 &&
+            (!c.tarifa || c.tarifa.inicial || c.tarifa.hora_cent === 0),
+        )
         .map(
           (c) =>
             `${c.nome} passa a cobrar por hora. O app do cliente que ainda não atualizou não envia as horas: os pedidos de ${c.nome} feitos por ele serão recusados até a atualização.`,
@@ -529,6 +565,7 @@ function TabelaDoContrato({
         </>
       )}
       <RevisarTabela
+        key={abertura}
         alvo={alvo}
         revisao={revisao}
         aoFechar={() => setRevisao(null)}

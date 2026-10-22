@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo } from '../../design/componentes/Campo.tsx'
 import { Folha } from '../../design/componentes/Folha.tsx'
@@ -71,6 +72,12 @@ export interface OpcaoCategorias {
   nomes: Record<CodigoCategoria, string>
   /** Preço atual de cada categoria (já com o fallback da versão antiga), para pré-preencher e comparar. */
   precos: PrecosCategorias | null
+  /**
+   * Fase 4.1: a versão de partida já tem a tabela por categoria (`publicar_tarifas`). O km/taxa por categoria daqui não
+   * vale mais para os pedidos do app novo: a tela não os mostra (vão os mesmos, sem mudança) e aponta para
+   * "Categorias e preços".
+   */
+  comTarifas?: boolean
 }
 
 const NOTA_TAXA = 'Só a Carga Pesada (com reboque) cobra taxa fixa. Passageiros e Carga Leve cobram só o km.'
@@ -243,9 +250,9 @@ function Conteudo({
               </p>
             </li>
           ))}
-          {categorias && revisao.precos && <LinhasCategorias nomes={categorias.nomes} antes={categorias.precos} depois={revisao.precos} />}
+          {categorias && !categorias.comTarifas && revisao.precos && <LinhasCategorias nomes={categorias.nomes} antes={categorias.precos} depois={revisao.precos} />}
         </ul>
-        {categorias && <p className="ivo-legenda text-texto-suave">{NOTA_TAXA}</p>}
+        {categorias && !categorias.comTarifas && <p className="ivo-legenda text-texto-suave">{NOTA_TAXA}</p>}
         <div aria-live="assertive">{falha && <Mensagem tipo="erro">{falha}</Mensagem>}</div>
         <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
           <Botao onClick={() => setRevisao(null)} disabled={enviando}>
@@ -364,7 +371,20 @@ function Conteudo({
         )
       })}
 
-      {categorias && (
+      {categorias?.comTarifas && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1 ivo-sobretitulo text-texto-suave">Preço por categoria</legend>
+          <p className="ivo-legenda text-texto-suave">
+            Os preços por categoria agora ficam em{' '}
+            <Link to="/adm/categorias" className="font-semibold text-texto underline">
+              Categorias e preços
+            </Link>
+            . Esta versão leva adiante a tabela de cada categoria, sem mudança.
+          </p>
+        </fieldset>
+      )}
+
+      {categorias && !categorias.comTarifas && (
         <fieldset className="space-y-3">
           <legend className="mb-1 ivo-sobretitulo text-texto-suave">Preço por categoria</legend>
           <p className="ivo-legenda text-texto-suave">
@@ -504,5 +524,7 @@ function ComCategorias(props: {
     CodigoCategoria,
     string
   >
-  return <Conteudo {...props} categorias={{ nomes, precos: precosDaVersao(partida, dados.precos) }} />
+  // Fase 4.1: com a tabela por categoria já publicada nesta versão, o km/taxa daqui não vale mais.
+  const comTarifas = dados.categorias.some((c) => c.tarifa && !c.tarifa.inicial)
+  return <Conteudo {...props} categorias={{ nomes, precos: precosDaVersao(partida, dados.precos), comTarifas }} />
 }
