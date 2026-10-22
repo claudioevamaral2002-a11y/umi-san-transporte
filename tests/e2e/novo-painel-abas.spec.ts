@@ -186,19 +186,19 @@ test.describe('no computador', () => {
     await expect(rota).toContainText('ParaPorto de Itajaí · Portão 3')
     await expect(primeira).toContainText('2,5 h')
 
-    await page.getByLabel('Status').selectOption({ label: 'Cancelada' })
+    await page.getByLabel('Status', { exact: true }).selectOption({ label: 'Cancelada' })
     await expect(tabela.getByRole('row')).toHaveCount(2)
     await expect(tabela.getByRole('row').nth(1)).toContainText('R$ 33,00')
-    await page.getByLabel('Status').selectOption({ label: 'Todos' })
+    await page.getByLabel('Status', { exact: true }).selectOption({ label: 'Todos' })
 
-    await page.getByLabel('Centro de custo').selectOption({ label: 'Diretoria' })
+    await page.getByLabel('Centro de custo', { exact: true }).selectOption({ label: 'Diretoria' })
     await expect(tabela.getByRole('row')).toHaveCount(2)
     await expect(tabela.getByRole('row').nth(1)).toContainText('Paulo Lima')
-    await page.getByLabel('Centro de custo').selectOption({ label: 'Todos' })
+    await page.getByLabel('Centro de custo', { exact: true }).selectOption({ label: 'Todos' })
     await expect(tabela.getByRole('row')).toHaveCount(4)
 
     // Outro mês: o banco devolve outro conjunto.
-    await page.getByLabel('Mês').selectOption({ index: 1 })
+    await page.getByLabel('Mês', { exact: true }).selectOption({ index: 1 })
     await expect.poll(() => chamadas.at(-1)?.p_mes).toMatch(/^\d{4}-\d{2}-01$/)
     await expect(tabela.getByRole('row')).toHaveCount(2)
     await expect(tabela.getByRole('row').nth(1)).toContainText('Carla Dias')

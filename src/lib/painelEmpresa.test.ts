@@ -39,21 +39,27 @@ describe('rotuloStatus', () => {
 
 describe('csvDoMes', () => {
   it('cabeçalho exato e uma linha por corrida (data e valor no formato brasileiro)', () => {
-    expect(CABECALHO_CSV).toBe('data;quem pediu;origem;destino;categoria;centro de custo;valor')
+    expect(CABECALHO_CSV).toBe('Data;Quem pediu;De;Paradas;Para;Categoria;Horas;Centro de custo;Valor')
     expect(csvDoMes([pedido()])).toBe(
-      'data;quem pediu;origem;destino;categoria;centro de custo;valor\r\n' +
-        '22/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;Porto de Itajaí · Portão 3;IVO Passageiros;Operações 4.100;220,00\r\n',
+      'Data;Quem pediu;De;Paradas;Para;Categoria;Horas;Centro de custo;Valor\r\n' +
+        '22/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;;Porto de Itajaí · Portão 3;IVO Passageiros;;Operações 4.100;220,00\r\n',
     )
   })
   it('";" no centro de custo vai entre aspas (e as aspas de dentro dobram)', () => {
     const linha = csvDoMes([pedido({ centro_custo: 'Obra; "Galpão" 2' })]).split('\r\n')[1]
     expect(linha).toBe(
-      '22/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;Porto de Itajaí · Portão 3;IVO Passageiros;"Obra; ""Galpão"" 2";220,00',
+      '22/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;;Porto de Itajaí · Portão 3;IVO Passageiros;;"Obra; ""Galpão"" 2";220,00',
     )
   })
   it('texto que a planilha leria como fórmula ganha um apóstrofo', () => {
     const linha = csvDoMes([pedido({ centro_custo: '=SOMA(A1)' })]).split('\r\n')[1]
-    expect(linha?.split(';')[5]).toBe("'=SOMA(A1)")
+    expect(linha?.split(';')[7]).toBe("'=SOMA(A1)")
+  })
+  it('paradas separadas por barra e horas com vírgula', () => {
+    const linha = csvDoMes([pedido({ paradas: ['Posto', 'Cliente'], horas_estimadas: 2.5 })]).split('\r\n')[1]
+    expect(linha).toBe(
+      '22/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;Posto | Cliente;Porto de Itajaí · Portão 3;IVO Passageiros;2,5;Operações 4.100;220,00',
+    )
   })
   it('sem valor (cancelada sem multa) fica de fora; campos vazios ficam vazios', () => {
     const csv = csvDoMes([
@@ -62,7 +68,7 @@ describe('csvDoMes', () => {
     ])
     expect(csv.split('\r\n')).toEqual([
       CABECALHO_CSV,
-      '22/10/2026;;Umi San · Rua Araguaia, 49;Porto de Itajaí · Portão 3;;;33,00',
+      '22/10/2026;;Umi San · Rua Araguaia, 49;;Porto de Itajaí · Portão 3;;;;33,00',
       '',
     ])
   })

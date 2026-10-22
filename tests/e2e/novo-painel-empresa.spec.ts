@@ -137,9 +137,9 @@ test.describe('no computador', () => {
     // Menu no topo: Painel (atual), Corridas, Pessoas e Carteira; a empresa à direita.
     const menu = page.getByRole('navigation', { name: 'Painel da empresa' })
     await expect(menu.getByRole('link', { name: 'Painel' })).toHaveAttribute('aria-current', 'page')
-    await expect(menu.getByRole('link', { name: 'Corridas' })).toHaveAttribute('href', '/pedidos')
-    await expect(menu.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/equipe')
-    await expect(menu.getByRole('link', { name: 'Carteira' })).toHaveAttribute('href', '/extrato')
+    await expect(menu.getByRole('link', { name: 'Corridas' })).toHaveAttribute('href', '/empresa/corridas')
+    await expect(menu.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/empresa/pessoas')
+    await expect(menu.getByRole('link', { name: 'Carteira' })).toHaveAttribute('href', '/empresa/carteira')
     await expect(page.getByText('Umi San', { exact: true })).toBeVisible()
 
     // 1. Resumo do mês.
@@ -160,8 +160,8 @@ test.describe('no computador', () => {
     await expect(proximas.getByRole('row')).toHaveCount(4)
     const [agendada, aguardando, confirmar] = [1, 2, 3].map((i) => proximas.getByRole('row').nth(i))
     await expect(agendada!).toContainText('Marina Souza')
-    await expect(agendada!).toContainText('08:30Umi San · Rua Araguaia, 49')
-    await expect(agendada!).toContainText('09:25Porto de Itajaí · Portão 3')
+    await expect(agendada!).toContainText('08:30')
+    await expect(agendada!).toContainText('DeUmi San · Rua Araguaia, 49ParaPorto de Itajaí · Portão 3')
     await expect(agendada!).toContainText('Passageiros')
     await expect(agendada!).not.toContainText('IVO Passageiros')
     await expect(agendada!).toContainText('Operações 4.100')
@@ -185,7 +185,7 @@ test.describe('no computador', () => {
     const pessoas = page.getByTestId('bloco-pessoas')
     await expect(pessoas).toContainText('3 pessoasainda não fizeram corridas')
     await expect(pessoas).toContainText('1 convitenão aceito')
-    await expect(pessoas.getByRole('link', { name: 'Reenviar convite' })).toHaveAttribute('href', '/equipe')
+    await expect(pessoas.getByRole('link', { name: 'Reenviar convite' })).toHaveAttribute('href', '/empresa/pessoas')
     await expect(pessoas.getByRole('button', { name: 'Exportar CSV do mês' })).toBeVisible()
 
     // O N1 não escolhe empresa: o banco usa a dele.
@@ -207,11 +207,11 @@ test.describe('no computador', () => {
     expect(arquivo.suggestedFilename()).toBe('corridas-2026-10.csv')
     const texto = (await readFile((await arquivo.path())!, 'utf8')).replace(String.fromCharCode(0xfeff), '')
     const linhas = texto.split('\r\n')
-    expect(linhas[0]).toBe('data;quem pediu;origem;destino;categoria;centro de custo;valor')
+    expect(linhas[0]).toBe('Data;Quem pediu;De;Paradas;Para;Categoria;Horas;Centro de custo;Valor')
     expect(linhas[1]).toBe(
-      '02/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;Porto de Itajaí · Portão 3;IVO Passageiros;"Obra; Galpão 2";220,00',
+      '02/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;;Porto de Itajaí · Portão 3;IVO Passageiros;;"Obra; Galpão 2";220,00',
     )
-    expect(linhas[2]).toBe('05/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;Porto de Itajaí · Portão 3;IVO Passageiros;Operações 4.100;33,00')
+    expect(linhas[2]).toBe('05/10/2026;Marina Souza;Umi San · Rua Araguaia, 49;;Porto de Itajaí · Portão 3;IVO Passageiros;;Operações 4.100;33,00')
   })
 
   test('o Master escolhe a empresa no topo', async ({ page }) => {
@@ -221,8 +221,8 @@ test.describe('no computador', () => {
     await expect(page.getByRole('heading', { name: 'Resumo de outubro' })).toBeVisible()
     expect(chamadas.at(-1)).toEqual({ p_empresa: EMPRESA_UMI.id, p_mes: null })
     const menu = page.getByRole('navigation', { name: 'Painel da empresa' })
-    await expect(menu.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/adm/usuarios')
-    await expect(menu.getByRole('link', { name: 'Carteira' })).toHaveAttribute('href', `/adm/creditos/${EMPRESA_UMI.id}`)
+    await expect(menu.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', `/empresa/pessoas?empresa=${EMPRESA_UMI.id}`)
+    await expect(menu.getByRole('link', { name: 'Carteira' })).toHaveAttribute('href', `/empresa/carteira?empresa=${EMPRESA_UMI.id}`)
 
     await seletor.selectOption(EMPRESA_PORTO.id)
     await expect(page).toHaveURL(new RegExp(`/empresa\\?empresa=${EMPRESA_PORTO.id}$`))
