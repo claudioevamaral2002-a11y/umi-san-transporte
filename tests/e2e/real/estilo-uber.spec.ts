@@ -5,7 +5,7 @@ import { comBanco, criarPessoa, empresaComContrato, entrarComDoisFatores, entrar
 
 // Fase 4 contra o Supabase real do CI (sem mocks de banco): o fluxo inteiro do pedido no estilo Uber, pelas telas do app
 // novo (dist-novo, projeto Playwright `real`, servido em :8789).
-//   ADM publica o preço por categoria (tela "Categorias e preços") → motorista cadastra o veículo (tela "Meus veículos")
+//   Master publica a tabela por categoria (tela "Categorias e preços", "Publicar tabela", fase 4.1) → motorista cadastra o veículo (tela "Meus veículos")
 //   → N2 pede Carga Leve → motorista muda os km e a espera na calculadora e envia a proposta → N2 confirma com centro de
 //   custo → saída (débito) → posições → conclusão → avaliação.
 // Só o Google é simulado (função `enderecos`, locais da empresa e blocos do mapa): o CI não tem chave. Tudo o mais é o
@@ -16,15 +16,15 @@ import { comBanco, criarPessoa, empresaComContrato, entrarComDoisFatores, entrar
 
 const URL_NOVO = 'http://127.0.0.1:8789'
 
-/** Preços do contrato por categoria publicados pelo ADM (centavos): o km de cada uma e a taxa da Carga Pesada. */
-const PRECOS = { PASSAGEIROS: 300, CARGA_LEVE: 400, CARGA_PESADA: 600, TAXA_PESADA: 20000 }
+/** Km por categoria na tabela publicada pelo Master (centavos). A Carga Pesada está desligada desde a fase 4.1. */
+const PRECOS = { PASSAGEIROS: 300, CARGA_LEVE: 400 }
 
 /** Km da rota simulada (`simularMapas`): 38,2 km, trecho único. */
 const KM_ROTA = 38.2
 /** O que a calculadora do motorista soma: +6 km e 1 h de espera. */
 const KM_A_MAIS = 6
 const ESPERA_HORAS = 1
-/** Do CONTRATO_TESTE: hora de espera e retorno de 50% no trecho único. */
+/** Na tabela publicada (os mesmos do CONTRATO_TESTE): hora de espera e retorno de 50% no trecho único. */
 const HORA_ESPERA_CENT = 5000
 
 /** Arredonda meio para cima, como as linhas do orçamento. */
@@ -111,41 +111,60 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
     })
     const ctxCli = await novoContexto()
     try {
-      // ----- 1. ADM publica o preço por categoria (tela "Categorias e preços"), sem RPC de apoio.
+      // ----- 1. O Master publica a tabela por categoria (tela "Categorias e preços" → "Publicar tabela"), sem RPC de apoio.
+      // Só da empresa deste teste (nunca a tabela modelo). Zerado = não cobra: km, espera e retorno de 50% em Passageiros
+      // e Carga Leve (o reboque da Carga Leve zerado: este pedido não cobra reboque); a IVO Motorista toda zerada fica
+      // indisponível para pedir.
       const pa = await ctxAdm.newPage()
       await entrarComDoisFatores(pa, adm.email, adm.senha, adm.segredoTotp!)
       await pa.goto('/adm/categorias')
       await expect(pa.getByRole('heading', { name: 'Categorias e preços', level: 1 })).toBeVisible({ timeout: 30_000 })
       await pa.getByLabel('Contrato', { exact: true }).selectOption(empresa)
-      await pa.getByRole('button', { name: 'Publicar nova versão' }).click()
-      const folhaPrecos = pa.getByRole('dialog', { name: /Publicar nova versão/ })
-      const km = (nome: string) => folhaPrecos.getByLabel(`${nome}: quilômetro`, { exact: true })
-      await expect(km('IVO Passageiros')).toBeVisible({ timeout: 30_000 })
-      await km('IVO Passageiros').fill('3,00')
-      await km('IVO Carga Leve').fill('4,00')
-      await km('IVO Carga Pesada').fill('6,00')
-      await folhaPrecos.getByLabel('IVO Carga Pesada: taxa fixa', { exact: true }).fill('200,00')
-      // A versão vale a partir do próximo minuto cheio (o campo vem com "daqui a 5 min"); a espera é abaixo.
-      await folhaPrecos.getByLabel('Vale a partir de', { exact: true }).fill(entradaSp(new Date(Math.floor(Date.now() / 60_000) * 60_000 + 60_000)))
-      await folhaPrecos.getByRole('button', { name: 'Revisar e publicar' }).click()
-      await expect(folhaPrecos.getByTestId('confirmacao-contrato')).toBeVisible()
-      await folhaPrecos.getByRole('button', { name: 'Publicar versão' }).click()
-      await expect(pa.getByText(/Versão \d+ publicada\./)).toBeVisible({ timeout: 30_000 })
-      // O banco guardou as 3 linhas da versão nova.
+      await expect(pa.getByLabel('Contrato', { exact: true })).toHaveValue(empresa)
+      const cartao = (nome: string) => pa.getByRole('region', { name: nome, exact: true })
+      const preencher = async (nome: string, valores: Record<string, string>) => {
+        for (const [campo, valor] of Object.entries(valores)) await cartao(nome).getByLabel(campo, { exact: true }).fill(valor)
+      }
+      const tabela = (km: string) => ({
+        'Taxa fixa': '0,00',
+        'Por km': km,
+        'Por hora': '0,00',
+        'Hora de espera': '50,00',
+        'Por parada': '0,00',
+        Retorno: '50',
+        'Diária de hospedagem': '0,00',
+      })
+      await expect(cartao('IVO Carga Leve').getByLabel('Por km', { exact: true })).toBeEditable({ timeout: 30_000 })
+      await preencher('IVO Passageiros', tabela('3,00'))
+      await preencher('IVO Carga Leve', { ...tabela('4,00'), Reboque: '0,00' })
+      await preencher('IVO Motorista', { ...tabela('0,00'), 'Hora de espera': '0,00', Retorno: '0' })
+      await pa.getByRole('button', { name: 'Publicar tabela', exact: true }).click()
+      const folhaPrecos = pa.getByRole('dialog', { name: /Publicar tabela/ })
+      await expect(folhaPrecos.getByTestId('revisao-tabela')).toContainText('IVO Carga Leve')
+      // Vale a partir do minuto cheio depois do próximo (sempre no futuro na hora do clique); a espera é abaixo.
+      await folhaPrecos
+        .getByLabel('Vale a partir de', { exact: true })
+        .fill(entradaSp(new Date(Math.floor(Date.now() / 60_000) * 60_000 + 120_000)))
+      await folhaPrecos.getByRole('button', { name: 'Publicar tabela', exact: true }).click()
+      await expect(pa.getByText(/Tabela publicada: versão \d+\./)).toBeVisible({ timeout: 30_000 })
+      // O banco guardou a tarifa de cada categoria ativa na versão nova (km:espera:retorno:reboque).
       const linhas = await comBanco(async (db) =>
         (
-          await db.query<{ categoria: string; km_cent: string; taxa_fixa_cent: string }>(
-            `select cc.categoria, cc.km_cent, cc.taxa_fixa_cent
-               from app.contratos_categorias cc join app.contratos_versoes v on v.id = cc.contrato_id
-              where v.empresa_id = $1 order by cc.categoria`,
+          await db.query<{ categoria: string; km_cent: string; hora_espera_cent: string; retorno_bp: string; reboque_cent: string }>(
+            `select t.categoria, t.km_cent, t.hora_espera_cent, t.retorno_bp, t.reboque_cent
+               from app.tarifas_categoria t join app.contratos_versoes v on v.id = t.contrato_id
+              where v.empresa_id = $1
+                and v.versao = (select max(x.versao) from app.contratos_versoes x where x.empresa_id = $1)
+                and t.categoria in ('PASSAGEIROS', 'CARGA_LEVE', 'MOTORISTA')
+              order by t.categoria`,
             [empresa],
           )
-        ).rows.map((l) => `${l.categoria}:${l.km_cent}:${l.taxa_fixa_cent}`),
+        ).rows.map((l) => `${l.categoria}:${l.km_cent}:${l.hora_espera_cent}:${l.retorno_bp}:${l.reboque_cent}`),
       )
       expect(linhas).toEqual([
-        `CARGA_LEVE:${PRECOS.CARGA_LEVE}:0`,
-        `CARGA_PESADA:${PRECOS.CARGA_PESADA}:${PRECOS.TAXA_PESADA}`,
-        `PASSAGEIROS:${PRECOS.PASSAGEIROS}:0`,
+        `CARGA_LEVE:${PRECOS.CARGA_LEVE}:${HORA_ESPERA_CENT}:5000:0`,
+        'MOTORISTA:0:0:0:0',
+        `PASSAGEIROS:${PRECOS.PASSAGEIROS}:${HORA_ESPERA_CENT}:5000:0`,
       ])
 
       // ----- 2. Motorista cadastra o veículo (tela "Meus veículos").
@@ -161,13 +180,14 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
       await pm.getByLabel('Placa', { exact: true }).fill(placa)
       await pm.getByLabel('Lugares', { exact: true }).fill('4')
       await pm.getByLabel('Carga máx.', { exact: true }).fill('650')
-      await pm.getByRole('checkbox', { name: 'Passageiros', exact: true }).check()
-      await pm.getByRole('checkbox', { name: 'Carga Leve', exact: true }).check()
+      // Fase 4.1: os nomes das categorias vêm do banco.
+      await pm.getByRole('checkbox', { name: 'IVO Passageiros', exact: true }).check()
+      await pm.getByRole('checkbox', { name: 'IVO Carga Leve', exact: true }).check()
       await pm.getByRole('button', { name: 'Salvar veículo' }).click()
       await expect(pm.getByText(`Fiorino ${placa} salvo.`)).toBeVisible({ timeout: 30_000 })
       await expect(pm.getByRole('list', { name: 'Veículos' })).toContainText(placa)
 
-      // ----- 3. A versão do contrato já vale (começou no minuto cheio seguinte ao da publicação).
+      // ----- 3. A versão com a tabela já vale (começa até 2 min depois da publicação).
       await expect
         .poll(
           async () =>
@@ -175,13 +195,14 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
               async (db) =>
                 (
                   await db.query<{ n: string }>(
-                    `select count(*) as n from app.contratos_categorias cc join app.contratos_versoes v on v.id = cc.contrato_id
-                      where v.empresa_id = $1 and v.vigente_desde <= now()`,
+                    `select count(*) as n from app.tarifas_categoria t join app.contratos_versoes v on v.id = t.contrato_id
+                      where v.empresa_id = $1 and v.vigente_desde <= now()
+                        and t.categoria in ('PASSAGEIROS', 'CARGA_LEVE', 'MOTORISTA')`,
                     [empresa],
                   )
                 ).rows[0]!.n,
             ),
-          { timeout: 90_000, intervals: [2_000] },
+          { timeout: 180_000, intervals: [2_000] },
         )
         .toBe('3')
 
@@ -194,9 +215,13 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
       await simularBlocosDoMapa(pc)
       await entrarComSenha(pc, cliente.email, cliente.senha)
       await expect(pc.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Clara$/ })).toBeVisible({ timeout: 30_000 })
-      await expect(pc.getByRole('combobox', { name: 'Origem' })).toHaveValue('Estaleiro Navegantes', { timeout: 20_000 })
-      await pc.getByRole('combobox', { name: 'Destino' }).fill('Porto')
-      await pc.getByRole('option', { name: /Porto de Itajaí/ }).click()
+      // Fase 4.1: "De" começa vazio (os locais da empresa aparecem primeiro na busca); "Destino" virou "Para".
+      const de = pc.getByRole('combobox', { name: 'De', exact: true })
+      await expect(de).toHaveValue('', { timeout: 20_000 })
+      await de.fill('Estaleiro Navegantes')
+      await pc.getByRole('option', { name: /Estaleiro Navegantes/ }).first().click()
+      await pc.getByRole('combobox', { name: 'Para', exact: true }).fill('Porto')
+      await pc.getByRole('option', { name: /Porto de Itajaí/ }).first().click()
       const categorias = pc.getByRole('radiogroup', { name: 'Categorias' })
       await expect(categorias.getByRole('radio')).toHaveCount(3, { timeout: 30_000 })
       // O preço estimado vem do contrato (o servidor calcula; a tela só mostra).
@@ -204,7 +229,7 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
       await expect(categorias.getByRole('radio', { name: /IVO Passageiros/ })).toContainText(
         new RegExp(`~${reais(kmComRetorno(KM_ROTA, PRECOS.PASSAGEIROS))}`),
       )
-      // Fase 4.1: a Carga Pesada foi desligada; a IVO Motorista ainda não tem tabela publicada, então fica indisponível.
+      // Fase 4.1: a Carga Pesada foi desligada; a IVO Motorista foi publicada toda zerada, então fica indisponível.
       await expect(categorias.getByRole('radio', { name: /IVO Motorista/ })).toContainText('Indisponível no momento')
       await categorias.getByRole('radio', { name: /IVO Carga Leve/ }).click()
       // Carga pede a descrição (nos detalhes da corrida).
@@ -253,7 +278,7 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
       await veComRecarga(pc, confirmar)
       await expect(pc.getByTestId('comparacao')).toContainText(new RegExp(`Pela tabela ${reais(TOTAL_TABELA)}`))
       await expect(pc.getByTestId('comparacao')).toContainText(new RegExp(`Proposta do Márcio ${reais(TOTAL_PROPOSTA)}`))
-      await pc.getByLabel('Centro de custo', { exact: true }).fill(CENTRO_CUSTO)
+      await pc.getByRole('textbox', { name: 'Centro de custo (opcional)' }).fill(CENTRO_CUSTO)
       await confirmar.click()
       await expect(pc.getByRole('heading', { name: 'Corrida confirmada' })).toBeVisible({ timeout: 30_000 })
       await expect(pc.getByText(CENTRO_CUSTO)).toBeVisible()
