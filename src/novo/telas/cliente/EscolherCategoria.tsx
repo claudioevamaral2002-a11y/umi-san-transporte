@@ -22,16 +22,14 @@ import { DURACAO_PADRAO, FORM_VAZIO, mascararTelefone, validarPasso, type ErrosP
 import { pedidos } from '../../../lib/pedidos.ts'
 import { diaDe, formatarDuracao, hoje, somarDias } from '../../../lib/tempo.ts'
 import { CaixaChip, Contador } from '../../../telas/pedidos/componentes.tsx'
+import { DIAS_NO_SELETOR, EscolherHorario } from './EscolherHorario.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
-import { diaCurto, formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
+import { formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
 import { gravarUltimaCategoria, lerUltimaCategoria } from '../../preferencias.ts'
 import { useRota } from '../../useRota.ts'
 
 export type EnderecoEscolhido = { texto: string; local: Local }
-
-/** Dias que o seletor "Agendar" oferece (hoje e os próximos). */
-const DIAS_NO_SELETOR = 14
 
 type Modo = 'agendar' | 'agora'
 
@@ -108,81 +106,6 @@ function CartaoCategoria({
         </span>
       )}
     </button>
-  )
-}
-
-/** Dia e horário do "Agendar": faixa de dias e os horários livres do dia escolhido. */
-function EscolherHorario({
-  dia,
-  inicio,
-  aoMudarDia,
-  aoMudarInicio,
-}: {
-  dia: string
-  inicio: string | null
-  aoMudarDia: (d: string) => void
-  aoMudarInicio: (i: string) => void
-}) {
-  const idDias = useId()
-  const idHoras = useId()
-  const hojeSp = hoje()
-  const dias = Array.from({ length: DIAS_NO_SELETOR }, (_, i) => somarDias(hojeSp, i))
-  const livres = useConsulta(`novo-livres-${dia}`, () => pedidos.horariosLivres(dia, DURACAO_PADRAO))
-  return (
-    <div className="space-y-3">
-      <div>
-        <p id={idDias} className="mb-2 font-semibold">
-          Dia
-        </p>
-        <div role="radiogroup" aria-labelledby={idDias} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-          {dias.map((d) => (
-            <button
-              key={d}
-              type="button"
-              role="radio"
-              aria-checked={d === dia}
-              onClick={() => aoMudarDia(d)}
-              className={`min-h-12 shrink-0 rounded-full border-[1.5px] px-4 font-semibold tabular-nums ${
-                d === dia ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
-              }`}
-            >
-              {d === hojeSp ? 'Hoje' : diaCurto(`${d}T15:00:00Z`)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p id={idHoras} className="mb-2 font-semibold">
-          Horário
-        </p>
-        {livres.dados === undefined ? (
-          livres.erro ? (
-            <p className="ivo-legenda text-texto-suave">Não foi possível ler os horários livres agora.</p>
-          ) : (
-            <Skeleton className="h-12" />
-          )
-        ) : livres.dados.horarios.length === 0 ? (
-          <p className="ivo-legenda text-texto-suave">Sem horário livre neste dia. Escolha outro.</p>
-        ) : (
-          <div role="radiogroup" aria-labelledby={idHoras} className="flex flex-wrap gap-2">
-            {livres.dados.horarios.map((h) => (
-              <button
-                key={h}
-                type="button"
-                role="radio"
-                aria-checked={h === inicio}
-                onClick={() => aoMudarInicio(h)}
-                className={`min-h-12 rounded-full border-[1.5px] px-4 font-semibold tabular-nums ${
-                  h === inicio ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
-                }`}
-              >
-                {quandoCurto(h).split(' ')[1]}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
   )
 }
 
