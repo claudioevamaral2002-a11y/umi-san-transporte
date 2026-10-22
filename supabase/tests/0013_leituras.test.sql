@@ -155,10 +155,11 @@ select is(pg_temp.ids(current_setting('t.mp_inv'), '$[*].codigo'),
   'filtro inválido recusado');
 select is(pg_temp.chaves(current_setting('t.mp_a5')::jsonb -> 'itens' -> 0),
   array['destino', 'duracao_min', 'empresa_nome', 'id', 'inicio', 'levar', 'modalidade', 'numero', 'origem',
-        'prazo_orcar_ate', 'prazo_vencido', 'status', 'total_cent', 'trazer', 'valido_ate'],
+        'paradas', 'prazo_orcar_ate', 'prazo_vencido', 'status', 'total_cent', 'trazer', 'valido_ate'],
   'item da lista: só campos de lista');
 select is((current_setting('t.mp_a5')::jsonb -> 'itens' -> 0)
-            - array['id', 'numero', 'inicio', 'destino', 'duracao_min', 'levar', 'trazer', 'modalidade', 'origem'],
+            - array['id', 'numero', 'inicio', 'destino', 'duracao_min', 'levar', 'trazer', 'modalidade', 'origem',
+                    'paradas'],
   jsonb_build_object('status', 'ORCADA', 'total_cent', 37500, 'valido_ate', now() + interval '24 hours',
                      'prazo_orcar_ate', null, 'prazo_vencido', false, 'empresa_nome', null),
   'cliente: total e validade do orçamento vigente, sem nome de empresa');
@@ -169,7 +170,7 @@ select is(jsonb_path_query_first(current_setting('t.mp_a3')::jsonb, '$.itens[*] 
             -> 'total_cent', 'null'::jsonb, 'gestor de frota não vê valores');
 select is(jsonb_path_query_first(current_setting('t.mp_a1')::jsonb, '$.itens[*] ? (@.status == "ORCADA")')
             - array['id', 'numero', 'inicio', 'destino', 'duracao_min', 'levar', 'trazer', 'modalidade', 'origem',
-                    'status', 'valido_ate', 'prazo_orcar_ate', 'prazo_vencido'],
+                    'status', 'valido_ate', 'prazo_orcar_ate', 'prazo_vencido', 'paradas'],
   '{"total_cent": 37500, "empresa_nome": "Empresa A"}'::jsonb, 'ADM vê valor e empresa');
 
 ------------------------------------------------------------------ pedido (detalhe)
@@ -303,7 +304,7 @@ select ok(current_setting('t.pd_a9')::jsonb -> 'aguardando_orcamento' = '[]'::js
           and current_setting('t.pd_a9')::jsonb -> 'aguardando_aprovacao' = '[]'::jsonb,
   'motorista não atribuído: sem pendências');
 select is(pg_temp.ids(current_setting('t.pd_a5'), '$.aguardando_orcamento[*].id'), pg_temp.lista('q4'), 'N2: os próprios aguardando orçamento');
-select is((current_setting('t.pd_a5')::jsonb -> 'aguardando_aprovacao' -> 0) - 'inicio' - 'duracao_min' - 'destino' - 'numero',
+select is((current_setting('t.pd_a5')::jsonb -> 'aguardando_aprovacao' -> 0) - 'inicio' - 'duracao_min' - 'destino' - 'numero' - 'paradas',
   jsonb_build_object('id', current_setting('t.q1'), 'status', 'ORCADA', 'origem', 'Origem Secreta A1',
                      'prazo', now() + interval '24 hours', 'urgente', false, 'versao', 1, 'total_cent', 37500,
                      'empresa_nome', null, 'categoria_nome', null, 'agora', false),

@@ -4,7 +4,7 @@
 -- devolvem as paradas. Compatibilidade: o pedido do app atual (sem categoria e sem as chaves novas) não muda.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(44);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -234,6 +234,9 @@ select set_config('t.v5', api.pedido((current_setting('t.p2')::jsonb ->> 'id')::
 select set_config('t.v5m', api.pedido((current_setting('t.m1')::jsonb ->> 'id')::uuid)::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca4'), true);
 select set_config('t.v4', api.pedido((current_setting('t.p2')::jsonb ->> 'id')::uuid)::text, true);
+select set_config('t.pd4', api.pendencias()::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.mp5', api.meus_pedidos('{}'::jsonb)::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca8'), true);
 select set_config('t.pn', api.painel_empresa(null, null)::text, true);
 reset role;
@@ -248,6 +251,16 @@ select ok(current_setting('t.v5m')::jsonb -> 'pedido' @> '{"horas_estimadas": 4,
 select is((select x -> 'paradas' from jsonb_array_elements(current_setting('t.pn')::jsonb -> 'proximas') x
             where x ->> 'id' = current_setting('t.p2')::jsonb ->> 'id'),
   '["Centro de Itajaí", "Ponto marcado"]'::jsonb, 'painel_empresa: o pedido traz os textos das paradas');
+select ok((select x -> 'paradas' from jsonb_array_elements(current_setting('t.mp5')::jsonb -> 'itens') x
+            where x ->> 'id' = current_setting('t.p2')::jsonb ->> 'id') = '["Centro de Itajaí", "Ponto marcado"]'::jsonb
+      and (select x -> 'paradas' from jsonb_array_elements(current_setting('t.mp5')::jsonb -> 'itens') x
+            where x ->> 'id' = current_setting('t.m1')::jsonb ->> 'id') = '[]'::jsonb,
+  'meus_pedidos: cada item traz os textos das paradas ([] sem paradas)');
+select ok((select x -> 'paradas' from jsonb_array_elements(current_setting('t.pd4')::jsonb -> 'proximos') x
+            where x ->> 'id' = current_setting('t.p2')::jsonb ->> 'id') = '["Centro de Itajaí", "Ponto marcado"]'::jsonb
+      and (select x -> 'paradas' from jsonb_array_elements(current_setting('t.pd4')::jsonb -> 'aguardando_orcamento') x
+            where x ->> 'id' = current_setting('t.m4')::jsonb ->> 'id') = '[]'::jsonb,
+  'pendencias: cada item traz os textos das paradas ([] sem paradas)');
 
 ------------------------------------------------------------------ 6. app atual e categoria sem tabela
 insert into app.categorias (codigo, nome, descricao_curta, carga, reboque, ordem)
