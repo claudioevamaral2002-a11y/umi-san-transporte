@@ -13,6 +13,10 @@ export interface PedidoPainel {
   fim_previsto: string
   origem: string
   destino: string
+  /** Paradas entre a origem e o destino, na ordem (fase 4.1). */
+  paradas?: string[] | null
+  /** Horas estimadas do pedido, de 0,5 a 24 (fase 4.1). */
+  horas_estimadas?: number | null
   categoria_nome: string | null
   centro_custo: string | null
   status: Status
@@ -70,9 +74,10 @@ export function rotuloStatus(status: Status): RotuloStatus {
   return ROTULOS[status]
 }
 
-export const CABECALHO_CSV = 'data;quem pediu;origem;destino;categoria;centro de custo;valor'
+export const CABECALHO_CSV = 'Data;Quem pediu;De;Paradas;Para;Categoria;Horas;Centro de custo;Valor'
 
 const DATA = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, day: '2-digit', month: '2-digit', year: 'numeric' })
+const HORAS = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1, useGrouping: false })
 const VALOR = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
 
 /** Campo do CSV: aspas quando há `;`, aspas ou quebra de linha; apóstrofo antes do que a planilha leria como fórmula. */
@@ -91,8 +96,10 @@ export function csvDoMes(itens: readonly PedidoPainel[]): string {
         DATA.format(new Date(i.inicio)),
         campo(i.solicitante_nome),
         campo(i.origem),
+        campo((i.paradas ?? []).join(' | ')),
         campo(i.destino),
         campo(i.categoria_nome),
+        i.horas_estimadas == null ? '' : HORAS.format(i.horas_estimadas),
         campo(i.centro_custo),
         VALOR.format((i.valor_cent ?? 0) / 100),
       ].join(';'),

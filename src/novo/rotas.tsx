@@ -102,6 +102,26 @@ const TELAS_NOVAS = [
 ]
 
 /**
+ * Painel da empresa (§6.9, fase 4.1): um painel só com as abas Painel · Corridas · Pessoas · Carteira como rotas
+ * filhas, sob o mesmo cabeçalho "← Início" das telas de página. O N1 (própria empresa) e o ADM (qualquer empresa).
+ */
+const PAINEL_EMPRESA = {
+  path: 'empresa',
+  element: <GuardaPerfil permite={vePainelEmpresa} />,
+  children: [
+    {
+      lazy: tela(() => import('./telas/empresa/PainelEmpresa.tsx'), 'PainelEmpresa'),
+      children: [
+        { index: true, lazy: tela(() => import('./telas/empresa/AbaPainel.tsx'), 'AbaPainel') },
+        { path: 'corridas', lazy: tela(() => import('./telas/empresa/AbaCorridas.tsx'), 'AbaCorridas') },
+        { path: 'pessoas', lazy: tela(() => import('./telas/empresa/AbaPessoas.tsx'), 'AbaPessoas') },
+        { path: 'carteira', lazy: tela(() => import('./telas/empresa/AbaCarteira.tsx'), 'AbaCarteira') },
+      ],
+    },
+  ],
+}
+
+/**
  * Rotas do segundo site (ivo-novo). Entrada e sessão reusam as telas do app atual (src/telas/entrada),
  * com as mesmas guardas: o estado da sessão leva cada pessoa à tela certa, como hoje.
  */
@@ -178,13 +198,6 @@ export const roteadorNovo = createBrowserRouter([
                   },
                 ],
               },
-              // Painel da empresa (Tarefa 14, §6.9): página larga com o menu no topo (fora da TelaDePagina).
-              {
-                element: <GuardaPerfil permite={vePainelEmpresa} />,
-                children: [
-                  { path: 'empresa', lazy: tela(() => import('./telas/empresa/PainelEmpresa.tsx'), 'PainelEmpresa') },
-                ],
-              },
               // A calculadora da contraproposta é uma página (mockup 6), fora do mapa.
               {
                 element: <GuardaPerfil permite={ehMotorista} />,
@@ -195,6 +208,7 @@ export const roteadorNovo = createBrowserRouter([
                 children: [
                   ...TELAS_DO_APP_ATUAL,
                   ...TELAS_NOVAS,
+                  PAINEL_EMPRESA,
                   ...PROVISORIAS.map(({ path, titulo, permite }) => ({
                     element: <GuardaPerfil permite={permite} />,
                     children: [{ path, element: <EmBreve titulo={titulo} /> }],

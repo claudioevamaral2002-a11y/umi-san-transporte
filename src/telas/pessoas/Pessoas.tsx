@@ -546,7 +546,7 @@ function Detalhe({ u }: { u: Usuario }) {
   )
 }
 
-function GestaoPessoas({ modo }: { modo: Modo }) {
+function GestaoPessoas({ modo, empresa }: { modo: Modo; empresa?: string }) {
   const equipe = modo === 'equipe'
   const { papeis: PAPEIS } = useRotulos()
   const { email: meuEmail, perfil } = useSessao()
@@ -561,7 +561,8 @@ function GestaoPessoas({ modo }: { modo: Modo }) {
   const [gerindo, setGerindo] = useState<Usuario | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 
-  const lista = dados ? filtrarUsuarios(dados.usuarios, busca, equipe ? 'TODOS' : papel) : []
+  const daEmpresa = dados && empresa ? dados.usuarios.filter((u) => u.empresa_id === empresa) : dados?.usuarios
+  const lista = daEmpresa ? filtrarUsuarios(daEmpresa, busca, equipe ? 'TODOS' : papel) : []
   const souEu = (u: Usuario) => !!meuEmail && u.email === meuEmail.trim().toLowerCase()
   // Na equipe ninguém age sobre a própria conta (o banco recusa do mesmo jeito).
   const podeGerir = (u: Usuario) => !equipe || !souEu(u)
@@ -762,8 +763,9 @@ function GestaoPessoas({ modo }: { modo: Modo }) {
 }
 
 /** ADM: todas as pessoas, de todos os perfis. */
-export function Usuarios() {
-  return <GestaoPessoas modo="adm" />
+/** `empresa`: só as pessoas dessa empresa (o painel da empresa, escolhida pelo Master no topo). */
+export function Usuarios({ empresa }: { empresa?: string } = {}) {
+  return <GestaoPessoas modo="adm" empresa={empresa} />
 }
 
 /** Gestor da empresa (cliente N1): colegas da própria empresa. */
