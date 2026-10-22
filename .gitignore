@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-novo/
 dev-dist/
 .env.test
 .env*.local

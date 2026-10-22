@@ -4,8 +4,24 @@ import { Campo } from '../../design/componentes/Campo.tsx'
 import { Folha } from '../../design/componentes/Folha.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
+import { Skeleton } from '../../design/componentes/Skeleton.tsx'
+import { ErroAoCarregar } from '../../design/componentes/Tela.tsx'
 import { api } from '../../lib/api.ts'
+import type { CodigoCategoria } from '../../lib/categorias.ts'
+import {
+  categoriasAdm,
+  CODIGOS,
+  COM_TAXA,
+  formularioPrecos,
+  precosDaVersao,
+  validarPrecos,
+  type ErrosPrecos,
+  type FormPrecos,
+  type PrecosCategorias,
+} from '../../lib/categoriasAdm.ts'
+import { useConsulta } from '../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
+import { usePublicacaoPorCategoria } from '../../lib/publicacaoPorCategoria.tsx'
 import {
   diferencas,
   formularioDe,
@@ -19,6 +35,7 @@ import {
   type ValoresContrato,
   type VersaoContrato,
 } from '../../lib/contratos.ts'
+import { formatarCentavos } from '../../design/dinheiro.ts'
 import { deEntradaDataHora, formatarDataHora, paraEntradaDataHora } from '../../lib/valores.ts'
 
 const ANO_MS = 365 * 24 * 3600_000
@@ -41,12 +58,75 @@ function validarVigencia(valor: string): { data: Date } | { erro: string } {
 interface Revisao {
   valores: ValoresContrato
   vigencia: Date
+  /** Só no app novo ("Categorias e preços"): o preço de cada categoria da versão nova. */
+  precos: PrecosCategorias | null
 }
+
+/**
+ * Fase 4 ("Categorias e preços" do app novo): o mesmo formulário com o preço por km e a taxa de cada categoria, e a
+ * publicação por `publicar_contrato_categorias` (o `publicar_contrato` antigo criaria a versão sem esses preços).
+ * Sem esta opção, a tela é a de hoje.
+ */
+export interface OpcaoCategorias {
+  nomes: Record<CodigoCategoria, string>
+  /** Preço atual de cada categoria (já com o fallback da versão antiga), para pré-preencher e comparar. */
+  precos: PrecosCategorias | null
+}
+
+const NOTA_TAXA = 'Só a Carga Pesada (com reboque) cobra taxa fixa. Passageiros e Carga Leve cobram só o km.'
 
 /** Para quem é a versão: a tabela modelo (`empresa` nula) ou o contrato de uma empresa. */
 export interface AlvoContrato {
   empresa: string | null
   nome: string
+}
+
+/** Linhas da confirmação com o preço de cada categoria (antes e depois), como as dos campos do contrato. */
+function LinhasCategorias({
+  nomes,
+  antes,
+  depois,
+}: {
+  nomes: Record<CodigoCategoria, string>
+  antes: PrecosCategorias | null
+  depois: PrecosCategorias
+}) {
+  const linhas = CODIGOS.flatMap((c) => [
+    { chave: `${c}.km`, rotulo: `${nomes[c]}: quilômetro`, antes: antes?.[c].km_cent ?? null, depois: depois[c].km_cent },
+    ...(c === COM_TAXA
+      ? [{ chave: `${c}.taxa`, rotulo: `${nomes[c]}: taxa fixa`, antes: antes?.[c].taxa_fixa_cent ?? null, depois: depois[c].taxa_fixa_cent }]
+      : []),
+  ])
+  return (
+    <>
+      {linhas.map((l) => {
+        const mudou = l.antes !== l.depois
+        const marcar = mudou && l.antes !== null
+        return (
+          <li
+            key={l.chave}
+            className={`px-3.5 py-2.5 ${marcar ? 'border-l-4 border-l-[var(--cor-laranja)] bg-[rgb(255_106_0/0.06)]' : ''}`}
+            data-mudou={mudou ? 'sim' : 'nao'}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="ivo-legenda font-semibold">{l.rotulo}</span>
+              {marcar && <span className="ivo-legenda font-semibold text-alerta-texto">Alterado</span>}
+            </div>
+            <p className="tabular-nums">
+              {marcar && l.antes !== null && (
+                <>
+                  <span className="text-texto-suave line-through">{formatarCentavos(l.antes)}</span>
+                  <span aria-hidden="true"> para </span>
+                  <span className="sr-only"> passa a </span>
+                </>
+              )}
+              <span className="font-bold">{formatarCentavos(l.depois)}</span>
+            </p>
+          </li>
+        )
+      })}
+    </>
+  )
 }
 
 function Conteudo({
@@ -55,18 +135,21 @@ function Conteudo({
   modelo,
   onPublicado,
   onCancelar,
+  categorias,
 }: {
   alvo: AlvoContrato
   base: VersaoContrato | null
   modelo: VersaoContrato | null
   onPublicado: (texto: string) => void
   onCancelar: () => void
+  categorias?: OpcaoCategorias
 }) {
   // Pré-preenchido com o vigente; empresa sem contrato parte da tabela modelo.
   const partida = base ?? (alvo.empresa ? modelo : null)
   const [form, setForm] = useState<FormularioContrato>(() => formularioDe(partida))
   const [vigencia, setVigencia] = useState(() => paraEntradaDataHora(new Date(Date.now() + 5 * 60_000)))
-  const [erros, setErros] = useState<ErrosFormulario & { vigencia?: string }>({})
+  const [erros, setErros] = useState<ErrosFormulario & { vigencia?: string } & ErrosPrecos>({})
+  const [precos, setPrecos] = useState<FormPrecos>(() => formularioPrecos(categorias?.precos ?? null))
   const [revisao, setRevisao] = useState<Revisao | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [falha, setFalha] = useState<string | null>(null)
@@ -83,14 +166,19 @@ function Conteudo({
     setFalha(null)
     const r = validarFormulario(form)
     const v = validarVigencia(vigencia)
-    const novos = { ...(r.ok ? {} : r.erros), ...('erro' in v ? { vigencia: v.erro } : {}) }
+    const rp = categorias ? validarPrecos(precos) : null
+    const novos = {
+      ...(r.ok ? {} : r.erros),
+      ...(rp && !rp.ok ? rp.erros : {}),
+      ...('erro' in v ? { vigencia: v.erro } : {}),
+    }
     setErros(novos)
-    if (!r.ok || 'erro' in v) {
+    if (!r.ok || 'erro' in v || (rp && !rp.ok)) {
       // Leva o foco ao primeiro campo com problema.
       requestAnimationFrame(() => formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
       return
     }
-    setRevisao({ valores: r.valores, vigencia: v.data })
+    setRevisao({ valores: r.valores, vigencia: v.data, precos: rp?.ok ? rp.precos : null })
     requestAnimationFrame(() => topo.current?.focus())
   }
 
@@ -99,7 +187,9 @@ function Conteudo({
     setEnviando(true)
     setFalha(null)
     // Sem atualização otimista: a tela só muda com a confirmação do servidor.
-    const r = await api.publicarContrato(alvo.empresa, revisao.valores, revisao.vigencia)
+    const r = revisao.precos
+      ? await categoriasAdm.publicar(alvo.empresa, revisao.valores, revisao.precos, revisao.vigencia)
+      : await api.publicarContrato(alvo.empresa, revisao.valores, revisao.vigencia)
     setEnviando(false)
     if (r.ok) {
       onPublicado(`Versão ${String(r.versao)} publicada. Vale a partir de ${formatarDataHora(revisao.vigencia)}.`)
@@ -153,7 +243,9 @@ function Conteudo({
               </p>
             </li>
           ))}
+          {categorias && revisao.precos && <LinhasCategorias nomes={categorias.nomes} antes={categorias.precos} depois={revisao.precos} />}
         </ul>
+        {categorias && <p className="ivo-legenda text-texto-suave">{NOTA_TAXA}</p>}
         <div aria-live="assertive">{falha && <Mensagem tipo="erro">{falha}</Mensagem>}</div>
         <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
           <Botao onClick={() => setRevisao(null)} disabled={enviando}>
@@ -272,6 +364,51 @@ function Conteudo({
         )
       })}
 
+      {categorias && (
+        <fieldset className="space-y-3">
+          <legend className="mb-1 ivo-sobretitulo text-texto-suave">Preço por categoria</legend>
+          <p className="ivo-legenda text-texto-suave">
+            Os pedidos do app novo usam o preço da categoria. Os pedidos sem categoria (app atual) continuam com os
+            valores da modalidade veículo próprio, acima.
+          </p>
+          <p className="ivo-legenda font-semibold">{NOTA_TAXA}</p>
+          {CODIGOS.map((c) => (
+            <div key={c} className="space-y-2 rounded-xl bg-fundo p-2.5">
+              <p className="font-semibold">{categorias.nomes[c]}</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Campo
+                  name={`${c}.km`}
+                  rotulo={`${categorias.nomes[c]}: quilômetro`}
+                  erro={erros[`${c}.km`]}
+                  inputMode="decimal"
+                  prefixo="R$"
+                  placeholder="0,00"
+                  autoComplete="off"
+                  value={precos[c].km}
+                  onChange={(ev) => setPrecos((x) => ({ ...x, [c]: { ...x[c], km: ev.target.value } }))}
+                />
+                {c === COM_TAXA ? (
+                  <Campo
+                    name={`${c}.taxa`}
+                    rotulo={`${categorias.nomes[c]}: taxa fixa`}
+                    ajuda="Cobrada uma vez por pedido, pelo reboque."
+                    erro={erros[`${c}.taxa`]}
+                    inputMode="decimal"
+                    prefixo="R$"
+                    placeholder="0,00"
+                    autoComplete="off"
+                    value={precos[c].taxa}
+                    onChange={(ev) => setPrecos((x) => ({ ...x, [c]: { ...x[c], taxa: ev.target.value } }))}
+                  />
+                ) : (
+                  <p className="self-center ivo-legenda text-texto-suave">Sem taxa fixa.</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </fieldset>
+      )}
+
       <fieldset className="space-y-3">
         <legend className="mb-1 ivo-sobretitulo text-texto-suave">Vigência</legend>
         <Campo
@@ -302,6 +439,7 @@ export function PublicarContrato({
   modelo,
   onFechar,
   onPublicado,
+  categorias,
 }: {
   aberta: boolean
   alvo: AlvoContrato
@@ -311,10 +449,60 @@ export function PublicarContrato({
   modelo: VersaoContrato | null
   onFechar: () => void
   onPublicado: (texto: string) => void
+  /** Fase 4 (só o app novo): preço por categoria e publicação por `publicar_contrato_categorias`. */
+  categorias?: OpcaoCategorias
 }) {
+  // No app novo, a tela Contratos de hoje também publica com o preço por categoria (lido da versão de partida).
+  const porCategoria = usePublicacaoPorCategoria() && !categorias
   return (
     <Folha aberta={aberta} onFechar={onFechar} sobretitulo={alvo.nome} titulo="Publicar nova versão" largura="md:max-w-2xl">
-      <Conteudo alvo={alvo} base={base} modelo={modelo} onPublicado={onPublicado} onCancelar={onFechar} />
+      {porCategoria ? (
+        aberta && <ComCategorias alvo={alvo} base={base} modelo={modelo} onPublicado={onPublicado} onCancelar={onFechar} />
+      ) : (
+        <Conteudo
+          alvo={alvo}
+          base={base}
+          modelo={modelo}
+          onPublicado={onPublicado}
+          onCancelar={onFechar}
+          categorias={categorias}
+        />
+      )}
     </Folha>
   )
+}
+
+/** Carrega os nomes e o preço por categoria da versão de partida e abre o formulário com eles. */
+function ComCategorias(props: {
+  alvo: AlvoContrato
+  base: VersaoContrato | null
+  modelo: VersaoContrato | null
+  onPublicado: (texto: string) => void
+  onCancelar: () => void
+}) {
+  const { alvo, base, modelo } = props
+  const partida = base ?? (alvo.empresa ? modelo : null)
+  const empresaDaPartida = base ? alvo.empresa : null
+  const { dados, erro, recarregar } = useConsulta(
+    `contrato-categorias-${empresaDaPartida ?? 'modelo'}-${partida?.versao ?? 'nenhuma'}`,
+    () => categoriasAdm.ler(empresaDaPartida, partida?.versao ?? null),
+  )
+  if (dados === undefined) {
+    return erro ? (
+      <ErroAoCarregar onTentar={recarregar} />
+    ) : (
+      <div className="space-y-3" aria-busy="true">
+        <p role="status" className="sr-only">
+          Carregando os preços por categoria…
+        </p>
+        <Skeleton className="h-12" />
+        <Skeleton className="h-40" />
+      </div>
+    )
+  }
+  const nomes = Object.fromEntries(CODIGOS.map((c) => [c, dados.categorias.find((x) => x.codigo === c)?.nome ?? c])) as Record<
+    CodigoCategoria,
+    string
+  >
+  return <Conteudo {...props} categorias={{ nomes, precos: precosDaVersao(partida, dados.precos) }} />
 }

@@ -324,7 +324,8 @@ select ok(
 ------------------------------------------------------------------ imutabilidade e CHECKs (como postgres)
 select throws_ok($$ update app.contratos_versoes set km_sem_reboque_cent = 1 $$, '42501', null, 'UPDATE recusado mesmo como postgres');
 select throws_ok($$ delete from app.contratos_versoes $$, '42501', null, 'DELETE recusado mesmo como postgres');
-select throws_ok($$ truncate app.contratos_versoes $$, '42501', null, 'TRUNCATE recusado');
+-- Desde a fase 4 a tabela é referenciada por app.contratos_categorias: o TRUNCATE já é recusado pelo banco (0A000) antes do gatilho.
+select throws_ok($$ truncate app.contratos_versoes $$, '0A000', null, 'TRUNCATE recusado');
 select is((select count(*)::int from pg_trigger
            where tgrelid = 'app.contratos_versoes'::regclass and not tgisinternal and tgenabled = 'O'
              and tgname in ('contratos_sem_update', 'contratos_sem_truncate')), 2,

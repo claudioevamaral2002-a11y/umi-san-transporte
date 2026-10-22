@@ -18,7 +18,7 @@ const SVG_CARRO =
   '<svg viewBox="0 0 64 36" width="26" height="16" aria-hidden="true"><path fill="currentColor" d="M6 22h4l5-11h17v11h4V9h12l8 9 4 2v6h-4a6 6 0 0 0-12 0H26a6 6 0 0 0-12 0H6z"/><circle cx="20" cy="27" r="4.5" fill="currentColor"/><circle cx="42" cy="27" r="4.5" fill="currentColor"/></svg>'
 const SVG_DESTINO = '<svg viewBox="0 0 16 14" width="20" height="18" aria-hidden="true"><path d="M8 14 0 0h16z"/></svg>'
 
-function textoDoSinal(estado: ReturnType<typeof estadoDoSinal>, idadeS: number): string {
+export function textoDoSinal(estado: ReturnType<typeof estadoDoSinal>, idadeS: number): string {
   if (estado === 'aguardando') return 'Aguardando a posição do motorista…'
   if (estado === 'perdido') {
     const min = Math.max(1, Math.round(idadeS / 60))

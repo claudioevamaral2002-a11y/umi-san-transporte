@@ -1,6 +1,6 @@
 # Handoff — IVO Transportes (app da Umi San)
 
-Estado em **09/10/2026**. Este documento é o ponto de partida para quem continuar o projeto, seja pessoa ou agente.
+Estado em **20/10/2026**. Este documento é o ponto de partida para quem continuar o projeto, seja pessoa ou agente.
 
 ## 1. O que é
 
@@ -53,11 +53,42 @@ Testes: ~1150 asserções pgTAP, ~100 de integração com concorrência real, ~2
 
 ## 5. Próximas fases (backlog em issues #11–#20)
 
+- **Fase 4 — IVO novo, estilo Uber (PR aberto, em teste no `ivo-novo.pages.dev`):** ver a seção 5B.
 - **Fase 3B — Execução e rastreio (PR em revisão, 18/10):** "deslize para sair" com débito, posição do motorista ao vivo para o cliente, nova previsão e atraso, conclusão com fotos. Especificação, plano e roteiro: `docs/fases/fase-3b-*.md`; operação: RUNBOOK §17.
 - **Fase 3 — restante:** retenção das fotos (com o e-mail da fase 5); aditivo; revisão de contrato já aprovado (§4.4); anexos no pedido; "Repetir pedido".
 - **Fase 5 — Operação:** notificações (outbox, push e e-mail), backup diário criptografado no R2, *dead man's switch* (Healthchecks), teste de restauração mensal, monitoramento.
 - **SMS como 2º fator** (A8), para motoristas com pouca familiaridade com tecnologia.
 - **Fase 6 — Fechamento:** `SECURITY.md` com evidências, README completo, migração de contas.
+
+## 5B. Fase 4 (IVO novo): estado e pendências
+
+**Estado:** no PR (branch `fase-4`), **ainda não mesclado**. Depois do merge, o Deploy publica os dois sites. **Teste no `ivo-novo.pages.dev` antes de trocar o endereço principal.**
+
+**O que foi construído:** segundo site no mesmo banco (o app atual não muda), no estilo Uber: mapa na frente; **categorias** (Passageiros, Carga Leve, Carga Pesada) com preço por categoria no contrato; **Agendar e Agora**; trajeto desenhado; **veículos** do motorista; chamada em tela cheia; **contraproposta por calculadora**; centro de custo; saída e viagem com a rota no app; acompanhamento com a última posição; **avaliação** e "Pedir de novo"; menu por perfil (Master, Motorista, Administrador, Solicitante, Visualizador); **Painel da empresa** (resumo do mês, corridas, pessoas, CSV). Desenho: `docs/fases/fase-4-ivo-estilo-uber-desenho.md`; roteiro: `docs/fases/fase-4-o-que-testar.md`; operação: RUNBOOK §18.
+
+**Pendências do dono** (passo a passo no RUNBOOK §18.9):
+1. Google Cloud: adicionar `https://ivo-novo.pages.dev/*` à chave `navegador-mapa` e deixá-la **só com a Map Tiles API** (remover Places e Routes; pendente desde 19/10).
+2. Cloudflare Turnstile: adicionar o hostname `ivo-novo.pages.dev` ao widget.
+3. Master: publicar os preços por categoria (☰ › Categorias e preços, **só pelo app novo**) e preencher **Contato para recarga** em Configurações.
+4. Ivo: salvar o telefone em Perfil e cadastrar os veículos.
+5. Rodar o roteiro `docs/fases/fase-4-o-que-testar.md`.
+
+O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deploy.
+
+**Limitações conhecidas (PWA, por decisão do dono):**
+- o rastreio só funciona com o app aberto e a tela acesa; com o Waze na frente o cliente vê "sinal perdido";
+- a chamada só toca com o app aberto (push é da fase 5); fechado, fica em Pendências;
+- não há voz curva a curva (só no app nativo);
+- o gestor de frota não tem telas no app novo (usa o app atual);
+- **Locais salvos** e **Ajuda** aparecem como "em breve";
+- publicar contrato pela tela do app atual derruba os preços por categoria.
+
+**Próximos passos:**
+- correção do PWA que deixa o app instalado preso numa versão antiga (o app novo já nasce com o aviso "Nova versão · Atualizar"; falta o app atual);
+- notificações (fase 5): chamada ao Ivo e avisos ao cliente com o app fechado;
+- app nativo do motorista (rastreio em segundo plano e voz curva a curva): opções e custos na §10 do desenho da fase 4;
+- trocar o endereço principal: servir o app novo em `umi-san-transporte.pages.dev` quando o dono aprovar (revisar o endereço fixo do app atual no menu e o `APP_ORIGENS`);
+- os itens menores adiados nas revisões ficam triados na revisão final da fase.
 
 ## 6. Onde está cada coisa
 

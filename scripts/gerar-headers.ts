@@ -1,5 +1,5 @@
-// Substitui __CSP__ em dist/_headers pela CSP do projeto Supabase alvo (especificação 9, itens 18 e 19).
-// Uso: node scripts/gerar-headers.ts [modo=production]
+// Substitui __CSP__ em <pasta>/_headers pela CSP do projeto Supabase alvo (especificação 9, itens 18 e 19).
+// Uso: node scripts/gerar-headers.ts [modo=production] [pasta=dist]
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -34,7 +34,7 @@ if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
     console.error('VITE_SUPABASE_URL ausente')
     process.exit(1)
   }
-  const caminho = 'dist/_headers'
+  const caminho = `${process.argv[3] ?? 'dist'}/_headers`
   const original = readFileSync(caminho, 'utf8')
   if (!original.includes('__CSP__')) {
     console.error(`${caminho} sem o marcador __CSP__`)

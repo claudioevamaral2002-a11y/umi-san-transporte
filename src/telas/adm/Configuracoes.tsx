@@ -192,6 +192,93 @@ function TetoMapas({ atual, onSalvo }: { atual: Configuracao; onSalvo: (texto: s
   )
 }
 
+/** Fase 4 (§6.9): o contato que o Painel da empresa mostra em "Para recarregar, fale com a IVO". */
+function ContatoRecarga({ atual, onSalvo }: { atual: Configuracao; onSalvo: (texto: string) => void }) {
+  const [editando, setEditando] = useState(false)
+  const [contato, setContato] = useState(atual.contato_recarga ?? '')
+  const [erro, setErro] = useState<string | undefined>()
+  const [falha, setFalha] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState(false)
+
+  async function salvar(e: FormEvent) {
+    e.preventDefault()
+    if (enviando) return
+    const valor = contato.trim()
+    if (valor.length > 60) {
+      setErro('Use até 60 caracteres.')
+      return
+    }
+    setErro(undefined)
+    setFalha(null)
+    setEnviando(true)
+    // Sem atualização otimista: o valor exibido só muda com a confirmação do servidor.
+    const r = await api.definirContatoRecarga(valor)
+    setEnviando(false)
+    if (r.ok) {
+      setEditando(false)
+      onSalvo(valor ? `O painel das empresas mostra "${valor}" para recarregar.` : 'Contato de recarga apagado.')
+    } else {
+      setFalha(mensagemDoCodigo(r.codigo))
+    }
+  }
+
+  return (
+    <Cartao className="space-y-3" data-testid="cartao-contato-recarga">
+      <div className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fundo text-link">
+          <Icone nome="conversa" />
+        </span>
+        <div className="min-w-0 space-y-0.5">
+          <h2 className="ivo-h3">Contato para recarga</h2>
+          <p className="ivo-legenda text-texto-suave">
+            Aparece no Painel da empresa, em &quot;Para recarregar, fale com a IVO&quot;. Telefone ou WhatsApp.
+          </p>
+        </div>
+      </div>
+      {editando ? (
+        <form onSubmit={salvar} noValidate className="space-y-3">
+          <Campo
+            rotulo="Telefone ou WhatsApp para recarga"
+            autoComplete="off"
+            maxLength={60}
+            value={contato}
+            erro={erro}
+            onChange={(e) => setContato(e.target.value)}
+          />
+          <div aria-live="assertive">{falha && <Mensagem tipo="erro">{falha}</Mensagem>}</div>
+          <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
+            <Botao
+              disabled={enviando}
+              onClick={() => {
+                setEditando(false)
+                setContato(atual.contato_recarga ?? '')
+                setErro(undefined)
+                setFalha(null)
+              }}
+            >
+              Cancelar
+            </Botao>
+            <Botao type="submit" variante="principal" disabled={enviando}>
+              {enviando ? 'Salvando…' : 'Salvar'}
+            </Botao>
+          </div>
+        </form>
+      ) : (
+        <>
+          <dl className="flex items-baseline justify-between gap-4 border-t border-borda pt-3">
+            <dt className="ivo-corpo text-texto-suave">Contato</dt>
+            <dd className="font-bold">{atual.contato_recarga ?? 'Não informado'}</dd>
+          </dl>
+          <Botao className="flex w-full items-center justify-center gap-2 md:w-auto" onClick={() => setEditando(true)}>
+            <Icone nome="lapis" tamanho={18} />
+            Alterar contato
+          </Botao>
+        </>
+      )}
+    </Cartao>
+  )
+}
+
 export function Configuracoes() {
   const { dados, erro, carregando, recarregar } = useConsulta('adm-configuracoes', api.configuracao)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -205,6 +292,16 @@ export function Configuracoes() {
       {dados && (
         <TetoMapas
           key={`teto-${dados.mapas_teto_diario_empresa}-${dados.alterado_em}`}
+          atual={dados}
+          onSalvo={(texto) => {
+            setAviso(texto)
+            recarregar()
+          }}
+        />
+      )}
+      {dados && (
+        <ContatoRecarga
+          key={`contato-${dados.contato_recarga ?? ''}-${dados.alterado_em}`}
           atual={dados}
           onSalvo={(texto) => {
             setAviso(texto)

@@ -30,6 +30,17 @@
   --color-barra: var(--cor-barra);
   --color-link: var(--cor-link);
   --color-laranja: var(--cor-laranja);
+  --color-painel-fundo: var(--cor-painel-fundo);
+  --color-painel-barra: var(--cor-painel-barra);
+  --color-painel-trilho: var(--cor-painel-trilho);
+  --color-tag-neutro-fundo: var(--cor-tag-neutro-fundo);
+  --color-tag-neutro-texto: var(--cor-tag-neutro-texto);
+  --color-tag-azul-fundo: var(--cor-tag-azul-fundo);
+  --color-tag-azul-texto: var(--cor-tag-azul-texto);
+  --color-tag-verde-fundo: var(--cor-tag-verde-fundo);
+  --color-tag-verde-texto: var(--cor-tag-verde-texto);
+  --color-tag-vermelho-fundo: var(--cor-tag-vermelho-fundo);
+  --color-tag-vermelho-texto: var(--cor-tag-vermelho-texto);
   --font-sans: "Manrope Variable", system-ui, sans-serif;
   --radius-folha: var(--raio-folha);
   --radius-cartao: var(--raio-cartao);

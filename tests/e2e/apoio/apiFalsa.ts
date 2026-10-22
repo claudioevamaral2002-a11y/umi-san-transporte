@@ -203,6 +203,8 @@ export interface ApiFalsa {
   /** `precos_para_orcar(p_empresa)` por empresa (padrão: os preços de exemplo para qualquer empresa). */
   precos?: Record<string, unknown[]>
   retencaoFotosDias?: number
+  /** Fase 4: contato de recarga das Configurações. */
+  contatoRecarga?: string | null
   empresas?: unknown[]
   usuarios?: unknown[]
   auditoria?: unknown[]
@@ -234,7 +236,7 @@ export async function simularApi(page: Page, api: ApiFalsa = {}) {
       : (api.historicoEmpresas?.[String(c.p_empresa)] ?? []),
   )
   await leitura('ler_configuracao', () => [
-    { retencao_fotos_dias: api.retencaoFotosDias ?? 30, alterado_em: '2026-10-01T00:00:00Z', mapas_teto_diario_empresa: 2000 },
+    { retencao_fotos_dias: api.retencaoFotosDias ?? 30, alterado_em: '2026-10-01T00:00:00Z', mapas_teto_diario_empresa: 2000, contato_recarga: api.contatoRecarga ?? null },
   ])
   await leitura('regras_do_servico', () => api.regras ?? [REGRAS])
   await leitura('precos_para_orcar', (c) => api.precos?.[String(c.p_empresa)] ?? (api.precos ? [] : [PRECOS]))
@@ -248,7 +250,7 @@ export async function simularApi(page: Page, api: ApiFalsa = {}) {
   await leitura('saldo_empresa', () => saldoFalso())
   await leitura('extrato', () => ({ ok: true, itens: [] }))
   await leitura('painel_adm', () => painelFalso())
-  for (const nome of ['publicar_contrato', 'definir_retencao_fotos', 'definir_teto_mapas', 'alterar_perfil', 'salvar_empresa', 'definir_logo_empresa']) {
+  for (const nome of ['publicar_contrato', 'definir_retencao_fotos', 'definir_teto_mapas', 'definir_contato_recarga', 'alterar_perfil', 'salvar_empresa', 'definir_logo_empresa']) {
     await page.route(`${URL_SUPABASE}/rest/v1/rpc/${nome}`, (route) => {
       chamadas.push({ rpc: nome, corpo: corpoDe(route) })
       return json(route, api.rpc?.[nome] ?? { ok: true })

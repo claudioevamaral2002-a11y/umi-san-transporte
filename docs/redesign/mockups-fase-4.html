@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IVO Transportes — mockups da fase 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---------- Página de apresentação (mesmos tokens dos mockups da 3A) ---------- */
+:root { --pg-fundo:#e9e6de; --pg-texto:#0a2540; --pg-suave:#4b5b70; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--pg-fundo); color:var(--pg-texto); font-family:Manrope, Inter, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+.pg { max-width:1480px; margin:0 auto; padding:32px 16px 96px; }
+.pg-topo { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:16px; margin-bottom:8px; }
+.pg h1 { font-size:30px; line-height:1.18; letter-spacing:-0.035em; margin:0; font-weight:700; }
+.pg-intro { max-width:72ch; color:var(--pg-suave); font-size:16px; line-height:1.55; margin:8px 0 0; }
+.pg h2 { font-size:24px; letter-spacing:-0.025em; margin:56px 0 4px; }
+.pg h2 + p { margin:0 0 20px; color:var(--pg-suave); max-width:72ch; line-height:1.55; }
+.chave { display:inline-flex; background:#fff; border-radius:999px; padding:4px; gap:4px; box-shadow:0 1px 2px rgb(10 37 64/.1); }
+.chave button { font:600 15px Manrope; border:0; background:none; color:var(--pg-texto); padding:10px 18px; border-radius:999px; cursor:pointer; }
+.chave button[aria-pressed=true] { background:#0a2540; color:#f6f4ee; }
+.fileira { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; }
+.peca { display:flex; flex-direction:column; gap:10px; margin:0; }
+.peca > figcaption { font-size:13px; font-weight:500; color:var(--pg-suave); max-width:360px; line-height:1.4; }
+.peca > figcaption b { color:var(--pg-texto); font-weight:700; }
+
+/* ---------- Tokens dentro do celular ---------- */
+.tel {
+  --fundo:#f6f4ee; --folha:#ffffff; --texto:#0a2540; --suave:#4b5b70; --linha:#e1e6ed;
+  --mare:#1e4b7a; --laranja:#ff6a00; --laranja-texto:#c2410c; --suave-sel:#e6edf5;
+  --alerta-fundo:#fff4e5; --alerta:#b45309; --livre:#15803d;
+  --st-age:#1e4b7a; --st-and:#c2410c; --st-con:#15803d;
+  --mapa:#eef1ea; --mapa-rua:#ffffff; --mapa-agua:#cfe0ee; --mapa-verde:#dfe9d6;
+  --sombra:0 1px 2px rgb(10 37 64/.06), 0 6px 20px rgb(10 37 64/.07);
+  width:360px; height:760px; border-radius:44px; padding:10px; background:#11161d; flex-shrink:0;
+  box-shadow:0 30px 60px -20px rgb(10 37 64/.35);
+}
+body[data-tema=escuro] .tel {
+  --fundo:#061a30; --folha:#0c2a49; --texto:#f6f4ee; --suave:#a9b8cc; --linha:#1b3d63; --suave-sel:#173f68;
+  --alerta-fundo:#3a2a10; --alerta:#fbbf24; --laranja-texto:#ff8a4c; --livre:#4ade80;
+  --st-age:#7fb2e8; --st-and:#ff8a4c; --st-con:#4ade80;
+  --mapa:#1d2733; --mapa-rua:#2f3c4b; --mapa-agua:#123049; --mapa-verde:#1f3329;
+  --sombra:0 0 0 1px #1b3d63;
+}
+.tela { position:relative; width:100%; height:100%; border-radius:34px; overflow:hidden; background:var(--fundo); color:var(--texto);
+  font-size:16px; line-height:1.55; display:flex; flex-direction:column; }
+.tela * { font-variant-numeric:tabular-nums; }
+.sb { height:38px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center; padding:0 26px; font-size:14px; font-weight:700; }
+.sb .ilha { width:96px; height:26px; background:#000; border-radius:20px; }
+.rolo { flex:1; overflow:hidden; padding:4px 16px 0; position:relative; }
+.h1 { font-size:30px; font-weight:700; line-height:1.18; letter-spacing:-0.035em; margin:0; }
+.h2 { font-size:24px; font-weight:700; line-height:1.25; letter-spacing:-0.025em; margin:0; }
+.h3 { font-size:18px; font-weight:700; line-height:1.35; letter-spacing:-0.015em; margin:0; }
+.leg { font-size:13px; font-weight:500; line-height:1.4; color:var(--suave); }
+.grupo { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--suave); margin:18px 0 8px; }
+.forte { font-weight:600; }
+.cartao { background:var(--folha); border-radius:16px; padding:14px 16px; box-shadow:var(--sombra); }
+.btn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; border-radius:14px; font:600 16px Manrope; border:0; width:100%; }
+.btn-acao { background:var(--laranja); color:#0a2540; }
+.btn-sec { background:transparent; color:var(--texto); border:1.5px solid var(--linha); }
+.btn svg { width:20px; height:20px; }
+.duas { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.st { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; line-height:1; padding:6px 10px 6px 8px; border-radius:999px;
+  background:color-mix(in srgb, currentColor 12%, transparent); }
+.st svg { width:14px; height:14px; }
+.st.age{color:var(--st-age)} .st.and{color:var(--st-and)} .st.con{color:var(--st-con)}
+.rota { display:grid; grid-template-columns:18px 1fr; column-gap:10px; }
+.rota .trilho { display:flex; flex-direction:column; align-items:center; padding-top:6px; }
+.rota .ini { width:12px; height:12px; border-radius:50%; border:2.5px solid var(--mare); }
+.rota .via { width:2px; flex:1; min-height:18px; background:repeating-linear-gradient(var(--suave) 0 3px, transparent 3px 7px); opacity:.6; margin:3px 0; }
+.rota p { margin:0; }
+.rota .lugar { font-weight:600; line-height:1.35; }
+.rota .quando { font-size:13px; color:var(--suave); font-weight:500; margin-bottom:8px; }
+.abas { flex-shrink:0; background:var(--folha); display:flex; justify-content:space-around; padding:8px 8px 22px; border-top:1px solid var(--linha); }
+.aba { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; font-weight:600; color:var(--suave); width:64px; }
+.aba .ic { width:52px; height:30px; display:grid; place-items:center; border-radius:999px; }
+.aba svg { width:22px; height:22px; }
+.aba.ativa { color:var(--texto); }
+.aba.ativa .ic { background:#0a2540; color:#f6f4ee; }
+.cmd { background:#0a2540; color:#f6f4ee; padding:0 16px 16px; flex-shrink:0; }
+.cmd .linha1 { display:flex; justify-content:space-between; align-items:center; height:44px; }
+.cmd .icb { width:44px; height:44px; display:grid; place-items:center; margin-left:-10px; }
+.cmd .icb svg { width:22px; height:22px; }
+.cmd .sub { font-size:13px; font-weight:500; color:#a9b8cc; margin:2px 0; }
+.rodape { flex-shrink:0; padding:12px 16px 26px; background:var(--fundo); border-top:1px solid var(--linha); display:grid; gap:8px; }
+
+/* ---------- Novos componentes da 3B ---------- */
+/* trilho "deslize para sair" (role=slider; teclado: setas/Enter; reduced motion: botão "Confirmar saída") */
+.trilho-sair { position:relative; height:64px; border-radius:999px; background:#0a2540; color:#f6f4ee; display:flex; align-items:center; overflow:hidden; }
+.trilho-sair .faixa { position:absolute; left:76px; right:24px; top:50%; height:2px; background:repeating-linear-gradient(90deg, rgb(255 255 255/.35) 0 10px, transparent 10px 20px); }
+.trilho-sair .txt { position:relative; margin-left:auto; margin-right:22px; font-weight:700; font-size:15px; display:flex; align-items:center; gap:6px; }
+.trilho-sair .pino { position:absolute; left:6px; top:6px; width:52px; height:52px; border-radius:50%; background:var(--laranja); display:grid; place-items:center; color:#0a2540; }
+.trilho-sair .pino svg { width:34px; height:34px; }
+.trilho-sair.meio .pino { left:46%; }
+.trilho-sair.meio .txt { opacity:.35; }
+.selo { display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; padding:7px 12px; border-radius:999px; background:var(--suave-sel); }
+.selo .pulso { width:9px; height:9px; border-radius:50%; background:var(--livre); box-shadow:0 0 0 4px color-mix(in srgb, var(--livre) 25%, transparent); }
+.aviso { display:flex; gap:10px; padding:12px 14px; border-radius:14px; background:var(--alerta-fundo); color:var(--texto); font-size:14px; line-height:1.45; }
+.aviso svg { width:20px; height:20px; flex-shrink:0; color:var(--alerta); margin-top:1px; }
+.aviso b { font-weight:700; }
+/* mapa ilustrativo (no app: Leaflet + blocos do Google) */
+.mapa { position:relative; height:300px; margin:0 -16px; background:var(--mapa); overflow:hidden; }
+.mapa svg.base { position:absolute; inset:0; width:100%; height:100%; }
+.mapa .atrib { position:absolute; right:8px; bottom:6px; font-size:10px; font-weight:600; color:var(--suave); background:color-mix(in srgb, var(--folha) 80%, transparent); padding:1px 6px; border-radius:4px; }
+.mapa .sinal { position:absolute; left:12px; top:12px; }
+.carro { position:absolute; width:44px; height:44px; border-radius:50%; background:#0a2540; border:3px solid #fff; display:grid; place-items:center; color:#ff6a00; box-shadow:0 4px 12px rgb(10 37 64/.35); }
+.carro svg { width:26px; height:26px; }
+.carro.perdido { background:#8a96a6; color:#e9edf2; }
+.halo { position:absolute; width:90px; height:90px; border-radius:50%; background:rgb(30 75 122/.14); border:1px solid rgb(30 75 122/.3); }
+.eta { display:flex; justify-content:space-between; align-items:baseline; }
+.eta .grande { font-size:30px; font-weight:800; letter-spacing:-0.03em; line-height:1.1; }
+/* linha do tempo com carrinho */
+.lt { display:grid; grid-template-columns:repeat(4,1fr); position:relative; margin:6px 0 2px; }
+.lt::before { content:""; position:absolute; left:12%; right:12%; top:13px; height:3px; background:var(--linha); border-radius:3px; }
+.lt .feito-barra { position:absolute; left:12%; top:13px; height:3px; background:var(--laranja); border-radius:3px; }
+.lt .et { position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--suave); text-align:center; }
+.lt .et i { width:16px; height:16px; border-radius:50%; background:var(--folha); border:3px solid var(--linha); margin-top:6px; }
+.lt .et.ok i { border-color:var(--laranja); background:var(--laranja); }
+.lt .et.ok { color:var(--texto); }
+.lt .pick { position:absolute; top:-6px; width:34px; height:20px; color:var(--texto); }
+/* folha inferior */
+.veu { position:absolute; inset:0; background:rgb(6 26 48/.45); }
+.folha-inf { position:absolute; left:0; right:0; bottom:0; background:var(--folha); border-radius:24px 24px 0 0; padding:10px 16px 26px; }
+.folha-inf .alca { width:40px; height:5px; border-radius:5px; background:var(--linha); margin:0 auto 12px; }
+.horas { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.hora { height:44px; border-radius:12px; display:grid; place-items:center; font-weight:600; font-size:15px; background:var(--folha); border:1.5px solid var(--linha); }
+.hora.esc { background:#0a2540; color:#f6f4ee; box-shadow:0 0 0 2px var(--folha), 0 0 0 4px var(--laranja); border-color:transparent; }
+.campo { border:1.5px solid var(--linha); background:var(--folha); border-radius:12px; padding:10px 14px; min-height:52px; }
+.campo .r { font-size:13px; font-weight:500; color:var(--suave); display:block; line-height:1.3; }
+.fotos { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.foto { aspect-ratio:1; border-radius:12px; background:linear-gradient(135deg,#9fb4c9,#4f6c8a); position:relative; }
+.foto.b { background:linear-gradient(135deg,#c8b48c,#6f5b3b); }
+.foto.c { background:linear-gradient(135deg,#9cc0a2,#3f6b4a); }
+.foto.add { background:transparent; border:1.5px dashed var(--suave); display:grid; place-items:center; color:var(--suave); }
+.foto.add svg { width:26px; height:26px; }
+.resumo { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+.resumo .k { font-size:12px; font-weight:600; color:var(--suave); }
+.resumo .v { font-weight:700; font-size:17px; }
+.partida { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; height:100%; padding:0 28px; }
+.estrada { width:240px; height:70px; position:relative; }
+.estrada .chao { position:absolute; left:0; right:0; bottom:12px; height:3px; background:repeating-linear-gradient(90deg, var(--suave) 0 14px, transparent 14px 26px); opacity:.6; }
+.estrada svg { position:absolute; left:90px; bottom:14px; width:70px; height:44px; color:var(--texto); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="pickup" viewBox="0 0 64 36"><path fill="currentColor" d="M6 22h4l5-11h17v11h4V9h12l8 9 4 2v6h-4a6 6 0 0 0-12 0H26a6 6 0 0 0-12 0H6z"/><circle cx="20" cy="27" r="4.5" fill="currentColor"/><circle cx="42" cy="27" r="4.5" fill="currentColor"/><path fill="#ff6a00" d="M40 11h7l5 6H40z"/></symbol>
+    <symbol id="seta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="voltar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="fone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+    <symbol id="mapa-ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></symbol>
+    <symbol id="relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 7v5l3 2"/></symbol>
+    <symbol id="alerta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3 2 20h20z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 9v5M12 17.5v.5"/></symbol>
+    <symbol id="camera" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="m5 12 4.5 4.5L19 7"/></symbol>
+    <symbol id="inicio" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></symbol>
+    <symbol id="agenda" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M4 10h16M9 3v4M15 3v4"/></symbol>
+    <symbol id="lista" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 7h12M8 12h12M8 17h12M4 7h.5M4 12h.5M4 17h.5"/></symbol>
+    <symbol id="destino" viewBox="0 0 16 14"><path fill="#ff6a00" d="M8 14 0 0h16z"/></symbol>
+  </defs>
+</svg>
+
+<!-- Mapa ilustrativo reutilizado: ruas, água e rota -->
+<template id="mapa-base">
+  <svg class="base" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect width="360" height="300" fill="var(--mapa)"/>
+    <path d="M250 0h110v300H285c-20-60-10-120-35-170C238 90 260 40 250 0z" fill="var(--mapa-agua)"/>
+    <rect x="30" y="200" width="70" height="60" rx="8" fill="var(--mapa-verde)"/>
+    <g stroke="var(--mapa-rua)" stroke-linecap="round" fill="none">
+      <path d="M-10 60 L240 80" stroke-width="12"/><path d="M-10 160 L250 150" stroke-width="16"/>
+      <path d="M60 -10 L80 310" stroke-width="10"/><path d="M160 -10 L170 310" stroke-width="12"/><path d="M-10 250 L260 240" stroke-width="9"/>
+    </g>
+    <path d="M40 255 L78 248 L80 152 L168 150 L176 72 L232 78" fill="none" stroke="#1e4b7a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+    <path d="M40 255 L78 248 L80 152 L120 151" fill="none" stroke="#ff6a00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</template>
+
+<style>
+/* ---------- Novos componentes da fase 4 (modelo Uber) ---------- */
+.cheio { position:absolute; inset:0; margin:0; height:auto; }
+.cheio svg.base { position:absolute; inset:0; width:100%; height:100%; }
+.menu-bt { position:absolute; top:46px; left:14px; width:46px; height:46px; border-radius:50%; background:var(--folha); color:var(--texto); display:grid; place-items:center; box-shadow:var(--sombra); z-index:2; }
+.menu-bt svg { width:22px; height:22px; }
+.busca { position:absolute; top:100px; left:14px; right:14px; background:var(--folha); border-radius:16px; padding:6px 14px; box-shadow:var(--sombra); z-index:2; }
+.busca .ln { display:flex; align-items:center; gap:10px; min-height:40px; font-weight:600; font-size:15px; }
+.busca .ln + .ln { border-top:1px solid var(--linha); }
+.busca .bol { width:10px; height:10px; border-radius:50%; border:2.5px solid var(--mare); flex-shrink:0; }
+.busca .qd { width:10px; height:10px; background:var(--laranja); flex-shrink:0; }
+.busca .ph { color:var(--suave); font-weight:500; }
+.folha-mapa { position:absolute; left:0; right:0; bottom:0; background:var(--folha); border-radius:24px 24px 0 0; padding:10px 16px 26px; box-shadow:0 -10px 30px rgb(10 37 64/.18); z-index:3; }
+.folha-mapa .alca { width:40px; height:5px; border-radius:5px; background:var(--linha); margin:0 auto 10px; }
+.cat { display:grid; grid-template-columns:54px 1fr auto; gap:12px; align-items:center; padding:9px 10px; border-radius:14px; border:1.5px solid transparent; }
+.cat + .cat { margin-top:4px; }
+.cat.sel { border-color:var(--laranja); background:var(--suave-sel); }
+.cat .vei { width:54px; height:34px; border-radius:10px; background:var(--fundo); display:grid; place-items:center; color:var(--texto); }
+.cat .vei svg { width:40px; height:24px; }
+.cat .nm { font-weight:700; line-height:1.25; }
+.cat .ds { font-size:12px; color:var(--suave); font-weight:500; }
+.cat .pr { text-align:right; font-weight:800; font-size:17px; }
+.cat .pr small { display:block; font-size:11px; font-weight:600; color:var(--suave); }
+.quando { display:flex; justify-content:space-between; align-items:center; margin:10px 2px 6px; font-size:14px; font-weight:600; }
+.pilula { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px; background:var(--suave-sel); font-weight:700; font-size:13px; }
+.mot { display:flex; gap:12px; align-items:center; }
+.mot .foto-m { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#1e4b7a,#0a2540); color:#f6f4ee; display:grid; place-items:center; font-weight:800; }
+.placa { display:inline-block; font-weight:800; letter-spacing:.08em; border:2px solid var(--texto); border-radius:6px; padding:0 6px; font-size:13px; }
+.valor-g { font-size:34px; font-weight:800; letter-spacing:-0.03em; line-height:1.05; }
+.memo { font-size:13px; color:var(--suave); line-height:1.5; }
+.memo b { color:var(--texto); }
+.prazo { height:6px; border-radius:6px; background:var(--linha); overflow:hidden; margin:10px 0 12px; }
+.prazo i { display:block; height:100%; width:64%; background:var(--laranja); }
+.chamada-topo { background:#0a2540; color:#f6f4ee; padding:10px 16px 14px; }
+.chamada-topo .sub { color:#a9b8cc; font-size:13px; font-weight:500; }
+.etiqueta { display:inline-flex; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; background:var(--suave-sel); margin:4px 4px 0 0; }
+.etiqueta.on { background:var(--laranja); color:#0a2540; }
+.teclado { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
+.teclado span { height:40px; border-radius:10px; background:var(--fundo); display:grid; place-items:center; font-weight:700; font-size:18px; }
+.estrelas { font-size:30px; letter-spacing:6px; color:var(--laranja); }
+.gaveta { position:absolute; top:0; bottom:0; left:0; width:270px; background:var(--folha); padding:52px 18px 20px; z-index:4; box-shadow:10px 0 30px rgb(10 37 64/.25); }
+.gaveta .it { display:flex; align-items:center; gap:14px; min-height:48px; font-weight:600; border-bottom:1px solid var(--linha); }
+.gaveta .it svg { width:20px; height:20px; color:var(--suave); }
+.gaveta .it.dest { color:var(--texto); }
+.interr { margin-left:auto; width:44px; height:26px; border-radius:13px; background:var(--livre); position:relative; }
+.interr::after { content:""; position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#fff; }
+.veic { padding:12px 14px; }
+.veic + .veic { margin-top:10px; }
+.waze-aviso { position:absolute; top:46px; left:14px; right:14px; z-index:2; }
+.pin-carro { position:absolute; width:40px; height:40px; border-radius:50%; background:#0a2540; border:3px solid #fff; display:grid; place-items:center; color:#ff6a00; box-shadow:0 4px 12px rgb(10 37 64/.35); z-index:1; }
+.pin-carro svg { width:24px; height:24px; }
+</style>
+
+<div class="pg">
+  <div class="pg-topo">
+    <div>
+      <h1>Fase 4: o IVO no estilo Uber (MVP em PWA)</h1>
+      <p class="pg-intro">Mockups para aprovação do dono, junto com <code>docs/fases/fase-4-ivo-estilo-uber-desenho.md</code>. O mapa fica na frente, há uma ação por vez, e os detalhes ficam recolhidos. Valores, nomes e horários são de exemplo. No app, o mapa é o Leaflet com os blocos do Google, como hoje.</p>
+    </div>
+    <div class="chave" role="group" aria-label="Tema">
+      <button type="button" aria-pressed="true" data-tema="claro">Claro</button>
+      <button type="button" aria-pressed="false" data-tema="escuro">Escuro</button>
+    </div>
+  </div>
+
+  <h2>Cliente pede (N1 e N2)</h2>
+  <p>O app abre no mapa. A pessoa escolhe para onde, vê o trajeto e o preço estimado de cada categoria, agenda e envia.</p>
+  <div class="fileira">
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa data-sem-rota></div>
+        <div class="sb" style="position:relative;z-index:2"><span>08:02</span><span class="ilha"></span><span>●●●</span></div>
+        <span class="menu-bt"><svg><use href="#lista"/></svg></span>
+        <div class="folha-mapa">
+          <div class="alca"></div>
+          <p class="h2" style="margin:0 0 12px">Bom dia, Marina</p>
+          <div class="campo" style="display:flex;align-items:center;gap:10px;font-weight:600"><span style="width:10px;height:10px;background:#ff6a00;flex-shrink:0"></span><span style="color:var(--suave)">Para onde?</span></div>
+          <p class="grupo">Locais da Umi San</p>
+          <p style="margin:0 0 8px" class="forte">Porto de Itajaí · Portão 3</p>
+          <p style="margin:0 0 8px" class="forte">Marina Itajaí · Píer B</p>
+          <p style="margin:0" class="forte">Aeroporto de Navegantes</p>
+        </div>
+      </div></div>
+      <figcaption><b>1. Início do cliente.</b> Mapa centrado na empresa, menu ☰ no canto, "Para onde?" e os locais da empresa primeiro. A origem já vem com o local principal.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa></div>
+        <div class="sb" style="position:relative;z-index:2"><span>08:03</span><span class="ilha"></span><span>●●●</span></div>
+        <span class="menu-bt"><svg><use href="#voltar"/></svg></span>
+        <div class="busca" style="top:100px">
+          <div class="ln"><span class="bol"></span>Umi San · Rua Araguaia, 49</div>
+          <div class="ln"><span class="qd"></span>Porto de Itajaí · Portão 3</div>
+        </div>
+        <div class="folha-mapa">
+          <div class="alca"></div>
+          <div class="cat sel"><span class="vei"><svg><use href="#pickup"/></svg></span><span><span class="nm">IVO Passageiros</span><br><span class="ds">até 4 pessoas · 55 min</span></span><span class="pr">~R$ 180<small>estimado</small></span></div>
+          <div class="cat"><span class="vei"><svg><use href="#pickup"/></svg></span><span><span class="nm">IVO Carga Leve</span><br><span class="ds">até 800 kg</span></span><span class="pr">~R$ 230</span></div>
+          <div class="cat"><span class="vei"><svg><use href="#pickup"/></svg></span><span><span class="nm">IVO Carga Pesada</span><br><span class="ds">com reboque</span></span><span class="pr">~R$ 410</span></div>
+          <div class="quando"><span class="pilula"><svg width="16" height="16"><use href="#agenda"/></svg>Agendar · qua 22/10, 08:30 ▾</span><span class="leg">42 km</span></div>
+          <p class="leg" style="margin:0 0 8px">Detalhes da corrida (pessoas, carga, contato) ▸</p>
+          <button class="btn btn-acao">Pedir IVO Passageiros · qua 08:30</button>
+        </div>
+      </div></div>
+      <figcaption><b>2. Categorias e quando.</b> O trajeto aparece desenhado e cada categoria mostra o preço estimado pela tabela do contrato. "Agendar" vem por padrão; "Agora" está no mesmo seletor.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa></div>
+        <div class="sb" style="position:relative;z-index:2"><span>08:04</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="folha-mapa">
+          <div class="alca"></div>
+          <div class="partida" style="height:auto;padding:6px 0 4px">
+            <div class="estrada"><span class="chao"></span><svg><use href="#pickup"/></svg></div>
+            <p class="h2" style="margin:0">Enviado ao Ivo</p>
+            <p class="leg" style="margin:0">Ele responde até <b style="color:var(--texto)">hoje, 12:04</b>. Você recebe o valor aqui.</p>
+          </div>
+          <div class="cartao" style="margin:14px 0 10px;box-shadow:none;border:1.5px solid var(--linha)">
+            <div class="rota"><div class="trilho"><span class="ini"></span><span class="via"></span><svg width="14" height="12"><use href="#destino"/></svg></div>
+              <div><p class="lugar">Umi San · Rua Araguaia, 49</p><p class="quando">qua 22/10, 08:30 · IVO Passageiros</p><p class="lugar">Porto de Itajaí · Portão 3</p></div></div>
+          </div>
+          <button class="btn btn-sec">Cancelar pedido</button>
+        </div>
+      </div></div>
+      <figcaption><b>3. Aguardando o Ivo.</b> O prazo vem do contrato. Cancelar nesta etapa não tem custo, como hoje.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa></div>
+        <div class="sb" style="position:relative;z-index:2"><span>09:10</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="folha-mapa">
+          <div class="alca"></div>
+          <div class="mot"><span class="foto-m">IB</span><div><p class="h3" style="margin:0">Ivo Barbosa</p><p class="leg" style="margin:0">Hilux branca · <span class="placa">ABC1D23</span></p></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:end;margin:12px 0 4px"><span class="valor-g">R$ 220,00</span><span class="leg">qua 22/10, 08:30</span></div>
+          <p class="memo" style="margin:0 0 10px">Pela tabela <b>R$ 180,00</b> · Proposta do Ivo <b>R$ 220,00</b> (48 km, 1 h de espera, pedágio) · <b>Ver o cálculo ▸</b></p>
+          <div class="campo"><span class="r">Centro de custo</span><span class="forte">Operações 4.100</span></div>
+          <p class="leg" style="margin:8px 2px">Disponível no saldo: R$ 7.820,00</p>
+          <button class="btn btn-acao">Confirmar corrida · R$ 220</button>
+          <div class="duas" style="margin-top:8px"><button class="btn btn-sec" style="min-height:44px;font-size:14px">Pedir outro valor</button><button class="btn btn-sec" style="min-height:44px;font-size:14px">Recusar</button></div>
+        </div>
+      </div></div>
+      <figcaption><b>4. Confirmar.</b> Motorista, veículo, valor e, quando o Ivo propôs outro valor, o valor da tabela e o resumo do que mudou, com o cálculo linha a linha. O centro de custo é digitado aqui, já com o último usado. Confirmar reserva o valor no saldo.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Motorista (Ivo)</h2>
+  <p>A chamada toca com o app aberto. Um toque aceita o valor da tabela. O ajuste pede um motivo, que o cliente vê.</p>
+  <div class="fileira">
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb" style="background:#0a2540;color:#f6f4ee"><span>08:05</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="chamada-topo"><span class="etiqueta on">Nova chamada</span><span class="etiqueta" style="color:#0a2540">IVO Passageiros</span><p class="h3" style="margin:8px 0 0">Umi San · qua 22/10, 08:30</p><p class="sub" style="margin:0">Responda até hoje, 12:04</p></div>
+        <div class="mapa" data-mapa style="height:220px;margin:0"></div>
+        <div style="padding:12px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:end"><span class="valor-g">R$ 180,00</span><span class="leg" style="text-align:right">42 km · ~55 min<br>pela tabela</span></div>
+          <div class="prazo"><i></i></div>
+          <p class="leg" style="margin:0 0 10px">Veículo: <b style="color:var(--texto)">Hilux branca · ABC1D23</b> ▾</p>
+          <button class="btn btn-acao">Aceitar por R$ 180</button>
+          <button class="btn btn-sec" style="margin-top:8px">Propor outro valor</button>
+          <p class="leg" style="text-align:center;margin:10px 0 0">Recusar · Mais itens (espera, pedágio)</p>
+        </div>
+      </div></div>
+      <figcaption><b>5. A chamada.</b> Em tela cheia, com som e vibração (só com o app aberto até a fase 5). Os km vêm da rota e podem ser ajustados como no Orçar de hoje.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>08:06</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <p class="h3" style="margin:4px 0 2px">Propor outro valor</p>
+          <p class="leg" style="margin:0 0 10px">Ajuste os itens; o preço de cada um vem do contrato.</p>
+          <div class="cartao" style="padding:6px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span><span class="forte">Km rodados</span><br><span class="leg">rota: 42 km</span></span><span style="display:flex;gap:10px;align-items:center"><span class="pilula">−</span><b>48</b><span class="pilula">+</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span class="forte">Espera (horas)</span><span style="display:flex;gap:10px;align-items:center"><span class="pilula">−</span><b>1</b><span class="pilula">+</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span class="forte">Pedágio / balsa</span><b>R$ 12,40</b></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px;border-bottom:1px solid var(--linha)"><span class="forte">Hospedagem (diárias)</span><span style="display:flex;gap:10px;align-items:center"><span class="pilula">−</span><b>0</b><span class="pilula">+</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:52px"><span class="forte">Outros</span><span class="leg" style="color:var(--texto);font-weight:700">+ Adicionar item</span></div>
+          </div>
+          <div class="cartao" style="margin-top:10px">
+            <p class="memo" style="margin:0">Pela tabela <b>R$ 180,00</b></p>
+            <div style="display:flex;justify-content:space-between;align-items:end"><span class="valor-g" style="font-size:28px">R$ 220,00</span><span class="leg">+ R$ 40,00</span></div>
+            <p class="leg" style="margin:4px 0 0">Ver o cálculo ▸</p>
+          </div>
+        </div>
+        <div class="rodape"><button class="btn btn-acao">Enviar proposta · R$ 220</button></div>
+      </div></div>
+      <figcaption><b>6. Contraproposta (calculadora).</b> Ajustado em 19/10 a pedido do dono: o motorista mexe nos itens (km, espera, pedágio, hospedagem, outros) e o total é recalculado pelo contrato, sem conta por fora. O cliente vê cada linha no memorial.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa></div>
+        <div class="pin-carro" style="left:86px;top:300px"><svg><use href="#pickup"/></svg></div>
+        <div class="sb" style="position:relative;z-index:2"><span>08:41</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="waze-aviso"><span class="selo" style="background:var(--folha);box-shadow:var(--sombra)"><span class="pulso"></span>Compartilhando sua localização</span></div>
+        <div class="folha-mapa">
+          <div class="alca"></div>
+          <div class="eta"><div><p class="leg forte" style="margin:0">Chegada ao destino</p><p class="grande" style="margin:0">~09:36</p></div><p class="leg" style="margin:0;text-align:right">38 km<br>Porto de Itajaí</p></div>
+          <div class="duas" style="margin:12px 0 8px"><button class="btn btn-sec"><svg><use href="#mapa-ic"/></svg>Abrir no Waze</button><button class="btn btn-sec"><svg><use href="#fone"/></svg>Ligar</button></div>
+          <p class="leg" style="margin:0 0 10px">No Waze, o cliente vê "sinal perdido". Volte ao IVO quando puder.</p>
+          <button class="btn btn-acao">Concluir serviço</button>
+        </div>
+      </div></div>
+      <figcaption><b>7. Dirigindo pelo app.</b> O trajeto fica desenhado da posição atual até o destino, com a chegada prevista grande e a tela sempre acesa. Sem "vire à direita": os termos do Google só permitem isso no app nativo. O botão "Nova previsão" saiu; o atraso é calculado sozinho.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>18:20</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <p class="h2" style="margin:6px 0 12px">Meus veículos</p>
+          <div class="cartao veic"><p class="forte" style="margin:0">Hilux branca · <span class="placa">ABC1D23</span></p><p class="leg" style="margin:2px 0 4px">Ativo · 4 lugares · 800 kg</p><span class="etiqueta on">Passageiros</span><span class="etiqueta on">Carga Leve</span></div>
+          <div class="cartao veic"><p class="forte" style="margin:0">Hilux + reboque · <span class="placa">REB4E56</span></p><p class="leg" style="margin:2px 0 4px">Ativo · reboque até 1.500 kg</p><span class="etiqueta on">Carga Pesada</span></div>
+          <div class="cartao veic" style="opacity:.6"><p class="forte" style="margin:0">Sprinter · <span class="placa">XYZ9K87</span></p><p class="leg" style="margin:2px 0 4px">Em manutenção</p><span class="etiqueta">Passageiros</span></div>
+        </div>
+        <div class="rodape"><button class="btn btn-acao">+ Cadastrar veículo</button></div>
+      </div></div>
+      <figcaption><b>8. Meus veículos.</b> Cada veículo diz que categorias atende. O que está em manutenção não aparece na chamada.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>18:21</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <p class="h2" style="margin:6px 0 12px">Novo veículo</p>
+          <div style="display:grid;gap:8px">
+            <div class="campo"><span class="r">Modelo</span><span class="forte">Toyota Hilux</span></div>
+            <div class="duas"><div class="campo"><span class="r">Cor</span><span class="forte">Branca</span></div><div class="campo"><span class="r">Placa</span><span class="forte">ABC1D23</span></div></div>
+            <div class="duas"><div class="campo"><span class="r">Lugares</span><span class="forte">4</span></div><div class="campo"><span class="r">Carga máx.</span><span class="forte">800 kg</span></div></div>
+          </div>
+          <p class="grupo">Atende quais categorias?</p>
+          <span class="etiqueta on">Passageiros</span><span class="etiqueta on">Carga Leve</span><span class="etiqueta">Carga Pesada</span>
+        </div>
+        <div class="rodape"><button class="btn btn-acao">Salvar veículo</button></div>
+      </div></div>
+      <figcaption><b>9. Cadastrar veículo.</b> Modelo, cor, placa, lugares, carga e categorias. Foto e documento ficam para depois.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Acompanhar e terminar (cliente)</h2>
+  <p>O mapa ocupa a tela. A chegada prevista fica em destaque. No fim vêm o resumo curto, a avaliação e "Pedir de novo".</p>
+  <div class="fileira">
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa></div>
+        <div class="pin-carro" style="left:86px;top:300px"><svg><use href="#pickup"/></svg></div>
+        <div class="sb" style="position:relative;z-index:2"><span>08:42</span><span class="ilha"></span><span>●●●</span></div>
+        <span class="menu-bt"><svg><use href="#voltar"/></svg></span>
+        <div class="folha-mapa">
+          <div class="alca"></div>
+          <div class="eta"><div><p class="leg forte" style="margin:0">Chegada prevista</p><p class="grande" style="margin:0">~09:36</p></div><span class="leg">atualizado agora</span></div>
+          <div class="mot" style="margin:12px 0"><span class="foto-m" style="width:42px;height:42px">IB</span><div><p class="forte" style="margin:0">Ivo Barbosa</p><p class="leg" style="margin:0">Hilux branca · <span class="placa">ABC1D23</span></p></div></div>
+          <div class="duas"><button class="btn btn-sec"><svg><use href="#fone"/></svg>Ligar</button><button class="btn btn-sec">Compartilhar</button></div>
+          <p class="leg" style="margin:10px 0 0">Detalhes do pedido ▸</p>
+        </div>
+      </div></div>
+      <figcaption><b>10. Acompanhando.</b> Ao abrir no meio da viagem, a última posição conhecida aparece na hora. Se o mapa falhar, a tela tenta de novo sozinha.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="sb"><span>09:40</span><span class="ilha"></span><span>●●●</span></div>
+        <div class="rolo">
+          <div style="color:var(--livre);margin:10px 0 4px"><svg width="40" height="40"><use href="#check"/></svg></div>
+          <p class="h2" style="margin:0">Corrida concluída</p>
+          <p class="leg" style="margin:2px 0 14px">qua 22/10 · 08:41 → 09:38</p>
+          <div class="cartao"><div class="resumo">
+            <div><div class="k">Valor</div><div class="v">R$ 220,00</div></div>
+            <div><div class="k">Centro de custo</div><div class="v" style="font-size:15px">Operações 4.100</div></div>
+            <div><div class="k">Km rodados</div><div class="v">~41 km</div></div>
+            <div><div class="k">Fotos</div><div class="v">2 ▸</div></div>
+          </div></div>
+          <p class="forte" style="margin:16px 0 2px">Como foi com o Ivo?</p>
+          <div class="estrelas">★★★★★</div>
+        </div>
+        <div class="rodape"><button class="btn btn-acao">Pedir de novo</button></div>
+      </div></div>
+      <figcaption><b>11. Fim.</b> Resumo curto, avaliação de 1 a 5 (opcional) e "Pedir de novo", com a mesma rota e categoria, faltando só a data. O recibo e o extrato ficam na Carteira.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Menu (☰ no canto superior esquerdo)</h2>
+  <p>Substitui a barra de abas. Cada perfil vê os seus itens; o ADM chega às telas de administração de hoje.</p>
+  <div class="fileira">
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa data-sem-rota></div>
+        <div class="veu" style="z-index:3"></div>
+        <div class="gaveta">
+          <span class="foto-m" style="width:52px;height:52px;border-radius:50%;background:#ff6a00;color:#0a2540;display:grid;place-items:center;font-weight:800">MS</span>
+          <p class="h3" style="margin:10px 0 0">Marina Souza</p><p class="leg" style="margin:0 0 12px">Umi San · gestora (N1)</p>
+          <div class="it"><svg><use href="#lista"/></svg>Minhas corridas</div>
+          <div class="it"><svg><use href="#agenda"/></svg>Agenda</div>
+          <div class="it"><svg><use href="#relogio"/></svg>Carteira da empresa</div>
+          <div class="it"><svg><use href="#mapa-ic"/></svg>Locais salvos</div>
+          <div class="it"><svg><use href="#inicio"/></svg>Equipe</div>
+          <div class="it"><svg><use href="#check"/></svg>Perfil e segurança</div>
+          <div class="it"><svg><use href="#alerta"/></svg>Ajuda</div>
+        </div>
+      </div></div>
+      <figcaption><b>12. Menu do cliente.</b> A Carteira tem o saldo e o extrato, com a coluna centro de custo. A Equipe aparece só para o N1.</figcaption>
+    </figure>
+
+    <figure class="peca">
+      <div class="tel"><div class="tela">
+        <div class="mapa cheio" data-mapa data-sem-rota></div>
+        <div class="veu" style="z-index:3"></div>
+        <div class="gaveta">
+          <span class="foto-m" style="width:52px;height:52px;border-radius:50%;background:#ff6a00;color:#0a2540;display:grid;place-items:center;font-weight:800">IB</span>
+          <p class="h3" style="margin:10px 0 0">Ivo Barbosa</p><p class="leg" style="margin:0 0 12px">Motorista</p>
+          <div class="it dest">Disponível para chamadas <span class="interr"></span></div>
+          <div class="it"><svg><use href="#lista"/></svg>Minhas corridas</div>
+          <div class="it"><svg><use href="#agenda"/></svg>Agenda</div>
+          <div class="it"><svg><use href="#pickup"/></svg>Meus veículos</div>
+          <div class="it"><svg><use href="#relogio"/></svg>Corridas do mês</div>
+          <div class="it"><svg><use href="#check"/></svg>Perfil e segurança</div>
+          <div class="it"><svg><use href="#alerta"/></svg>Ajuda</div>
+        </div>
+      </div></div>
+      <figcaption><b>13. Menu do motorista.</b> "Disponível" liga e desliga as chamadas e <b>não</b> compartilha a localização. "Corridas do mês" mostra quantas foram e o total cobrado dos clientes.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Painel da empresa (N1, no computador)</h2>
+  <p>Acrescentado em 19/10 a pedido do dono, com a referência do site da Rhino for Business. Mostra o resumo do mês, as próximas corridas, as recentes e as pessoas. No celular, as tabelas viram cartões.</p>
+  <style>
+    .web { --fundo:#f6f4ee; --folha:#fff; --texto:#0a2540; --suave:#4b5b70; --linha:#e1e6ed; --suave-sel:#e6edf5; --laranja:#ff6a00;
+      width:1180px; max-width:100%; border-radius:18px; overflow:hidden; background:var(--fundo); color:var(--texto); box-shadow:0 30px 60px -20px rgb(10 37 64/.35); font-size:15px; }
+    body[data-tema=escuro] .web { --fundo:#061a30; --folha:#0c2a49; --texto:#f6f4ee; --suave:#a9b8cc; --linha:#1b3d63; --suave-sel:#173f68; }
+    .web-topo { display:flex; align-items:center; gap:36px; padding:16px 28px; background:var(--folha); border-bottom:1px solid var(--linha); }
+    .web-topo .marca { font-weight:800; font-size:18px; display:flex; gap:8px; align-items:center; }
+    .web-topo .marca i { width:26px; height:26px; border-radius:7px; background:#0a2540; display:inline-block; position:relative; }
+    .web-topo .marca i::after { content:""; position:absolute; left:7px; top:7px; width:12px; height:12px; background:#ff6a00; clip-path:polygon(50% 100%,0 0,100% 0); }
+    .web-topo nav { display:flex; gap:24px; font-weight:600; color:var(--suave); }
+    .web-topo nav b { color:var(--texto); }
+    .web-topo .emp { margin-left:auto; font-weight:700; }
+    .web-corpo { padding:24px 28px 32px; }
+    .web h3 { font-size:24px; letter-spacing:-.02em; margin:22px 0 12px; display:flex; justify-content:space-between; align-items:baseline; }
+    .web h3 a { font-size:13px; font-weight:600; color:var(--suave); }
+    .web .bloco { background:var(--folha); border-radius:16px; padding:20px 22px; box-shadow:0 1px 2px rgb(10 37 64/.06); }
+    .barra { height:12px; border-radius:6px; background:var(--linha); margin:14px 0 10px; overflow:hidden; }
+    .barra i { display:block; height:100%; width:38%; background:#0a2540; border-radius:6px; }
+    body[data-tema=escuro] .barra i { background:#ff6a00; }
+    .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .kpis .n { font-size:32px; font-weight:800; letter-spacing:-.03em; }
+    .tab { width:100%; border-collapse:collapse; font-size:14px; }
+    .tab th { text-align:left; font-weight:600; color:var(--suave); background:var(--fundo); padding:10px 12px; }
+    .tab th:first-child { border-radius:10px 0 0 10px; } .tab th:last-child { border-radius:0 10px 10px 0; }
+    .tab td { padding:12px; border-bottom:1px solid var(--linha); vertical-align:top; }
+    .tab tr:last-child td { border-bottom:0; }
+    .tab .h { color:var(--suave); display:inline-block; width:44px; }
+    .tg { display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; border-radius:7px; }
+    .tg.ag { background:#e6edf5; color:#1e4b7a; } .tg.and { background:#fff1e6; color:#c2410c; } .tg.con { background:#e7f6ec; color:#15803d; }
+    .tg.can { background:#fdeaea; color:#b91c1c; } .tg.aguard { background:#f1f1ef; color:#4b5b70; }
+    .pess { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .pess .q { font-size:13px; font-weight:700; padding:3px 9px; border-radius:7px; background:#fff1e6; color:#c2410c; }
+    .pess .q.b { background:#ece9fb; color:#5b45c4; }
+    .pess .bt { margin-left:auto; border:1.5px solid var(--linha); background:var(--folha); color:var(--texto); border-radius:10px; padding:8px 14px; font:600 13px Manrope; }
+  </style>
+  <div class="fileira">
+    <figure class="peca" style="width:100%">
+      <div class="web">
+        <div class="web-topo"><span class="marca"><i></i>IVO para empresas</span>
+          <nav><b>Painel</b><span>Corridas</span><span>Pessoas</span><span>Carteira</span></nav>
+          <span class="emp">Umi San ▾</span></div>
+        <div class="web-corpo">
+          <h3 style="margin-top:0">Resumo de outubro <a>Extrato ›</a></h3>
+          <div class="bloco">
+            <div class="kpis">
+              <div><div class="leg">Gasto no mês</div><div class="n">R$ 4.380</div></div>
+              <div><div class="leg">Reservado (corridas confirmadas)</div><div class="n" style="color:var(--suave)">R$ 620</div></div>
+              <div style="text-align:right"><div class="leg">Disponível agora</div><div class="n">R$ 7.820</div></div>
+            </div>
+            <div class="barra"><i></i></div>
+            <div style="display:flex;justify-content:space-between" class="leg"><span>38% do total do mês (saldo + recargas + limite de crédito)</span><span>Para recarregar, fale com a IVO · (47) 9 9999-0000</span></div>
+          </div>
+
+          <h3>Próximas corridas <a>Ver todas ›</a></h3>
+          <div class="bloco" style="padding:12px">
+            <table class="tab">
+              <tr><th>Quem pediu</th><th>Data</th><th>Roteiro</th><th>Categoria</th><th>Centro de custo</th><th>Status</th><th>Valor</th></tr>
+              <tr><td>Marina Souza</td><td>qua 22/10</td><td><span class="h">08:30</span>Umi San · Rua Araguaia, 49<br><span class="h">09:25</span>Porto de Itajaí · Portão 3</td><td>Passageiros</td><td>Operações 4.100</td><td><span class="tg ag">Agendada</span></td><td>R$ 220,00</td></tr>
+              <tr><td>Paulo Lima</td><td>qui 23/10</td><td><span class="h">14:00</span>Marina Itajaí · Píer B<br><span class="h">14:40</span>Umi San · Galpão 2</td><td>Carga Pesada</td><td>Manutenção</td><td><span class="tg aguard">Aguardando o Ivo</span></td><td style="color:var(--suave)">~R$ 410,00</td></tr>
+              <tr><td>Marina Souza</td><td>sex 24/10</td><td><span class="h">06:00</span>Umi San · Rua Araguaia, 49<br><span class="h">06:35</span>Aeroporto de Navegantes</td><td>Passageiros</td><td>Diretoria</td><td><span class="tg aguard">Para confirmar</span></td><td>R$ 165,00</td></tr>
+            </table>
+          </div>
+
+          <h3>Corridas recentes <a>Ver todas ›</a></h3>
+          <div class="bloco" style="padding:12px">
+            <table class="tab">
+              <tr><th>Quem pediu</th><th>Data</th><th>Roteiro</th><th>Categoria</th><th>Centro de custo</th><th>Status</th><th>Valor</th></tr>
+              <tr><td>Marina Souza</td><td>hoje</td><td><span class="h">08:41</span>Umi San · Rua Araguaia, 49<br><span class="h">~09:36</span>Porto de Itajaí · Portão 3</td><td>Passageiros</td><td>Operações 4.100</td><td><span class="tg and">A caminho</span></td><td>R$ 220,00</td></tr>
+              <tr><td>Paulo Lima</td><td>ter 21/10</td><td><span class="h">10:00</span>Umi San · Galpão 2<br><span class="h">10:52</span>Porto de Itajaí · Portão 3</td><td>Carga Leve</td><td>Manutenção</td><td><span class="tg con">Concluída</span></td><td>R$ 230,00</td></tr>
+              <tr><td>Marina Souza</td><td>seg 20/10</td><td><span class="h">07:30</span>Umi San · Rua Araguaia, 49<br><span class="h">08:05</span>Aeroporto de Navegantes</td><td>Passageiros</td><td>Diretoria</td><td><span class="tg can">Cancelada</span></td><td>R$ 33,00 <span class="leg">multa</span></td></tr>
+            </table>
+          </div>
+
+          <h3>Pessoas <a>Equipe ›</a></h3>
+          <div class="bloco"><div class="pess"><span class="q">3 pessoas</span><span>ainda não fizeram corridas</span><span class="q b">1 convite</span><span>não aceito</span><button class="bt">Reenviar convite</button><button class="bt" style="margin-left:0">Exportar CSV do mês</button></div></div>
+        </div>
+      </div>
+      <figcaption><b>14. Painel da empresa.</b> Só o N1 (e o ADM, escolhendo a empresa). É só leitura: os valores vêm do livro-razão e dos pedidos. Sem botão de recarga, porque a recarga é do ADM. <b>O painel construído segue a direção executiva pedida pelo dono (menu no topo, quase monocromático, tags pálidas, laranja só no logo).</b></figcaption>
+    </figure>
+  </div>
+</div>
+<script>
+  const base = document.getElementById('mapa-base')
+  document.querySelectorAll('[data-mapa]').forEach((m) => {
+    const c = base.content.cloneNode(true)
+    if (m.hasAttribute('data-sem-rota')) c.querySelectorAll('path[stroke="#1e4b7a"], path[stroke="#ff6a00"]').forEach((p) => p.remove())
+    m.prepend(c)
+  })
+  document.querySelectorAll('.chave button').forEach((b) =>
+    b.addEventListener('click', () => {
+      document.body.dataset.tema = b.dataset.tema
+      document.querySelectorAll('.chave button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)))
+    }),
+  )
+</script>
+</body>
+</html>

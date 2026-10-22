@@ -16,7 +16,7 @@ import { useConsulta } from '../../lib/consulta.ts'
 import type { PrecosParaOrcar } from '../../lib/contratos.ts'
 import { formatarRota } from '../../lib/enderecos.ts'
 import { rota } from '../../lib/enderecosRemoto.ts'
-import { mensagemDoCodigo } from '../../lib/erros.ts'
+import { mensagemAoOrcar, mensagemDoCodigo } from '../../lib/erros.ts'
 import {
   DIARIAS_MAX,
   ESPERA_MAX_MEIAS,
@@ -29,43 +29,13 @@ import {
   textoParaKmDecimos,
   type FormOrcamento,
 } from '../../lib/orcar.ts'
-import { ErroLeitura, pedidos, type LinhaOrcamento, type RespostaPedido } from '../../lib/pedidos.ts'
+import { ErroLeitura, pedidos, type RespostaPedido } from '../../lib/pedidos.ts'
 import { ROTULO_MODALIDADE, rotuloTrajeto } from '../../lib/situacao.ts'
 import { formatarDuracao, formatarQuando, numeroPedido } from '../../lib/tempo.ts'
 import { useAgora } from '../../lib/useAgora.ts'
 import { deEntradaDataHora, formatarPercentual } from '../../lib/valores.ts'
 import { Contador, Contagem, Escolhas, Memorial, Rota } from './componentes.tsx'
-
-const ATRASO_PREVIA_MS = 300
-
-type Previa =
-  | { estado: 'calculando' }
-  | { estado: 'ok'; linhas: LinhaOrcamento[]; total: number }
-  | { estado: 'erro'; mensagem: string }
-
-/** Prévia ao vivo: `calcular_orcamento` com debounce de 300 ms; respostas antigas são descartadas. */
-function usePrevia(id: string, entrada: Record<string, unknown> | null): Previa | null {
-  const [previa, setPrevia] = useState<Previa | null>(null)
-  const chave = entrada ? JSON.stringify(entrada) : null
-  const sequencia = useRef(0)
-  useEffect(() => {
-    if (!chave) return
-    const minha = ++sequencia.current
-    const t = setTimeout(() => {
-      setPrevia({ estado: 'calculando' })
-      void pedidos.calcular(id, JSON.parse(chave) as Record<string, unknown>).then((r) => {
-        if (minha !== sequencia.current) return
-        if (r.ok && Array.isArray(r.linhas) && typeof r.total_cent === 'number') {
-          setPrevia({ estado: 'ok', linhas: r.linhas as LinhaOrcamento[], total: r.total_cent })
-        } else {
-          setPrevia({ estado: 'erro', mensagem: mensagemDoCodigo(r.codigo) })
-        }
-      })
-    }, ATRASO_PREVIA_MS)
-    return () => clearTimeout(t)
-  }, [id, chave])
-  return chave ? previa : null
-}
+import { usePrevia } from './usePrevia.ts'
 
 function Unitario({ centavos, por }: { centavos: number; por: string }) {
   return (
@@ -158,7 +128,7 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
     if (resposta.ok) {
       navegar(`/pedidos/${p.id}`, { replace: true, state: { aviso: 'Orçamento enviado. O cliente já pode ver o memorial.' } })
     } else {
-      setErroEnvio(mensagemDoCodigo(resposta.codigo))
+      setErroEnvio(mensagemAoOrcar(resposta.codigo))
     }
   }
 

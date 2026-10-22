@@ -369,7 +369,8 @@ select is((select x - 'id' - 'criado_em' from jsonb_array_elements(current_setti
             where x ->> 'tipo' = 'RESERVA' and (x ->> 'valor_cent')::bigint = 30000),
   jsonb_build_object('tipo', 'RESERVA', 'valor_cent', 30000, 'efeito_contabil_cent', 0, 'efeito_reservado_cent', 30000,
                      'numero', (select numero from app.atividades where id = current_setting('t.q1')::uuid),
-                     'solicitante_nome', 'Solicitante A', 'pode_abrir', false, 'atividade_id', null, 'estorna_id', null),
+                     'solicitante_nome', 'Solicitante A', 'pode_abrir', false, 'atividade_id', null, 'estorna_id', null,
+                     'centro_custo', null),
   'extrato do N2 colega: vê data, tipo, valor, nº e solicitante, mas não abre o pedido nem recebe o id');
 select ok((select bool_and((x ->> 'pode_abrir')::boolean and x ->> 'atividade_id' is not null)
              from jsonb_array_elements(current_setting('t.x4')::jsonb -> 'itens') x where x ->> 'numero' is not null),

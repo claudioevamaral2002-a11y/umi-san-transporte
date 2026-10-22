@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { limparConsultas } from './consulta.ts'
 import { derivarEstado, type EstadoSessao, type Perfil } from './estadoSessao.ts'
 import { lerLinkDeEntrada } from './linkDeEntrada.ts'
+import { limparUltimoCentroCusto } from '../novo/preferencias.ts'
 
 export type { EstadoSessao, Papel, Perfil } from './estadoSessao.ts'
 
@@ -131,6 +132,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
           if (evento === 'SIGNED_OUT') viaLink = false
           // Outra conta pode entrar no mesmo aparelho: nada da anterior fica na memória das telas.
           if (evento === 'SIGNED_OUT' || evento === 'SIGNED_IN') limparConsultas()
+          // O último centro de custo (app novo) é da conta que saiu: não fica no aparelho para a próxima.
+          if (evento === 'SIGNED_OUT') limparUltimoCentroCusto()
           setTimeout(atualizar, 0)
         })
         cancelar = () => data.subscription.unsubscribe()

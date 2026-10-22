@@ -75,6 +75,19 @@ export interface DetalhePedido {
   saida_liberada_em?: string | null
   pode_ver_rastreio?: boolean
   fotos_qtd?: number
+  // Fase 4 (opcionais: pedidos do app atual não têm categoria).
+  categoria?: string | null
+  categoria_nome?: string | null
+  /** Veículo da corrida, visto pelo cliente a partir do orçamento (ORCADA). */
+  veiculo?: { modelo: string; cor: string; placa: string } | null
+  centro_custo?: string | null
+  agora?: boolean
+  /** Nota de 1 a 5 do cliente (uma vez, só concluída). */
+  avaliacao?: number | null
+  /** Última posição gravada (só em andamento, para quem pode ver o rastreio): a tela já abre com ela. */
+  ultima_posicao?: { lat: number; lng: number; em: string } | null
+  /** Telefone do motorista (perfil), a partir de AGENDADA, para o botão "Ligar" do cliente (Tarefa 10). */
+  motorista_telefone?: string | null
 }
 
 export interface LinhaOrcamento {
@@ -132,6 +145,8 @@ export interface Acoes {
   informar_previsao?: boolean
   concluir?: boolean
   enviar_fotos?: boolean
+  /** Fase 4: avaliar a corrida concluída (cliente que decide, uma vez). */
+  avaliar?: boolean
 }
 
 /** Motorista/ADM, pedido SOLICITADA depois de uma revisão: a última versão enviada e o motivo do cliente. */
@@ -231,7 +246,7 @@ export class ErroLeitura extends Error {
   }
 }
 
-async function chamar(nome: string, args: Record<string, unknown>): Promise<RespostaRpc> {
+export async function chamar(nome: string, args: Record<string, unknown>): Promise<RespostaRpc> {
   try {
     const { data, error } = await supabase.rpc(nome, args)
     if (error || !data || typeof data !== 'object' || typeof (data as RespostaRpc).ok !== 'boolean') {
@@ -243,7 +258,7 @@ async function chamar(nome: string, args: Record<string, unknown>): Promise<Resp
   }
 }
 
-async function ler<T>(nome: string, args: Record<string, unknown>): Promise<T> {
+export async function ler<T>(nome: string, args: Record<string, unknown>): Promise<T> {
   const r = await chamar(nome, args)
   if (!r.ok) throw new ErroLeitura(r.codigo ?? 'ERRO_INESPERADO')
   return r as unknown as T

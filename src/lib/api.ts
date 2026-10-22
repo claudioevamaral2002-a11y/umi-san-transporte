@@ -77,6 +77,8 @@ export interface Configuracao {
   alterado_em: string
   /** Fase 3A: teto diário de buscas de endereço (chamadas ao Google) por empresa. */
   mapas_teto_diario_empresa: number
+  /** Fase 4: telefone ou WhatsApp para recarga, mostrado no Painel da empresa (até 60 caracteres). */
+  contato_recarga: string | null
 }
 
 type LinhaListarContratos = Partial<VersaoContrato> & {
@@ -114,6 +116,9 @@ export const api = {
   definirRetencaoFotos: (dias: number) => rpc('definir_retencao_fotos', { p_dias: dias }),
 
   definirTetoMapas: (valor: number) => rpc('definir_teto_mapas', { p_valor: valor }),
+
+  /** Fase 4: contato de recarga do Painel da empresa (vazio apaga). */
+  definirContatoRecarga: (texto: string) => rpc('definir_contato_recarga', { p_texto: texto }),
 
   /** Cliente: regras do contrato vigente da própria empresa (`null` = sem contrato vigente). */
   regrasDoServico: async () => (exigir(await supabase.rpc('regras_do_servico')) as RegrasServico[])[0] ?? null,

@@ -149,14 +149,21 @@ export function criarManipuladorEnderecos(deps: {
           units: 'METRIC',
         }),
       },
-      'routes.distanceMeters,routes.duration',
+      'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline',
       'google:rota',
-    )) as { routes?: Array<{ distanceMeters?: number; duration?: string }> } | null
+    )) as { routes?: Array<{ distanceMeters?: number; duration?: string; polyline?: { encodedPolyline?: string } }> } | null
     const rota = r?.routes?.[0]
     if (!rota?.distanceMeters || rota.distanceMeters <= 0) return SEM_ROTA
     const km = Math.round(rota.distanceMeters / 100) / 10
     if (km > 5000) return SEM_ROTA
     const segundos = Number.parseInt(rota.duration ?? '', 10)
-    return { ok: true, km, minutos: Number.isFinite(segundos) ? Math.round(segundos / 60) : null }
+    // A linha do trajeto só passa adiante para desenhar o mapa: nunca é gravada (termos do Google).
+    const linha = rota.polyline?.encodedPolyline
+    return {
+      ok: true,
+      km,
+      minutos: Number.isFinite(segundos) ? Math.round(segundos / 60) : null,
+      polyline: typeof linha === 'string' && linha.length > 0 && linha.length <= 200_000 ? linha : null,
+    }
   }
 }

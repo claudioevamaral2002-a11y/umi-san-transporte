@@ -9,7 +9,7 @@ import { ResumoViagem } from './comum.tsx'
 import { EnvioDeFotos } from './EnvioDeFotos.tsx'
 
 /** Foto por URL assinada curta (5 min), pedida ao abrir. */
-function Foto({ foto }: { foto: FotoDoPedido }) {
+export function Foto({ foto }: { foto: FotoDoPedido }) {
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
     let vivo = true

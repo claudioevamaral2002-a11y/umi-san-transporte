@@ -2,7 +2,7 @@
 // tela "Em andamento" aberta: ao sair dela ou concluir, o GPS e a tela acesa param (nada de rastreio em segundo plano).
 import { useEffect, useState } from 'react'
 import type { Local } from './enderecos.ts'
-import { detalhar, rota } from './enderecosRemoto.ts'
+import { detalhar, pontoDaRota, type Coordenada } from './enderecosRemoto.ts'
 import { execucao } from './execucao.ts'
 import {
   alvoDaViagem,
@@ -12,9 +12,16 @@ import {
   type Leitura,
   type Ponto,
 } from './rastreio.ts'
+import { rotaAte } from './rotaDesenhada.ts'
 
 export type PontoDoPedido = Pick<Local, 'nome' | 'lat' | 'lng' | 'place_id'>
 export type EstadoGps = 'parado' | 'pedindo' | 'ativo' | 'negado' | 'indisponivel' | 'encerrado'
+
+/** Fase 4: o trajeto da posição atual até o alvo, do mesmo cálculo da chegada (só em memória; nunca vai ao banco). */
+export interface TrajetoDaViagem {
+  km: number
+  pontos: Coordenada[]
+}
 
 /** Coordenadas do ponto para saber quando o motorista chegou: as guardadas, ou um "detalhar" na hora (só em memória). */
 async function coordenadas(p: PontoDoPedido | null): Promise<Ponto | null> {
@@ -41,10 +48,19 @@ export function useEnvioDePosicao({
   idaEVolta: boolean
   origem: PontoDoPedido | null
   destino: PontoDoPedido | null
-}): { estado: EstadoGps; chegada: string | null; alvo: 'destino' | 'origem' } {
+}): {
+  estado: EstadoGps
+  chegada: string | null
+  alvo: 'destino' | 'origem'
+  /** Fase 4: última leitura do GPS e o trajeto dela até o alvo (o app novo desenha no mapa; o atual ignora). */
+  posicao: Ponto | null
+  trajeto: TrajetoDaViagem | null
+} {
   const [estado, setEstado] = useState<EstadoGps>('pedindo')
   const [chegada, setChegada] = useState<string | null>(null)
   const [alvo, setAlvo] = useState<'destino' | 'origem'>('destino')
+  const [posicao, setPosicao] = useState<Ponto | null>(null)
+  const [trajeto, setTrajeto] = useState<TrajetoDaViagem | null>(null)
   const chaveOrigem = JSON.stringify(origem)
   const chaveDestino = JSON.stringify(destino)
   const semGps = typeof navigator === 'undefined' || !('geolocation' in navigator)
@@ -72,8 +88,11 @@ export function useEnvioDePosicao({
       if (!ponto) return
       const permitido = await execucao.registrarEta(id)
       if (!permitido.ok || !vivo) return
-      const r = await rota({ lat: l.lat, lng: l.lng, place_id: null }, ponto)
-      if (!vivo || r.minutos === null) return
+      // Mesma chamada da ação `rota` de antes; a linha do trajeto (fase 4) vem junto, sem custo a mais.
+      const alvoRota = pontoDaRota(ponto)
+      const r = alvoRota ? await rotaAte({ lat: l.lat, lng: l.lng }, alvoRota).catch(() => null) : null
+      if (!vivo || !r || r.minutos === null) return
+      setTrajeto({ km: r.km, pontos: r.pontos })
       etaAtual = new Date(Date.now() + r.minutos * 60_000).toISOString()
       setChegada(etaAtual)
     }
@@ -120,6 +139,7 @@ export function useEnvioDePosicao({
           velocidade: c.speed !== null && Number.isFinite(c.speed) ? Math.min(100, Math.max(0, c.speed)) : null,
         }
         ultima = l
+        setPosicao({ lat: l.lat, lng: l.lng })
         if (amostrador.deveEnviar(l, Date.now())) void enviar(l)
       },
       (erro) => {
@@ -139,7 +159,7 @@ export function useEnvioDePosicao({
     }
   }, [id, ativo, semGps, idaEVolta, chaveOrigem, chaveDestino])
 
-  return { estado: !ativo ? 'parado' : semGps ? 'indisponivel' : estado, chegada, alvo }
+  return { estado: !ativo ? 'parado' : semGps ? 'indisponivel' : estado, chegada, alvo, posicao: ativo ? posicao : null, trajeto }
 }
 
 /** Tela acesa (Wake Lock) enquanto `ativo`; o navegador solta ao esconder a aba, então pede de novo ao voltar. */
