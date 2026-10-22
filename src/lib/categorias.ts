@@ -93,6 +93,9 @@ export function toleranciaKm(kmRota: number): number {
   return Math.max(1, kmRota * 0.01)
 }
 
+/** Maior `km_volta` que `categorias_disponiveis` aceita (o mesmo teto do `km`). */
+const KM_VOLTA_MAX = 5000
+
 /** "Agora" = primeiro horário livre a partir de agora + 60 min. */
 export const MARGEM_AGORA_MIN = 60
 
@@ -101,12 +104,24 @@ export const categorias = {
    * `km` vai como número JSON (o banco confere o formato); categorias inativas nem vêm. `paradas` é a quantidade (0 a 3)
    * e `horas` as horas estimadas; sem eles, o preço sai sem essas linhas. Chaves vazias não vão.
    */
-  disponiveis: (p: { km: number; levar: boolean; trazer: boolean; paradas?: number | null; horas?: number | null }) => {
+  disponiveis: (p: {
+    km: number
+    /** Fase 4.1: km da volta direta (destino → origem). Só vai em ida e volta; o banco soma `km + km_volta`. */
+    kmVolta?: number | null
+    levar: boolean
+    trazer: boolean
+    paradas?: number | null
+    horas?: number | null
+  }) => {
     const corpo: Record<string, unknown> = { km: p.km, levar: p.levar, trazer: p.trazer }
     if (p.paradas !== undefined && p.paradas !== null && Number.isFinite(p.paradas)) {
       corpo.paradas = Math.min(MAX_PARADAS, Math.max(0, Math.trunc(p.paradas)))
     }
     if (p.horas !== undefined && p.horas !== null && horasValidas(p.horas)) corpo.horas = p.horas
+    if (p.levar && p.trazer && typeof p.kmVolta === 'number' && Number.isFinite(p.kmVolta)) {
+      const volta = kmDaRota(p.kmVolta)
+      if (volta >= 0 && volta <= KM_VOLTA_MAX) corpo.km_volta = volta
+    }
     return ler<{ categorias: CategoriaComPreco[] }>('categorias_disponiveis', { p: corpo })
   },
 }

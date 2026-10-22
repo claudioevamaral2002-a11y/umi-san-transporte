@@ -179,6 +179,20 @@ describe('categorias.disponiveis', () => {
     await categorias.disponiveis({ km: 10, levar: true, trazer: false, paradas: 0, horas: null })
     expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 10, levar: true, trazer: false, paradas: 0 } })
   })
+  it('km_volta (volta direta) só em ida e volta, com uma casa e até 5000', async () => {
+    rpc.mockResolvedValue({ data: { ok: true, categorias: [] }, error: null })
+    await categorias.disponiveis({ km: 48.2, kmVolta: 41.04, levar: true, trazer: true, paradas: 1 })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', {
+      p: { km: 48.2, levar: true, trazer: true, paradas: 1, km_volta: 41 },
+    })
+    // Trecho único: a volta não vai.
+    await categorias.disponiveis({ km: 48.2, kmVolta: 41, levar: true, trazer: false })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 48.2, levar: true, trazer: false } })
+    for (const ruim of [null, undefined, Number.NaN, -1, 5000.1, Infinity]) {
+      await categorias.disponiveis({ km: 48.2, kmVolta: ruim, levar: true, trazer: true })
+      expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 48.2, levar: true, trazer: true } })
+    }
+  })
 })
 
 describe('km da rota', () => {

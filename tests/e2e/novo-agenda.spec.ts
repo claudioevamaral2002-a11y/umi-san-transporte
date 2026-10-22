@@ -32,8 +32,10 @@ async function abrirAgenda(page: Page, meiaEmMeia = false) {
     }),
   )
   await page.goto('/')
-  await expect(page.getByRole('combobox', { name: 'Origem' })).toHaveValue('Estaleiro Navegantes')
-  const destino = page.getByRole('combobox', { name: 'Destino' })
+  // Fase 4.1 (Tarefa 6): a origem começa vazia.
+  await page.getByRole('combobox', { name: 'De', exact: true }).fill('Estaleiro Navegantes')
+  await page.getByRole('option', { name: /Estaleiro Navegantes/ }).first().click()
+  const destino = page.getByRole('combobox', { name: 'Para', exact: true })
   await destino.fill('Porto')
   await page.getByRole('option', { name: /Porto de Itajaí/ }).click()
   await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
