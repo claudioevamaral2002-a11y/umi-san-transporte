@@ -38,8 +38,9 @@ export function decodificarPolyline(codificada: string): Coordenada[] {
 export async function rotaAte(
   origem: PontoRota,
   destino: PontoRota,
+  paradas?: PontoRota[],
 ): Promise<{ km: number; minutos: number | null; pontos: Coordenada[] } | null> {
-  const r = await consultarRota(origem, destino)
+  const r = await (paradas && paradas.length > 0 ? consultarRota(origem, destino, paradas) : consultarRota(origem, destino))
   if (!r || r.km === null) return null
   return { km: r.km, minutos: r.minutos, pontos: r.polyline ? decodificarPolyline(r.polyline) : [] }
 }

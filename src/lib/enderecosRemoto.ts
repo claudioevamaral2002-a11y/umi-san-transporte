@@ -73,8 +73,9 @@ export function pontoDaRota(l: Pick<Local, 'lat' | 'lng' | 'place_id'>): PontoRo
 export async function consultarRota(
   origem: PontoRota,
   destino: PontoRota,
+  paradas?: PontoRota[],
 ): Promise<{ km: number | null; minutos: number | null; polyline: string | null } | null> {
-  const r = await chamarFuncao('enderecos', { acao: 'rota', origem, destino })
+  const r = await chamarFuncao('enderecos', { acao: 'rota', origem, destino, ...(paradas && paradas.length > 0 ? { paradas } : {}) })
   if (!r.ok) return null
   const km = typeof r.km === 'number' ? r.km : null
   return {

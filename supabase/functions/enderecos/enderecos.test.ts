@@ -127,6 +127,30 @@ describe('enderecos', () => {
     })
   })
 
+  it('rota: paradas vão como intermediates e a máscara mantém a linha; mais de 3 é ENTRADA_INVALIDA', async () => {
+    const pedidos: Array<{ corpo: Record<string, unknown>; init: RequestInit }> = []
+    const buscar = (async (_u: string, init: RequestInit) => {
+      pedidos.push({ corpo: JSON.parse(String(init.body)), init })
+      return resp({ routes: [{ distanceMeters: 48200, duration: '3000s' }] })
+    }) as unknown as typeof fetch
+    const m = criarManipuladorEnderecos({ chave: 'K', buscar, registrarUso: ok })
+    const o = { lat: -26.9, lng: -48.66 }
+    const d = { lat: -26.89, lng: -48.65 }
+    const p = { place_id: 'ChIJabc' }
+    const q = { lat: -26.91, lng: -48.64 }
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [p, q] })).toMatchObject({ ok: true, km: 48.2 })
+    expect(pedidos[0]!.corpo.intermediates).toEqual([
+      { placeId: 'ChIJabc' },
+      { location: { latLng: { latitude: -26.91, longitude: -48.64 } } },
+    ])
+    expect(new Headers(pedidos[0]!.init.headers).get('X-Goog-FieldMask')).toContain('routes.polyline.encodedPolyline')
+    expect(await m({ acao: 'rota', origem: o, destino: d })).toMatchObject({ ok: true })
+    expect(pedidos[1]!.corpo.intermediates).toBeUndefined()
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [p, p, p, p] })).toEqual({ ok: false, codigo: 'ENTRADA_INVALIDA' })
+    expect(await m({ acao: 'rota', origem: o, destino: d, paradas: [{ lat: 40, lng: -48 }] })).toEqual({ ok: false, codigo: 'ENTRADA_INVALIDA' })
+    expect(pedidos).toHaveLength(2)
+  })
+
   it('rota: Google com tempo esgotado ou erro devolve km null (o pedido segue sem prévia)', async () => {
     const lento = (async (_u: string, init: RequestInit) => {
       // O sinal de tempo limite aborta a chamada.
