@@ -4,18 +4,22 @@ export function Segmentado<T extends string>({
   valor,
   aoMudar,
   rotulo,
+  rotuladoPor,
   testid,
 }: {
   opcoes: ReadonlyArray<{ valor: T; rotulo: string }>
   valor: T
   aoMudar: (v: T) => void
   rotulo: string
+  /** Id de um rótulo visível (ex.: a legenda do fieldset): usa `aria-labelledby` no lugar do `aria-label`. */
+  rotuladoPor?: string
   testid?: string
 }) {
   return (
     <div
       role="radiogroup"
-      aria-label={rotulo}
+      aria-label={rotuladoPor ? undefined : rotulo}
+      aria-labelledby={rotuladoPor}
       data-testid={testid}
       className="flex gap-1 rounded-full border-[1.5px] border-borda bg-superficie p-1"
     >

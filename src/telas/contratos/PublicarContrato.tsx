@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo } from '../../design/componentes/Campo.tsx'
@@ -169,6 +169,7 @@ function Conteudo({
   const [falha, setFalha] = useState<string | null>(null)
   const formulario = useRef<HTMLFormElement>(null)
   const topo = useRef<HTMLDivElement>(null)
+  const idForma = useId()
   // v2.1: o saldo contábil da empresa, lido ao trocar para o Faturado (aviso sem bloquear: acertar antes com um Ajuste).
   const [saldoContabil, setSaldoContabil] = useState<number | null>(null)
   // Sem a forma na versão de partida (banco anterior), a tela mostra Crédito e não manda a chave até o Master escolher.
@@ -301,8 +302,10 @@ function Conteudo({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="mb-1 ivo-sobretitulo text-texto-suave">Forma de cobrança</legend>
-        <Segmentado rotulo="Forma de cobrança" opcoes={OPCOES_FORMA} valor={forma} aoMudar={mudarForma} />
+        <legend id={idForma} className="mb-1 ivo-sobretitulo text-texto-suave">
+          Forma de cobrança
+        </legend>
+        <Segmentado rotulo="Forma de cobrança" rotuladoPor={idForma} opcoes={OPCOES_FORMA} valor={forma} aoMudar={mudarForma} />
         <p className="ivo-legenda text-texto-suave">
           {faturado
             ? 'A empresa pede sem saldo e paga por fatura quinzenal com NF. O limite e o alerta de saldo não se aplicam.'

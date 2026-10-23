@@ -88,7 +88,8 @@ const RESUMO = [
 const FATURAS = {
   ok: true,
   forma_cobranca: 'FATURADO',
-  a_faturar: { total_cent: 180000, itens: [item(21, 42, -180000)] },
+  // O segundo item foi às 22h30 de 20/10 em Brasília (01h30 de 21/10 em UTC): aparece como 20/10.
+  a_faturar: { total_cent: 180000, itens: [item(21, 42, -180000), item(23, 44, 0, { criado_em: '2026-10-21T01:30:00+00:00' })] },
   em_aberto_cent: 250000,
   vencidas_cent: 250000,
   faturas: [
@@ -215,7 +216,9 @@ test('contrato: "Forma de cobrança"; no Faturado o limite e o alerta somem, há
   await expect(page.getByText(/Versão 3 publicada/)).toBeVisible()
   const p = contrato[0]!.corpo.p as Record<string, unknown>
   expect(p.forma_cobranca).toBe('FATURADO')
-  expect(p.limite_saldo_negativo_cent).toBe(100000)
+  // No Faturado, o limite e o alerta (escondidos) vão como 0.
+  expect(p.limite_saldo_negativo_cent).toBe(0)
+  expect(p.alerta_saldo_baixo_cent).toBe(0)
 })
 
 test('contrato: com o saldo zerado não há aviso; voltar ao Crédito mostra o limite e o alerta de novo', async ({ page }) => {
@@ -308,6 +311,22 @@ test('empresa: os totais, as faturas com as etiquetas e as ações certas de cad
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
 })
 
+test('as datas dos itens são as de Brasília: 01h30 UTC de 21/10 aparece como 20/10', async ({ page }) => {
+  await abrir(page, `/adm/faturas/${UMI}`)
+  const item44 = page.getByRole('region', { name: 'A faturar' }).getByRole('listitem').filter({ hasText: 'Pedido #0044' })
+  await expect(item44).toContainText('20/10/2026')
+  await expect(item44).not.toContainText('21/10/2026')
+})
+
+test('empresa de volta ao Crédito com algo a faturar ainda mostra "Gerar fatura"', async ({ page }) => {
+  await abrir(page, `/adm/faturas/${UMI}`)
+  // A rota registrada por último vence: a mesma empresa, agora no Crédito.
+  await page.route(`${URL_SUPABASE}/rest/v1/rpc/faturas`, (r) => json(r, { ...FATURAS, forma_cobranca: 'CREDITO' }))
+  await page.reload()
+  await expect(page.getByText('Esta empresa voltou ao Crédito (pré-pago), mas ainda tem valores a faturar.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Gerar fatura' })).toBeVisible()
+})
+
 test('"Gerar fatura": a última quinzena fechada, a prévia, o vencimento +30; confirmar sobe o PDF e depois gera', async ({ page }) => {
   const { faturas } = await abrir(page, `/adm/faturas/${UMI}`)
   await page.getByRole('button', { name: 'Gerar fatura' }).click()
@@ -377,6 +396,11 @@ test('"Marcar como paga" com a data (hoje por padrão)', async ({ page }) => {
   await f2.getByRole('button', { name: 'Marcar como paga' }).click()
   const folha = page.getByRole('dialog', { name: 'Marcar como paga' })
   await expect(folha.getByLabel('Data do pagamento')).toHaveValue(hoje())
+  await expect(folha.getByLabel('Data do pagamento')).toHaveAttribute('max', hoje())
+  await folha.getByLabel('Data do pagamento').fill(somarDias(hoje(), 1))
+  await folha.getByRole('button', { name: 'Confirmar pagamento' }).click()
+  await expect(folha.getByText('A data do pagamento não pode ser no futuro.')).toBeVisible()
+  expect(faturas.filter((c) => c.rpc === 'marcar_fatura_paga')).toHaveLength(0)
   await folha.getByLabel('Data do pagamento').fill('2026-10-20')
   await folha.getByRole('button', { name: 'Confirmar pagamento' }).click()
   await expect(page.getByText('Fatura nº 2 marcada como paga.')).toBeVisible()

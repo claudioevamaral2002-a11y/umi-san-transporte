@@ -30,7 +30,7 @@ import {
   type Quinzena,
   type SituacaoFatura,
 } from '../../../lib/faturas.ts'
-import { hoje, numeroPedido } from '../../../lib/tempo.ts'
+import { diaDe, hoje, numeroPedido } from '../../../lib/tempo.ts'
 
 /** Quantas quinzenas fechadas a folha oferece (a primeira, a última que fechou, já vem escolhida). */
 const QUINZENAS_NA_LISTA = 6
@@ -84,7 +84,7 @@ function LinhaItem({ i }: { i: ItemFatura }) {
           {i.numero !== null && i.tipo !== 'DEBITO' && <span className="font-normal text-texto-suave">, {ROTULO_TIPO[i.tipo]}</span>}
         </p>
         <p className="ivo-legenda text-texto-suave">
-          {diaBr(i.criado_em.slice(0, 10))}
+          {diaBr(diaDe(i.criado_em))}
           {i.solicitante_nome ? `, ${i.solicitante_nome}` : ''}
         </p>
         {i.origem && i.destino && <RotaDePara origem={i.origem} destino={i.destino} paradas={i.paradas ?? []} className="mt-1" />}
@@ -280,6 +280,10 @@ function MarcarPaga({ fatura, aoConcluir, aoFechar }: { fatura: Fatura; aoConclu
       setErro('Informe a data do pagamento.')
       return
     }
+    if (data > hoje()) {
+      setErro('A data do pagamento não pode ser no futuro.')
+      return
+    }
     setErro(undefined)
     setEnviando(true)
     const r = await faturas.marcarPaga(fatura.id, data)
@@ -294,7 +298,7 @@ function MarcarPaga({ fatura, aoConcluir, aoFechar }: { fatura: Fatura; aoConclu
       <p className="ivo-corpo">
         Total de <Dinheiro centavos={fatura.total_cent} className="font-bold" />. O pagamento entra no extrato da empresa.
       </p>
-      <Campo type="date" rotulo="Data do pagamento" value={data} erro={erro} onChange={(e) => setData(e.target.value)} />
+      <Campo type="date" rotulo="Data do pagamento" max={hoje()} value={data} erro={erro} onChange={(e) => setData(e.target.value)} />
       <Rodape falha={falha}>
         <Botao onClick={aoFechar} disabled={enviando}>
           Voltar
@@ -409,6 +413,8 @@ function TrocarPdf({
 // Tela
 // ------------------------------------------------------------------------------------------------
 
+type Aviso = { tipo: 'sucesso' | 'erro'; texto: string }
+
 type Acao = { tipo: 'gerar' } | { tipo: 'paga' | 'cancelar' | 'pdf'; fatura: Fatura }
 
 const TITULO_ACAO: Record<Acao['tipo'], string> = {
@@ -489,9 +495,17 @@ export function FaturasEmpresa() {
   const empresas = useConsulta('adm-empresas', api.empresas)
   const nome = empresas.dados?.find((e) => e.id === empresa)?.nome ?? 'Empresa'
   const { dados, erro, recarregar } = useConsulta(`adm-faturas-${empresa}`, () => faturas.listar(empresa))
-  const [acao, setAcao] = useState<Acao | null>(null)
-  const [aviso, setAviso] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null)
+  // A ação e o aviso valem só para a empresa em que foram abertos: trocar de :empresa fecha a folha e limpa o aviso
+  // (e as folhas têm key={empresa}), para um caminho de PDF enviado para outra empresa nunca ser reaproveitado.
+  const [estadoAcao, setEstadoAcao] = useState<{ empresa: string; acao: Acao | null }>({ empresa, acao: null })
+  const acao = estadoAcao.empresa === empresa ? estadoAcao.acao : null
+  const setAcao = (a: Acao | null) => setEstadoAcao({ empresa, acao: a })
+  const [estadoAviso, setEstadoAviso] = useState<{ empresa: string; aviso: Aviso | null }>({ empresa, aviso: null })
+  const aviso = estadoAviso.empresa === empresa ? estadoAviso.aviso : null
+  const setAviso = (a: Aviso | null) => setEstadoAviso({ empresa, aviso: a })
   const faturado = dados?.forma_cobranca === 'FATURADO'
+  // De volta ao Crédito com algo ainda a faturar: o Master ainda pode fechar a última fatura.
+  const podeGerar = faturado || (dados?.a_faturar.total_cent ?? 0) > 0
   const ordenadas = useMemo(() => [...(dados?.faturas ?? [])].sort((a, b) => b.numero - a.numero), [dados])
 
   async function baixar(f: Fatura) {
@@ -522,7 +536,7 @@ export function FaturasEmpresa() {
           sobretitulo="Faturas"
           titulo={nome}
           acao={
-            faturado && (
+            podeGerar && (
               <Botao variante="principal" className="flex w-full items-center justify-center gap-2 md:w-auto" onClick={() => setAcao({ tipo: 'gerar' })}>
                 <Icone nome="mais" tamanho={20} />
                 Gerar fatura
@@ -545,7 +559,13 @@ export function FaturasEmpresa() {
         )
       ) : (
         <>
-          {!faturado && <Mensagem tipo="info">{mensagemDoCodigo('NAO_FATURADO')}</Mensagem>}
+          {!faturado && (
+            <Mensagem tipo="info">
+              {podeGerar
+                ? 'Esta empresa voltou ao Crédito (pré-pago), mas ainda tem valores a faturar.'
+                : mensagemDoCodigo('NAO_FATURADO')}
+            </Mensagem>
+          )}
           <Cartao className="grid grid-cols-3 gap-2">
             <Total rotulo="A faturar" centavos={dados.a_faturar.total_cent} testid="total-a-faturar" />
             <Total rotulo="Em aberto" centavos={dados.em_aberto_cent} testid="total-em-aberto" />
@@ -595,11 +615,11 @@ export function FaturasEmpresa() {
         onFechar={() => setAcao(null)}
         largura="md:max-w-2xl"
       >
-        {acao?.tipo === 'gerar' && <GerarFatura empresa={empresa} aoConcluir={concluir} aoFechar={() => setAcao(null)} />}
+        {acao?.tipo === 'gerar' && <GerarFatura key={empresa} empresa={empresa} aoConcluir={concluir} aoFechar={() => setAcao(null)} />}
         {acao?.tipo === 'paga' && <MarcarPaga fatura={acao.fatura} aoConcluir={concluir} aoFechar={() => setAcao(null)} />}
         {acao?.tipo === 'cancelar' && <CancelarFatura fatura={acao.fatura} aoConcluir={concluir} aoFechar={() => setAcao(null)} />}
         {acao?.tipo === 'pdf' && (
-          <TrocarPdf empresa={empresa} fatura={acao.fatura} aoConcluir={concluir} aoFechar={() => setAcao(null)} />
+          <TrocarPdf key={empresa} empresa={empresa} fatura={acao.fatura} aoConcluir={concluir} aoFechar={() => setAcao(null)} />
         )}
       </Folha>
     </main>
