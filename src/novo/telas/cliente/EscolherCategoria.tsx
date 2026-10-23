@@ -187,6 +187,7 @@ export function EscolherCategoria({
   const pontosParadas = paradas.map((p) => pontoDaRota(p.local)).filter((p): p is PontoRota => p !== null)
   const {
     estado: rota,
+    falhou: rotaFalhou,
     km,
     kmVolta,
     tentarDeNovo,
@@ -384,7 +385,7 @@ export function EscolherCategoria({
         </div>
       </div>
 
-      {rota.fase === 'carregando' || (rota.fase === 'pronta' && km === null) || (km !== null && cats === null && !lista.erro) ? (
+      {!rotaFalhou && (rota.fase === 'carregando' || (rota.fase === 'pronta' && km === null) || (km !== null && cats === null && !lista.erro)) ? (
         <div className="space-y-2" aria-busy="true">
           <p role="status" className="sr-only">
             Calculando o trajeto e os preços…
@@ -393,7 +394,7 @@ export function EscolherCategoria({
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
         </div>
-      ) : rota.fase === 'falhou' ? (
+      ) : rotaFalhou ? (
         <div className="space-y-3">
           <Mensagem tipo="erro">
             Não foi possível calcular o trajeto agora. Confira os endereços ou tente de novo em instantes.
@@ -401,6 +402,16 @@ export function EscolherCategoria({
           <Botao className="w-full" onClick={tentarDeNovo}>
             Tentar de novo
           </Botao>
+          {/* Só a volta falhou (ida e volta com paradas): dá para seguir só com a ida. */}
+          {rota.fase === 'pronta' && idaEVolta && (
+            <button
+              type="button"
+              onClick={() => setIdaEVolta(false)}
+              className="min-h-12 w-full ivo-legenda font-semibold text-texto-suave underline"
+            >
+              Pedir só a ida
+            </button>
+          )}
         </div>
       ) : lista.erro || cats === null ? (
         <div className="space-y-3">
