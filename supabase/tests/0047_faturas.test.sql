@@ -13,7 +13,7 @@
 --   * painel_empresa no FATURADO; a reconciliação continua limpa e acusa as duas divergências novas.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(81);
+select plan(82);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
