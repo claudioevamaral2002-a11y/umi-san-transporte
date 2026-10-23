@@ -238,7 +238,7 @@ select is(pg_temp.ids(current_setting('t.pv1')::jsonb -> 'itens'),
   array[current_setting('t.l1')::bigint, current_setting('t.l2')::bigint],
   'prévia de Q1: L1 e L2 (23h30 do último dia, horário de Brasília); sem L0, RECARGA nem Q2');
 select is(current_setting('t.g1')::jsonb - 'fatura', '{"ok": true, "numero": 1}'::jsonb, 'gera a fatura nº 1');
-select is(current_setting('t.d1')::jsonb -> 'fatura' - 'id',
+select is((current_setting('t.d1')::jsonb -> 'fatura') - 'id',
   jsonb_build_object('numero', 1, 'inicio', current_setting('t.q1i'), 'fim', current_setting('t.q1f'), 'total_cent', 50000,
     'nf_numero', '101', 'nf_emitida_em', current_setting('t.q2i'), 'nf_pdf_caminho', current_setting('t.pdf1'),
     'vencimento', (current_setting('t.q2i')::date + 30)::text, 'status', 'ABERTA',
