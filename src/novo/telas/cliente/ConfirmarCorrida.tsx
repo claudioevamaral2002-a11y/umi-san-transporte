@@ -37,16 +37,19 @@ const primeiroNome = (nome: string | null) => nome?.trim().split(/\s+/)[0] ?? 'm
 
 /**
  * "Pela tabela" = a estimativa da mesma categoria para a mesma rota, com as paradas e as horas estimadas do pedido
- * (o banco calcula; a tela só compara).
+ * (o banco calcula; a tela só compara). v2.1: com as diárias estimadas e a volta à origem do pedido; o pedido antigo de
+ * ida e volta (`trazer`) continua com o preço de ida e volta.
  */
 function useTabela(r: RespostaPedido, km: number | null, kmVolta: number | null) {
   const p = r.pedido
   const codigo = p.categoria ?? null
   const paradas = paradasDoDetalhe(p).quantidade
   const horas = paradasDoDetalhe(p).horas
+  const diarias = p.diarias_estimadas ?? null
+  const volta = p.volta_a_origem === true
   const chave =
     codigo && km !== null
-      ? `novo-tabela-${p.id}-${kmDaRota(km)}-${kmVolta}-${p.levar}-${p.trazer}-${paradas}-${horas ?? ''}`
+      ? `novo-tabela-${p.id}-${kmDaRota(km)}-${kmVolta}-${p.levar}-${p.trazer}-${paradas}-${horas ?? ''}-${diarias ?? ''}-${volta}`
       : 'novo-tabela-nada'
   const { dados } = useConsulta(chave, async () => {
     if (!codigo || km === null) return null
@@ -57,6 +60,8 @@ function useTabela(r: RespostaPedido, km: number | null, kmVolta: number | null)
       trazer: p.trazer,
       paradas: paradas > 0 ? paradas : null,
       horas,
+      diarias,
+      voltaAOrigem: volta,
     })
     const c = lista.categorias.find((x) => x.codigo === codigo)
     return c && c.total_cent !== null ? { total_cent: c.total_cent, linhas: c.linhas ?? [] } : null

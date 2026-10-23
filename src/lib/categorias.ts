@@ -27,6 +27,11 @@ export interface CategoriaComPreco {
   cobra_hora: boolean
   /** A tarifa tem valor por parada. */
   cobra_parada: boolean
+  /**
+   * v2.1: a tarifa tem diária de hospedagem (`hospedagem_diaria_cent` > 0): a tela mostra "Diárias (hospedagem)".
+   * Opcional: o banco anterior não devolvia (sem ela, a categoria não cobra diária).
+   */
+  cobra_diaria?: boolean
 }
 
 /**

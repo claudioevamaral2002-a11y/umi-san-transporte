@@ -10,9 +10,12 @@ import { RotaDePara } from '../../../design/componentes/RotaDePara.tsx'
 import {
   categorias,
   comPreenchimento,
+  DIARIAS_MAX,
   horasValidas,
   kmDaRota,
   MAX_CENTRO_CUSTO,
+  MAX_OUTROS_CUSTOS,
+  mudarDiarias,
   mudarHoras,
   pedidoDaCategoria,
   primeiroHorarioAgora,
@@ -26,13 +29,13 @@ import { DURACAO_PADRAO, FORM_VAZIO, mascararTelefone, validarPasso, type ErrosP
 import { mensagemDeParadas, paradaDoLocal } from '../../../lib/paradas.ts'
 import { pedidos } from '../../../lib/pedidos.ts'
 import { diaDe, formatarDuracao, hoje, somarDias } from '../../../lib/tempo.ts'
-import { CaixaChip, Contador } from '../../../telas/pedidos/componentes.tsx'
+import { Contador } from '../../../telas/pedidos/componentes.tsx'
 import { DIAS_NO_SELETOR, EscolherHorario } from './EscolherHorario.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
 import { gravarUltimaCategoria, gravarUltimoCentroCusto, lerUltimaCategoria, lerUltimoCentroCusto } from '../../preferencias.ts'
-import { useRotaComParadas } from './rotaComParadas.ts'
+import { useRotaComParadas, voltaAOrigem } from './rotaComParadas.ts'
 
 export type EnderecoEscolhido = { texto: string; local: Local }
 
@@ -86,11 +89,14 @@ function CartaoCategoria({
   c,
   marcada,
   minutos,
+  comOutrosCustos,
   aoEscolher,
 }: {
   c: CategoriaComPreco
   marcada: boolean
   minutos: number | null
+  /** v2.1: o cliente avisou outros custos; embaixo do preço da marcada, "+ outros custos no orçamento". */
+  comOutrosCustos: boolean
   aoEscolher: () => void
 }) {
   const disponivel = escolhivel(c)
@@ -123,6 +129,9 @@ function CartaoCategoria({
           <span className="shrink-0 text-right">
             <span className="block font-extrabold tabular-nums">~{reaisCurto(c.total_cent)}</span>
             <span className={`block ivo-legenda ${suave}`}>estimado</span>
+            {marcada && comOutrosCustos && (
+              <span className={`block ivo-legenda ${suave}`}>+ outros custos no orçamento</span>
+            )}
           </span>
         ) : (
           <span className={`shrink-0 text-right ivo-legenda ${suave}`}>por hora</span>
@@ -141,7 +150,7 @@ export function EscolherCategoria({
   paradas = [],
   aoAdicionarParada,
   categoriaInicial,
-  idaEVoltaInicial = false,
+  diariasIniciais = 0,
   semData = false,
   aoVoltar,
 }: {
@@ -153,14 +162,14 @@ export function EscolherCategoria({
   aoAdicionarParada?: () => void
   /** "Pedir de novo": a categoria da corrida anterior (vem marcada; sem ela, a última pedida neste aparelho). */
   categoriaInicial?: string
-  idaEVoltaInicial?: boolean
+  /** "Pedir de novo" (v2.1): as diárias da corrida anterior. */
+  diariasIniciais?: number
   /** "Pedir de novo": sem data escolhida; o seletor abre e o botão de pedir espera o horário. */
   semData?: boolean
   aoVoltar: () => void
 }) {
   const navegar = useNavigate()
   const idQuando = useId()
-  const [idaEVolta, setIdaEVolta] = useState(idaEVoltaInicial)
   const [escolhida, setEscolhida] = useState<string | null>(() => categoriaInicial ?? lerUltimaCategoria())
   const [modo, setModo] = useState<Modo>('agendar')
   const [quandoAberto, setQuandoAberto] = useState(semData)
@@ -182,6 +191,11 @@ export function EscolherCategoria({
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   const [horas, setHoras] = useState<number | null>(null)
   const [centro, setCentro] = useState(() => lerUltimoCentroCusto())
+  // v2.1: diárias (hospedagem) e outros custos (texto, sem valor). Sem "Ida e volta": ir e voltar é uma parada e o Para
+  // igual ao De, que conta como volta à origem (sem o retorno de trecho único).
+  const [diarias, setDiarias] = useState(diariasIniciais)
+  const [outrosCustos, setOutrosCustos] = useState('')
+  const volta = voltaAOrigem(origem.local, destino.local)
   const detalhes = useRef<HTMLDetailsElement>(null)
 
   const pontosParadas = paradas.map((p) => pontoDaRota(p.local)).filter((p): p is PontoRota => p !== null)
@@ -191,7 +205,7 @@ export function EscolherCategoria({
     km,
     kmVolta,
     tentarDeNovo,
-  } = useRotaComParadas(pontoDaRota(origem.local), pontoDaRota(destino.local), pontosParadas, idaEVolta)
+  } = useRotaComParadas(pontoDaRota(origem.local), pontoDaRota(destino.local), pontosParadas, false)
   const pontos = rota.fase === 'pronta' ? rota.rota.pontos : []
   const fimDaRota = pontos.at(-1)
   const destinoNoMapa =
@@ -201,11 +215,11 @@ export function EscolherCategoria({
   const kmTrajeto = rota.fase === 'pronta' ? kmDaRota(rota.rota.km) : null
   const minutos = rota.fase === 'pronta' ? rota.rota.minutos : null
   const nParadas = paradas.length
-  // Preço com as paradas (quantidade) e as horas estimadas; ao mudar as horas, a lista anterior fica na tela.
-  // Só as horas mantêm a lista anterior: outra rota, outras paradas ou ida e volta esperam o preço novo.
-  const trajeto = `${km}-${kmVolta}-${idaEVolta}-${nParadas}`
+  // Preço com as paradas (quantidade), as horas estimadas e as diárias; ao mudar as horas ou as diárias, a lista
+  // anterior fica na tela. Outra rota, outras paradas ou a volta à origem esperam o preço novo.
+  const trajeto = `${km}-${kmVolta}-${volta}-${nParadas}`
   const lista = useConsulta(
-    km === null ? 'novo-categorias-nada' : `novo-categorias-${trajeto}-${horas ?? ''}`,
+    km === null ? 'novo-categorias-nada' : `novo-categorias-${trajeto}-${horas ?? ''}-${diarias}`,
     async () =>
       km === null
         ? null
@@ -216,9 +230,10 @@ export function EscolherCategoria({
                 km,
                 kmVolta,
                 levar: true,
-                trazer: idaEVolta,
                 paradas: nParadas > 0 ? nParadas : null,
                 horas,
+                diarias,
+                voltaAOrigem: volta,
               })
             ).categorias,
           },
@@ -229,6 +244,7 @@ export function EscolherCategoria({
   const atual = disponiveis.find((c) => c.codigo === escolhida) ?? disponiveis[0] ?? null
   const preenchida = atual ? comPreenchimento(atual) : null
   const faltamHoras = !!atual?.cobra_hora && (horas === null || !horasValidas(horas))
+  const cobraDiaria = atual?.cobra_diaria === true
 
   // Padrão do "Agendar": o primeiro horário livre a partir de amanhã.
   useEffect(() => {
@@ -282,7 +298,7 @@ export function EscolherCategoria({
       origemLocal: origem.local,
       destinoLocal: destino.local,
       levar: true,
-      trazer: idaEVolta,
+      trazer: false,
       carga: preenchida?.carga ?? 'PESSOAS',
       reboque: preenchida?.reboque ?? 'NAO',
     }
@@ -297,7 +313,8 @@ export function EscolherCategoria({
     const problema =
       mensagemDeParadas(paradasDoPedido) ??
       (faltamHoras ? mensagemDoPedido('CAMPOS_INVALIDOS', ['horas_estimadas']) : null) ??
-      (centro.trim().length > MAX_CENTRO_CUSTO ? mensagemDoPedido('CAMPOS_INVALIDOS', ['centro_custo']) : null)
+      (centro.trim().length > MAX_CENTRO_CUSTO ? mensagemDoPedido('CAMPOS_INVALIDOS', ['centro_custo']) : null) ??
+      (outrosCustos.trim().length > MAX_OUTROS_CUSTOS ? mensagemDoPedido('CAMPOS_INVALIDOS', ['outros_custos']) : null)
     if (problema) {
       setErroEnvio(problema)
       return
@@ -335,6 +352,10 @@ export function EscolherCategoria({
         paradas: paradasDoPedido,
         horas,
         centroCusto: centro,
+        // As diárias só na categoria que cobra diária (o contador some nas outras).
+        diarias: preenchida.cobra_diaria === true ? diarias : null,
+        outrosCustos,
+        voltaAOrigem: volta,
       }),
     )
     if (r.ok && typeof r.id === 'string') {
@@ -402,16 +423,6 @@ export function EscolherCategoria({
           <Botao className="w-full" onClick={tentarDeNovo}>
             Tentar de novo
           </Botao>
-          {/* Só a volta falhou (ida e volta com paradas): dá para seguir só com a ida. */}
-          {rota.fase === 'pronta' && idaEVolta && (
-            <button
-              type="button"
-              onClick={() => setIdaEVolta(false)}
-              className="min-h-12 w-full ivo-legenda font-semibold text-texto-suave underline"
-            >
-              Pedir só a ida
-            </button>
-          )}
         </div>
       ) : lista.erro || cats === null ? (
         <div className="space-y-3">
@@ -429,6 +440,7 @@ export function EscolherCategoria({
                 c={c}
                 marcada={atual?.codigo === c.codigo}
                 minutos={minutos}
+                comOutrosCustos={outrosCustos.trim() !== ''}
                 aoEscolher={() => {
                   setEscolhida(c.codigo)
                   setErros({})
@@ -534,7 +546,30 @@ export function EscolherCategoria({
                   required
                 />
               )}
-              <CaixaChip rotulo="Ida e volta" marcado={idaEVolta} aoMudar={setIdaEVolta} />
+              {cobraDiaria && (
+                <Contador
+                  rotulo="Diárias (hospedagem)"
+                  valor={diarias}
+                  min={0}
+                  max={DIARIAS_MAX}
+                  aoMudar={(v) => {
+                    setDiarias(mudarDiarias(diarias, v > diarias ? 1 : -1))
+                    setErroEnvio(null)
+                  }}
+                  detalhe="Viagem com pernoite"
+                />
+              )}
+              <Campo
+                rotulo="Outros custos (opcional)"
+                value={outrosCustos}
+                onChange={(e) => {
+                  setOutrosCustos(e.target.value)
+                  setErroEnvio(null)
+                }}
+                maxLength={MAX_OUTROS_CUSTOS}
+                autoComplete="off"
+                ajuda="Pedágio, balsa… O valor vem no orçamento"
+              />
               <Campo
                 rotulo="Contato no local (opcional)"
                 value={form.contatoNome}
