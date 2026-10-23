@@ -169,15 +169,32 @@ describe('forma de cobrança (v2.1)', () => {
     expect(ROTULO_FORMA_COBRANCA).toEqual({ CREDITO: 'Crédito (pré-pago)', FATURADO: 'Faturado (NF)' })
     expect(FORMAS_COBRANCA).toEqual(['CREDITO', 'FATURADO'])
   })
-  it('vai e volta pelo formulário; sem a forma na versão, a chave não vai (o banco herda a vigente)', () => {
+  it('pré-preenche a forma da partida, mas só a manda quando o Master a muda (sem mexer, o banco herda pela data)', () => {
     const f = formularioDe({ ...BASE, forma_cobranca: 'FATURADO' })
     expect(f.forma_cobranca).toBe('FATURADO')
+    // Sem mexer no seletor: a chave não vai (uma troca já agendada não é desfeita).
     expect(validarFormulario(f)).toEqual({
       ok: true,
-      valores: { ...BASE, forma_cobranca: 'FATURADO', limite_saldo_negativo_cent: 0, alerta_saldo_baixo_cent: 0 },
+      valores: { ...BASE, limite_saldo_negativo_cent: 0, alerta_saldo_baixo_cent: 0 },
     })
-    const r = validarFormulario(formularioDe(BASE))
+    const c = formularioDe({ ...BASE, forma_cobranca: 'CREDITO' })
+    let r = validarFormulario(c)
     expect(r.ok && 'forma_cobranca' in r.valores).toBe(false)
+    // Mudou: vai.
+    c.forma_cobranca = 'FATURADO'
+    expect(validarFormulario(c)).toMatchObject({ ok: true, valores: { forma_cobranca: 'FATURADO' } })
+    f.forma_cobranca = 'CREDITO'
+    expect(validarFormulario(f)).toMatchObject({ ok: true, valores: { forma_cobranca: 'CREDITO' } })
+    // Mudou e voltou: não vai.
+    c.forma_cobranca = 'CREDITO'
+    r = validarFormulario(c)
+    expect(r.ok && 'forma_cobranca' in r.valores).toBe(false)
+    // Sem a forma na versão (banco anterior): só vai se o Master escolher.
+    const sem = formularioDe(BASE)
+    r = validarFormulario(sem)
+    expect(r.ok && 'forma_cobranca' in r.valores).toBe(false)
+    sem.forma_cobranca = 'CREDITO'
+    expect(validarFormulario(sem)).toMatchObject({ ok: true, valores: { forma_cobranca: 'CREDITO' } })
   })
   it('no Faturado, limite e alerta de saldo em branco (escondidos) valem 0', () => {
     const f = formularioDe({ ...BASE, forma_cobranca: 'FATURADO' })

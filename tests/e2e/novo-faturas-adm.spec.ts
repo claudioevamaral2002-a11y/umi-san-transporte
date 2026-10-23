@@ -227,6 +227,25 @@ test('contrato: "Forma de cobrança"; no Faturado o limite e o alerta somem, há
   expect(p.alerta_saldo_baixo_cent).toBe(0)
 })
 
+test('contrato: publicar sem mexer na forma não manda a chave (o banco herda pela data; uma troca agendada fica)', async ({ page }) => {
+  const { contrato } = await abrir(page, `/adm/contratos/${UMI}?publicar=1`)
+  const folha = page.getByRole('dialog', { name: /Publicar nova versão/ })
+  const forma = folha.getByRole('radiogroup', { name: 'Forma de cobrança' })
+  await expect(forma.getByRole('radio', { name: 'Crédito (pré-pago)' })).toHaveAttribute('aria-checked', 'true')
+  // Muda e volta: igual à partida, também não vai.
+  await forma.getByRole('radio', { name: 'Faturado (NF)' }).click()
+  await forma.getByRole('radio', { name: 'Crédito (pré-pago)' }).click()
+  await folha.getByRole('button', { name: 'Revisar e publicar' }).click()
+  const revisao = folha.getByTestId('confirmacao-contrato')
+  await expect(revisao).toBeVisible()
+  await expect(revisao).not.toContainText('Forma de cobrança')
+  await folha.getByRole('button', { name: 'Publicar versão' }).click()
+  await expect(page.getByText(/Versão 3 publicada/)).toBeVisible()
+  const p = contrato[0]!.corpo.p as Record<string, unknown>
+  expect('forma_cobranca' in p).toBe(false)
+  expect(p.limite_saldo_negativo_cent).toBeGreaterThan(0)
+})
+
 test('contrato: com o saldo zerado não há aviso; voltar ao Crédito mostra o limite e o alerta de novo', async ({ page }) => {
   const { dinheiro } = await abrir(page, `/adm/contratos/${UMI}?publicar=1`, {
     saldos: [saldoFalso({ saldo_contabil_cent: 0, disponivel_cent: 0, reservado_cent: 0 })],
@@ -472,12 +491,20 @@ test('Créditos: a empresa no Faturado tem a etiqueta "Faturado (NF)" e não tem
   await expect(page.getByRole('button', { name: 'Ajuste' })).toBeVisible()
   await expect(page.getByText('Faturado (NF)')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Recarga' })).toHaveCount(0)
+  // O Ajuste feito no Faturado entra na próxima fatura.
+  await page.getByRole('button', { name: 'Ajuste' }).click()
+  await expect(page.getByRole('dialog', { name: /Ajuste de saldo/ }).getByTestId('aviso-ajuste-fatura')).toHaveText(
+    'Este ajuste entra na próxima fatura.',
+  )
 })
 
 test('Créditos: a empresa no Crédito continua com a Recarga', async ({ page }) => {
   await abrir(page, `/adm/creditos/${UMI}`, { saldos: [saldoFalso({ forma_cobranca: 'CREDITO' })] })
   await expect(page.getByRole('button', { name: 'Recarga' })).toBeVisible()
   await expect(page.getByText('Faturado (NF)')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ajuste' }).click()
+  await expect(page.getByRole('dialog', { name: /Ajuste de saldo/ }).getByLabel('Valor')).toBeVisible()
+  await expect(page.getByTestId('aviso-ajuste-fatura')).toHaveCount(0)
 })
 
 test('N1 não acessa adm/faturas', async ({ page }) => {

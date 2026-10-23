@@ -172,7 +172,8 @@ function Conteudo({
   const idForma = useId()
   // v2.1: o saldo contábil da empresa, lido ao trocar para o Faturado (aviso sem bloquear: acertar antes com um Ajuste).
   const [saldoContabil, setSaldoContabil] = useState<number | null>(null)
-  // Sem a forma na versão de partida (banco anterior), a tela mostra Crédito e não manda a chave até o Master escolher.
+  // A forma só vai quando o Master a muda em relação à partida (`validarFormulario`); sem mexer, o banco herda a forma em
+  // vigor na data escolhida. Sem a forma na partida (banco anterior), a tela mostra Crédito.
   const forma: FormaCobranca = form.forma_cobranca ?? 'CREDITO'
   const faturado = forma === 'FATURADO'
 

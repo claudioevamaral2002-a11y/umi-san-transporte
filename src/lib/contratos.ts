@@ -218,8 +218,13 @@ export interface FaixaTexto {
 export interface FormularioContrato {
   campos: Record<CampoNumerico, string>
   faixas: FaixaTexto[]
-  /** v2.1: ausente = não vai (o banco herda a forma da vigente). */
+  /** v2.1: a forma mostrada no seletor (pré-preenchida com a da versão de partida). */
   forma_cobranca?: FormaCobranca
+  /**
+   * v2.1: a forma da versão de partida. A chave só vai quando o Master muda a forma em relação a ela; sem mexer, não vai
+   * e o banco herda a forma em vigor na data escolhida (assim, uma troca já agendada para o Faturado não é desfeita).
+   */
+  forma_partida?: FormaCobranca
 }
 
 /** Texto inicial de cada campo a partir de uma versão (ou vazio). */
@@ -240,7 +245,9 @@ export function formularioDe(versao: ValoresContrato | null): FormularioContrato
     horas: String(f.antecedencia_min_horas),
     multa: bpParaTexto(f.multa_bp),
   }))
-  return versao?.forma_cobranca ? { campos, faixas, forma_cobranca: versao.forma_cobranca } : { campos, faixas }
+  return versao?.forma_cobranca
+    ? { campos, faixas, forma_cobranca: versao.forma_cobranca, forma_partida: versao.forma_cobranca }
+    : { campos, faixas }
 }
 
 export const MAX_FAIXAS = 20
@@ -311,7 +318,8 @@ export function validarFormulario(
     }
   }
   valores.faixas_cancelamento = faixas
-  if (f.forma_cobranca) valores.forma_cobranca = f.forma_cobranca
+  // Só vai quando o Master mudou a forma em relação à versão de partida (sem isso, o banco herda a da data escolhida).
+  if (f.forma_cobranca && f.forma_cobranca !== f.forma_partida) valores.forma_cobranca = f.forma_cobranca
 
   return Object.keys(erros).length > 0 ? { ok: false, erros } : { ok: true, valores }
 }

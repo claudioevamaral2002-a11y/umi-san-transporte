@@ -145,10 +145,13 @@ interface Pronto {
 function Formulario({
   op,
   empresa,
+  faturado,
   aoRevisar,
 }: {
   op: Operacao
   empresa: string
+  /** v2.1: empresa no Faturado (NF): o ajuste entra na próxima fatura. */
+  faturado: boolean
   aoRevisar: (p: Pronto) => void
 }) {
   const [valor, setValor] = useState('')
@@ -225,6 +228,11 @@ function Formulario({
               </div>
             </fieldset>
           )}
+          {op.tipo === 'ajuste' && faturado && (
+            <p className="ivo-legenda text-texto-suave" data-testid="aviso-ajuste-fatura">
+              Este ajuste entra na próxima fatura.
+            </p>
+          )}
           <Campo
             rotulo="Valor"
             prefixo="R$"
@@ -283,7 +291,8 @@ function ConteudoLancamento({
   const [estado, setEstado] = useState<{ fase: 'confirmar' | 'processando' } | { fase: 'erro'; codigo: string }>({ fase: 'confirmar' })
   const [intencao] = useState(() => new Intencao())
 
-  if (!pronto) return <Formulario op={op} empresa={empresa} aoRevisar={setPronto} />
+  if (!pronto)
+    return <Formulario op={op} empresa={empresa} faturado={saldo.forma_cobranca === 'FATURADO'} aoRevisar={setPronto} />
 
   async function enviar(p: Pronto) {
     setEstado({ fase: 'processando' })
@@ -371,7 +380,8 @@ export function CreditoEmpresa() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [versao, setVersao] = useState(0)
   const nome = empresas.dados?.find((e) => e.id === empresa)?.nome ?? 'Empresa'
-  // v2.1: no Faturado (NF) não há recarga; o acerto de saldo antigo é por Ajuste.
+  // v2.1: no Faturado (NF) não há recarga. Um Ajuste feito agora entra na próxima fatura (não acerta o saldo do
+  // Crédito): o saldo antigo se zera com um Ajuste ANTES de a troca para o Faturado valer.
   const faturado = saldo.dados?.forma_cobranca === 'FATURADO'
 
   return (
