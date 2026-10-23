@@ -136,6 +136,17 @@ O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deplo
 - Passos do dono para a v1 (Turnstile e chave do mapa para `ivo-v1.pages.dev`): RUNBOOK §20.2.
 - **Próxima: v2.1**, com os 3 ajustes pedidos em 23/10 (tirar as etiquetas do cartão da categoria; Categorias e preços abre só para ver, com lápis para editar e "Desativar" no lugar de excluir; diárias e outros custos ao pedir, e fim do "Ida e volta") e o **faturamento por NF** para a Umi San: quinzenal, sem teto, NF emitida pelo dono no site da prefeitura e anexada no portal. O adiantamento de R$ 15.000 é controle interno do dono e fica fora do app.
 
+## 5E. v2.1: ajustes e faturamento por NF
+
+- Especificação: `docs/fases/v2-1-ajustes-faturamento-nf-desenho.md` (aprovada em 23/10). Plano: `docs/fases/v2-1-plano.md`. Roteiro: `docs/fases/v2-1-o-que-testar.md`. RUNBOOK §21.
+- **Banco** (migrations `20261023120000` a `20261023120300`):
+  - forma de cobrança no contrato;
+  - faturas quinzenais (`app.faturas`, `app.faturas_itens`, bucket `notas-fiscais`, lançamento `PAGAMENTO_FATURA`);
+  - diárias, outros custos e volta à origem no pedido;
+  - `excluir_categoria`.
+- **Pendências do dono:** trocar a Umi San para Faturado (RUNBOOK §21.1), acertando o saldo antes, e gerar a fatura a cada dia 1 e 16.
+- **Possível melhoria:** o `PainelEmpresa` remonta a cada troca de aba (relê o painel); vem de antes da v2.1.
+
 ## 6. Onde está cada coisa
 
 | Precisa de… | Veja |

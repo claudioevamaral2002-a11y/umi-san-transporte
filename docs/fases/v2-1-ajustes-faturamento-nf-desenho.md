@@ -205,3 +205,18 @@ Estado: **aprovada pelo dono em 23/10/2026**. Base: v2.0, em que o app novo assu
 - **Diárias até 30 ao pedir.** O Ivo pode ir até 60 na calculadora, como hoje.
 - **Uma NF por fatura**, e o PDF é obrigatório para gerar a fatura. Assim, o N1 sempre consegue baixar a nota.
 - **Versão:** `package.json` vai para **2.1.0** neste trabalho.
+
+## 10. Desvios na implementação
+
+Notas do que saiu diferente do aprovado. As decisões acima não mudaram.
+
+- **O que entra na fatura (§4.3):**
+  - entram as cobranças (DEBITO, MULTA, ADITIVO e AJUSTE) **criadas enquanto o contrato em vigor era Faturado**, e não "a partir do início da primeira versão Faturado". Assim, uma empresa que volta ao Crédito não é faturada pelo que pagou no saldo;
+  - um ESTORNO só entra quando a cobrança que ele estorna entraria.
+- **Forma herdada (§4.1):** sem a chave, a versão nova herda a forma da versão **em vigor na data escolhida**; na falta dela, a da versão mais alta.
+- **Uma fatura por quinzena:** o banco não aceita duas faturas ativas para a mesma quinzena da mesma empresa. Para refazer, cancela-se a anterior.
+- **Data do pagamento:** não pode ser futura nem anterior à emissão da NF.
+- **Empresa que voltou ao Crédito:** continua em ☰ › Faturas enquanto tiver fatura aberta ou algo a faturar, e o Master ainda consegue gerar a última fatura.
+- **Lançamentos (§5.3):** o cartão do extrato chama-se **"Total devido"** (faturado e a faturar), e não "Em aberto". No Painel, "Em aberto" são só as faturas emitidas e não pagas: com o mesmo nome, os dois valores diferentes confundiriam.
+- **Baixar NF:** baixa o arquivo direto, sem abrir aba nova. Navegadores de celular bloqueiam janela aberta depois de esperar o link.
+- **v1:** a tela de aprovação, Créditos e Contratos (compartilhadas) também mostram a forma de cobrança e o aviso do Faturado.
