@@ -1,6 +1,6 @@
 # v2.1: ajustes do Master e do pedido, e faturamento por Nota Fiscal
 
-Estado: **rascunho para aprovação do dono** (23/10/2026). Base: v2.0, em que o app novo assume o endereço principal (PR #42, RUNBOOK §20). Origem: pedidos do dono em 23/10, depois do primeiro teste da 4.1, e a proposta comercial **IVO-P26-001 v2** (Umi San).
+Estado: **aprovada pelo dono em 23/10/2026**. Base: v2.0, em que o app novo assume o endereço principal (PR #42, RUNBOOK §20). Origem: pedidos do dono em 23/10, depois do primeiro teste da 4.1, e a proposta comercial **IVO-P26-001 v2** (Umi San).
 
 ## 1. O que o dono pediu (23/10)
 
