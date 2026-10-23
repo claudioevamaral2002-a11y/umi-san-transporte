@@ -3,7 +3,8 @@
 --   * prévia (categorias_disponiveis) com `diarias` e `volta_a_origem`: HOSPEDAGEM n × diária na categoria que cobra
 --     diária (a que não cobra fica sem a linha, sem recusa), sem RETORNO na volta à origem; `cobra_diaria`;
 --   * criar_pedido grava diarias_estimadas, outros_custos (aparado) e volta_a_origem; 31 diárias, 121 caracteres ou
---     volta não booleana → CAMPOS_INVALIDOS;
+--     volta não booleana → CAMPOS_INVALIDOS; a volta à origem só fica true com o mesmo place_id ou De e Para a menos de
+--     300 m (senão false, e o trecho único paga o RETORNO);
 --   * PARIDADE: pedido com 2 diárias e volta à origem → prévia = calcular_orcamento {km, hospedagem_diarias: 2}; sem
 --     hospedagem_diarias na entrada valem as diárias do pedido; o `diarias` antigo continua ignorado;
 --   * pedido antigo de ida e volta e pedido da v1 (sem categoria, sem as chaves) com o preço de antes;
@@ -12,7 +13,7 @@
 --   * excluir_categoria / pode_excluir; extrato com 9 tipos.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(41);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -114,6 +115,7 @@ select ok(current_setting('t.x1')::jsonb ->> 'codigo' = 'CAMPOS_INVALIDOS'
 ------------------------------------------------------------------ 2. criar_pedido
 -- as entradas montadas antes (pg_temp não é executável pelo papel authenticated)
 select set_config('t.q0', (pg_temp.ped(14, '{"diarias_estimadas": 2, "volta_a_origem": true,
+  "origem_place_id": "ChIJgloria", "destino_place_id": "ChIJgloria",
   "outros_custos": "  pedágio da BR-101, balsa  "}'))::text, true);
 select set_config('t.q1', (pg_temp.ped(20, '{"volta_a_origem": false}'))::text, true);
 select set_config('t.q2', (pg_temp.ped(26, '{"diarias_estimadas": 31}'))::text, true);
@@ -124,6 +126,11 @@ select set_config('t.q6', (pg_temp.ped(26, jsonb_build_object('outros_custos', r
   'diarias_estimadas', 30)))::text, true);
 select set_config('t.q7', (pg_temp.ped(32, '{"trazer": true, "destino": "Porto de Vitória"}'))::text, true);
 select set_config('t.q8', (pg_temp.ped(38) - 'categoria')::text, true);
+-- volta à origem mandada num trecho único (De e Para em lugares diferentes): o banco não confia no aparelho
+select set_config('t.q10', (pg_temp.ped(50, '{"volta_a_origem": true, "origem_place_id": "ChIJgloria",
+  "destino_place_id": "ChIJporto"}'))::text, true);
+select set_config('t.q11', (pg_temp.ped(56, '{"volta_a_origem": true, "origem_lat": -20.3155, "origem_lng": -40.3128,
+  "destino_lat": -20.3200, "destino_lng": -40.3128}'))::text, true);
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.r1', api.criar_pedido(current_setting('t.q0')::jsonb)::text, true);
@@ -137,14 +144,20 @@ select set_config('t.r3', api.criar_pedido(current_setting('t.q6')::jsonb)::text
 select set_config('t.r4', api.criar_pedido(current_setting('t.q7')::jsonb)::text, true);
 -- pedido da v1: sem categoria e sem as chaves novas
 select set_config('t.r5', api.criar_pedido(current_setting('t.q8')::jsonb)::text, true);
+select set_config('t.r10', api.criar_pedido(current_setting('t.q10')::jsonb)::text, true);
+select set_config('t.r11', api.criar_pedido(current_setting('t.q11')::jsonb)::text, true);
 reset role;
 
 select ok((current_setting('t.r1')::jsonb ->> 'ok')::boolean and (current_setting('t.r2')::jsonb ->> 'ok')::boolean
           and (current_setting('t.r3')::jsonb ->> 'ok')::boolean and (current_setting('t.r4')::jsonb ->> 'ok')::boolean
-          and (current_setting('t.r5')::jsonb ->> 'ok')::boolean, 'pedidos criados');
+          and (current_setting('t.r5')::jsonb ->> 'ok')::boolean and (current_setting('t.r10')::jsonb ->> 'ok')::boolean
+          and (current_setting('t.r11')::jsonb ->> 'ok')::boolean, 'pedidos criados');
 select is((select row(diarias_estimadas, outros_custos, volta_a_origem)::text from app.atividades
             where id = (current_setting('t.r1')::jsonb ->> 'id')::uuid),
-  row(2, 'pedágio da BR-101, balsa', true)::text, 'grava diárias, outros custos (aparado) e volta à origem');
+  row(2, 'pedágio da BR-101, balsa', true)::text,
+  'grava diárias, outros custos (aparado) e volta à origem (De e Para com o mesmo place_id)');
+select is((select volta_a_origem from app.atividades where id = (current_setting('t.r11')::jsonb ->> 'id')::uuid), false,
+  'volta à origem com De e Para a mais de 300 m (coordenadas): grava false');
 select is((select row(diarias_estimadas, char_length(outros_custos))::text from app.atividades
             where id = (current_setting('t.r3')::jsonb ->> 'id')::uuid), row(30, 120)::text, '30 diárias e 120 caracteres: aceitos');
 select is(array[current_setting('t.e1')::jsonb ->> 'codigo', current_setting('t.e2')::jsonb ->> 'codigo',
@@ -174,6 +187,7 @@ select set_config('t.c_vol', api.calcular_orcamento((current_setting('t.r1')::js
 select set_config('t.c2', api.calcular_orcamento((current_setting('t.r2')::jsonb ->> 'id')::uuid, '{"km": 30}')::text, true);
 select set_config('t.c4', api.calcular_orcamento((current_setting('t.r4')::jsonb ->> 'id')::uuid, '{"km": 60}')::text, true);
 select set_config('t.c5', api.calcular_orcamento((current_setting('t.r5')::jsonb ->> 'id')::uuid, '{"km": 30}')::text, true);
+select set_config('t.c10', api.calcular_orcamento((current_setting('t.r10')::jsonb ->> 'id')::uuid, '{"km": 30}')::text, true);
 select set_config('t.env', api.enviar_orcamento((current_setting('t.r1')::jsonb ->> 'id')::uuid, '{"km": 30}', null)::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.iv', api.categorias_disponiveis('{"km":30,"levar":true,"trazer":true}'::jsonb)::text, true);
@@ -193,6 +207,9 @@ select is(current_setting('t.c_vol')::jsonb ->> 'codigo', 'CAMPOS_INVALIDOS',
   'volta_a_origem não vem do motorista: a do pedido vale sempre');
 select is(pg_temp.linhas(current_setting('t.c2')::jsonb), 'TAXA_FIXA=4000,KM=10500,RETORNO=2100',
   'pedido sem volta à origem e sem diárias: com RETORNO, sem HOSPEDAGEM');
+select ok(not (select volta_a_origem from app.atividades where id = (current_setting('t.r10')::jsonb ->> 'id')::uuid)
+          and pg_temp.linhas(current_setting('t.c10')::jsonb) = 'TAXA_FIXA=4000,KM=10500,RETORNO=2100',
+  'trecho único com volta_a_origem true (place_id diferentes): grava false e paga o RETORNO');
 select ok((current_setting('t.env')::jsonb ->> 'ok')::boolean and current_setting('t.env')::jsonb -> 'total_cent' = '50500'::jsonb,
   'enviar_orcamento sem hospedagem_diarias: as diárias do pedido (50500)');
 select is(current_setting('t.c4')::jsonb -> 'total_cent', pg_temp.cat(current_setting('t.iv')::jsonb, 'PASSAGEIROS') -> 'total_cent',
@@ -289,7 +306,9 @@ select ok(has_function_privilege('authenticated', 'api.excluir_categoria(text)',
 -- Versão nova do contrato, sem tarifas por categoria (mesmo instante, versão maior: passa a ser a vigente). PASSAGEIROS
 -- cai no preço de hoje: km 250 e retorno de 50% do contrato.
 select interno.inserir_contrato('00000000-0000-0000-0000-0000000000e1', current_setting('t.contrato')::jsonb, now(), null, 'Teste');
-select set_config('t.q9', (pg_temp.ped(44, '{"volta_a_origem": true}'))::text, true);
+-- De e Para marcados no mapa a uns 60 m um do outro: volta à origem.
+select set_config('t.q9', (pg_temp.ped(44, '{"volta_a_origem": true, "origem_lat": -20.3155, "origem_lng": -40.3128,
+  "destino_lat": -20.3160, "destino_lng": -40.3130}'))::text, true);
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
 select set_config('t.sv', api.categorias_disponiveis('{"km":30,"levar":true,"trazer":false,"volta_a_origem":true}'::jsonb)::text, true);
@@ -310,6 +329,8 @@ select ok((current_setting('t.c9')::jsonb ->> 'ok')::boolean
           and current_setting('t.c9')::jsonb -> 'total_cent'
               = pg_temp.cat(current_setting('t.sv')::jsonb, 'PASSAGEIROS') -> 'total_cent',
   'sem tarifa: calcular_orcamento do pedido com volta à origem sem RETORNO, igual à prévia');
+select is((select volta_a_origem from app.atividades where id = (current_setting('t.r9')::jsonb ->> 'id')::uuid), true,
+  'volta à origem com De e Para a menos de 300 m (coordenadas): grava true');
 
 select * from finish();
 rollback;

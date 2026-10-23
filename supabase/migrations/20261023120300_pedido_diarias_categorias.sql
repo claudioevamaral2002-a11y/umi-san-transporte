@@ -2,7 +2,8 @@
 -- no pedido; excluir categoria sem uso.
 --   * app.atividades ganha diarias_estimadas (0 a 30), outros_custos (texto até 120, sem valor: o Ivo põe o valor no
 --     orçamento) e volta_a_origem (o Para é o mesmo lugar do De: circuito fechado). interno.validar_pedido aceita as três
---     chaves, opcionais (nulo = ausente); api.criar_pedido grava (outros custos aparado, vazio = nenhum);
+--     chaves, opcionais (nulo = ausente); api.criar_pedido grava (outros custos aparado, vazio = nenhum; a volta à
+--     origem só fica true quando o De e o Para são o mesmo lugar: mesmo place_id ou menos de 300 m, senão false);
 --   * preço: interno.linhas_da_tarifa e interno.linhas_para_categoria ganham p_volta_a_origem (default false): com ele,
 --     sem a linha RETORNO (no preço de hoje, sem tarifa da categoria, o retorno do contrato vale 0). A assinatura muda,
 --     então são recriadas (drop + create) e nascem fechadas;
@@ -281,6 +282,7 @@ declare
   v_cat app.categorias;
   v_tarifa app.tarifas_categoria;
   v_paradas int;
+  v_volta boolean;
 begin
   if not (select app.pode_fazer('CRIAR_PEDIDO')) then
     return interno.negar('CRIAR_PEDIDO', 'pedido', 'SEM_PERMISSAO');
@@ -306,6 +308,18 @@ begin
   if v_detalhe is not null then
     return interno.negar('CRIAR_PEDIDO', 'pedido', 'CAMPOS_INVALIDOS', v_detalhe);
   end if;
+  -- v2.1: a volta à origem tira o RETORNO do preço, então não se confia no aparelho: só vale quando o Para é o mesmo
+  -- lugar do De pelo que o pedido grava (a regra de `voltaAOrigem` da tela): mesmo place_id, ou os dois pontos com
+  -- coordenadas a menos de 300 m (haversine, raio médio da Terra). Fora disso grava false, sem recusa (compatível com
+  -- o que já se envia). Ponto do Google de um lado e marcado no mapa do outro não dá para comparar: false.
+  v_volta := coalesce((p ->> 'volta_a_origem')::boolean, false)
+             and (coalesce(nullif(p ->> 'origem_place_id', '') = p ->> 'destino_place_id', false)
+                  or coalesce(jsonb_typeof(p -> 'origem_lat') = 'number' and jsonb_typeof(p -> 'destino_lat') = 'number'
+                              and 2 * 6371000 * asin(least(1, sqrt(
+                                    sin(radians((p ->> 'destino_lat')::float8 - (p ->> 'origem_lat')::float8) / 2) ^ 2
+                                    + cos(radians((p ->> 'origem_lat')::float8)) * cos(radians((p ->> 'destino_lat')::float8))
+                                      * sin(radians((p ->> 'destino_lng')::float8 - (p ->> 'origem_lng')::float8) / 2) ^ 2)))
+                                  < 300, false));
   v_motorista := interno.motorista_padrao();
   if v_motorista is null then
     return interno.negar('CRIAR_PEDIDO', 'pedido', 'SEM_MOTORISTA');
@@ -377,7 +391,7 @@ begin
       v_categoria, v_agora, (p ->> 'horas_estimadas')::numeric, nullif(btrim(p ->> 'centro_custo'), ''),
       -- v2.1
       (p ->> 'diarias_estimadas')::smallint, nullif(btrim(p ->> 'outros_custos'), ''),
-      coalesce((p ->> 'volta_a_origem')::boolean, false))
+      v_volta)
     returning id, numero into v_id, v_numero;
     -- 4.1: as paradas, na ordem (do Google só o place_id; de um ponto marcado, as coordenadas).
     insert into app.atividades_paradas (atividade_id, ordem, texto, place_id, lat, lng)
@@ -403,7 +417,7 @@ begin
                        'forma_cobranca', c.forma_cobranca,
                        'diarias_estimadas', (p ->> 'diarias_estimadas')::int,
                        'outros_custos', nullif(btrim(p ->> 'outros_custos'), ''),
-                       'volta_a_origem', coalesce((p ->> 'volta_a_origem')::boolean, false)));
+                       'volta_a_origem', v_volta));
   -- fase 3A: os dois pontos com coordenadas viram locais da empresa (aparecem primeiro na próxima busca).
   perform interno.guardar_local(v.empresa_id, btrim(p ->> 'origem'),
     (p ->> 'origem_lat')::numeric, (p ->> 'origem_lng')::numeric, p ->> 'origem_place_id');
@@ -708,6 +722,8 @@ begin
   if coalesce((p ->> 'diarias')::int, 0) > 0 then
     e := e || jsonb_build_object('hospedagem_diarias', (p ->> 'diarias')::int);
   end if;
+  -- A prévia só estima: aceita a volta à origem que a tela manda. O que vale no preço é a do pedido, que
+  -- api.criar_pedido só grava true quando o De e o Para são o mesmo lugar (mesmo place_id ou menos de 300 m).
   v_volta := coalesce((p ->> 'volta_a_origem')::boolean, false);
 
   for k in select * from app.categorias x where x.ativa order by x.ordem, x.codigo loop
