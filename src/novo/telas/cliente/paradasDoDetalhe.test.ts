@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { DetalhePedido } from '../../../lib/pedidos.ts'
 import { paradasDoDetalhe } from './paradasDoDetalhe.ts'
 
-// enderecosRemoto.ts importa o cliente do Supabase; no CI não há VITE_SUPABASE_URL para os testes de unidade.
+// enderecosRemoto.ts importa o cliente do Supabase e as funções; no CI não há VITE_SUPABASE_URL para os testes de
+// unidade.
 vi.mock('../../../lib/supabase.ts', () => ({ supabase: { rpc: vi.fn(), functions: { invoke: vi.fn() } } }))
+vi.mock('../../../lib/funcoes.ts', () => ({ chamarFuncao: vi.fn() }))
 
 const detalhe = (extra: Record<string, unknown>) => ({ id: 'p1', ...extra }) as unknown as DetalhePedido
 
