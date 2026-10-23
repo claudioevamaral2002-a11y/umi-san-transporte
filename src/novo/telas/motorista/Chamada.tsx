@@ -21,9 +21,11 @@ import {
   entradaDaChamada,
   enviarProposta,
   formDaTabela,
+  kmDaTabela,
   paradasDoPedido,
   rotuloVeiculo,
   useChamada,
+  useItensDaTarifa,
   veiculoDoCliente,
   type EstadoRotaDaChamada,
   type PedidoDaChamada,
@@ -132,8 +134,9 @@ function Responder({
   const [erro, setErro] = useState<string | null>(null)
   const [recusando, setRecusando] = useState(false)
 
-  // IVO Motorista (cobrada por hora): o aceite não espera a rota; sem ela, km 0.
-  const km = rota.fase === 'pronta' ? rota.rota.km : doCliente ? 0 : null
+  // IVO Motorista (cobrada por hora): o aceite não espera a rota; sem ela, km 0 só se a tarifa não cobra km.
+  const itens = useItensDaTarifa(doCliente ? p : undefined)
+  const km = kmDaTabela(rota.fase === 'pronta' ? rota.rota.km : null, p, itens)
   const kmVolta = rota.fase === 'pronta' ? rota.rota.kmVolta : null
   const montado = km !== null ? entradaDaChamada(formDaTabela(p, km, kmVolta), p) : null
   // A MESMA entrada mostra o preço e vai no "Aceitar": o valor enviado é o que o motorista viu.

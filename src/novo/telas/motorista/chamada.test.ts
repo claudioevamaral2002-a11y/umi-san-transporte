@@ -77,6 +77,7 @@ const {
   entradaDaSonda,
   itensDaSonda,
   itensPadrao,
+  kmDaTabela,
   paradasAlcancadas,
   paradasDoPedido,
   paradasPendentes,
@@ -138,6 +139,24 @@ describe('itens pela tarifa (sondagem)', () => {
   it('sem a sondagem: os itens de antes, e as horas se o pedido tem', () => {
     expect(itensPadrao(motorista())).toMatchObject({ km: true, horas: true, espera: true, hospedagem: true })
     expect(itensPadrao(pedido())).toMatchObject({ horas: false })
+  })
+})
+
+describe('km da tabela sem a rota', () => {
+  const soHoras = itensDaSonda([{ codigo: 'HORAS' }])
+  it('com a rota: os km da rota', () => {
+    expect(kmDaTabela(42, motorista(), soHoras)).toBe(42)
+    expect(kmDaTabela(42, pedido(), undefined)).toBe(42)
+  })
+  it('IVO Motorista sem a rota: km 0 só quando a sondagem diz que a tarifa não cobra km', () => {
+    expect(kmDaTabela(null, motorista(), soHoras)).toBe(0)
+    expect(kmDaTabela(null, motorista(), itensDaSonda([{ codigo: 'HORAS' }, { codigo: 'KM' }]))).toBeNull()
+    // Sondagem respondendo ou falhou (itens de antes, com km): sem preço até a rota voltar.
+    expect(kmDaTabela(null, motorista(), undefined)).toBeNull()
+    expect(kmDaTabela(null, motorista(), itensPadrao(motorista()))).toBeNull()
+  })
+  it('veículo da IVO sem a rota: sem preço', () => {
+    expect(kmDaTabela(null, pedido(), soHoras)).toBeNull()
   })
 })
 

@@ -136,7 +136,7 @@ type Chamadas = Array<{ rpc: string; corpo: Record<string, unknown> }>
 
 async function abrir(
   page: Page,
-  o: { caminho: string; detalhe: { pedido: Record<string, unknown> } & Record<string, unknown>; tarifa: Tarifa; veiculos?: unknown[]; ciente?: boolean },
+  o: { caminho: string; detalhe: { pedido: Record<string, unknown> } & Record<string, unknown>; tarifa: Tarifa; veiculos?: unknown[]; ciente?: boolean; mapasFora?: boolean },
 ) {
   await page.addInitScript((ciente) => {
     if (ciente) localStorage.setItem('ivo:aviso-localizacao', '1')
@@ -155,7 +155,7 @@ async function abrir(
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/pendencias`, (route: Route) =>
     json(route, { ok: true, aguardando_orcamento: [], aguardando_aprovacao: [], proximos: [] }),
   )
-  const mapas = await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: POLYLINE })
+  const mapas = await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: POLYLINE, fora: o.mapasFora ?? false })
   await simularBlocosDoMapa(page)
   await page.goto(o.caminho)
   return { chamadas, mapas }
@@ -191,6 +191,29 @@ test.describe('IVO Motorista (veículo do cliente, cobrada por hora)', () => {
     expect(p).not.toHaveProperty('diarias')
     expect(p).not.toHaveProperty('ajuste_cent')
     expect(csp).toEqual([])
+  })
+
+  test('sem a rota: km 0 só quando a tarifa não cobra km', async ({ page }) => {
+    // Só por hora: o aceite não espera a rota (4 h × R$ 90).
+    await abrir(page, { caminho: `/chamada/${ID_PEDIDO}`, detalhe: pedidoMotorista(), tarifa: TARIFA_MOTORISTA, mapasFora: true })
+    await expect(page.getByText('Não foi possível calcular a rota agora.', { exact: false })).toBeVisible()
+    await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 360,00')
+    await expect(page.getByRole('button', { name: 'Aceitar por R$ 360' })).toBeEnabled()
+  })
+
+  test('sem a rota e a tarifa cobra km: sem preço até a rota voltar', async ({ page }) => {
+    const { chamadas } = await abrir(page, {
+      caminho: `/chamada/${ID_PEDIDO}`,
+      detalhe: pedidoMotorista(),
+      tarifa: { ...TARIFA_MOTORISTA, km_cent: 300 },
+      mapasFora: true,
+    })
+    await expect(page.getByText('Não foi possível calcular a rota agora.', { exact: false })).toBeVisible()
+    // A sondagem respondeu (com KM): nenhum preço sem os km.
+    await expect.poll(() => chamadas.filter((c) => c.rpc === 'calcular_orcamento' && (c.corpo.p as Record<string, unknown>).km === 1).length).toBeGreaterThan(0)
+    await expect(page.getByTestId('valor-tabela')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Aceitar pela tabela' })).toBeDisabled()
+    expect(chamadas.filter((c) => c.rpc === 'calcular_orcamento' && (c.corpo.p as Record<string, unknown>).km === 0)).toHaveLength(0)
   })
 
   test('calculadora: só Horas, Hospedagem, Pedágio e Outros (sem Km); a contraproposta envia as horas', async ({ page }) => {

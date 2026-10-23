@@ -178,6 +178,20 @@ export function itensPadrao(p: PedidoDaChamada): ItensDaTarifa {
 }
 
 /**
+ * Km da tabela (o "Aceitar" e o "Pela tabela"): os da rota; sem a rota, 0 só na categoria de veículo do cliente cuja
+ * tarifa, pela sondagem, não cobra km (IVO Motorista por hora). Enquanto a sondagem responde, ou se ela falhou (itens
+ * de antes, com km), `null`: sem preço até a rota voltar, em vez de um preço sem os km.
+ */
+export function kmDaTabela(
+  kmRota: number | null,
+  p: PedidoDaChamada,
+  itens: Pick<ItensDaTarifa, 'km'> | undefined,
+): number | null {
+  if (kmRota !== null) return kmRota
+  return veiculoDoCliente(p) && itens !== undefined && !itens.km ? 0 : null
+}
+
+/**
  * Formulário da calculadora: o de hoje mais as horas (em meias horas, como a espera). `null` = sem horas (pedido antigo
  * sem horas estimadas): nada vai na entrada até o motorista mexer no contador, e o total fica igual ao da tabela.
  */

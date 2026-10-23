@@ -30,6 +30,7 @@ import {
   formDaTabela,
   HORAS_MAX_MEIAS,
   HORAS_MIN_MEIAS,
+  kmDaTabela,
   paradasDoPedido,
   rotuloVeiculo,
   trechos,
@@ -85,7 +86,7 @@ function Calculadora({
   const [erro, setErro] = useState<string | null>(null)
 
   // "Pela tabela": a mesma entrada do "Aceitar" da chamada (só os km da rota), recalculada pelo banco.
-  const kmTabela = km ?? (doCliente ? 0 : null)
+  const kmTabela = kmDaTabela(km, p, itens)
   const montadoTabela = kmTabela !== null ? entradaDaChamada(formDaTabela(p, kmTabela, kmVolta), p) : null
   const tabela = usePrevia(p.id, montadoTabela?.ok ? montadoTabela.entrada : null, 0)
   // A MESMA entrada mostra o total e vai no envio (o banco recalcula pela tarifa e grava esse total).
