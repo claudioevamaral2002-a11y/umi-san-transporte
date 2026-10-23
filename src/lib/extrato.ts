@@ -14,6 +14,7 @@ export const ROTULO_TIPO: Record<TipoLancamento, string> = {
   ESTORNO: 'Estorno',
   RESERVA: 'Reserva',
   LIBERACAO_RESERVA: 'Liberação de reserva',
+  PAGAMENTO_FATURA: 'Pagamento de fatura',
 }
 
 /** Tipos que o ADM pode estornar (o banco confere de novo). */

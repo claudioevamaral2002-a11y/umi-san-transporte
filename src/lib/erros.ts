@@ -87,6 +87,17 @@ export const MENSAGENS = {
 
   // Categorias livres (fase 4.1)
   CATEGORIA_DUPLICADA: 'Já existe uma categoria ativa com este nome.',
+
+  // Faturado (NF) e excluir categoria (v2.1)
+  CATEGORIA_EM_USO: 'Esta categoria já foi usada e não pode ser excluída. Use Desativar.',
+  NAO_FATURADO: 'Esta empresa não está no Faturado (NF). Confira a forma de cobrança do contrato.',
+  QUINZENA_INVALIDA: 'Escolha uma quinzena: do dia 1 ao 15 ou do dia 16 ao último dia do mês.',
+  QUINZENA_EM_ANDAMENTO: 'Esta quinzena ainda não terminou. Gere a fatura depois do último dia dela.',
+  NADA_A_FATURAR: 'Não há nada a faturar nesta quinzena.',
+  FATURA_PAGA: 'Esta fatura já está paga e não pode mais ser alterada.',
+  FATURA_CANCELADA: 'Esta fatura foi cancelada. Atualize a página.',
+  // Conferido no aparelho antes de enviar a NF (enviarPdfNota).
+  PDF_INVALIDO: 'Envie a NF em PDF de até 5 MB.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
@@ -98,13 +109,16 @@ export function mensagemDoCodigo(codigo: string | null | undefined): string {
 
 /**
  * Mensagens de CAMPOS_INVALIDOS por campo do pedido (fase 4.1). O banco audita o campo em `detalhe.invalidos`, mas a
- * resposta ao app traz só o código: a tela confere paradas, horas e centro de custo antes de enviar e usa estas
+ * resposta ao app traz só o código: a tela confere paradas, horas, centro de custo, diárias e outros custos antes de enviar e usa estas
  * mensagens; se o banco recusar mesmo assim, `mensagemDoPedido(codigo, campos)` diz qual campo.
  */
 export const MENSAGENS_CAMPO_DO_PEDIDO = {
   paradas: 'Confira as paradas: use até 3, cada uma com 3 a 200 caracteres.',
   horas_estimadas: 'Informe as horas estimadas, de 0,5 a 24, de meia em meia hora.',
   centro_custo: 'O centro de custo pode ter até 80 caracteres.',
+  // v2.1
+  diarias_estimadas: 'Informe as diárias de 0 a 30.',
+  outros_custos: 'Os outros custos podem ter até 120 caracteres.',
 } as const satisfies Record<string, string>
 
 /** Mensagem de uma recusa de `criar_pedido`; `campos` (opcional) são os campos inválidos conhecidos pela tela. */

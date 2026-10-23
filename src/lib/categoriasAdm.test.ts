@@ -163,3 +163,19 @@ describe('categoriasAdm (fase 4.1)', () => {
     expect(rpc).toHaveBeenLastCalledWith('categorias_adm', { p_empresa: null, p_versao: null })
   })
 })
+
+describe('categoriasAdm (v2.1)', () => {
+  it('excluir chama excluir_categoria com o código', async () => {
+    rpc.mockResolvedValue({ data: { ok: false, codigo: 'CATEGORIA_EM_USO' }, error: null })
+    const r = await categoriasAdm.excluir('PASSAGEIROS')
+    expect(rpc).toHaveBeenCalledWith('excluir_categoria', { p_codigo: 'PASSAGEIROS' })
+    expect(r).toEqual({ ok: false, codigo: 'CATEGORIA_EM_USO' })
+  })
+  it('salvar não manda pode_excluir (a leitura traz, o banco recusaria)', async () => {
+    rpc.mockResolvedValue({ data: { ok: true }, error: null })
+    await categoriasAdm.salvar({ codigo: 'GUINCHO', nome: 'IVO Guincho', descricao_curta: 'x', ordem: 5, ativa: true, pode_excluir: true })
+    expect(rpc).toHaveBeenLastCalledWith('salvar_categoria', {
+      p: { codigo: 'GUINCHO', nome: 'IVO Guincho', descricao_curta: 'x', ordem: 5, ativa: true },
+    })
+  })
+})
