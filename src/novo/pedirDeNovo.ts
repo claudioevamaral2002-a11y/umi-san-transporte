@@ -2,9 +2,14 @@
 // escolha de categoria, sem data. Sem "Ida e volta" na v2.1: um pedido antigo de ida e volta abre como trecho único.
 // Vai pelo estado da navegação, só com o que o pedido já guarda (nome e place_id do Google, ou as coordenadas de um
 // ponto marcado no mapa): nenhum endereço do Google é guardado a mais.
-import { DIARIAS_MAX } from '../lib/categorias.ts'
 import type { Local } from '../lib/enderecos.ts'
 import type { DetalhePedido } from '../lib/pedidos.ts'
+
+/**
+ * Diárias ao pedir: de 0 a 30, o mesmo `DIARIAS_MAX` de `lib/categorias.ts`. Não importa de lá: categorias.ts traz o
+ * cliente do Supabase, e o teste unitário deste módulo roda no CI sem as variáveis do Supabase.
+ */
+const DIARIAS_MAX = 30
 
 /** Dá para traçar a rota: place_id do Google, ou coordenadas de um ponto marcado no mapa (mesma regra de `pontoDaRota`). */
 const temPonto = (l: Pick<Local, 'lat' | 'lng' | 'place_id'>) => !!l.place_id || (l.lat !== null && l.lng !== null)
