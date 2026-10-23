@@ -213,7 +213,9 @@ export function ConfirmarCorrida({
   }
 
   const saldoDados = saldo.dados ?? null
-  const depois = saldoDados ? saldoAposAprovacao(saldoDados, total) : null
+  // v2.1: no Faturado (NF) a corrida não depende do saldo: entra na fatura da quinzena.
+  const faturado = saldoDados?.forma_cobranca === 'FATURADO'
+  const depois = saldoDados && !faturado ? saldoAposAprovacao(saldoDados, total) : null
 
   return (
     <FolhaMapa rotulo="Confirmar a corrida">
@@ -278,6 +280,8 @@ export function ConfirmarCorrida({
           />
           {saldo.dados === undefined && !saldo.erro ? (
             <Skeleton className="h-5 w-48" />
+          ) : faturado ? (
+            <p className="ivo-legenda text-texto-suave">Será cobrada na fatura da quinzena (NF)</p>
           ) : saldoDados ? (
             <div className="space-y-1">
               <p className="ivo-legenda text-texto-suave tabular-nums">

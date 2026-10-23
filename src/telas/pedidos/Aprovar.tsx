@@ -45,7 +45,7 @@ function LinhaValor({ rotulo, children, destaque = false }: { rotulo: string; ch
   )
 }
 
-/** Saldo de agora e depois da aprovação — conta só de exibição; quem decide é o banco. */
+/** Saldo de agora e depois da aprovação — conta só de exibição; quem decide é o banco. No Faturado, só o aviso da fatura. */
 function SaldoNoRecibo({ total }: { total: number }) {
   const { dados, erro } = useConsulta('saldo-recibo', () => dinheiro.saldo(null))
   if (dados === undefined) {
@@ -53,6 +53,14 @@ function SaldoNoRecibo({ total }: { total: number }) {
       <p className="ivo-legenda text-texto-suave">Não foi possível ler o saldo agora. O servidor confere ao confirmar.</p>
     ) : (
       <Skeleton className="h-20" />
+    )
+  }
+  // v2.1: no Faturado (NF) a aprovação não depende do saldo (o banco não recusa por saldo); sem a forma, Crédito.
+  if (dados.forma_cobranca === 'FATURADO') {
+    return (
+      <section aria-label="Cobrança" className="rounded-xl bg-fundo p-3" data-testid="recibo-faturado">
+        <p className="ivo-legenda text-texto-suave">Será cobrada na fatura da quinzena (NF)</p>
+      </section>
     )
   }
   const depois = saldoAposAprovacao(dados, total)

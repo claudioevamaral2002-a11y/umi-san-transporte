@@ -125,7 +125,9 @@ export function rotuloDivergencia(tipo: string): string {
 /**
  * Sem crédito nenhum: nem disponível nem limite para ficar negativo. O banco recusa o pedido novo (SEM_CREDITO) com a
  * mesma conta; aqui é só para desabilitar o "Novo pedido" com explicação.
+ * v2.1: no Faturado (NF) o pedido não exige saldo, e nunca falta crédito (sem `forma_cobranca`, Crédito como antes).
  */
-export function semCredito(s: { disponivel_cent: number; limite_cent: number }): boolean {
+export function semCredito(s: { disponivel_cent: number; limite_cent: number; forma_cobranca?: string | null }): boolean {
+  if (s.forma_cobranca === 'FATURADO') return false
   return s.disponivel_cent + s.limite_cent <= 0
 }

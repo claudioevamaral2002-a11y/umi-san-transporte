@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../design/componentes/StatusBadge.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { pontoDaRota } from '../../../lib/enderecosRemoto.ts'
 import { pedidos, type DetalhePedido, type RespostaPedido } from '../../../lib/pedidos.ts'
+import { dinheiro } from '../../../lib/saldo.ts'
 import { useSessao } from '../../../lib/sessao.tsx'
 import { useTempoReal } from '../../../lib/tempoReal.ts'
 import { podeCriarPedido } from '../../../telas/pedidos/Pedidos.tsx'
@@ -39,11 +40,20 @@ const LinkInicio = () => (
   </Link>
 )
 
-/** Depois da confirmação (ou ao abrir uma corrida já agendada): o que foi reservado e quem vai. */
+/**
+ * Depois da confirmação (ou ao abrir uma corrida já agendada): o que foi reservado e quem vai. v2.1: no Faturado (NF),
+ * a forma de cobrança vem do saldo da empresa (só quem pede o lê; o N3 fica com o texto do Crédito) e a corrida "entra
+ * na fatura" em vez de ficar reservada no saldo.
+ */
 function CorridaConfirmada({ r, aprovacao }: { r: RespostaPedido; aprovacao: Aprovacao | null }) {
   const titulo = useRef<HTMLHeadingElement>(null)
   useEffect(() => titulo.current?.focus(), [])
   const p = r.pedido
+  const { perfil } = useSessao()
+  const leSaldo = podeCriarPedido(perfil)
+  const saldo = useConsulta(leSaldo ? 'novo-saldo-corrida' : 'novo-saldo-nada', async () => (leSaldo ? dinheiro.saldo(null) : null))
+  // `null` enquanto o saldo carrega (nada de texto que mude em seguida); sem saldo (N3 ou falha), o texto do Crédito.
+  const forma = !leSaldo || saldo.erro ? 'CREDITO' : saldo.dados === undefined ? null : (saldo.dados?.forma_cobranca ?? 'CREDITO')
   return (
     <FolhaMapa rotulo="Corrida confirmada">
       <div className="mb-3 flex items-center gap-3">
@@ -65,7 +75,7 @@ function CorridaConfirmada({ r, aprovacao }: { r: RespostaPedido; aprovacao: Apr
             </dd>
           </div>
         )}
-        {aprovacao && (
+        {aprovacao && forma === 'CREDITO' && (
           <div className="flex justify-between gap-3">
             <dt className="text-texto-suave">Reservado no saldo</dt>
             <dd className="font-semibold tabular-nums">
@@ -80,7 +90,11 @@ function CorridaConfirmada({ r, aprovacao }: { r: RespostaPedido; aprovacao: Apr
           </div>
         )}
       </dl>
-      <p className="mt-3 ivo-legenda text-texto-suave">A cobrança acontece na saída do Ivo. O valor fica reservado até lá.</p>
+      {forma === 'FATURADO' ? (
+        <p className="mt-3 ivo-legenda text-texto-suave">Entra na fatura da quinzena quando a corrida começar</p>
+      ) : forma === 'CREDITO' ? (
+        <p className="mt-3 ivo-legenda text-texto-suave">A cobrança acontece na saída do Ivo. O valor fica reservado até lá.</p>
+      ) : null}
       <div className="mt-3">
         <LinkInicio />
       </div>
