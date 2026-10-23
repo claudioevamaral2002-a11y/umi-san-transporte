@@ -1,4 +1,4 @@
-// Fase 4.1 (Tarefa 5): "Categorias e preços" do Master (mockup 5) com a tabela de cada categoria (8 campos, zerado =
+// Fase 4.1 (Tarefa 5; v2.1: abre só para ver, o lápis edita): "Categorias e preços" do Master (mockup 5) com a tabela de cada categoria (8 campos, zerado =
 // não cobra), "+ Nova categoria", "Publicar tabela" com a revisão do que muda, e o cadastro de veículo com os nomes
 // das categorias vindos do banco. Roda no projeto Playwright `novo` (dist-novo). Nada muda antes da resposta.
 import AxeBuilder from '@axe-core/playwright'
@@ -81,6 +81,8 @@ async function abrir(
 }
 
 const cartao = (page: Page, nome: string) => page.getByRole('region', { name: nome, exact: true })
+// v2.1: a página abre só para ver; o lápis abre os campos do cartão.
+const editar = (page: Page, nome: string) => page.getByRole('button', { name: `Editar ${nome}`, exact: true }).click()
 const CAMPOS = ['Taxa fixa', 'Por km', 'Por hora', 'Hora de espera', 'Por parada', 'Retorno', 'Diária de hospedagem']
 
 test('cada categoria em cartão com a tabela; Reboque só na categoria com reboque; a primeira abertura vem preenchida', async ({
@@ -91,7 +93,9 @@ test('cada categoria em cartão com a tabela; Reboque só na categoria com reboq
   await expect(page.getByRole('button', { name: '+ Nova categoria' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Publicar tabela' })).toBeVisible()
 
+  await page.getByRole('button', { name: 'Inativas (1)' }).click()
   for (const nome of ['IVO Passageiros', 'IVO Carga Leve', 'IVO Motorista', 'IVO Carga Pesada']) {
+    await editar(page, nome)
     const c = cartao(page, nome)
     for (const campo of CAMPOS) await expect(c.getByLabel(campo, { exact: true })).toBeVisible()
     await expect(c.getByText('Deixe zerado se não cobra.').first()).toBeVisible()
@@ -108,13 +112,10 @@ test('cada categoria em cartão com a tabela; Reboque só na categoria com reboq
   await expect(cartao(page, 'IVO Carga Leve').getByLabel('Reboque', { exact: true })).toHaveValue('150,00')
   await expect(cartao(page, 'IVO Motorista').getByLabel('Diária de hospedagem', { exact: true })).toHaveValue('180,00')
   await expect(page.getByText(/preenchida com os preços de hoje/).first()).toBeVisible()
-  // Veículo do cliente e inativa à vista no cartão.
+  // Veículo do cliente e inativa à vista no cartão (v2.1: sem "Com reboque").
   await expect(cartao(page, 'IVO Motorista').getByRole('list', { name: 'Marcações' })).toContainText('Veículo do cliente')
-  await expect(cartao(page, 'IVO Carga Leve').getByRole('list', { name: 'Marcações' })).toContainText('Com reboque')
-  await expect(cartao(page, 'IVO Carga Pesada').getByRole('switch', { name: 'IVO Carga Pesada ativa' })).toHaveAttribute(
-    'aria-checked',
-    'false',
-  )
+  await expect(cartao(page, 'IVO Carga Leve').getByRole('list', { name: 'Marcações' })).toHaveCount(0)
+  await expect(cartao(page, 'IVO Carga Pesada').getByRole('list', { name: 'Marcações' })).toContainText('Inativa')
 })
 
 test('"+ Nova categoria" abre um cartão em branco e salvar envia salvar_categoria sem código', async ({ page }) => {
@@ -150,11 +151,11 @@ test('"+ Nova categoria" abre um cartão em branco e salvar envia salvar_categor
   await expect(page.getByRole('form', { name: 'Nova categoria' })).toHaveCount(0)
 })
 
-test('editar nome e "ativa" chama salvar_categoria com o código', async ({ page }) => {
+test('editar o nome chama salvar_categoria com o código', async ({ page }) => {
   const chamadas = await abrir(page, ADM, '/adm/categorias')
+  await editar(page, 'IVO Carga Leve')
   const leve = cartao(page, 'IVO Carga Leve')
   await leve.getByLabel('Nome', { exact: true }).fill('IVO Carga Leve Plus')
-  await leve.getByRole('switch', { name: 'IVO Carga Leve ativa' }).click()
   await leve.getByRole('button', { name: 'Salvar categoria' }).click()
   await expect(page.getByText('IVO Carga Leve Plus salva.')).toBeVisible()
   expect(chamadas.find((c) => c.rpc === 'salvar_categoria')!.corpo).toEqual({
@@ -163,13 +164,15 @@ test('editar nome e "ativa" chama salvar_categoria com o código', async ({ page
       nome: 'IVO Carga Leve Plus',
       descricao_curta: 'descrição de IVO Carga Leve',
       ordem: 2,
-      ativa: false,
+      ativa: true,
     },
   })
 })
 
 test('"Publicar tabela": a revisão mostra o que muda e publicar_tarifas leva TODAS as ativas', async ({ page }) => {
   const chamadas = await abrir(page, ADM, '/adm/categorias')
+  await editar(page, 'IVO Passageiros')
+  await editar(page, 'IVO Motorista')
   await cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true }).fill('3,80')
   await cartao(page, 'IVO Motorista').getByLabel('Por hora', { exact: true }).fill('90,00')
   await page.getByRole('button', { name: 'Publicar tabela' }).click()
@@ -200,6 +203,7 @@ test('"Publicar tabela": a revisão mostra o que muda e publicar_tarifas leva TO
 
 test('valor ilegível fica no campo e não abre a revisão', async ({ page }) => {
   const chamadas = await abrir(page, ADM, '/adm/categorias')
+  await editar(page, 'IVO Passageiros')
   const campo = cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true })
   await campo.fill('abc')
   await page.getByRole('button', { name: 'Publicar tabela' }).click()
@@ -211,6 +215,7 @@ test('valor ilegível fica no campo e não abre a revisão', async ({ page }) =>
 
 test('cobrar por hora em Passageiros avisa (sem bloquear) que o app antigo não manda as horas', async ({ page }) => {
   const chamadas = await abrir(page, ADM, '/adm/categorias')
+  await editar(page, 'IVO Passageiros')
   await cartao(page, 'IVO Passageiros').getByLabel('Por hora', { exact: true }).fill('50,00')
   await page.getByRole('button', { name: 'Publicar tabela' }).click()
   const folha = page.getByRole('dialog', { name: /Publicar tabela/ })
@@ -225,6 +230,7 @@ test('cobrar por hora numa tabela que já cobrava por hora não avisa de novo', 
     c.codigo === 'PASSAGEIROS' ? { ...c, tarifa: { ...INI_PASSAGEIROS, hora_cent: 5000, inicial: false } } : c,
   )
   await abrir(page, ADM, '/adm/categorias', { categorias: [publicadas] })
+  await editar(page, 'IVO Passageiros')
   await cartao(page, 'IVO Passageiros').getByLabel('Por hora', { exact: true }).fill('60,00')
   await page.getByRole('button', { name: 'Publicar tabela' }).click()
   await expect(page.getByTestId('revisao-tabela')).toContainText('Por hora: R$ 50,00 → R$ 60,00')
@@ -236,6 +242,7 @@ test('primeira tabela: a taxa fixa de Passageiros conta como nova; categoria tod
     c.codigo === 'PASSAGEIROS' ? { ...c, tarifa: { ...INI_PASSAGEIROS, taxa_fixa_cent: 4000, inicial: true } } : c,
   )
   await abrir(page, ADM, '/adm/categorias', { categorias: [comTaxa] })
+  await editar(page, 'IVO Motorista')
   await cartao(page, 'IVO Motorista').getByLabel('Diária de hospedagem', { exact: true }).fill('0')
   await page.getByRole('button', { name: 'Publicar tabela' }).click()
   const revisao = page.getByTestId('revisao-tabela')

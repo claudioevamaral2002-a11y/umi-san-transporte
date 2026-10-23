@@ -1,8 +1,10 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useBlocker } from 'react-router'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { Campo, CampoSelecao } from '../../../design/componentes/Campo.tsx'
 import { Cartao } from '../../../design/componentes/Cartao.tsx'
 import { Folha } from '../../../design/componentes/Folha.tsx'
+import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Interruptor } from '../../../design/componentes/Interruptor.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
@@ -18,22 +20,14 @@ import {
   doFormulario,
   FORM_TARIFA_VAZIO,
   paraFormulario,
-  type CampoTarifa,
   type ErrosTarifa,
   type FormTarifa,
   type Tarifa,
 } from '../../../lib/tarifas.ts'
 import { deEntradaDataHora, formatarDataHora, paraEntradaDataHora } from '../../../lib/valores.ts'
+import { CartaoCategoria, temReboque, validarNomeDescricao } from './CartaoCategoria.tsx'
 
-const AJUDA_ZERADO = 'Deixe zerado se não cobra.'
 const ANO_MS = 365 * 24 * 3600_000
-
-function validarNomeDescricao(nome: string, descricao: string) {
-  return {
-    ...(nome.length < 2 || nome.length > 40 ? { nome: 'De 2 a 40 caracteres.' } : {}),
-    ...(descricao.length < 1 || descricao.length > 60 ? { descricao: 'De 1 a 60 caracteres.' } : {}),
-  }
-}
 
 function validarVigencia(valor: string): { data: Date } | { erro: string } {
   const data = deEntradaDataHora(valor)
@@ -45,9 +39,6 @@ function validarVigencia(valor: string): { data: Date } | { erro: string } {
 
 /** As três categorias de antes da 4.1 (as únicas com preço antes da primeira tabela). */
 const DE_ANTES = new Set<string>(CODIGOS)
-
-/** O campo Reboque só existe na categoria marcada com reboque (a de veículo do cliente nunca tem). */
-const temReboque = (c: CategoriaAdm) => c.reboque === 'SIM' && !c.veiculo_cliente
 
 /**
  * O que a categoria cobra hoje, para a revisão. Tabela já publicada: a dela. Primeira tabela (`inicial`): só as três
@@ -61,137 +52,6 @@ function tarifaDeAntes(c: CategoriaAdm): Tarifa | null {
   if (!DE_ANTES.has(c.codigo)) return null
   // Antes da 4.1, Passageiros e Carga Leve cobravam só o km (a taxa fixa ia 0 e o reboque não existia).
   return c.codigo === COM_TAXA ? t : { ...t, taxa_fixa_cent: 0, reboque_cent: 0 }
-}
-
-/** Nome, descrição e "ativa" de uma categoria; o código, a carga, o reboque e o veículo do cliente não mudam aqui. */
-function DadosDaCategoria({ c, aoSalvar }: { c: CategoriaAdm; aoSalvar: (texto: string) => void }) {
-  const [nome, setNome] = useState(c.nome)
-  const [descricao, setDescricao] = useState(c.descricao_curta)
-  const [ativa, setAtiva] = useState(c.ativa)
-  const [erros, setErros] = useState<{ nome?: string; descricao?: string }>({})
-  const [falha, setFalha] = useState<string | null>(null)
-  const [enviando, setEnviando] = useState(false)
-  const mudou = nome !== c.nome || descricao !== c.descricao_curta || ativa !== c.ativa
-
-  async function salvar(e: FormEvent) {
-    e.preventDefault()
-    if (enviando) return
-    const n = nome.trim()
-    const d = descricao.trim()
-    const novos = validarNomeDescricao(n, d)
-    setErros(novos)
-    if (Object.keys(novos).length > 0) return
-    setEnviando(true)
-    setFalha(null)
-    const r = await categoriasAdm.salvar({ codigo: c.codigo, nome: n, descricao_curta: d, ordem: c.ordem, ativa })
-    setEnviando(false)
-    if (r.ok) aoSalvar(`${n} salva.`)
-    else setFalha(mensagemDoCodigo(r.codigo))
-  }
-
-  return (
-    <form onSubmit={(e) => void salvar(e)} noValidate className="space-y-3" aria-label={`Dados de ${c.nome}`}>
-      <div className="flex items-center justify-end gap-1">
-        <span className="ivo-legenda font-semibold">Ativa</span>
-        <Interruptor ligado={ativa} rotulo={`${c.nome} ativa`} onAlternar={() => setAtiva((a) => !a)} />
-      </div>
-      {!ativa && <p className="ivo-legenda text-texto-suave">Inativa: some da tela do cliente e fica fora da tabela.</p>}
-      <div className="grid gap-3 md:grid-cols-2">
-        <Campo rotulo="Nome" maxLength={40} erro={erros.nome} value={nome} onChange={(e) => setNome(e.target.value)} />
-        <Campo
-          rotulo="Descrição"
-          maxLength={60}
-          erro={erros.descricao}
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-        />
-      </div>
-      <div aria-live="assertive">{falha && <Mensagem tipo="erro">{falha}</Mensagem>}</div>
-      <Botao type="submit" disabled={!mudou || enviando}>
-        {enviando ? 'Salvando…' : 'Salvar categoria'}
-      </Botao>
-    </form>
-  )
-}
-
-/** Os campos da tabela de uma categoria (reais com vírgula; retorno em %). Zerado = não cobra. */
-function CamposTarifa({
-  c,
-  form,
-  erros,
-  aoMudar,
-}: {
-  c: CategoriaAdm
-  form: FormTarifa
-  erros: ErrosTarifa
-  aoMudar: (campo: CampoTarifa, valor: string) => void
-}) {
-  return (
-    <fieldset className="space-y-2" disabled={!c.ativa}>
-      <legend className="mb-1 ivo-sobretitulo text-texto-suave">Tabela de preço</legend>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {CAMPOS_TARIFA.filter((x) => x.campo !== 'reboque' || temReboque(c)).map((x) => (
-          <Campo
-            key={x.campo}
-            rotulo={x.rotulo}
-            inputMode="decimal"
-            autoComplete="off"
-            {...(x.tipo === 'reais' ? { prefixo: 'R$', placeholder: '0,00' } : { sufixo: '%', placeholder: '0' })}
-            ajuda={AJUDA_ZERADO}
-            erro={erros[x.campo]}
-            value={form[x.campo]}
-            onChange={(e) => aoMudar(x.campo, e.target.value)}
-          />
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
-function CartaoCategoria({
-  c,
-  form,
-  erros,
-  aoMudar,
-  aoSalvar,
-}: {
-  c: CategoriaAdm
-  form: FormTarifa
-  erros: ErrosTarifa
-  aoMudar: (campo: CampoTarifa, valor: string) => void
-  aoSalvar: (texto: string) => void
-}) {
-  const id = useId()
-  const marcas = [
-    ...(c.veiculo_cliente ? ['Veículo do cliente'] : []),
-    ...(temReboque(c) ? ['Com reboque'] : []),
-    ...(c.carga ? [`Leva: ${ROTULO_CARGA[c.carga].toLowerCase()}`] : []),
-  ]
-  return (
-    <li>
-      <Cartao>
-        <section aria-labelledby={`${id}-nome`} className={`space-y-4 ${c.ativa ? '' : 'opacity-90'}`}>
-          <div className="space-y-1">
-            <h2 id={`${id}-nome`} className="ivo-h3">
-              {c.nome}
-            </h2>
-            <p className="ivo-legenda text-texto-suave">{c.descricao_curta}</p>
-            {marcas.length > 0 && (
-              <ul aria-label="Marcações" className="flex flex-wrap gap-1.5">
-                {marcas.map((m) => (
-                  <li key={m} className="rounded-full border border-marinho-2 px-2.5 py-0.5 ivo-legenda font-bold">
-                    {m}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <DadosDaCategoria key={`${c.nome}-${c.descricao_curta}-${String(c.ativa)}`} c={c} aoSalvar={aoSalvar} />
-          <CamposTarifa c={c} form={form} erros={erros} aoMudar={aoMudar} />
-        </section>
-      </Cartao>
-    </li>
-  )
 }
 
 /** "+ Nova categoria": um cartão em branco. Sem código: o banco gera do nome. */
@@ -437,32 +297,97 @@ function RevisarTabela({
   )
 }
 
+/** Tarifa comparável: sem o `inicial` da leitura e com o reboque zerado onde a categoria não tem reboque. */
+function comparavel(c: CategoriaAdm, t: Tarifa): Tarifa {
+  const saida = { ...TARIFA_ZERO }
+  for (const x of CAMPOS_TARIFA) saida[x.chave] = x.campo === 'reboque' && !temReboque(c) ? 0 : t[x.chave]
+  return saida
+}
+
+const TARIFA_ZERO: Tarifa = {
+  taxa_fixa_cent: 0,
+  km_cent: 0,
+  hora_cent: 0,
+  hora_espera_cent: 0,
+  parada_cent: 0,
+  retorno_bp: 0,
+  reboque_cent: 0,
+  hospedagem_diaria_cent: 0,
+}
+
+/**
+ * O rascunho muda de verdade a tabela lida? "3,5" no lugar de "3,50" não muda; um valor ilegível conta como mudança
+ * (o Publicar se ativa e a validação mostra o campo).
+ */
+function mudouDeVerdade(c: CategoriaAdm, form: FormTarifa): boolean {
+  const r = doFormulario(form)
+  if ('erro' in r) return true
+  const antes = comparavel(c, c.tarifa ?? TARIFA_ZERO)
+  const depois = comparavel(c, r)
+  return CAMPOS_TARIFA.some((x) => antes[x.chave] !== depois[x.chave])
+}
+
+/** Tira uma chave de um registro (o lápis fechado não deixa rascunho para trás). */
+function sem<T>(codigo: string) {
+  return (x: Record<string, T>) => Object.fromEntries(Object.entries(x).filter(([k]) => k !== codigo))
+}
+
 /** As categorias e a tabela de um contrato (a tabela modelo ou o de uma empresa). */
 function TabelaDoContrato({
   alvo,
   linha,
   aoPublicar,
+  aoRascunho,
 }: {
   alvo: { empresa: string | null; nome: string }
   linha: ContratoListado | null
   aoPublicar: (texto: string) => void
+  /** Há mudança não publicada (tabela) ou não salva (nome, descrição): sair da página pergunta. */
+  aoRascunho: (temRascunho: boolean) => void
 }) {
   const lista = useConsulta(`novo-categorias-adm-${alvo.empresa ?? 'modelo'}`, () => categoriasAdm.listar(alvo.empresa))
-  // Só o que a pessoa editou; o resto vem da tarifa lida (ou da inicial).
+  // Os cartões abertos no lápis e o que a pessoa digitou neles; o resto vem da tarifa lida (ou da inicial).
+  const [editando, setEditando] = useState<Record<string, true>>({})
   const [editados, setEditados] = useState<Record<string, FormTarifa>>({})
+  const [dadosMudados, setDadosMudados] = useState<Record<string, true>>({})
   const [erros, setErros] = useState<Record<string, ErrosTarifa>>({})
   const [nova, setNova] = useState(false)
+  const [verInativas, setVerInativas] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [revisao, setRevisao] = useState<Revisao | null>(null)
   const [abertura, setAbertura] = useState(0)
-  const listaRef = useRef<HTMLUListElement>(null)
+  const listaRef = useRef<HTMLDivElement>(null)
 
   const cats = lista.dados
   const formDe = (c: CategoriaAdm) => editados[c.codigo] ?? (c.tarifa ? paraFormulario(c.tarifa) : FORM_TARIFA_VAZIO)
   const ativas = (cats ?? []).filter((c) => c.ativa)
+  const inativas = (cats ?? []).filter((c) => !c.ativa)
   const semContrato = cats !== undefined && cats.every((c) => !c.tarifa)
   // "Ainda não publicada" só pelas três de antes: uma categoria criada depois de uma publicação também vem `inicial`.
   const primeira = ativas.some((c) => DE_ANTES.has(c.codigo) && c.tarifa?.inicial)
+  const mudadas = ativas.filter((c) => {
+    const f = editados[c.codigo]
+    return f !== undefined && mudouDeVerdade(c, f)
+  })
+  // Publicar só com diferença real: um valor mudado, ou uma categoria ativa que ainda não entrou numa tabela publicada.
+  const temDiferenca = mudadas.length > 0 || ativas.some((c) => c.tarifa?.inicial)
+  const temRascunho = mudadas.length > 0 || Object.keys(dadosMudados).length > 0
+
+  useEffect(() => {
+    aoRascunho(temRascunho)
+  }, [aoRascunho, temRascunho])
+  useEffect(() => () => aoRascunho(false), [aoRascunho])
+
+  const marcarDados = useCallback((codigo: string, mudou: boolean) => {
+    setDadosMudados((x) => (Boolean(x[codigo]) === mudou ? x : mudou ? { ...x, [codigo]: true } : sem<true>(codigo)(x)))
+  }, [])
+
+  /** Fecha o lápis do cartão e descarta o rascunho dele. */
+  function fechar(codigo: string) {
+    setEditando(sem<true>(codigo))
+    setEditados(sem<FormTarifa>(codigo))
+    setErros(sem<ErrosTarifa>(codigo))
+  }
 
   function revisar() {
     if (!cats) return
@@ -507,13 +432,43 @@ function TabelaDoContrato({
 
   const ordemNova = Math.min(99, Math.max(0, ...(cats ?? []).map((c) => c.ordem)) + 1)
 
+  const cartao = (c: CategoriaAdm) => (
+    <CartaoCategoria
+      key={c.codigo}
+      c={c}
+      editando={Boolean(editando[c.codigo])}
+      form={formDe(c)}
+      erros={erros[c.codigo] ?? {}}
+      aoEditar={() => {
+        setAviso(null)
+        setEditando((x) => ({ ...x, [c.codigo]: true }))
+      }}
+      aoCancelar={() => fechar(c.codigo)}
+      aoMudar={(campo, valor) => setEditados((x) => ({ ...x, [c.codigo]: { ...formDe(c), [campo]: valor } }))}
+      aoSalvar={(t) => {
+        setAviso(t)
+        lista.recarregar()
+      }}
+      aoMudarSituacao={(t) => {
+        fechar(c.codigo)
+        setAviso(t)
+        lista.recarregar()
+      }}
+      aoRascunho={marcarDados}
+    />
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 md:flex-row md:justify-end">
         <Botao onClick={() => setNova(true)} disabled={nova || cats === undefined}>
           + Nova categoria
         </Botao>
-        <Botao variante="principal" onClick={revisar} disabled={cats === undefined || semContrato || ativas.length === 0}>
+        <Botao
+          variante="principal"
+          onClick={revisar}
+          disabled={cats === undefined || semContrato || ativas.length === 0 || !temDiferenca}
+        >
           Publicar tabela
         </Botao>
       </div>
@@ -525,7 +480,7 @@ function TabelaDoContrato({
           <Skeleton className="h-60" />
         )
       ) : (
-        <>
+        <div ref={listaRef} className="space-y-4">
           <p className="ivo-legenda text-texto-suave">
             {semContrato
               ? `${alvo.nome} ainda não tem contrato. Publique o contrato na tela Contratos antes da tabela.`
@@ -534,9 +489,9 @@ function TabelaDoContrato({
                 : linha?.vigente
                   ? `Versão ${linha.vigente.versao}, vigente desde ${formatarDataHora(linha.vigente.vigente_desde)}.`
                   : 'Tabela publicada.'}{' '}
-            Deixe zerado o que a categoria não cobra. Ao publicar, a revisão mostra o que mudou em cada categoria.
+            Use o lápis para editar uma categoria. Ao publicar, a revisão mostra o que mudou em cada categoria.
           </p>
-          <ul ref={listaRef} aria-label="Categorias" className="space-y-3">
+          <ul aria-label="Categorias" className="space-y-3">
             {nova && (
               <NovaCategoria
                 ordem={ordemNova}
@@ -548,21 +503,30 @@ function TabelaDoContrato({
                 }}
               />
             )}
-            {cats.map((c) => (
-              <CartaoCategoria
-                key={c.codigo}
-                c={c}
-                form={formDe(c)}
-                erros={erros[c.codigo] ?? {}}
-                aoMudar={(campo, valor) => setEditados((x) => ({ ...x, [c.codigo]: { ...formDe(c), [campo]: valor } }))}
-                aoSalvar={(t) => {
-                  setAviso(t)
-                  lista.recarregar()
-                }}
-              />
-            ))}
+            {ativas.map(cartao)}
           </ul>
-        </>
+          {inativas.length > 0 && (
+            <section aria-label="Categorias inativas" className="space-y-3">
+              <button
+                type="button"
+                aria-expanded={verInativas}
+                aria-controls="categorias-inativas"
+                onClick={() => setVerInativas((v) => !v)}
+                className="-ml-2 inline-flex min-h-12 items-center gap-1.5 rounded-xl px-2 font-bold text-texto hover:bg-borda/60"
+              >
+                <Icone
+                  nome="setaBaixo"
+                  tamanho={20}
+                  className={`transition-transform motion-reduce:transition-none ${verInativas ? '' : '-rotate-90'}`}
+                />
+                Inativas ({inativas.length})
+              </button>
+              <ul id="categorias-inativas" aria-label="Inativas" hidden={!verInativas} className="space-y-3">
+                {verInativas && inativas.map(cartao)}
+              </ul>
+            </section>
+          )}
+        </div>
       )}
       <RevisarTabela
         key={abertura}
@@ -572,6 +536,7 @@ function TabelaDoContrato({
         aoPublicar={(t) => {
           setRevisao(null)
           setEditados({})
+          setEditando({})
           setErros({})
           aoPublicar(t)
           lista.recarregar()
@@ -582,10 +547,11 @@ function TabelaDoContrato({
 }
 
 /**
- * "Categorias e preços" do Master (fase 4.1, mockup 5): cada categoria em cartão com nome, descrição, ativa, as
- * marcações e a tabela de preço (8 campos; zerado = não cobra). "+ Nova categoria" cria pelo `salvar_categoria` sem
- * código; "Publicar tabela" revisa o que muda e publica a versão nova do contrato com a tabela de todas as ativas
- * (`publicar_tarifas`). Contrato vazio = tabela modelo.
+ * "Categorias e preços" do Master (fase 4.1, mockup 5; v2.1, especificação §5.1): cada categoria em cartão, aberto só
+ * para ver; o lápis edita nome, descrição e a tabela de preço (8 campos; zerado = não cobra), com Cancelar e
+ * Desativar ou Excluir. "+ Nova categoria" cria pelo `salvar_categoria` sem código; "Publicar tabela" (só com
+ * diferença real) revisa o que muda e publica a versão nova do contrato com a tabela de todas as ativas
+ * (`publicar_tarifas`). Contrato vazio = tabela modelo. Sair com rascunho pede confirmação.
  */
 export function CategoriasPrecos() {
   // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
@@ -593,8 +559,41 @@ export function CategoriasPrecos() {
   const contratos = useConsulta('novo-contratos-adm', api.contratos)
   const [alvoId, setAlvoId] = useState<string>('modelo')
   const [aviso, setAviso] = useState<string | null>(null)
+  const [rascunho, setRascunho] = useState(false)
+  // Trocar de contrato com rascunho também pergunta (a tabela do outro contrato monta do zero).
+  const [trocaPendente, setTrocaPendente] = useState<string | null>(null)
+  const bloqueio = useBlocker(
+    ({ currentLocation, nextLocation }) => rascunho && currentLocation.pathname !== nextLocation.pathname,
+  )
   const linha = contratos.dados?.find((c) => (c.empresa_id ?? 'modelo') === alvoId) ?? null
   const alvo = { empresa: alvoId === 'modelo' ? null : alvoId, nome: linha?.empresa_nome ?? 'Tabela modelo' }
+
+  // Fechar ou recarregar a aba com rascunho: o navegador pergunta.
+  useEffect(() => {
+    if (!rascunho) return
+    const avisar = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', avisar)
+    return () => window.removeEventListener('beforeunload', avisar)
+  }, [rascunho])
+
+  function trocar(id: string) {
+    setAviso(null)
+    setAlvoId(id)
+  }
+
+  function descartar() {
+    if (bloqueio.state === 'blocked') {
+      bloqueio.proceed()
+      return
+    }
+    if (trocaPendente !== null) trocar(trocaPendente)
+    setTrocaPendente(null)
+  }
+
+  function continuar() {
+    if (bloqueio.state === 'blocked') bloqueio.reset()
+    setTrocaPendente(null)
+  }
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 px-4">
@@ -609,10 +608,7 @@ export function CategoriasPrecos() {
         <CampoSelecao
           rotulo="Contrato"
           value={alvoId}
-          onChange={(e) => {
-            setAviso(null)
-            setAlvoId(e.target.value)
-          }}
+          onChange={(e) => (rascunho ? setTrocaPendente(e.target.value) : trocar(e.target.value))}
         >
           {contratos.dados.map((c) => (
             <option key={c.empresa_id ?? 'modelo'} value={c.empresa_id ?? 'modelo'}>
@@ -625,11 +621,25 @@ export function CategoriasPrecos() {
         key={alvoId}
         alvo={alvo}
         linha={linha}
+        aoRascunho={setRascunho}
         aoPublicar={(t) => {
           setAviso(t)
           contratos.recarregar()
         }}
       />
+      <Folha
+        aberta={bloqueio.state === 'blocked' || trocaPendente !== null}
+        titulo="Sair sem publicar?"
+        onFechar={continuar}
+      >
+        <p className="ivo-corpo text-texto-suave">As mudanças que você não publicou nem salvou serão perdidas.</p>
+        <div className="flex flex-col gap-3">
+          <Botao variante="perigo" onClick={descartar}>
+            Descartar e sair
+          </Botao>
+          <Botao onClick={continuar}>Continuar editando</Botao>
+        </div>
+      </Folha>
     </main>
   )
 }
