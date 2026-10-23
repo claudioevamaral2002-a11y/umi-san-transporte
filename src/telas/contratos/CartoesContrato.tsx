@@ -6,6 +6,7 @@ import {
   descreverFaixas,
   formatarValor,
   GRUPOS,
+  ROTULO_FORMA_COBRANCA,
   type DefinicaoCampo,
   type Faixa,
   type ValoresContrato,
@@ -58,14 +59,20 @@ export function FaixasCancelamento({ faixas }: { faixas: Faixa[] }) {
   )
 }
 
-/** Os quatro cartões de um contrato (ADM): modalidades, regras e crédito da empresa. */
+/**
+ * Os quatro cartões de um contrato (ADM): modalidades, regras e crédito da empresa. v2.1: o último mostra a forma de
+ * cobrança (quando o banco a devolve); no Faturado, sem o limite e o alerta de saldo, que não se aplicam.
+ */
 export function CartoesContrato({ versao }: { versao: ValoresContrato }) {
+  const faturado = versao.forma_cobranca === 'FATURADO'
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {GRUPOS.map((g) => (
         <Cartao key={g.id} className="space-y-1" data-testid={`cartao-${g.id}`}>
-          <h2 className="ivo-h3">{g.titulo}</h2>
-          <p className="ivo-legenda text-texto-suave">{g.descricao}</p>
+          <h2 className="ivo-h3">{g.id === 'credito' && faturado ? 'Cobrança da empresa' : g.titulo}</h2>
+          <p className="ivo-legenda text-texto-suave">
+            {g.id === 'credito' && faturado ? 'Fatura quinzenal com NF; o limite e o alerta de saldo não se aplicam.' : g.descricao}
+          </p>
           {g.id === 'regras' && (
             <section aria-label="Cancelamento" className="pt-2">
               <h3 className="font-bold">Cancelamento</h3>
@@ -74,7 +81,12 @@ export function CartoesContrato({ versao }: { versao: ValoresContrato }) {
             </section>
           )}
           <div className="pt-1">
-            <ListaValores campos={g.campos} valores={versao} />
+            {g.id === 'credito' && versao.forma_cobranca && (
+              <dl>
+                <Linha rotulo="Forma de cobrança">{ROTULO_FORMA_COBRANCA[versao.forma_cobranca]}</Linha>
+              </dl>
+            )}
+            {!(g.id === 'credito' && faturado) && <ListaValores campos={g.campos} valores={versao} />}
           </div>
         </Cartao>
       ))}

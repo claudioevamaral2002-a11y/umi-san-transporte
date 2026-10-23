@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 import { FolhaMapa } from '../componentes/FolhaMapa.tsx'
 import { useTituloNaTela } from '../../design/componentes/Tela.tsx'
+
+/** v2.1: as pendências das faturas só carregam para o Master, fora do pacote inicial do app. */
+const PendenciasFaturas = lazy(() => import('./adm/PendenciasFaturas.tsx'))
 
 function saudacao(agora: Date): string {
   const h = agora.getHours()
@@ -18,6 +21,14 @@ export function InicioProvisorio() {
     <FolhaMapa>
       <h1 className="ivo-h2">{primeiroNome ? `${ola}, ${primeiroNome}` : ola}</h1>
       <p className="mt-1 ivo-corpo text-texto-suave">As telas novas chegam em breve. O menu ☰ leva às de hoje.</p>
+      {/* v2.1: pendências das faturas do Master ("Quinzena fechada: … pronta para faturar", "Faturas vencidas"). */}
+      {perfil?.papel === 'ADM' && (
+        <div className="mt-4">
+          <Suspense fallback={null}>
+            <PendenciasFaturas />
+          </Suspense>
+        </div>
+      )}
     </FolhaMapa>
   )
 }

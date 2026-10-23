@@ -269,8 +269,9 @@ export function validarFormulario(
   const faturado = f.forma_cobranca === 'FATURADO'
   for (const c of CAMPOS) {
     const texto = f.campos[c.campo] ?? ''
-    // No Faturado, o limite e o alerta ficam escondidos: em branco valem 0 (o banco os ignora).
-    if (faturado && CAMPOS_SO_DO_CREDITO.includes(c.campo) && texto.trim() === '') {
+    // No Faturado, o limite e o alerta ficam escondidos e não se aplicam: valem 0, seja qual for o texto (o banco os
+    // ignora), para um valor esquecido no campo escondido nunca barrar a publicação nem ir para a versão.
+    if (faturado && CAMPOS_SO_DO_CREDITO.includes(c.campo)) {
       valores[c.campo] = 0
       continue
     }

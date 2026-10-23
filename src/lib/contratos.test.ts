@@ -172,7 +172,10 @@ describe('forma de cobrança (v2.1)', () => {
   it('vai e volta pelo formulário; sem a forma na versão, a chave não vai (o banco herda a vigente)', () => {
     const f = formularioDe({ ...BASE, forma_cobranca: 'FATURADO' })
     expect(f.forma_cobranca).toBe('FATURADO')
-    expect(validarFormulario(f)).toEqual({ ok: true, valores: { ...BASE, forma_cobranca: 'FATURADO' } })
+    expect(validarFormulario(f)).toEqual({
+      ok: true,
+      valores: { ...BASE, forma_cobranca: 'FATURADO', limite_saldo_negativo_cent: 0, alerta_saldo_baixo_cent: 0 },
+    })
     const r = validarFormulario(formularioDe(BASE))
     expect(r.ok && 'forma_cobranca' in r.valores).toBe(false)
   })
@@ -183,6 +186,12 @@ describe('forma de cobrança (v2.1)', () => {
     expect(validarFormulario(f)).toMatchObject({ ok: true, valores: { limite_saldo_negativo_cent: 0, alerta_saldo_baixo_cent: 0 } })
     f.forma_cobranca = 'CREDITO'
     expect(validarFormulario(f).ok).toBe(false)
+  })
+  it('no Faturado, limite e alerta valem 0 seja qual for o texto (inclusive inválido)', () => {
+    const f = formularioDe({ ...BASE, forma_cobranca: 'FATURADO' })
+    f.campos.limite_saldo_negativo_cent = 'abc'
+    f.campos.alerta_saldo_baixo_cent = '999,99'
+    expect(validarFormulario(f)).toMatchObject({ ok: true, valores: { limite_saldo_negativo_cent: 0, alerta_saldo_baixo_cent: 0 } })
   })
   it('a diferença mostra a forma quando ela vai na versão nova', () => {
     const d = diferencas({ ...BASE, forma_cobranca: 'CREDITO' }, { ...BASE, forma_cobranca: 'FATURADO' })
