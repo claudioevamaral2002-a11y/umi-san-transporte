@@ -307,7 +307,8 @@ test.describe('fim', () => {
     await expect(page.getByRole('button', { name: /^Agendar · escolha/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /^Pedir IVO/ })).toHaveCount(0)
     await page.getByRole('radio', { name: '08:30' }).click()
-    await expect(page.getByRole('button', { name: /^Pedir IVO Carga Leve · \w{3} 08:30$/ })).toBeVisible()
+    // \S, não \w: "sáb" tem acento (o teste falhava quando amanhã era sábado).
+    await expect(page.getByRole('button', { name: /^Pedir IVO Carga Leve · \S{3} 08:30$/ })).toBeVisible()
   })
 })
 
