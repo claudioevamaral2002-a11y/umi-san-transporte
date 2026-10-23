@@ -356,7 +356,11 @@ function TabelaDoContrato({
   const [aviso, setAviso] = useState<string | null>(null)
   const [revisao, setRevisao] = useState<Revisao | null>(null)
   const [abertura, setAbertura] = useState(0)
+  // Depois de excluir, desativar ou reativar, o cartão que tinha o foco some: o foco vai ao cartão seguinte da mesma
+  // lista (ou à lista), quando a lista relida chega.
+  const focoApos = useRef<{ codigo: string | null; lista: CategoriaAdm[] | undefined } | null>(null)
   const listaRef = useRef<HTMLDivElement>(null)
+  const categoriasRef = useRef<HTMLUListElement>(null)
 
   const cats = lista.dados
   const formDe = (c: CategoriaAdm) => editados[c.codigo] ?? (c.tarifa ? paraFormulario(c.tarifa) : FORM_TARIFA_VAZIO)
@@ -377,6 +381,16 @@ function TabelaDoContrato({
     aoRascunho(temRascunho)
   }, [aoRascunho, temRascunho])
   useEffect(() => () => aoRascunho(false), [aoRascunho])
+
+  useEffect(() => {
+    const pedido = focoApos.current
+    if (!pedido || cats === pedido.lista) return
+    focoApos.current = null
+    const li = pedido.codigo ? listaRef.current?.querySelector(`li[data-codigo="${pedido.codigo}"]`) : null
+    const alvo =
+      li?.querySelector<HTMLElement>('button[aria-label^="Editar "]') ?? li?.querySelector<HTMLElement>('input')
+    ;(alvo ?? categoriasRef.current)?.focus()
+  }, [cats])
 
   const marcarDados = useCallback((codigo: string, mudou: boolean) => {
     setDadosMudados((x) => (Boolean(x[codigo]) === mudou ? x : mudou ? { ...x, [codigo]: true } : sem<true>(codigo)(x)))
@@ -444,16 +458,25 @@ function TabelaDoContrato({
         setEditando((x) => ({ ...x, [c.codigo]: true }))
       }}
       aoCancelar={() => fechar(c.codigo)}
-      aoMudar={(campo, valor) => setEditados((x) => ({ ...x, [c.codigo]: { ...formDe(c), [campo]: valor } }))}
+      aoMudar={(campo, valor) =>
+        setEditados((x) => ({
+          ...x,
+          [c.codigo]: { ...(x[c.codigo] ?? (c.tarifa ? paraFormulario(c.tarifa) : FORM_TARIFA_VAZIO)), [campo]: valor },
+        }))
+      }
       aoSalvar={(t) => {
         setAviso(t)
         lista.recarregar()
       }}
       aoMudarSituacao={(t) => {
+        const irma = c.ativa ? ativas : inativas
+        const i = irma.findIndex((x) => x.codigo === c.codigo)
+        focoApos.current = { codigo: (irma[i + 1] ?? irma[i - 1])?.codigo ?? null, lista: cats }
         fechar(c.codigo)
         setAviso(t)
         lista.recarregar()
       }}
+      aoRecarregar={lista.recarregar}
       aoRascunho={marcarDados}
     />
   )
@@ -491,7 +514,7 @@ function TabelaDoContrato({
                   : 'Tabela publicada.'}{' '}
             Use o lápis para editar uma categoria. Ao publicar, a revisão mostra o que mudou em cada categoria.
           </p>
-          <ul aria-label="Categorias" className="space-y-3">
+          <ul ref={categoriasRef} tabIndex={-1} aria-label="Categorias" className="space-y-3 outline-none">
             {nova && (
               <NovaCategoria
                 ordem={ordemNova}
@@ -536,7 +559,8 @@ function TabelaDoContrato({
         aoPublicar={(t) => {
           setRevisao(null)
           setEditados({})
-          setEditando({})
+          // Quem tem nome ou descrição ainda não salvos continua aberto (o rascunho deles não foi publicado).
+          setEditando(Object.fromEntries(Object.keys(dadosMudados).map((k) => [k, true as const])))
           setErros({})
           aoPublicar(t)
           lista.recarregar()
@@ -571,7 +595,11 @@ export function CategoriasPrecos() {
   // Fechar ou recarregar a aba com rascunho: o navegador pergunta.
   useEffect(() => {
     if (!rascunho) return
-    const avisar = (e: BeforeUnloadEvent) => e.preventDefault()
+    const avisar = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Navegadores mais antigos só perguntam com o returnValue preenchido.
+      e.returnValue = ''
+    }
     window.addEventListener('beforeunload', avisar)
     return () => window.removeEventListener('beforeunload', avisar)
   }, [rascunho])
@@ -629,7 +657,7 @@ export function CategoriasPrecos() {
       />
       <Folha
         aberta={bloqueio.state === 'blocked' || trocaPendente !== null}
-        titulo="Sair sem publicar?"
+        titulo={trocaPendente !== null ? 'Trocar de contrato sem publicar?' : 'Sair sem publicar?'}
         onFechar={continuar}
       >
         <p className="ivo-corpo text-texto-suave">As mudanças que você não publicou nem salvou serão perdidas.</p>

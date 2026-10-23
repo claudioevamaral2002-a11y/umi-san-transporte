@@ -4,7 +4,7 @@
 // confirmação. Roda no projeto Playwright `novo` (dist-novo), com o banco simulado.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { simularApi, versaoFalsa } from './apoio/apiFalsa.ts'
+import { EMPRESA_UMI, linhaContrato, simularApi, versaoFalsa } from './apoio/apiFalsa.ts'
 import { simularMapas } from './apoio/mapasFalsos.ts'
 import { simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa, json, URL_SUPABASE, type PerfilFalso } from './apoio/sessaoFalsa.ts'
@@ -56,10 +56,10 @@ interface Chamada {
 const cartao = (page: Page, nome: string) => page.getByRole('region', { name: nome, exact: true })
 const editar = (page: Page, nome: string) => page.getByRole('button', { name: `Editar ${nome}`, exact: true }).click()
 
-async function abrir(page: Page, opcoes: { categorias?: unknown[][]; excluir?: unknown } = {}) {
+async function abrir(page: Page, opcoes: { categorias?: unknown[][]; excluir?: unknown; contratos?: unknown[] } = {}) {
   await comSessaoFalsa(page, ADM, AAL2)
   await simularMapas(page)
-  await simularApi(page, { vigente: [versaoFalsa(3)] })
+  await simularApi(page, { vigente: [versaoFalsa(3)], ...(opcoes.contratos ? { contratos: opcoes.contratos } : {}) })
   await simularPedidos(page)
   const chamadas: Chamada[] = []
   const listas = [...(opcoes.categorias ?? [CATEGORIAS])]
@@ -102,6 +102,9 @@ test('o lápis abre os campos daquele cartão; Cancelar volta aos valores public
   await abrir(page)
   await editar(page, 'IVO Carga Leve')
   const leve = cartao(page, 'IVO Carga Leve')
+  // O foco vai ao primeiro campo do cartão aberto.
+  await expect(leve.getByLabel('Nome', { exact: true })).toBeFocused()
+  await expect(leve.getByRole('group', { name: 'Tabela de preço de IVO Carga Leve' })).toBeVisible()
   const km = leve.getByLabel('Por km', { exact: true })
   await expect(km).toHaveValue('4,80')
   await expect(leve.getByLabel('Reboque', { exact: true })).toHaveValue('100,00')
@@ -112,6 +115,8 @@ test('o lápis abre os campos daquele cartão; Cancelar volta aos valores public
   await km.fill('5,20')
   await leve.getByRole('button', { name: 'Cancelar', exact: true }).click()
   await expect(leve.locator('input')).toHaveCount(0)
+  // Cancelar devolve o foco ao lápis.
+  await expect(page.getByRole('button', { name: 'Editar IVO Carga Leve', exact: true })).toBeFocused()
   await expect(leve.getByTestId('valores')).toContainText('Km R$ 4,80')
   await editar(page, 'IVO Carga Leve')
   await expect(leve.getByLabel('Por km', { exact: true })).toHaveValue('4,80')
@@ -178,15 +183,25 @@ test('"Excluir" só na categoria que pode ser excluída, com confirmação, cham
   await expect(page.getByText('IVO Van excluída.')).toBeVisible()
   expect(chamadas.find((c) => c.rpc === 'excluir_categoria')!.corpo).toEqual({ p_codigo: 'VAN' })
   await expect(cartao(page, 'IVO Van')).toHaveCount(0)
+  // O cartão que tinha o foco sumiu: o foco vai ao vizinho da lista.
+  await expect(page.getByRole('button', { name: 'Editar IVO Motorista', exact: true })).toBeFocused()
 })
 
-test('excluir uma categoria já usada mostra CATEGORIA_EM_USO na confirmação', async ({ page }) => {
-  await abrir(page, { excluir: { ok: false, codigo: 'CATEGORIA_EM_USO' } })
+test('excluir uma categoria já usada mostra CATEGORIA_EM_USO, relê a lista e passa a oferecer Desativar', async ({
+  page,
+}) => {
+  const usada = CATEGORIAS.map((c) => (c.codigo === 'VAN' ? { ...c, pode_excluir: false } : c))
+  const chamadas = await abrir(page, { excluir: { ok: false, codigo: 'CATEGORIA_EM_USO' }, categorias: [CATEGORIAS, usada] })
   await editar(page, 'IVO Van')
   await cartao(page, 'IVO Van').getByRole('button', { name: 'Excluir', exact: true }).click()
   const folha = page.getByRole('dialog', { name: 'Excluir IVO Van?' })
   await folha.getByRole('button', { name: 'Excluir', exact: true }).click()
   await expect(folha.getByText('Esta categoria já foi usada e não pode ser excluída. Use Desativar.')).toBeVisible()
+  await expect.poll(() => chamadas.filter((c) => c.rpc === 'categorias_adm').length).toBe(2)
+  await folha.getByRole('button', { name: 'Voltar' }).click()
+  const van = cartao(page, 'IVO Van')
+  await expect(van.getByRole('button', { name: 'Desativar', exact: true })).toBeVisible()
+  await expect(van.getByRole('button', { name: 'Excluir', exact: true })).toHaveCount(0)
 })
 
 test('"Desativar" pede confirmação e salva a categoria inativa', async ({ page }) => {
@@ -247,6 +262,39 @@ test('o nome mudado e não salvo também conta como rascunho', async ({ page }) 
   await cartao(page, 'IVO Passageiros').getByLabel('Nome', { exact: true }).fill('IVO Passageiros VIP')
   await page.getByRole('link', { name: 'Início' }).click()
   await expect(page.getByRole('dialog', { name: 'Sair sem publicar?' })).toBeVisible()
+})
+
+test('trocar de contrato com rascunho pergunta', async ({ page }) => {
+  await abrir(page, { contratos: [linhaContrato(EMPRESA_UMI, versaoFalsa(2))] })
+  await editar(page, 'IVO Passageiros')
+  await cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true }).fill('3,80')
+  await page.getByLabel('Contrato').selectOption({ label: 'Umi San' })
+  const folha = page.getByRole('dialog', { name: 'Trocar de contrato sem publicar?' })
+  await folha.getByRole('button', { name: 'Continuar editando' }).click()
+  await expect(cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true })).toHaveValue('3,80')
+})
+
+test('publicar mantém aberto o cartão com nome ainda não salvo', async ({ page }) => {
+  await abrir(page)
+  await editar(page, 'IVO Passageiros')
+  await editar(page, 'IVO Motorista')
+  await cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true }).fill('3,80')
+  await cartao(page, 'IVO Motorista').getByLabel('Nome', { exact: true }).fill('IVO Motorista Plus')
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  await page.getByRole('dialog', { name: /Publicar tabela/ }).getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(page.getByText(/Tabela publicada: versão 4/)).toBeVisible()
+  await expect(cartao(page, 'IVO Passageiros').locator('input')).toHaveCount(0)
+  await expect(cartao(page, 'IVO Motorista').getByLabel('Nome', { exact: true })).toHaveValue('IVO Motorista Plus')
+})
+
+test('nome inválido leva o foco ao campo', async ({ page }) => {
+  await abrir(page)
+  await editar(page, 'IVO Passageiros')
+  const nome = cartao(page, 'IVO Passageiros').getByLabel('Nome', { exact: true })
+  await nome.fill('X')
+  await cartao(page, 'IVO Passageiros').getByLabel('Descrição', { exact: true }).focus()
+  await cartao(page, 'IVO Passageiros').getByRole('button', { name: 'Salvar categoria' }).click()
+  await expect(nome).toBeFocused()
 })
 
 test('sem rascunho, sai sem perguntar', async ({ page }) => {

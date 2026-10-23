@@ -1,7 +1,7 @@
 // v2.1 (especificação §5.1): o cartão de uma categoria em "Categorias e preços". Abre só para ver (nome, descrição,
 // as marcações que mudam o comportamento e os valores maiores que zero); o lápis ("Editar <nome>") mostra os campos,
 // com Cancelar (descarta o rascunho) e Desativar ou Excluir, com confirmação. Nas inativas, Reativar.
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { Campo } from '../../../design/componentes/Campo.tsx'
 import { Cartao } from '../../../design/componentes/Cartao.tsx'
@@ -69,7 +69,9 @@ function DadosDaCategoria({
   const [erros, setErros] = useState<{ nome?: string; descricao?: string }>({})
   const [falha, setFalha] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
-  const mudou = nome !== c.nome || descricao !== c.descricao_curta
+  const caixa = useRef<HTMLFormElement>(null)
+  // Só espaço a mais nas pontas não é mudança (o salvar apara).
+  const mudou = nome.trim() !== c.nome || descricao.trim() !== c.descricao_curta
 
   // O nome ou a descrição não salvos também contam como rascunho (sair da página pergunta).
   useEffect(() => {
@@ -84,7 +86,10 @@ function DadosDaCategoria({
     const d = descricao.trim()
     const novos = validarNomeDescricao(n, d)
     setErros(novos)
-    if (Object.keys(novos).length > 0) return
+    if (Object.keys(novos).length > 0) {
+      requestAnimationFrame(() => caixa.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
+      return
+    }
     setEnviando(true)
     setFalha(null)
     const r = await categoriasAdm.salvar({ codigo: c.codigo, nome: n, descricao_curta: d, ordem: c.ordem, ativa: c.ativa })
@@ -94,7 +99,7 @@ function DadosDaCategoria({
   }
 
   return (
-    <form onSubmit={(e) => void salvar(e)} noValidate className="space-y-3" aria-label={`Dados de ${c.nome}`}>
+    <form ref={caixa} onSubmit={(e) => void salvar(e)} noValidate className="space-y-3" aria-label={`Dados de ${c.nome}`}>
       <div className="grid gap-3 md:grid-cols-2">
         <Campo rotulo="Nome" maxLength={40} erro={erros.nome} value={nome} onChange={(e) => setNome(e.target.value)} />
         <Campo
@@ -127,7 +132,9 @@ function CamposTarifa({
 }) {
   return (
     <fieldset className="space-y-2" disabled={!c.ativa}>
-      <legend className="mb-1 ivo-sobretitulo text-texto-suave">Tabela de preço</legend>
+      <legend className="mb-1 ivo-sobretitulo text-texto-suave">
+        Tabela de preço<span className="sr-only"> de {c.nome}</span>
+      </legend>
       {!c.ativa && <p className="ivo-legenda text-texto-suave">Inativa: fica fora da tabela até ser reativada.</p>}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {CAMPOS_TARIFA.filter((x) => x.campo !== 'reboque' || temReboque(c)).map((x) => (
@@ -174,6 +181,7 @@ export function CartaoCategoria({
   aoMudar,
   aoSalvar,
   aoMudarSituacao,
+  aoRecarregar,
   aoRascunho,
 }: {
   c: CategoriaAdm
@@ -187,6 +195,8 @@ export function CartaoCategoria({
   aoSalvar: (texto: string) => void
   /** Excluída, desativada ou reativada: relê a lista e sai do modo de editar. */
   aoMudarSituacao: (texto: string) => void
+  /** Relê a lista (CATEGORIA_EM_USO: o `pode_excluir` mudou desde a leitura e o Desativar aparece). */
+  aoRecarregar: () => void
   aoRascunho: (codigo: string, mudou: boolean) => void
 }) {
   const id = useId()
@@ -196,6 +206,22 @@ export function CartaoCategoria({
   // Saem "Com reboque" e "Leva: …" (§2): ficam só as marcações que mudam o comportamento.
   const marcas = [...(c.veiculo_cliente ? ['Veículo do cliente'] : []), ...(c.ativa ? [] : ['Inativa'])]
   const resumo = c.tarifa ? resumoTarifa(c, c.tarifa) : ''
+  const secao = useRef<HTMLElement>(null)
+  const lapis = useRef<HTMLButtonElement>(null)
+  const editandoAntes = useRef(editando)
+
+  // Entrar no lápis leva o foco ao primeiro campo; sair (Cancelar, publicar) devolve ao lápis, mas só se o foco estava
+  // neste cartão ou se perdeu (o botão que o tinha sumiu): não rouba o foco de outro lugar.
+  useEffect(() => {
+    if (editandoAntes.current === editando) return
+    editandoAntes.current = editando
+    if (editando) {
+      secao.current?.querySelector<HTMLElement>('input')?.focus()
+      return
+    }
+    const ativo = document.activeElement
+    if (!ativo || ativo === document.body || secao.current?.contains(ativo)) lapis.current?.focus()
+  }, [editando])
 
   /** Desativar e Reativar salvam só o "ativa", com o nome e a descrição publicados. */
   async function mudarAtiva(ativa: boolean) {
@@ -217,6 +243,8 @@ export function CartaoCategoria({
     setEnviando(false)
     if (!r.ok) {
       setFalha(mensagemDoCodigo(r.codigo))
+      // Alguém usou a categoria depois da leitura: relê, e o cartão passa a oferecer Desativar.
+      if (r.codigo === 'CATEGORIA_EM_USO') aoRecarregar()
       return
     }
     const feito = CONFIRMAR[confirmar].feito
@@ -235,9 +263,9 @@ export function CartaoCategoria({
   }
 
   return (
-    <li>
+    <li data-codigo={c.codigo}>
       <Cartao>
-        <section aria-labelledby={`${id}-nome`} className="space-y-4">
+        <section ref={secao} aria-labelledby={`${id}-nome`} className="space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <h2 id={`${id}-nome`} className="ivo-h3 break-words">
@@ -256,6 +284,7 @@ export function CartaoCategoria({
             </div>
             {!editando && (
               <button
+                ref={lapis}
                 type="button"
                 onClick={aoEditar}
                 aria-label={`Editar ${c.nome}`}
