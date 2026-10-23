@@ -38,6 +38,8 @@ export const MENSAGENS = {
   CHAVE_INVALIDA: 'Permissão desconhecida. Atualize a página e tente de novo.',
   CAMINHO_INVALIDO: 'Arquivo de logo inválido. Envie um PNG ou WebP.',
   VIGENCIA_NO_PASSADO: 'A vigência precisa começar agora ou no futuro.',
+  // publicar_tarifas com uma versão do contrato já agendada para o futuro (fase 4.1).
+  VERSAO_FUTURA_PENDENTE: 'Já existe uma versão agendada para o futuro. Espere ela começar a valer ou fale com o suporte.',
 
   // Pedidos, agenda e orçamento (fase 2A)
   SEM_CONTRATO: 'Sua empresa ainda não tem contrato vigente. Fale com a IVO Transportes.',

@@ -280,6 +280,17 @@ test('publicar para uma empresa manda p_empresa e lê as categorias dela', async
   expect(chamadas.find((c) => c.rpc === 'publicar_tarifas')!.corpo.p_empresa).toBe(EMPRESA_UMI.id)
 })
 
+test('versão futura pendente: VERSAO_FUTURA_PENDENTE mostra a mensagem e a folha fica aberta', async ({ page }) => {
+  const chamadas = await abrir(page, ADM, '/adm/categorias', { publicar: { ok: false, codigo: 'VERSAO_FUTURA_PENDENTE' } })
+  await page.getByRole('button', { name: 'Publicar tabela' }).click()
+  const folha = page.getByRole('dialog', { name: /Publicar tabela/ })
+  await folha.getByRole('button', { name: 'Publicar tabela' }).click()
+  await expect(
+    folha.getByText('Já existe uma versão agendada para o futuro. Espere ela começar a valer ou fale com o suporte.'),
+  ).toBeVisible()
+  expect(chamadas.filter((c) => c.rpc === 'publicar_tarifas')).toHaveLength(1)
+})
+
 test('as categorias mudaram desde a leitura: CAMPOS_INVALIDOS pede para atualizar a página', async ({ page }) => {
   const nova = cat('VAN_EXECUTIVA', 'IVO Van Executiva', 5, { tarifa: { ...ZERO, inicial: true } })
   await abrir(page, ADM, '/adm/categorias', {
