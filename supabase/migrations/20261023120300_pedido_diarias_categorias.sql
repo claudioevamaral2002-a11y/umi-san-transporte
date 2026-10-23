@@ -11,7 +11,8 @@
 --   * interno.linhas_do_pedido (calcular_orcamento e enviar_orcamento): sem `hospedagem_diarias` na entrada, valem as
 --     diárias do pedido; a volta à origem é SEMPRE a do pedido (a entrada não a traz). `diarias` da entrada antiga
 --     continua aceito e descartado (com categoria). Invariante: prévia do cliente = orçamento do motorista;
---   * api.pedido devolve diarias_estimadas, outros_custos, volta_a_origem e a forma_cobranca da empresa;
+--   * api.pedido devolve diarias_estimadas, outros_custos, volta_a_origem e a forma_cobranca da empresa (esta, nula para
+--     o motorista);
 --   * api.excluir_categoria(p_codigo): só GERIR_CONTRATOS; apaga a categoria que nenhum pedido, nenhum preço de contrato
 --     (contratos_categorias), nenhuma tarifa publicada e nenhum veículo usam; senão CATEGORIA_EM_USO.
 --     api.categorias_adm traz `pode_excluir` em cada categoria;
@@ -816,7 +817,8 @@ begin
     'horas_estimadas', a.horas_estimadas) || jsonb_build_object(
     -- v2.1
     'diarias_estimadas', a.diarias_estimadas, 'outros_custos', a.outros_custos, 'volta_a_origem', a.volta_a_origem,
-    'forma_cobranca', interno.forma_cobranca(a.empresa_id));
+    -- a forma de cobrança é da empresa: o motorista não a recebe
+    'forma_cobranca', case when v.papel <> 'MOTORISTA' then interno.forma_cobranca(a.empresa_id) end);
 
   select coalesce(jsonb_agg(jsonb_build_object('de', h.de, 'para', h.para, 'em', h.em, 'observacao', h.observacao,
                                                'por_nome', pf.nome) order by h.id), '[]')

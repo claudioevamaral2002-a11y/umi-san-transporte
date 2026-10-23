@@ -5,6 +5,7 @@ import { ler } from './pedidos.ts'
 import { type FormPedido, montarPedido } from './novoPedido.ts'
 import { MAX_PARADAS, type Parada, paraPedido } from './paradas.ts'
 import type { Carga, Reboque } from './situacao.ts'
+import { DIARIAS_MAX } from './limitesPedido.ts'
 
 /** As três categorias de antes da 4.1 (preços e telas antigos). Categorias novas usam `string`: ver `CategoriaComPreco`. */
 export type CodigoCategoria = 'PASSAGEIROS' | 'CARGA_LEVE' | 'CARGA_PESADA'
@@ -61,10 +62,8 @@ export const PASSO_HORAS = 0.5
 /** Centro de custo: texto livre, opcional, até 80 caracteres. */
 export const MAX_CENTRO_CUSTO = 80
 
-/** Diárias (hospedagem) ao pedir: de 0 a 30 (v2.1; o Ivo vai até 60 na calculadora). */
-export const DIARIAS_MAX = 30
-/** "Outros custos (opcional)": texto livre, sem valor, até 120 caracteres (o valor vem no orçamento). */
-export const MAX_OUTROS_CUSTOS = 120
+// Diárias ao pedir (0 a 30) e "Outros custos" (até 120): num módulo sem importações, que `novo/pedirDeNovo.ts` também usa.
+export { DIARIAS_MAX, MAX_OUTROS_CUSTOS } from './limitesPedido.ts'
 
 /** Diárias que vão ao banco: inteiro de 1 a 30 (0 = sem diárias, a chave não vai). */
 function diariasParaEnviar(d: number | null | undefined): number | null {

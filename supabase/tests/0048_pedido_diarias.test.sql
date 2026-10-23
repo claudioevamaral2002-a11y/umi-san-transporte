@@ -7,11 +7,12 @@
 --   * PARIDADE: pedido com 2 diárias e volta à origem → prévia = calcular_orcamento {km, hospedagem_diarias: 2}; sem
 --     hospedagem_diarias na entrada valem as diárias do pedido; o `diarias` antigo continua ignorado;
 --   * pedido antigo de ida e volta e pedido da v1 (sem categoria, sem as chaves) com o preço de antes;
---   * api.pedido (cliente e motorista) traz as três e a forma de cobrança;
+--   * api.pedido (cliente e motorista) traz as três; a forma de cobrança só o cliente (o motorista não a recebe);
+--   * categoria sem tarifa (preço de hoje, pelo contrato) com volta à origem: sem RETORNO na prévia e no orçamento;
 --   * excluir_categoria / pode_excluir; extrato com 9 tipos.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(35);
+select plan(38);
 
 insert into app.empresas (id, nome) values ('00000000-0000-0000-0000-0000000000e1', 'Empresa A');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
@@ -220,6 +221,8 @@ select is((current_setting('t.dm')::jsonb -> 'pedido') - array(select k from jso
                                                                  where k not in ('diarias_estimadas', 'outros_custos', 'volta_a_origem')),
   '{"diarias_estimadas": 2, "outros_custos": "pedágio da BR-101, balsa", "volta_a_origem": true}'::jsonb,
   'motorista: as três no detalhe (a calculadora começa com as diárias)');
+select is(coalesce(current_setting('t.dm')::jsonb #> '{pedido,forma_cobranca}', 'null'::jsonb), 'null'::jsonb,
+  'motorista: sem a forma de cobrança da empresa');
 select is(jsonb_build_object('d', current_setting('t.d5')::jsonb #> '{pedido,diarias_estimadas}',
                              'o', current_setting('t.d5')::jsonb #> '{pedido,outros_custos}',
                              'v', current_setting('t.d5')::jsonb #> '{pedido,volta_a_origem}'),
@@ -281,6 +284,32 @@ select ok(has_function_privilege('authenticated', 'api.excluir_categoria(text)',
           and not has_function_privilege('authenticated',
                 'interno.linhas_da_tarifa(app.tarifas_categoria, boolean, boolean, boolean, jsonb, boolean)', 'EXECUTE'),
   'excluir_categoria: authenticated executa, anon não; as internas fechadas');
+
+------------------------------------------------------------------ 7. categoria sem tarifa (preço de hoje) e volta à origem
+-- Versão nova do contrato, sem tarifas por categoria (mesmo instante, versão maior: passa a ser a vigente). PASSAGEIROS
+-- cai no preço de hoje: km 250 e retorno de 50% do contrato.
+select interno.inserir_contrato('00000000-0000-0000-0000-0000000000e1', current_setting('t.contrato')::jsonb, now(), null, 'Teste');
+select set_config('t.q9', (pg_temp.ped(44, '{"volta_a_origem": true}'))::text, true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.sv', api.categorias_disponiveis('{"km":30,"levar":true,"trazer":false,"volta_a_origem":true}'::jsonb)::text, true);
+select set_config('t.sr', api.categorias_disponiveis('{"km":30,"levar":true,"trazer":false}'::jsonb)::text, true);
+select set_config('t.r9', api.criar_pedido(current_setting('t.q9')::jsonb)::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca4'), true);
+select set_config('t.c9', api.calcular_orcamento((current_setting('t.r9')::jsonb ->> 'id')::uuid, '{"km": 30}')::text, true);
+reset role;
+
+select ok(not exists (select 1 from app.tarifas_categoria t join app.contratos_versoes c on c.id = t.contrato_id
+                       where c.id = (select x.id from interno.contrato_vigente('00000000-0000-0000-0000-0000000000e1') x))
+          and pg_temp.linhas(pg_temp.cat(current_setting('t.sr')::jsonb, 'PASSAGEIROS')) ~ 'RETORNO'
+          and pg_temp.linhas(pg_temp.cat(current_setting('t.sv')::jsonb, 'PASSAGEIROS')) !~ 'RETORNO'
+          and pg_temp.cat(current_setting('t.sv')::jsonb, 'PASSAGEIROS') ->> 'disponivel' = 'true',
+  'sem tarifa: a prévia com volta à origem fica sem RETORNO (sem a volta, com)');
+select ok((current_setting('t.c9')::jsonb ->> 'ok')::boolean
+          and pg_temp.linhas(current_setting('t.c9')::jsonb) !~ 'RETORNO'
+          and current_setting('t.c9')::jsonb -> 'total_cent'
+              = pg_temp.cat(current_setting('t.sv')::jsonb, 'PASSAGEIROS') -> 'total_cent',
+  'sem tarifa: calcular_orcamento do pedido com volta à origem sem RETORNO, igual à prévia');
 
 select * from finish();
 rollback;
