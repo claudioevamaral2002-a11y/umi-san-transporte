@@ -69,7 +69,8 @@ const TELAS_DO_APP_ATUAL = [
     path: 'adm',
     element: <GuardaPerfil permite={ehAdm} />,
     children: [
-      { path: 'painel', lazy: tela(() => import('../telas/adm/Painel.tsx'), 'Painel') },
+      // v2.1: o Painel de hoje com as pendências das faturas (prop opcional; a v1 continua sem elas).
+      { path: 'painel', lazy: tela(() => import('./telas/adm/PainelComFaturas.tsx'), 'PainelComFaturas') },
       { path: 'contratos', lazy: tela(() => import('../telas/adm/Contratos.tsx'), 'Contratos') },
       { path: 'contratos/:alvo', lazy: tela(() => import('../telas/adm/Contratos.tsx'), 'ContratoDetalhe') },
       { path: 'creditos', lazy: tela(() => import('../telas/adm/Creditos.tsx'), 'Creditos') },
@@ -83,6 +84,9 @@ const TELAS_DO_APP_ATUAL = [
       { path: 'veiculos', lazy: tela(() => import('./telas/adm/Veiculos.tsx'), 'Veiculos') },
       { path: 'veiculos/novo', lazy: veiculoDoAdm },
       { path: 'veiculos/:id', lazy: veiculoDoAdm },
+      // v2.1: faturamento por NF (só o Master).
+      { path: 'faturas', lazy: tela(() => import('./telas/adm/Faturas.tsx'), 'Faturas') },
+      { path: 'faturas/:empresa', lazy: tela(() => import('./telas/adm/FaturasEmpresa.tsx'), 'FaturasEmpresa') },
     ],
   },
 ]

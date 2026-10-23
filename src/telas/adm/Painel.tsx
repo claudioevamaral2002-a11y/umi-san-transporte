@@ -192,8 +192,11 @@ function Blocos({ dados, resumo = false }: { dados: DadosPainel; resumo?: boolea
   )
 }
 
-/** /adm/painel — crédito por cliente, corridas, aprovado no período, pendências e reconciliação. */
-export function Painel() {
+/**
+ * /adm/painel — crédito por cliente, corridas, aprovado no período, pendências e reconciliação. v2.1: o app novo passa
+ * em `extra` as pendências das faturas (a v1 não passa nada e fica como antes).
+ */
+export function Painel({ extra }: { extra?: ReactNode } = {}) {
   const [preset, setPreset] = useState<Exclude<Preset, 'personalizado'>>('mes')
   const [agora] = useState(() => new Date())
   const periodo = useMemo(() => periodoDe(preset, agora), [preset, agora])
@@ -216,6 +219,7 @@ export function Painel() {
         }
         descricao={periodo ? `De ${diaBr(periodo.diaDe)} a ${diaBr(periodo.diaAte)}` : undefined}
       />
+      {extra}
       {dados === undefined ? (
         erro ? (
           <ErroAoCarregar onTentar={recarregar} />

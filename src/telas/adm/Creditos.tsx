@@ -12,6 +12,7 @@ import { formatarCentavos } from '../../design/dinheiro.ts'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
 import { api } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
+import { ROTULO_FORMA_COBRANCA } from '../../lib/contratos.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
 import { ROTULO_TIPO, formatarComSinal } from '../../lib/extrato.ts'
 import {
@@ -34,6 +35,15 @@ export function SeloAlerta() {
     <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cor-laranja)] px-2.5 py-0.5 text-xs font-extrabold text-marinho">
       <Icone nome="alerta" tamanho={14} />
       Abaixo do alerta
+    </span>
+  )
+}
+
+/** v2.1: a empresa no Faturado (NF) paga por fatura; a Recarga fica escondida para ela. */
+export function SeloFaturado() {
+  return (
+    <span className="rounded-full border border-borda px-2.5 py-0.5 text-xs font-bold text-texto">
+      {ROTULO_FORMA_COBRANCA.FATURADO}
     </span>
   )
 }
@@ -61,6 +71,7 @@ export function CartaoCreditoEmpresa({ e }: { e: EmpresaPainel }) {
         <p className="min-w-0 truncate ivo-h3">{e.empresa_nome}</p>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {e.abaixo_alerta && <SeloAlerta />}
+          {e.forma_cobranca === 'FATURADO' && <SeloFaturado />}
           {!e.tem_contrato && (
             <span className="rounded-full border border-borda px-2.5 py-0.5 text-xs font-bold text-texto-suave">Sem contrato</span>
           )}
@@ -360,6 +371,8 @@ export function CreditoEmpresa() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [versao, setVersao] = useState(0)
   const nome = empresas.dados?.find((e) => e.id === empresa)?.nome ?? 'Empresa'
+  // v2.1: no Faturado (NF) não há recarga; o acerto de saldo antigo é por Ajuste.
+  const faturado = saldo.dados?.forma_cobranca === 'FATURADO'
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
@@ -384,9 +397,16 @@ export function CreditoEmpresa() {
           <Skeleton className="h-52" />
         )}
         <Cartao className="grid gap-3 md:w-56">
-          <Botao variante="principal" disabled={!saldo.dados} onClick={() => setOp({ tipo: 'recarga' })}>
-            Recarga
-          </Botao>
+          {faturado ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <SeloFaturado />
+              <span className="ivo-legenda text-texto-suave">Cobrança por fatura, sem recarga.</span>
+            </div>
+          ) : (
+            <Botao variante="principal" disabled={!saldo.dados} onClick={() => setOp({ tipo: 'recarga' })}>
+              Recarga
+            </Botao>
+          )}
           <Botao disabled={!saldo.dados} onClick={() => setOp({ tipo: 'ajuste' })}>
             Ajuste
           </Botao>

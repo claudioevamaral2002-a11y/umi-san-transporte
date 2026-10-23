@@ -55,6 +55,7 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
         { rotulo: 'Painel e Corridas em andamento', titulo: 'Painel', icone: 'grafico', para: '/adm/painel' },
         { rotulo: 'Contratos', icone: 'tabela', para: '/adm/contratos' },
         { rotulo: 'Créditos', icone: 'dinheiro', para: '/adm/creditos' },
+        { rotulo: 'Faturas', icone: 'lista', para: '/adm/faturas' },
         { rotulo: 'Usuários', icone: 'usuarios', para: '/adm/usuarios' },
         { rotulo: 'Empresas', icone: 'predio', para: '/adm/empresas' },
         { rotulo: 'Configurações', icone: 'chave', para: '/adm/configuracoes' },
