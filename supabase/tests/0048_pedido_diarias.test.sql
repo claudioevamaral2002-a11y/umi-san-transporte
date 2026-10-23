@@ -111,21 +111,31 @@ select ok(current_setting('t.x1')::jsonb ->> 'codigo' = 'CAMPOS_INVALIDOS'
   'diarias 31, texto ou fração e volta não booleana: CAMPOS_INVALIDOS');
 
 ------------------------------------------------------------------ 2. criar_pedido
+-- as entradas montadas antes (pg_temp não é executável pelo papel authenticated)
+select set_config('t.q0', (pg_temp.ped(14, '{"diarias_estimadas": 2, "volta_a_origem": true,
+  "outros_custos": "  pedágio da BR-101, balsa  "}'))::text, true);
+select set_config('t.q1', (pg_temp.ped(20, '{"volta_a_origem": false}'))::text, true);
+select set_config('t.q2', (pg_temp.ped(26, '{"diarias_estimadas": 31}'))::text, true);
+select set_config('t.q3', (pg_temp.ped(26, jsonb_build_object('outros_custos', repeat('x', 121))))::text, true);
+select set_config('t.q4', (pg_temp.ped(26, '{"volta_a_origem": "sim"}'))::text, true);
+select set_config('t.q5', (pg_temp.ped(26, '{"diarias_estimadas": -1}'))::text, true);
+select set_config('t.q6', (pg_temp.ped(26, jsonb_build_object('outros_custos', repeat('y', 120),
+  'diarias_estimadas', 30)))::text, true);
+select set_config('t.q7', (pg_temp.ped(32, '{"trazer": true, "destino": "Porto de Vitória"}'))::text, true);
+select set_config('t.q8', (pg_temp.ped(38) - 'categoria')::text, true);
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
-select set_config('t.r1', api.criar_pedido(pg_temp.ped(14, '{"diarias_estimadas": 2, "volta_a_origem": true,
-  "outros_custos": "  pedágio da BR-101, balsa  "}'))::text, true);
-select set_config('t.r2', api.criar_pedido(pg_temp.ped(20, '{"volta_a_origem": false}'))::text, true);
-select set_config('t.e1', api.criar_pedido(pg_temp.ped(26, '{"diarias_estimadas": 31}'))::text, true);
-select set_config('t.e2', api.criar_pedido(pg_temp.ped(26, jsonb_build_object('outros_custos', repeat('x', 121))))::text, true);
-select set_config('t.e3', api.criar_pedido(pg_temp.ped(26, '{"volta_a_origem": "sim"}'))::text, true);
-select set_config('t.e4', api.criar_pedido(pg_temp.ped(26, '{"diarias_estimadas": -1}'))::text, true);
-select set_config('t.r3', api.criar_pedido(pg_temp.ped(26, jsonb_build_object('outros_custos', repeat('y', 120),
-  'diarias_estimadas', 30)))::text, true);
+select set_config('t.r1', api.criar_pedido(current_setting('t.q0')::jsonb)::text, true);
+select set_config('t.r2', api.criar_pedido(current_setting('t.q1')::jsonb)::text, true);
+select set_config('t.e1', api.criar_pedido(current_setting('t.q2')::jsonb)::text, true);
+select set_config('t.e2', api.criar_pedido(current_setting('t.q3')::jsonb)::text, true);
+select set_config('t.e3', api.criar_pedido(current_setting('t.q4')::jsonb)::text, true);
+select set_config('t.e4', api.criar_pedido(current_setting('t.q5')::jsonb)::text, true);
+select set_config('t.r3', api.criar_pedido(current_setting('t.q6')::jsonb)::text, true);
 -- pedido antigo de ida e volta (sem as chaves novas)
-select set_config('t.r4', api.criar_pedido(pg_temp.ped(32, '{"trazer": true, "destino": "Porto de Vitória"}'))::text, true);
+select set_config('t.r4', api.criar_pedido(current_setting('t.q7')::jsonb)::text, true);
 -- pedido da v1: sem categoria e sem as chaves novas
-select set_config('t.r5', api.criar_pedido(pg_temp.ped(38) - 'categoria')::text, true);
+select set_config('t.r5', api.criar_pedido(current_setting('t.q8')::jsonb)::text, true);
 reset role;
 
 select ok((current_setting('t.r1')::jsonb ->> 'ok')::boolean and (current_setting('t.r2')::jsonb ->> 'ok')::boolean
