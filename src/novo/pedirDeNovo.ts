@@ -1,6 +1,8 @@
-// "Pedir de novo" (Tarefa 9): a corrida concluída leva a mesma origem, destino, categoria e ida e volta para a escolha de
-// categoria, sem data. Vai pelo estado da navegação, só com o que o pedido já guarda (nome e place_id do Google, ou as
-// coordenadas de um ponto marcado no mapa): nenhum endereço do Google é guardado a mais.
+// "Pedir de novo" (Tarefa 9): a corrida concluída leva a mesma origem, destino, categoria e (v2.1) as diárias para a
+// escolha de categoria, sem data. Sem "Ida e volta" na v2.1: um pedido antigo de ida e volta abre como trecho único.
+// Vai pelo estado da navegação, só com o que o pedido já guarda (nome e place_id do Google, ou as coordenadas de um
+// ponto marcado no mapa): nenhum endereço do Google é guardado a mais.
+import { DIARIAS_MAX } from '../lib/categorias.ts'
 import type { Local } from '../lib/enderecos.ts'
 import type { DetalhePedido } from '../lib/pedidos.ts'
 
@@ -11,8 +13,13 @@ export interface PedirDeNovo {
   origem: { texto: string; local: Local }
   destino: { texto: string; local: Local }
   categoria: string | null
-  idaEVolta: boolean
+  /** v2.1: as diárias (hospedagem) do pedido anterior, de 0 a 30 (0 = sem diárias). */
+  diarias: number
 }
+
+/** Diárias válidas para pedir (inteiro de 0 a 30); qualquer outra coisa vira 0. */
+const diariasValidas = (v: unknown): number =>
+  typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= DIARIAS_MAX ? v : 0
 
 const local = (p: DetalhePedido, lado: 'origem' | 'destino'): Local => ({
   nome: p[lado],
@@ -31,7 +38,7 @@ export function pedirDeNovoDe(p: DetalhePedido): PedirDeNovo | null {
     origem: { texto: p.origem, local: origem },
     destino: { texto: p.destino, local: destino },
     categoria: p.categoria ?? null,
-    idaEVolta: p.trazer,
+    diarias: diariasValidas(p.diarias_estimadas),
   }
 }
 
@@ -56,6 +63,6 @@ export function lerPedirDeNovo(estado: unknown): PedirDeNovo | null {
     origem,
     destino,
     categoria: typeof e.categoria === 'string' ? e.categoria : null,
-    idaEVolta: e.idaEVolta === true,
+    diarias: diariasValidas(e.diarias),
   }
 }

@@ -30,7 +30,9 @@ import {
   formDaTabela,
   HORAS_MAX_MEIAS,
   HORAS_MIN_MEIAS,
+  diariasDoPedido,
   kmDaTabela,
+  outrosCustosDoPedido,
   paradasDoPedido,
   rotuloVeiculo,
   trechos,
@@ -76,6 +78,8 @@ function Calculadora({
   const p = r.pedido as PedidoDaChamada
   const doCliente = veiculoDoCliente(p)
   const nParadas = paradasDoPedido(p).length
+  const diariasCliente = diariasDoPedido(p)
+  const avisou = outrosCustosDoPedido(p)
   const navegar = useNavigate()
   const idCalculo = useId()
   const titulo = useRef<HTMLHeadingElement>(null)
@@ -188,6 +192,7 @@ function Calculadora({
               min={0}
               max={DIARIAS_MAX}
               aoMudar={(hospedagemDiarias) => mudar({ hospedagemDiarias })}
+              detalhe={diariasCliente > 0 ? `estimadas pelo cliente: ${diariasCliente}` : undefined}
             />
           )}
           {!doCliente && (
@@ -205,6 +210,11 @@ function Calculadora({
               {f.outros.length} de {MAX_OUTROS}
             </span>
           </div>
+          {avisou && (
+            <p className="ivo-legenda break-words text-texto-suave" data-testid="cliente-avisou">
+              O cliente avisou: <span className="font-semibold text-texto">{avisou}</span>
+            </p>
+          )}
           {f.outros.map((o, i) => (
             <div key={i} className="flex items-end gap-2">
               <Campo

@@ -138,4 +138,9 @@ describe('sem crédito (Novo pedido indisponível)', () => {
     expect(semCredito({ disponivel_cent: 1, limite_cent: 0 })).toBe(false)
     expect(semCredito({ disponivel_cent: -49999, limite_cent: 50000 })).toBe(false)
   })
+  it('v2.1: no Faturado (NF) nunca falta crédito; sem a forma, Crédito como antes', () => {
+    expect(semCredito({ disponivel_cent: -900000, limite_cent: 0, forma_cobranca: 'FATURADO' })).toBe(false)
+    expect(semCredito({ disponivel_cent: 0, limite_cent: 0, forma_cobranca: 'CREDITO' })).toBe(true)
+    expect(semCredito({ disponivel_cent: 0, limite_cent: 0, forma_cobranca: null })).toBe(true)
+  })
 })

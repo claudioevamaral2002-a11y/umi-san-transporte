@@ -231,3 +231,27 @@ describe('paradas da viagem', () => {
     expect(paradasPendentes([{ lat: 0, lng: 0 }, undefined, null], [0])).toEqual([1])
   })
 })
+
+describe('diárias e outros custos do cliente (v2.1)', () => {
+  it('a tabela começa a hospedagem com as diárias do pedido, e elas vão na entrada', async () => {
+    const { diariasDoPedido, entradaDaChamada } = await import('./chamada.ts')
+    const p = pedido({ diarias_estimadas: 2 })
+    expect(diariasDoPedido(p)).toBe(2)
+    const m = entradaDaChamada(formDaTabela(p, 42), p)
+    expect(m.ok && m.entrada.hospedagem_diarias).toBe(2)
+    // A volta à origem nunca vai na entrada: o banco usa a do pedido.
+    expect(m.ok && 'volta_a_origem' in m.entrada).toBe(false)
+  })
+  it('pedido antigo (sem diárias) ou valor fora de 0 a 30: hospedagem 0', async () => {
+    const { diariasDoPedido } = await import('./chamada.ts')
+    expect(formDaTabela(pedido(), 42).hospedagemDiarias).toBe(0)
+    expect(diariasDoPedido(pedido({ diarias_estimadas: 31 }))).toBe(0)
+    expect(diariasDoPedido(pedido({ diarias_estimadas: 1.5 }))).toBe(0)
+  })
+  it('outros custos: o texto aparado, ou nulo', async () => {
+    const { outrosCustosDoPedido } = await import('./chamada.ts')
+    expect(outrosCustosDoPedido(pedido({ outros_custos: '  balsa  ' }))).toBe('balsa')
+    expect(outrosCustosDoPedido(pedido({ outros_custos: '   ' }))).toBeNull()
+    expect(outrosCustosDoPedido(pedido())).toBeNull()
+  })
+})

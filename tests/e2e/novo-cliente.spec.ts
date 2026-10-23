@@ -202,6 +202,8 @@ test.describe('pedir', () => {
       inicio: instanteSp(diaDe(new Date(agora.getTime() + 24 * 60 * MIN)), '08:30'),
     })
     expect(criar.agora).toBeUndefined()
+    // v2.1: sem "Ida e volta"; o pedido novo vai com trazer falso e a volta à origem explícita.
+    expect(criar.volta_a_origem).toBe(false)
   })
 
   test('"Agora": envia agora:true e o primeiro horário livre a partir de +60 min (dentro da janela do banco)', async ({ page }) => {
