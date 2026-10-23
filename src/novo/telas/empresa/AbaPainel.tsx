@@ -15,12 +15,52 @@ import {
   plural,
   useContextoPainel,
   usePainelDaEmpresa,
+  type Aba,
 } from './componentes.tsx'
 
 /** Só os dígitos, para o link de ligação ("(47) 9 9999-0000" → "tel:+5547999990000"). */
 function linkDoContato(contato: string): string | null {
   const d = contato.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
   return d.length === 10 || d.length === 11 ? `tel:+55${d}` : null
+}
+
+/** Um valor do resumo do Faturado ("A faturar", "Em aberto", "Vencidas"). */
+function Total({ rotulo, detalhe, centavos, testId }: { rotulo: string; detalhe?: string; centavos: number; testId: string }) {
+  return (
+    <div data-testid={testId}>
+      <dt className="text-sm font-medium text-texto-suave">
+        {rotulo}
+        {detalhe && <span className="text-xs"> · {detalhe}</span>}
+      </dt>
+      <dd className="text-2xl leading-tight font-extrabold tracking-[-0.02em] tabular-nums md:text-[1.75rem]">
+        {reaisCurto(centavos)}
+      </dd>
+    </div>
+  )
+}
+
+/**
+ * v2.1 (§5.3): no Faturado não há saldo a recarregar. O gasto do mês continua; o disponível, o reservado, a barra do
+ * total e o contato de recarga dão lugar ao que vai para a fatura, às faturas em aberto e, delas, às vencidas.
+ */
+function ResumoFaturado({ resumo, faturas }: { resumo: Painel['resumo']; faturas: string }) {
+  return (
+    <Secao titulo={`Resumo de ${nomeDoMesPainel(resumo.mes)}`} link={{ para: faturas, texto: 'Faturas' }}>
+      <div className={`${CARTAO} space-y-5 p-6 md:p-8`} data-testid="resumo-mes">
+        <div>
+          <p className="text-sm font-medium text-texto-suave">Gasto no mês</p>
+          <p className="text-[2.25rem] leading-tight font-extrabold tracking-[-0.03em] tabular-nums md:text-5xl">
+            {reaisCurto(resumo.gasto_cent)}
+          </p>
+        </div>
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-4 border-t border-borda pt-4 sm:grid-cols-3">
+          <Total rotulo="A faturar" detalhe="quinzena atual" centavos={resumo.a_faturar_cent ?? 0} testId="a-faturar" />
+          <Total rotulo="Em aberto" centavos={resumo.em_aberto_cent ?? 0} testId="em-aberto" />
+          <Total rotulo="Vencidas" centavos={resumo.vencidas_cent ?? 0} testId="vencidas" />
+        </dl>
+      </div>
+    </Secao>
+  )
 }
 
 function Resumo({ resumo, carteira }: { resumo: Painel['resumo']; carteira: string }) {
@@ -118,11 +158,11 @@ function Pessoas({ pessoas, equipe, onExportar }: { pessoas: Painel['pessoas']; 
 
 /** Aba "Painel" (/empresa): resumo do mês, próximas corridas, recentes e pessoas. */
 export function AbaPainel() {
-  const { ehAdm, empresa, semEmpresa, erroEmpresas, recarregarEmpresas } = useContextoPainel()
+  const { ehAdm, empresa, semEmpresa, erroEmpresas, recarregarEmpresas, forma } = useContextoPainel()
   const { dados, erro, recarregar } = usePainelDaEmpresa()
   // O nome da página já está no cabeçalho "← Início": o h1 daqui é só para leitores de tela.
   useTituloNaTela('oculto')
-  const aba = (a: '' | '/corridas' | '/pessoas' | '/carteira') => enderecoDaAba(a, ehAdm, empresa)
+  const aba = (a: Aba) => enderecoDaAba(a, ehAdm, empresa)
 
   return (
     <main className="mx-auto max-w-5xl space-y-9 p-4 md:p-6">
@@ -149,7 +189,11 @@ export function AbaPainel() {
         )
       ) : (
         <>
-          <Resumo resumo={dados.resumo} carteira={aba('/carteira')} />
+          {forma === 'FATURADO' ? (
+            <ResumoFaturado resumo={dados.resumo} faturas={aba('/faturas')} />
+          ) : (
+            <Resumo resumo={dados.resumo} carteira={aba('/carteira')} />
+          )}
           <Secao titulo="Próximas corridas" link={{ para: aba('/corridas'), texto: 'Ver todas' }}>
             <TabelaCorridas titulo="Próximas corridas" itens={dados.proximas} vazio="Nenhuma corrida marcada." ehCliente={!ehAdm} />
           </Secao>

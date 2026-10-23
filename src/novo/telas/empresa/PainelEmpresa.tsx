@@ -4,7 +4,8 @@ import { SimboloIvo } from '../../../design/componentes/SimboloIvo.tsx'
 import { api, type Empresa } from '../../../lib/api.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { useSessao } from '../../../lib/sessao.tsx'
-import { enderecoDaAba, type ContextoPainel } from './componentes.tsx'
+import type { FormaCobranca } from '../../../lib/contratos.ts'
+import { enderecoDaAba, formaDoPainel, useLeituraDoPainel, type Aba, type ContextoPainel } from './componentes.tsx'
 
 /**
  * "Painel da empresa" (especificação §6.9, mockup "painel com abas" da fase 4.1, tom executivo da Rhino, Ruling R17):
@@ -12,16 +13,23 @@ import { enderecoDaAba, type ContextoPainel } from './componentes.tsx'
  * /empresa/pessoas, /empresa/carteira). O cabeçalho (com o "← Início" da moldura de página) e o seletor de empresa do
  * Master ficam em todas; só o conteúdo troca. Para o Administrador (N1) da própria empresa e para o Master (ADM).
  * Quase monocromático: hierarquia pelo tamanho e pelo peso, o laranja só no símbolo.
+ *
+ * v2.1 (§5.3): na empresa Faturado (NF), a aba Carteira vira Faturas (/empresa/faturas). A forma vem do painel do mês,
+ * lido aqui uma vez; enquanto ele carrega, a quarta aba espera (nada de "Carteira" que vira "Faturas").
  */
 
 const ITEM_ABA = 'flex min-h-11 items-center border-b-2 font-semibold'
 
-const ABAS = [
+const ABAS_COMUNS: ReadonlyArray<{ rotulo: string; aba: Aba }> = [
   { rotulo: 'Painel', aba: '' },
   { rotulo: 'Corridas', aba: '/corridas' },
   { rotulo: 'Pessoas', aba: '/pessoas' },
-  { rotulo: 'Carteira', aba: '/carteira' },
-] as const
+]
+
+function abasDa(forma: FormaCobranca | undefined): ReadonlyArray<{ rotulo: string; aba: Aba }> {
+  if (!forma) return ABAS_COMUNS
+  return [...ABAS_COMUNS, forma === 'FATURADO' ? { rotulo: 'Faturas', aba: '/faturas' } : { rotulo: 'Carteira', aba: '/carteira' }]
+}
 
 /** Topo do painel: marca, abas (navegação com a aba atual marcada) e a empresa. */
 function BarraDoPainel({
@@ -30,12 +38,14 @@ function BarraDoPainel({
   empresa,
   onEmpresa,
   nomeEmpresa,
+  forma,
 }: {
   ehAdm: boolean
   empresas: Empresa[] | null
   empresa: string | null
   onEmpresa: (id: string) => void
   nomeEmpresa: string | null
+  forma: FormaCobranca | undefined
 }) {
   const idSeletor = useId()
   return (
@@ -48,7 +58,7 @@ function BarraDoPainel({
         </span>
         <nav aria-label="Painel da empresa" className="order-last w-full md:order-none md:w-auto">
           <ul className="flex gap-5 md:gap-6">
-            {ABAS.map(({ rotulo, aba }) => (
+            {abasDa(forma).map(({ rotulo, aba }) => (
               <li key={rotulo}>
                 <NavLink
                   to={enderecoDaAba(aba, ehAdm, empresa)}
@@ -99,6 +109,8 @@ export function PainelEmpresa() {
   const listaEmpresas = useConsulta('painel-empresa-empresas', () => (ehAdm ? api.empresas() : Promise.resolve([])))
   const empresa = ehAdm ? (busca.get('empresa') ?? listaEmpresas.dados?.[0]?.id ?? null) : null
   const semEmpresa = ehAdm && listaEmpresas.dados !== undefined && listaEmpresas.dados.length === 0
+  const painel = useLeituraDoPainel(ehAdm, empresa)
+  const forma = formaDoPainel(painel)
   const contexto: ContextoPainel = {
     ehAdm,
     empresa,
@@ -106,6 +118,8 @@ export function PainelEmpresa() {
     nomeEmpresa: (ehAdm ? listaEmpresas.dados?.find((e) => e.id === empresa)?.nome : perfil?.empresa_nome) ?? 'Empresa',
     erroEmpresas: !!listaEmpresas.erro,
     recarregarEmpresas: listaEmpresas.recarregar,
+    painel,
+    forma,
   }
 
   return (
@@ -117,6 +131,7 @@ export function PainelEmpresa() {
         // Troca a empresa e fica na mesma aba (só muda o `?empresa=`).
         onEmpresa={(id) => setBusca({ empresa: id }, { replace: true })}
         nomeEmpresa={perfil?.empresa_nome ?? null}
+        forma={forma}
       />
       <Outlet context={contexto} />
     </div>
