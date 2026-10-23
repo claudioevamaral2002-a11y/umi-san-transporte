@@ -8,6 +8,9 @@ const {
   HORAS_MAX,
   HORAS_MIN,
   MAX_CENTRO_CUSTO,
+  DIARIAS_MAX,
+  MAX_OUTROS_CUSTOS,
+  mudarDiarias,
   categorias,
   comPreenchimento,
   horasValidas,
@@ -213,5 +216,64 @@ describe('kmDoPedido', () => {
     expect(kmDoPedido({ ida: { km: 48.2 }, volta: null, levar: true, trazer: true })).toBe(48.2)
     expect(kmDoPedido({ ida: { km: 48.2 }, volta: { km: 41.0 }, levar: true, trazer: false })).toBe(48.2)
     expect(kmDoPedido({ ida: null, levar: true, trazer: false })).toBeNull()
+  })
+})
+
+describe('v2.1: diárias, outros custos e volta à origem', () => {
+  const base = {
+    ...FORM_VAZIO,
+    inicio: '2026-10-20T12:00:00.000Z',
+    origem: 'Glória',
+    destino: 'Glória',
+    levar: true,
+    trazer: true,
+    pessoasQtd: 1,
+  }
+  const passageiros = {
+    codigo: 'PASSAGEIROS',
+    nome: 'IVO Passageiros',
+    descricao_curta: '',
+    disponivel: true,
+    veiculo_cliente: false,
+    cobra_hora: false,
+    cobra_parada: false,
+    total_cent: 1,
+    carga: 'PESSOAS' as const,
+    reboque: 'NAO' as const,
+  }
+  it('o pedido manda trazer: false, diarias_estimadas e volta_a_origem', () => {
+    const p = pedidoDaCategoria(passageiros, base, { diarias: 2, voltaAOrigem: true })
+    expect(p).toMatchObject({ trazer: false, levar: true, diarias_estimadas: 2, volta_a_origem: true })
+  })
+  it('sem diárias (0 ou inválidas) a chave não vai; volta_a_origem vai sempre, falso por padrão', () => {
+    expect(pedidoDaCategoria(passageiros, base)).toMatchObject({ trazer: false, volta_a_origem: false })
+    for (const d of [0, null, 31, -1, 1.5, Number.NaN]) {
+      expect(pedidoDaCategoria(passageiros, base, { diarias: d })).not.toHaveProperty('diarias_estimadas')
+    }
+    expect(pedidoDaCategoria(passageiros, base, { diarias: DIARIAS_MAX })).toMatchObject({ diarias_estimadas: 30 })
+  })
+  it('outros custos vão aparados e só se não estiverem vazios', () => {
+    expect(pedidoDaCategoria(passageiros, base, { outrosCustos: '  pedágio da BR-101, balsa ' })).toMatchObject({
+      outros_custos: 'pedágio da BR-101, balsa',
+    })
+    expect(pedidoDaCategoria(passageiros, base, { outrosCustos: '   ' })).not.toHaveProperty('outros_custos')
+    expect(pedidoDaCategoria(passageiros, base, { outrosCustos: null })).not.toHaveProperty('outros_custos')
+    expect(MAX_OUTROS_CUSTOS).toBe(120)
+  })
+  it('a prévia manda trazer: false por padrão, as diárias e a volta à origem', async () => {
+    rpc.mockResolvedValue({ data: { ok: true, categorias: [] }, error: null })
+    await categorias.disponiveis({ km: 30, levar: true, diarias: 2, voltaAOrigem: true })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', {
+      p: { km: 30, levar: true, trazer: false, diarias: 2, volta_a_origem: true },
+    })
+    await categorias.disponiveis({ km: 30, levar: true, diarias: 0, voltaAOrigem: false })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 30, levar: true, trazer: false } })
+    await categorias.disponiveis({ km: 30, levar: true, diarias: 31 })
+    expect(rpc).toHaveBeenLastCalledWith('categorias_disponiveis', { p: { km: 30, levar: true, trazer: false } })
+  })
+  it('mudarDiarias: − e + de 1 em 1, presos entre 0 e 30', () => {
+    expect(mudarDiarias(0, 1)).toBe(1)
+    expect(mudarDiarias(0, -1)).toBe(0)
+    expect(mudarDiarias(30, 1)).toBe(30)
   })
 })

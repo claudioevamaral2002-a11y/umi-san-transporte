@@ -10,6 +10,8 @@ import {
   podeEditarContratos,
   prazoPorExtenso,
   validarFormulario,
+  FORMAS_COBRANCA,
+  ROTULO_FORMA_COBRANCA,
   type ValoresContrato,
 } from './contratos.ts'
 
@@ -159,5 +161,37 @@ describe('diferencas', () => {
 
   it('versões iguais: nada muda', () => {
     expect(diferencas(BASE, { ...BASE, faixas_cancelamento: [...FAIXAS_PADRAO] }).some((x) => x.mudou)).toBe(false)
+  })
+})
+
+describe('forma de cobrança (v2.1)', () => {
+  it('rótulos da interface', () => {
+    expect(ROTULO_FORMA_COBRANCA).toEqual({ CREDITO: 'Crédito (pré-pago)', FATURADO: 'Faturado (NF)' })
+    expect(FORMAS_COBRANCA).toEqual(['CREDITO', 'FATURADO'])
+  })
+  it('vai e volta pelo formulário; sem a forma na versão, a chave não vai (o banco herda a vigente)', () => {
+    const f = formularioDe({ ...BASE, forma_cobranca: 'FATURADO' })
+    expect(f.forma_cobranca).toBe('FATURADO')
+    expect(validarFormulario(f)).toEqual({ ok: true, valores: { ...BASE, forma_cobranca: 'FATURADO' } })
+    const r = validarFormulario(formularioDe(BASE))
+    expect(r.ok && 'forma_cobranca' in r.valores).toBe(false)
+  })
+  it('no Faturado, limite e alerta de saldo em branco (escondidos) valem 0', () => {
+    const f = formularioDe({ ...BASE, forma_cobranca: 'FATURADO' })
+    f.campos.limite_saldo_negativo_cent = ''
+    f.campos.alerta_saldo_baixo_cent = ''
+    expect(validarFormulario(f)).toMatchObject({ ok: true, valores: { limite_saldo_negativo_cent: 0, alerta_saldo_baixo_cent: 0 } })
+    f.forma_cobranca = 'CREDITO'
+    expect(validarFormulario(f).ok).toBe(false)
+  })
+  it('a diferença mostra a forma quando ela vai na versão nova', () => {
+    const d = diferencas({ ...BASE, forma_cobranca: 'CREDITO' }, { ...BASE, forma_cobranca: 'FATURADO' })
+    expect(d.find((x) => x.campo === 'forma_cobranca')).toMatchObject({
+      rotulo: 'Forma de cobrança',
+      antes: 'Crédito (pré-pago)',
+      depois: 'Faturado (NF)',
+      mudou: true,
+    })
+    expect(diferencas(BASE, BASE).some((x) => x.campo === 'forma_cobranca')).toBe(false)
   })
 })

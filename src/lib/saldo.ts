@@ -2,6 +2,7 @@
 // a tela só mostra o que o servidor confirmou (especificação 12.2: nenhuma ação financeira é otimista). As únicas
 // contas feitas aqui são de EXIBIÇÃO (ex.: "saldo depois da aprovação" no recibo) e nunca vão ao banco.
 import type { RespostaRpc } from './api.ts'
+import type { FormaCobranca } from './contratos.ts'
 import { ErroLeitura } from './pedidos.ts'
 import { supabase } from './supabase.ts'
 
@@ -15,6 +16,8 @@ export interface Saldo {
   alerta_cent: number
   abaixo_alerta: boolean
   atualizado_em: string | null
+  /** v2.1 (opcional: o banco anterior não devolvia; sem ela, Crédito). No Faturado, o saldo negativo é o "Em aberto". */
+  forma_cobranca?: FormaCobranca
 }
 
 export const TIPOS_LANCAMENTO = [
@@ -26,6 +29,8 @@ export const TIPOS_LANCAMENTO = [
   'ESTORNO',
   'RESERVA',
   'LIBERACAO_RESERVA',
+  // v2.1: pagamento de fatura (crédito igual ao total; nunca entra numa fatura nem é estornado).
+  'PAGAMENTO_FATURA',
 ] as const
 export type TipoLancamento = (typeof TIPOS_LANCAMENTO)[number]
 

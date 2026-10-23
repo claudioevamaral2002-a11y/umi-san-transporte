@@ -16,6 +16,18 @@ export interface Faixa {
   multa_bp: number
 }
 
+/** v2.1: como a empresa paga. Crédito = saldo pré-pago (como sempre); Faturado = fatura quinzenal com NF. */
+export const FORMAS_COBRANCA = ['CREDITO', 'FATURADO'] as const
+export type FormaCobranca = (typeof FORMAS_COBRANCA)[number]
+
+export const ROTULO_FORMA_COBRANCA: Record<FormaCobranca, string> = {
+  CREDITO: 'Crédito (pré-pago)',
+  FATURADO: 'Faturado (NF)',
+}
+
+/** No Faturado, o limite de saldo negativo e o alerta de saldo baixo não se aplicam (o formulário os esconde). */
+const CAMPOS_SO_DO_CREDITO: readonly CampoNumerico[] = ['limite_saldo_negativo_cent', 'alerta_saldo_baixo_cent']
+
 /** Os 13 campos de um contrato (`api.publicar_contrato`). A retenção de fotos é configuração global. */
 export interface ValoresContrato {
   km_sem_reboque_cent: number
@@ -31,6 +43,11 @@ export interface ValoresContrato {
   limiar_urgente_horas: number
   limite_saldo_negativo_cent: number
   alerta_saldo_baixo_cent: number
+  /**
+   * v2.1 (opcional): sem a chave, a versão nova herda a forma da vigente (o que a v1 e a tela de antes mandam). As
+   * leituras de contrato a devolvem.
+   */
+  forma_cobranca?: FormaCobranca
 }
 
 /** Uma versão publicada (`api.listar_contratos` / `api.historico_contrato`): só o ADM lê. */
@@ -50,10 +67,10 @@ export type RegrasServico = Pick<
 /** O que o motorista usa para orçar (`api.precos_para_orcar`): preços unitários e prazos. */
 export type PrecosParaOrcar = Omit<
   ValoresContrato,
-  'faixas_cancelamento' | 'limite_saldo_negativo_cent' | 'alerta_saldo_baixo_cent'
+  'faixas_cancelamento' | 'limite_saldo_negativo_cent' | 'alerta_saldo_baixo_cent' | 'forma_cobranca'
 >
 
-export type CampoNumerico = Exclude<keyof ValoresContrato, 'faixas_cancelamento'>
+export type CampoNumerico = Exclude<keyof ValoresContrato, 'faixas_cancelamento' | 'forma_cobranca'>
 export type Tipo = 'dinheiro' | 'percentual' | 'horas' | 'dias'
 
 export interface DefinicaoCampo {
@@ -201,6 +218,8 @@ export interface FaixaTexto {
 export interface FormularioContrato {
   campos: Record<CampoNumerico, string>
   faixas: FaixaTexto[]
+  /** v2.1: ausente = não vai (o banco herda a forma da vigente). */
+  forma_cobranca?: FormaCobranca
 }
 
 /** Texto inicial de cada campo a partir de uma versão (ou vazio). */
@@ -221,7 +240,7 @@ export function formularioDe(versao: ValoresContrato | null): FormularioContrato
     horas: String(f.antecedencia_min_horas),
     multa: bpParaTexto(f.multa_bp),
   }))
-  return { campos, faixas }
+  return versao?.forma_cobranca ? { campos, faixas, forma_cobranca: versao.forma_cobranca } : { campos, faixas }
 }
 
 export const MAX_FAIXAS = 20
@@ -247,8 +266,14 @@ export function validarFormulario(
 ): { ok: true; valores: ValoresContrato } | { ok: false; erros: ErrosFormulario } {
   const erros: ErrosFormulario = {}
   const valores = {} as ValoresContrato
+  const faturado = f.forma_cobranca === 'FATURADO'
   for (const c of CAMPOS) {
     const texto = f.campos[c.campo] ?? ''
+    // No Faturado, o limite e o alerta ficam escondidos: em branco valem 0 (o banco os ignora).
+    if (faturado && CAMPOS_SO_DO_CREDITO.includes(c.campo) && texto.trim() === '') {
+      valores[c.campo] = 0
+      continue
+    }
     const v =
       c.tipo === 'dinheiro'
         ? reaisParaCentavos(texto)
@@ -285,6 +310,7 @@ export function validarFormulario(
     }
   }
   valores.faixas_cancelamento = faixas
+  if (f.forma_cobranca) valores.forma_cobranca = f.forma_cobranca
 
   return Object.keys(erros).length > 0 ? { ok: false, erros } : { ok: true, valores }
 }
@@ -294,7 +320,7 @@ export function validarFormulario(
 // ------------------------------------------------------------------------------------------------
 
 export interface Diferenca {
-  campo: CampoNumerico | 'faixas_cancelamento'
+  campo: CampoNumerico | 'faixas_cancelamento' | 'forma_cobranca'
   rotulo: string
   antes: string | null
   depois: string
@@ -331,5 +357,16 @@ export function diferencas(atual: ValoresContrato | null, novo: ValoresContrato)
     depois: textoFaixas(novo.faixas_cancelamento),
     mudou: !igual,
   })
+  // v2.1: a forma só aparece quando vai na versão nova (sem ela, o banco herda a da vigente).
+  if (novo.forma_cobranca) {
+    const formaAntes = atual?.forma_cobranca ?? null
+    lista.push({
+      campo: 'forma_cobranca',
+      rotulo: 'Forma de cobrança',
+      antes: formaAntes ? ROTULO_FORMA_COBRANCA[formaAntes] : null,
+      depois: ROTULO_FORMA_COBRANCA[novo.forma_cobranca],
+      mudou: formaAntes !== novo.forma_cobranca,
+    })
+  }
   return lista
 }
