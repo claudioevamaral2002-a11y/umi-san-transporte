@@ -128,7 +128,13 @@ async function simularFaturas(page: Page, respostas: Record<string, unknown[]> =
   })
   await page.route(`${URL_SUPABASE}/storage/v1/object/sign/notas-fiscais/**`, (route) => {
     const url = route.request().url()
-    if (route.request().method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4' })
+    if (route.request().method() === 'GET')
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        headers: { 'content-disposition': 'attachment; filename="nf.pdf"' },
+        body: '%PDF-1.4',
+      })
     chamadas.push({ rpc: 'link', corpo: { url } })
     return json(route, { signedURL: `/object/sign/notas-fiscais/${UMI}/nota-2.pdf?token=t` })
   })
@@ -438,18 +444,18 @@ test('"Trocar PDF" sobe o PDF novo e depois troca o caminho', async ({ page }) =
   expect(String(faturas[iTrocar]!.corpo.p_caminho)).toMatch(new RegExp(`^${UMI}/[0-9a-f-]{36}\\.pdf$`))
 })
 
-test('"Baixar NF (PDF)" abre o link assinado da NF', async ({ page, context }) => {
+test('"Baixar NF (PDF)" baixa a NF pelo link assinado, sem pop-up', async ({ page }) => {
   const { faturas } = await abrir(page, `/adm/faturas/${UMI}`)
   const f2 = page.getByRole('list', { name: 'Faturas da empresa' }).locator(':scope > li').filter({ hasText: 'Fatura nº 2' })
-  // A aba nova não herda as rotas da página: o contexto serve o link (HTML, para o Chromium sem leitor de PDF não baixar).
-  await context.route(`${URL_SUPABASE}/storage/v1/object/sign/notas-fiscais/**`, (r) =>
-    r.fulfill({ status: 200, contentType: 'text/html', body: '<title>NF</title>' }),
-  )
-  const nova = context.waitForEvent('page')
+  const janelas: unknown[] = []
+  page.on('popup', (p) => janelas.push(p))
+  const baixando = page.waitForEvent('download')
   await f2.getByRole('button', { name: 'Baixar NF (PDF)' }).click()
-  const aba = await nova
-  await expect.poll(() => aba.url()).toContain(`/storage/v1/object/sign/notas-fiscais/${UMI}/nota-2.pdf`)
+  const pdf = await baixando
+  expect(pdf.url()).toContain(`/storage/v1/object/sign/notas-fiscais/${UMI}/nota-2.pdf?token=t&download=`)
   expect(String(faturas.find((c) => c.rpc === 'link')!.corpo.url)).toContain(`/notas-fiscais/${UMI}/nota-2.pdf`)
+  await expect(page).toHaveURL(new RegExp(`/adm/faturas/${UMI}$`))
+  expect(janelas).toHaveLength(0)
 })
 
 // ------------------------------------------------------------------------------------------------

@@ -512,8 +512,9 @@ export function FaturasEmpresa() {
     if (!f.nf_pdf_caminho) return
     setAviso(null)
     try {
-      const link = await linkNota(f.nf_pdf_caminho)
-      window.open(link, '_blank', 'noopener')
+      // Baixa no lugar, sem pop-up: abrir janela depois de um await é bloqueado no celular.
+      const link = await linkNota(f.nf_pdf_caminho, { baixar: true })
+      window.location.assign(link)
     } catch {
       setAviso({ tipo: 'erro', texto: 'Não foi possível abrir a NF. Tente de novo.' })
     }

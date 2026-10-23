@@ -212,10 +212,11 @@ test('na tela Contratos de hoje, dentro do app novo, a versão nova também sai 
 
 test('o ADM desativa uma categoria pelo salvar_categoria', async ({ page }) => {
   const { novas } = await abrir(page, ADM, '/adm/categorias')
-  const leve = page.getByRole('form', { name: 'Dados de IVO Carga Leve' })
-  await leve.getByRole('switch', { name: 'IVO Carga Leve ativa' }).click()
-  await leve.getByRole('button', { name: 'Salvar categoria' }).click()
-  await expect(page.getByText('IVO Carga Leve salva.')).toBeVisible()
+  // v2.1: o interruptor "ativa" saiu do cartão; desativar é pelo lápis, com confirmação.
+  await page.getByRole('button', { name: 'Editar IVO Carga Leve' }).click()
+  await page.getByRole('button', { name: 'Desativar', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Desativar IVO Carga Leve?' }).getByRole('button', { name: 'Desativar', exact: true }).click()
+  await expect(page.getByText('IVO Carga Leve desativada.')).toBeVisible()
   expect(novas.find((c) => c.rpc === 'salvar_categoria')!.corpo).toEqual({
     p: { codigo: 'CARGA_LEVE', nome: 'IVO Carga Leve', descricao_curta: 'até 800 kg', ordem: 2, ativa: false },
   })
