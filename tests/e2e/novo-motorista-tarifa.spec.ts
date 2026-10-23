@@ -419,6 +419,9 @@ test.describe('ida e volta e sondagem', () => {
     })
     // Ida 42 km (pelas paradas) + volta 42 km (direta) = 84 km: R$ 10 + 84 × R$ 3 + 2 × R$ 25 = R$ 312.
     await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 312,00')
+    // v2.1: o pedido antigo de ida e volta continua dizendo "ida e volta" (e sem diárias nem outros custos).
+    await expect(page.getByTestId('folha-mapa')).toContainText('por trecho, ida e volta')
+    await expect(page.getByTestId('pedido-extras')).toHaveCount(0)
     expect(rotas(mapas)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ origem: { place_id: 'ChIJdef' }, destino: { place_id: 'ChIJpor' }, paradas: expect.any(Array) }),
@@ -451,6 +454,61 @@ test.describe('ida e volta e sondagem', () => {
     await expect(itens.getByRole('group', { name: 'Horas', exact: true }).locator('output')).toHaveText('4')
     await expect(itens.getByRole('group', { name: 'Espera (horas)' })).toBeVisible()
     await expect(itens.getByRole('group', { name: 'Hospedagem (diárias)' })).toBeVisible()
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 360,00')
+  })
+})
+
+test.describe('v2.1: diárias e outros custos do cliente', () => {
+  const OUTROS = 'Pedágio da BR-101, balsa'
+  const comExtras = () => pedidoMotorista({ diarias_estimadas: 2, outros_custos: OUTROS })
+
+  test('a chamada mostra "Diárias: N" e os outros custos; o aceite leva as diárias do pedido', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const { chamadas } = await abrir(page, { caminho: `/chamada/${ID_PEDIDO}`, detalhe: comExtras(), tarifa: TARIFA_MOTORISTA })
+    const extras = page.getByTestId('pedido-extras')
+    await expect(extras).toContainText('Diárias: 2')
+    await expect(extras).toContainText(`Outros custos: ${OUTROS}`)
+    // 4 h × R$ 90 + 2 diárias × R$ 180: o mesmo que o cliente viu na prévia.
+    await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 720,00')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+
+    await page.getByRole('button', { name: 'Aceitar por R$ 720' }).click()
+    await expect(page.getByText('Proposta enviada')).toBeVisible()
+    const p = envios(chamadas)[0]!.corpo.p as Record<string, unknown>
+    expect(p).toMatchObject({ hospedagem_diarias: 2, veiculo_id: null })
+    // A volta à origem nunca vai na entrada: o banco usa a do pedido.
+    expect(p).not.toHaveProperty('volta_a_origem')
+    expect(p).not.toHaveProperty('diarias')
+  })
+
+  test('a calculadora começa com a Hospedagem nas diárias do pedido e mostra "O cliente avisou" acima dos Outros', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const { chamadas } = await abrir(page, { caminho: `/chamada/${ID_PEDIDO}/propor`, detalhe: comExtras(), tarifa: TARIFA_MOTORISTA })
+    const hospedagem = page.getByTestId('itens-proposta').getByRole('group', { name: 'Hospedagem (diárias)' })
+    await expect(hospedagem.locator('output')).toHaveText('2')
+    await expect(hospedagem).toContainText('estimadas pelo cliente: 2')
+    await expect(page.getByTestId('pela-tabela')).toHaveText('Pela tabela R$ 720,00')
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 720,00')
+    const avisou = page.getByTestId('outros').getByTestId('cliente-avisou')
+    await expect(avisou).toHaveText(`O cliente avisou: ${OUTROS}`)
+    await page.getByRole('button', { name: 'Adicionar item' }).click()
+    const descricao = page.getByLabel('Descrição 1')
+    expect((await avisou.boundingBox())!.y).toBeLessThan((await descricao.boundingBox())!.y)
+    await descricao.fill('Pedágio BR-101')
+    await page.getByLabel('Valor 1').fill('25,00')
+    await expect(page.getByTestId('total-proposta')).toHaveText('R$ 745,00')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+    await page.getByRole('button', { name: 'Enviar proposta · R$ 745' }).click()
+    await expect(page.getByText('Proposta enviada')).toBeVisible()
+    expect(envios(chamadas)[0]!.corpo.p).toMatchObject({ hospedagem_diarias: 2, outros: [{ descricao: 'Pedágio BR-101', valor_cent: 2500 }] })
+  })
+
+  test('pedido antigo (sem diárias nem outros custos): Hospedagem começa em 0 e não há aviso do cliente', async ({ page }) => {
+    await abrir(page, { caminho: `/chamada/${ID_PEDIDO}/propor`, detalhe: pedidoMotorista(), tarifa: TARIFA_MOTORISTA })
+    await expect(page.getByTestId('itens-proposta').getByRole('group', { name: 'Hospedagem (diárias)' }).locator('output')).toHaveText('0')
+    await expect(page.getByTestId('cliente-avisou')).toHaveCount(0)
     await expect(page.getByTestId('total-proposta')).toHaveText('R$ 360,00')
   })
 })
