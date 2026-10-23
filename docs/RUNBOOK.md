@@ -580,8 +580,8 @@ Roteiro de teste: [v2-1-o-que-testar.md](fases/v2-1-o-que-testar.md). Desenho: [
   - a reserva e o débito na saída acontecem como antes, e o saldo fica negativo: é o valor devido;
   - limite e alerta de saldo não se aplicam;
   - **não há teto**: fatura vencida só avisa.
-- Publicar uma versão sem escolher a forma (por exemplo, pela v1) **mantém** a forma da versão em vigor na data escolhida.
-- **Antes de trocar para Faturado**, deixe o saldo da empresa em zero com um **Ajuste** em ☰ › **Créditos**. A primeira fatura soma só o que acontecer **depois** que a versão Faturado passar a valer.
+- Publicar **sem mexer na Forma de cobrança** (ou pela v1, que não tem o seletor) **mantém** a forma da versão em vigor na data escolhida. A tela só manda a forma quando ela é trocada: assim, uma troca para Faturado já agendada não é desfeita por uma versão nova publicada depois.
+- **Antes de trocar para Faturado**, deixe o saldo da empresa em zero com um **Ajuste** em ☰ › **Créditos**, e faça esse Ajuste **antes de a versão Faturado passar a valer**. A primeira fatura soma só o que acontecer **depois** que ela vale, e um Ajuste feito com a empresa já no Faturado **entra na próxima fatura** (a tela avisa: "Este ajuste entra na próxima fatura.").
 
 ### 21.2 Quinzenas e faturas
 - As quinzenas vão do **dia 1 ao 15** e do **16 ao último dia** do mês, no horário de Brasília.
@@ -603,6 +603,7 @@ Roteiro de teste: [v2-1-o-que-testar.md](fases/v2-1-o-que-testar.md). Desenho: [
   - **Vencidas**.
 - A aba **Faturas**, para o Administrador (N1) e o Master, tem **Baixar NF (PDF)** e **CSV da fatura**. O Solicitante e o Visualizador não veem faturas.
 - Em ☰ › **Carteira da empresa**, a página se chama **Lançamentos**, e o cartão **Total devido** soma o faturado e o que falta faturar.
+- O **Total devido** só é igual a **Em aberto** + **A faturar** quando o saldo foi zerado antes da troca para o Faturado; um saldo que sobrou do Crédito continua somado nele.
 
 ### 21.4 Ajustes de tela
 - **Categorias e preços** abre só para ver. O **lápis** edita uma categoria, e **Cancelar** descarta a edição.

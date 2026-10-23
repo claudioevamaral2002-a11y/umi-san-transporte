@@ -252,6 +252,17 @@ test.describe('motorista', () => {
     })
   })
 
+  test('orçar: a hospedagem começa com as diárias que o cliente estimou (v2.1)', async ({ page }) => {
+    await comSessaoFalsa(page, MOTORISTA, AAL2)
+    await simularApi(page)
+    const chamadas = await simularPedidos(page, { detalhes: [pedidoSolicitadoMotorista({ diarias_estimadas: 2 })] })
+    await page.goto(`/pedidos/${ID_PEDIDO}/orcar`)
+    await expect(page.getByRole('group', { name: 'Hospedagem' })).toContainText('2 diárias')
+    await expect
+      .poll(() => (chamadas.filter((c) => c.rpc === 'calcular_orcamento').at(-1)?.corpo.p as Record<string, unknown> | undefined)?.hospedagem_diarias)
+      .toBe(2)
+  })
+
   test('orçar: pedido que não aguarda orçamento e cliente que força a rota', async ({ page, browser }) => {
     await comSessaoFalsa(page, MOTORISTA, AAL2)
     await simularApi(page)

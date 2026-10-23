@@ -213,7 +213,9 @@ Notas do que saiu diferente do aprovado. As decisões acima não mudaram.
 - **O que entra na fatura (§4.3):**
   - entram as cobranças (DEBITO, MULTA, ADITIVO e AJUSTE) **criadas enquanto o contrato em vigor era Faturado**, e não "a partir do início da primeira versão Faturado". Assim, uma empresa que volta ao Crédito não é faturada pelo que pagou no saldo;
   - um ESTORNO só entra quando a cobrança que ele estorna entraria.
-- **Forma herdada (§4.1):** sem a chave, a versão nova herda a forma da versão **em vigor na data escolhida**; na falta dela, a da versão mais alta.
+- **Forma herdada (§4.1):** sem a chave, a versão nova herda a forma da versão **em vigor na data escolhida**; na falta dela, a da versão mais alta. A tela de Contratos pré-preenche o seletor com a forma da versão de partida, mas **só manda a chave quando o Master a troca**: publicar sem mexer não desfaz uma troca já agendada.
+- **Volta à origem (§4.5):** `api.criar_pedido` não confia no aparelho: grava `volta_a_origem` true só quando o De e o Para têm o mesmo `place_id` ou os dois têm coordenadas a menos de 300 m; senão grava false, sem recusa. A prévia (`categorias_disponiveis`) só estima e aceita a que a tela manda.
+- **Ajuste no Faturado:** um Ajuste feito com o contrato em vigor no Faturado entra na próxima fatura. O saldo do Crédito se zera **antes** de a troca valer.
 - **Uma fatura por quinzena:** o banco não aceita duas faturas ativas para a mesma quinzena da mesma empresa. Para refazer, cancela-se a anterior.
 - **Data do pagamento:** não pode ser futura nem anterior à emissão da NF.
 - **Empresa que voltou ao Crédito:** continua em ☰ › Faturas enquanto tiver fatura aberta ou algo a faturar, e o Master ainda consegue gerar a última fatura.
