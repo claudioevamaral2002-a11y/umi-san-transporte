@@ -2,6 +2,7 @@ import './ambiente.ts'
 import { randomUUID } from 'node:crypto'
 import { deflateSync } from 'node:zlib'
 import { expect, type Page } from '@playwright/test'
+import { CONTRATO_TESTE, comBanco, empresaNova } from '../../integracao/ajuda.ts'
 import { gerarTotp } from '../../integracao/totp.ts'
 
 export * from '../../integracao/ajuda.ts'
@@ -117,4 +118,60 @@ export function pngMinimo(): Buffer {
     bloco('IDAT', deflateSync(Buffer.from([0, 255, 0, 0]))),
     bloco('IEND', Buffer.alloc(0)),
   ])
+}
+
+/** PDF mínimo e único (o bucket notas-fiscais só confere o tipo e o tamanho). */
+export function pdfMinimo(): Buffer {
+  return Buffer.from(`%PDF-1.4\n% NF de teste ${randomUUID()}\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n`)
+}
+
+/** Empresa nova com contrato no Crédito vigente há 90 dias (antes de qualquer quinzena fechada). */
+export async function empresaComContratoAntigo(): Promise<string> {
+  const empresa = await empresaNova()
+  await comBanco((db) =>
+    db.query(`select interno.inserir_contrato($1, $2::jsonb, now() - interval '90 days', null, 'Teste')`, [
+      empresa,
+      JSON.stringify(CONTRATO_TESTE),
+    ]),
+  )
+  return empresa
+}
+
+/**
+ * v2.1: leva o Faturado da empresa e o DEBITO da corrida para a última quinzena fechada, para o Master poder gerar a
+ * fatura hoje. A versão Faturado passa a valer desde o início da quinzena e o DEBITO vai para o meio-dia do último dia
+ * dela (horário de Brasília). Contrato e livro-razão são imutáveis: SÓ neste cenário de teste os gatilhos que barram o
+ * update são desligados, numa transação (o DDL volta junto se algo falhar). Devolve a quinzena (AAAA-MM-DD).
+ */
+export async function levarParaQuinzenaFechada(empresa: string, atividade: string): Promise<{ inicio: string; fim: string }> {
+  return comBanco(async (db) => {
+    await db.query('begin')
+    try {
+      const q = (
+        await db.query<{ inicio: string; fim: string }>(
+          'select inicio::text as inicio, fim::text as fim from interno.ultima_quinzena_fechada()',
+        )
+      ).rows[0]!
+      await db.query('alter table app.contratos_versoes disable trigger contratos_sem_update')
+      const c = await db.query(
+        `update app.contratos_versoes set vigente_desde = $2::date::timestamp at time zone 'America/Sao_Paulo'
+          where empresa_id = $1 and forma_cobranca = 'FATURADO'`,
+        [empresa, q.inicio],
+      )
+      await db.query('alter table app.contratos_versoes enable trigger contratos_sem_update')
+      await db.query('alter table app.lancamentos disable trigger lancamentos_sem_update')
+      const l = await db.query(
+        `update app.lancamentos set criado_em = ($2::date + time '12:00') at time zone 'America/Sao_Paulo'
+          where empresa_id = $1 and atividade_id = $3 and tipo = 'DEBITO'`,
+        [empresa, q.fim, atividade],
+      )
+      await db.query('alter table app.lancamentos enable trigger lancamentos_sem_update')
+      if (c.rowCount !== 1 || l.rowCount !== 1) throw new Error(`esperava 1 contrato e 1 DEBITO (${c.rowCount}, ${l.rowCount})`)
+      await db.query('commit')
+      return q
+    } catch (e) {
+      await db.query('rollback')
+      throw e
+    }
+  })
 }
