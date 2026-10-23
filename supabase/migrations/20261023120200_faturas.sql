@@ -11,7 +11,7 @@
 --     lançamento é o id da fatura; a idempotência fica registrada). api.estornar_lancamento já recusa esse tipo
 --     (NAO_ESTORNAVEL): a fatura tem cancelamento próprio, e a paga não se cancela;
 --   * a NF fica no bucket privado notas-fiscais (PDF até 5 MB) em <empresa_id>/<uuid>.pdf: o ADM envia e troca; o ADM e o
---     N1 da empresa leem (link assinado);
+--     N1 da empresa leem (link assinado). O arquivo nunca é sobrescrito: trocar o PDF é enviar outro caminho;
 --   * api.painel_empresa no FATURADO traz a_faturar_cent, em_aberto_cent e vencidas_cent; interno.reconciliar ganha
 --     FATURA_TOTAL_DIVERGENTE e LANCAMENTO_EM_DUAS_FATURAS.
 -- Regras de sempre: security definer, search_path vazio, negações por interno.negar, trava da conta antes de ler ou
@@ -58,6 +58,8 @@ create table app.faturas (
   constraint faturas_cancelada check ((status = 'CANCELADA') = (cancelada_motivo is not null and cancelada_em is not null))
 );
 create index faturas_empresa on app.faturas (empresa_id, numero desc);
+-- Uma fatura não cancelada por quinzena da empresa.
+create unique index faturas_quinzena_unica on app.faturas (empresa_id, inicio) where status <> 'CANCELADA';
 alter table app.faturas enable row level security;
 
 create table app.faturas_itens (
@@ -120,8 +122,9 @@ create trigger faturas_itens_sem_truncate before truncate on app.faturas_itens
 
 ------------------------------------------------------------------------------------------------
 -- 3. Storage: bucket privado notas-fiscais, só PDF de até 5 MB, em <empresa_id>/<uuid>.pdf.
---    Envio e troca: só o ADM. Leitura: o ADM, ou o N1 (CLIENTE nível 1) cuja empresa é o primeiro segmento do caminho.
---    Sem política de delete: a NF não é apagada.
+--    Envio: só o ADM, sempre num caminho novo (a troca do PDF envia outro arquivo; não há política de update). Leitura: o
+--    ADM, ou o N1 (CLIENTE nível 1) cuja empresa é o primeiro segmento do caminho. Sem política de delete: a NF não é
+--    apagada.
 ------------------------------------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('notas-fiscais', 'notas-fiscais', false, 5242880, array['application/pdf'])
@@ -131,18 +134,6 @@ on conflict (id) do update
       allowed_mime_types = array['application/pdf'];
 
 create policy notas_inserir on storage.objects for insert to authenticated
-with check (
-  bucket_id = 'notas-fiscais'
-  and (select app.pode_fazer('LANCAR_SALDO'))
-  and name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$'
-  and exists (select 1 from app.empresas e where e.id::text = (storage.foldername(name))[1])
-);
-
-create policy notas_atualizar on storage.objects for update to authenticated
-using (
-  bucket_id = 'notas-fiscais'
-  and (select app.pode_fazer('LANCAR_SALDO'))
-)
 with check (
   bucket_id = 'notas-fiscais'
   and (select app.pode_fazer('LANCAR_SALDO'))
@@ -408,17 +399,29 @@ begin
     return interno.negar('GERAR_FATURA', v_alvo, 'NADA_A_FATURAR',
       jsonb_build_object('inicio', p_inicio, 'fim', p_fim, 'itens', cardinality(v_ids), 'total_cent', v_total));
   end if;
+  -- a quinzena já tem fatura não cancelada: o que sobrou (lançamento datado nela depois do fechamento) vai na seguinte
+  if exists (select 1 from app.faturas f
+              where f.empresa_id = p_empresa and f.inicio = p_inicio and f.status <> 'CANCELADA') then
+    return interno.negar('GERAR_FATURA', v_alvo, 'NADA_A_FATURAR',
+      jsonb_build_object('inicio', p_inicio, 'fim', p_fim, 'ja_faturada', true));
+  end if;
   if v_total > interno.teto_cent() then
     return interno.negar('GERAR_FATURA', v_alvo, 'VALOR_FORA_DO_LIMITE');
   end if;
 
   select coalesce(max(f.numero), 0) + 1 into v_numero from app.faturas f where f.empresa_id = p_empresa;
-  insert into app.faturas (empresa_id, numero, inicio, fim, total_cent, nf_numero, nf_emitida_em, nf_pdf_caminho,
-                           vencimento, criada_por)
-  values (p_empresa, v_numero, p_inicio, p_fim, v_total, v_numero_nf, v_emitida, v_caminho, v_vencimento,
-          (select auth.uid()))
-  returning id into v_id;
-  insert into app.faturas_itens (fatura_id, lancamento_id) select v_id, x from unnest(v_ids) x;
+  begin
+    insert into app.faturas (empresa_id, numero, inicio, fim, total_cent, nf_numero, nf_emitida_em, nf_pdf_caminho,
+                             vencimento, criada_por)
+    values (p_empresa, v_numero, p_inicio, p_fim, v_total, v_numero_nf, v_emitida, v_caminho, v_vencimento,
+            (select auth.uid()))
+    returning id into v_id;
+    insert into app.faturas_itens (fatura_id, lancamento_id) select v_id, x from unnest(v_ids) x;
+  exception when unique_violation then
+    -- defesa: a trava da conta já serializa; um concorrente que passou na frente deixa esta sem nada a faturar
+    return interno.negar('GERAR_FATURA', v_alvo, 'NADA_A_FATURAR',
+      jsonb_build_object('inicio', p_inicio, 'fim', p_fim, 'ja_faturada', true));
+  end;
 
   perform interno.auditar('GERAR_FATURA', 'fatura:' || v_id, 'OK', null,
     jsonb_build_object('empresa_id', p_empresa, 'numero', v_numero, 'inicio', p_inicio, 'fim', p_fim,
@@ -428,7 +431,8 @@ begin
 end $$;
 
 -- Marca a fatura como paga: lança PAGAMENTO_FATURA = total (uma vez: a chave do lançamento é o id da fatura).
--- Recusas: JA_PROCESSADO (já paga), FATURA_CANCELADA, CAMPOS_INVALIDOS (data vazia ou no futuro). {ok, lancamento_id}
+-- Recusas: JA_PROCESSADO (já paga), FATURA_CANCELADA, CAMPOS_INVALIDOS (data vazia, no futuro ou antes da emissão da
+-- NF). {ok, lancamento_id}
 create function api.marcar_fatura_paga(p_fatura uuid, p_paga_em date)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -458,6 +462,10 @@ begin
   end if;
   if f.status = 'CANCELADA' then
     return interno.negar('MARCAR_FATURA_PAGA', v_alvo, 'FATURA_CANCELADA');
+  end if;
+  if p_paga_em < f.nf_emitida_em then
+    return interno.negar('MARCAR_FATURA_PAGA', v_alvo, 'CAMPOS_INVALIDOS',
+      jsonb_build_object('invalidos', jsonb_build_array('paga_em')));
   end if;
 
   begin
@@ -617,12 +625,13 @@ begin
   if v.usuario_id is null or not (v.papel = 'ADM' or (v.papel = 'CLIENTE' and v.nivel = 1)) then
     return interno.negar('VER_FATURA', v_alvo, 'SEM_PERMISSAO');
   end if;
+  -- o limite vem antes de dizer se a fatura existe (não vira sonda de ids)
+  if not interno.checar_limite('VER_FATURAS', 300, interval '1 hour') then
+    return interno.negar('VER_FATURA', v_alvo, 'LIMITE_EXCEDIDO');
+  end if;
   select * into f from app.faturas x where x.id = p_fatura;
   if f.id is null or (v.papel = 'CLIENTE' and f.empresa_id is distinct from v.empresa_id) then
     return interno.negar('VER_FATURA', v_alvo, case when v.papel = 'ADM' then 'NAO_ENCONTRADO' else 'SEM_PERMISSAO' end);
-  end if;
-  if not interno.checar_limite('VER_FATURAS', 300, interval '1 hour') then
-    return interno.negar('VER_FATURA', v_alvo, 'LIMITE_EXCEDIDO');
   end if;
   return jsonb_build_object('ok', true, 'fatura', interno.fatura_json(f),
     'itens', coalesce((select jsonb_agg(interno.item_fatura(l) order by l.criado_em, l.id)
@@ -630,7 +639,8 @@ begin
                         where i.fatura_id = f.id), '[]'::jsonb));
 end $$;
 
--- Só o ADM: uma linha por empresa cuja vigente é FATURADO. quinzena_pronta = a última quinzena fechada, se ela tem o
+-- Só o ADM: uma linha por empresa cuja vigente é FATURADO e também por empresa que voltou ao Crédito mas ainda tem
+-- fatura ABERTA ou algo a faturar do tempo do Faturado. quinzena_pronta = a última quinzena fechada, se ela tem o
 -- que faturar (total > 0); senão null. {ok, empresas:[{empresa_id, empresa_nome, a_faturar_cent, em_aberto_cent,
 -- vencidas_cent, quinzena_pronta}]}
 create function api.faturas_resumo()
@@ -656,7 +666,9 @@ begin
                                then jsonb_build_object('inicio', q.inicio, 'fim', q.fim) end)
                      order by e.nome, e.id)
       from app.empresas e
-     where interno.forma_cobranca(e.id) = 'FATURADO'), '[]'::jsonb));
+     where interno.forma_cobranca(e.id) = 'FATURADO'
+        or exists (select 1 from app.faturas f where f.empresa_id = e.id and f.status = 'ABERTA')
+        or exists (select 1 from interno.itens_a_faturar(e.id, 'infinity'))), '[]'::jsonb));
 end $$;
 
 ------------------------------------------------------------------------------------------------

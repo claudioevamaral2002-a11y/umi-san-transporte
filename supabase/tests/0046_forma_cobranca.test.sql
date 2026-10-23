@@ -1,7 +1,7 @@
 -- v2.1, Tarefa 1 (migration 20261023120000_forma_cobranca.sql; docs/fases/v2-1-ajustes-faturamento-nf-desenho.md §4.1,
 -- §4.2): forma de cobrança no contrato (CREDITO ou FATURADO).
---   * sem a chave, a versão nova herda a forma da última versão (maior número, mesmo agendada) da mesma empresa; sem
---     versão, a do modelo; sem modelo, CREDITO;
+--   * sem a chave, a versão nova herda a forma da versão da mesma empresa em vigor na data dela (uma troca agendada
+--     para antes vale; uma agendada para depois não é antecipada); sem versão, a do modelo; sem modelo, CREDITO;
 --   * FATURADO grava; valor inválido → CAMPOS_INVALIDOS com o detalhe forma_cobranca; publicar_tarifas mantém a forma;
 --   * no FATURADO, criar_pedido não exige crédito e aprovar_orcamento não recusa por saldo: a reserva e o RESERVA
 --     continuam, o disponível fica negativo e a saída gera o DEBITO;
@@ -10,7 +10,7 @@
 --     painel do ADM).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(40);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -181,7 +181,7 @@ select is(current_setting('t.r3')::jsonb ->> 'codigo', 'SEM_CREDITO', 'CREDITO s
 select is(current_setting('t.ap2')::jsonb ->> 'codigo', 'SALDO_INSUFICIENTE', 'CREDITO sem saldo: SALDO_INSUFICIENTE, como antes');
 select is(current_setting('t.s2')::jsonb ->> 'forma_cobranca', 'CREDITO', 'saldo_empresa no CREDITO');
 
------------------------------------------------------------------- 5b. herda da última versão, mesmo agendada
+------------------------------------------------------------------ 5b. herda da versão em vigor na data da nova
 -- vigente CREDITO (v5); o Master agenda a troca para FATURADO (v6, daqui a 10 dias) e depois publica outra versão sem a
 -- chave (v7, como a v1 envia): ela herda a troca agendada, não a vigente.
 set local role authenticated;
@@ -195,7 +195,16 @@ select ok((current_setting('t.p6')::jsonb ->> 'ok')::boolean and (current_settin
           and interno.forma_cobranca('00000000-0000-0000-0000-0000000000e1') = 'CREDITO',
   'FATURADO agendado e mais uma versão sem a chave; a vigente continua CREDITO');
 select is(pg_temp.forma('00000000-0000-0000-0000-0000000000e1', 7), 'FATURADO',
-  'sem a chave: herda da última versão publicada (a agendada), não da vigente');
+  'sem a chave, com data depois da troca agendada: herda a agendada, não a vigente de hoje');
+-- e uma versão sem a chave valendo hoje (v8), com o FATURADO ainda agendado para daqui a 10 dias: fica CREDITO
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca1'), true);
+select set_config('t.p8', api.publicar_contrato('00000000-0000-0000-0000-0000000000e1',
+  current_setting('t.base')::jsonb, now())::text, true);
+reset role;
+select ok((current_setting('t.p8')::jsonb ->> 'ok')::boolean
+          and pg_temp.forma('00000000-0000-0000-0000-0000000000e1', 8) = 'CREDITO',
+  'sem a chave, valendo hoje com o FATURADO agendado para depois: herda o CREDITO de hoje (não antecipa a troca)');
 
 ------------------------------------------------------------------ 6. privilégios
 select ok(not has_function_privilege('authenticated', 'interno.forma_cobranca(uuid)', 'EXECUTE')

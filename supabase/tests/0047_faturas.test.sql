@@ -8,10 +8,12 @@
 --   * um estorno com data depois do fim cai na fatura seguinte, e a fatura já gerada não muda;
 --   * paga → PAGAMENTO_FATURA e o saldo sobe pelo total; segunda vez → JA_PROCESSADO; estornar o pagamento → recusado;
 --   * situacao VENCIDA; quem lê (N1 sim; N2, N3, motorista e N1 de outra empresa não); faturas_resumo só ADM;
+--   * paga antes da emissão da NF → CAMPOS_INVALIDOS; quinzena já faturada com lançamento novo nela → NADA_A_FATURAR;
+--   * faturas_resumo continua listando a empresa que voltou ao Crédito com fatura aberta;
 --   * painel_empresa no FATURADO; a reconciliação continua limpa e acusa as duas divergências novas.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(78);
+select plan(81);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -306,6 +308,8 @@ set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca1'), true);
 select set_config('t.pg_fut', api.marcar_fatura_paga(current_setting('t.f2')::uuid,
   current_setting('t.hoje')::date + 1)::text, true);
+select set_config('t.pg_ant', api.marcar_fatura_paga(current_setting('t.f3')::uuid,
+  current_setting('t.hoje')::date - 41)::text, true);
 select set_config('t.pg', api.marcar_fatura_paga(current_setting('t.f2')::uuid, current_setting('t.hoje')::date)::text, true);
 select set_config('t.pg2', api.marcar_fatura_paga(current_setting('t.f2')::uuid, current_setting('t.hoje')::date)::text, true);
 select set_config('t.pgc', api.marcar_fatura_paga(current_setting('t.f1')::uuid, current_setting('t.hoje')::date)::text, true);
@@ -319,6 +323,7 @@ select set_config('t.lf', api.faturas('00000000-0000-0000-0000-0000000000e1')::t
 reset role;
 
 select is(current_setting('t.pg_fut')::jsonb ->> 'codigo', 'CAMPOS_INVALIDOS', 'paga no futuro: recusado');
+select is(current_setting('t.pg_ant')::jsonb ->> 'codigo', 'CAMPOS_INVALIDOS', 'paga antes da emissão da NF: recusado');
 select is(current_setting('t.pg')::jsonb ->> 'ok', 'true', 'marca a nº 2 como paga');
 select is((select tipo::text || ':' || valor_cent from app.lancamentos
             where id = (current_setting('t.pg')::jsonb ->> 'lancamento_id')::bigint), 'PAGAMENTO_FATURA:50000',
@@ -388,12 +393,32 @@ select is(current_setting('t.n1b'), 'SEM_PERMISSAO,[],false',
   'N1 de outra empresa: não lê a fatura; a dele vem vazia, e o painel no Crédito não traz os números da fatura');
 select is(current_setting('t.adm_nf')::jsonb ->> 'codigo', 'NAO_ENCONTRADO', 'ADM: fatura inexistente');
 
+------------------------------------------------------------------ 6b. quinzena já faturada; empresa de volta ao Crédito
+-- um lançamento datado em Q1 depois de a nº 2 (Q1) já existir: gerar Q1 de novo não cria outra fatura da mesma quinzena
+select set_config('t.lq1', pg_temp.lanc('AJUSTE', -1000, pg_temp.em(current_setting('t.q1i')) + interval '2 days')::text, true);
+select interno.inserir_contrato('00000000-0000-0000-0000-0000000000e1',
+  current_setting('t.base')::jsonb || '{"forma_cobranca": "CREDITO"}', now(), null, 'Teste');
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca1'), true);
+select set_config('t.gq1', api.gerar_fatura('00000000-0000-0000-0000-0000000000e1', current_setting('t.q1i')::date,
+  current_setting('t.q1f')::date, current_setting('t.nf')::jsonb
+    || jsonb_build_object('numero', '104', 'pdf_caminho', current_setting('t.pdf2')))::text, true);
+select set_config('t.rs3', api.faturas_resumo()::text, true);
+reset role;
+select is(current_setting('t.gq1')::jsonb ->> 'codigo', 'NADA_A_FATURAR',
+  'quinzena com fatura não cancelada e um lançamento novo nela: NADA_A_FATURAR (sem erro de índice)');
+select is((select count(*)::int from app.faturas where empresa_id = '00000000-0000-0000-0000-0000000000e1'), 3,
+  'nenhuma fatura nova');
+select is(array(select x ->> 'empresa_id' from jsonb_array_elements(current_setting('t.rs3')::jsonb -> 'empresas') x),
+  array['00000000-0000-0000-0000-0000000000e1'],
+  'faturas_resumo: a empresa de volta ao Crédito com fatura aberta continua listada (a B, sem nada, não)');
+
 ------------------------------------------------------------------ 7. reconciliação
 select is(interno.reconciliar() -> 'divergencias', '[]'::jsonb, 'reconciliação limpa depois de todo o fluxo');
 -- divergências injetadas (cenário de teste): fatura com total errado e o L1 também nela (a nº 2, paga, já o tem)
 insert into app.faturas (id, empresa_id, numero, inicio, fim, total_cent, nf_numero, nf_emitida_em, nf_pdf_caminho, vencimento)
-values ('00000000-0000-0000-0000-0000000000f9', '00000000-0000-0000-0000-0000000000e1', 99, current_setting('t.q1i')::date,
-        current_setting('t.q1f')::date, 12345, '999', current_setting('t.q2i')::date, current_setting('t.pdf1'),
+values ('00000000-0000-0000-0000-0000000000f9', '00000000-0000-0000-0000-0000000000e1', 99, current_setting('t.q3i')::date,
+        current_setting('t.q3f')::date, 12345, '999', current_setting('t.q2i')::date, current_setting('t.pdf1'),
         current_setting('t.q2i')::date);
 alter table app.faturas_itens disable trigger faturas_itens_validar;
 insert into app.faturas_itens (fatura_id, lancamento_id, ativa)
