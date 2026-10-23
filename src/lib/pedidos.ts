@@ -97,6 +97,8 @@ export interface DetalhePedido {
   outros_custos?: string | null
   /** O Para é o mesmo lugar do De: circuito fechado, sem o retorno de trecho único. */
   volta_a_origem?: boolean
+  /** Forma de cobrança da empresa do pedido (todos os níveis a recebem, inclusive o N3, que não lê o saldo). */
+  forma_cobranca?: 'CREDITO' | 'FATURADO'
 }
 
 export interface LinhaOrcamento {

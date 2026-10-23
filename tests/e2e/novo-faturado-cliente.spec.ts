@@ -1,6 +1,7 @@
 // v2.1 (Tarefa 8, lado do cliente): empresa no Faturado (NF). O início nunca mostra "sem crédito", a confirmação diz
 // "Será cobrada na fatura da quinzena (NF)" sem o saldo, e a corrida confirmada "Entra na fatura da quinzena quando a
-// corrida começar". No Crédito, tudo como hoje. A forma vem de `saldo_empresa.forma_cobranca` (sem ela, Crédito).
+// corrida começar". No Crédito, tudo como hoje. A forma vem de `saldo_empresa.forma_cobranca` (sem ela, Crédito); na
+// corrida confirmada, do `pedido.forma_cobranca` quando o detalhe a traz (também para o N3, que não lê o saldo).
 // Roda no projeto Playwright `novo` (dist-novo).
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page, type Route } from '@playwright/test'
@@ -56,15 +57,19 @@ function agendada() {
   return { ...o, pedido: { ...o.pedido, status: 'AGENDADA' }, orcamento: { ...o.orcamento, status: 'APROVADO' } }
 }
 
-async function abrir(page: Page, o: { saldo: Record<string, unknown>; detalhes?: unknown[]; caminho?: string }) {
+async function abrir(page: Page, o: { saldo: Record<string, unknown>; detalhes?: unknown[]; caminho?: string; nivel?: 1 | 2 | 3 }) {
   await page.setViewportSize(TELA)
-  await comSessaoFalsa(page, { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' })
+  await comSessaoFalsa(page, { papel: 'CLIENTE', nivel: o.nivel ?? 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' })
   await simularApi(page)
   const chamadas = await simularPedidos(page, { detalhes: o.detalhes })
   await simularMapas(page, { rota: { km: 42, minutos: 55 }, polyline: '_p~iF~ps|U_ulLnnqC' })
   await simularBlocosDoMapa(page)
   // Registrada depois de `simularApi`: esta resposta vale.
-  await page.route(`${URL_SUPABASE}/rest/v1/rpc/saldo_empresa`, (route: Route) => json(route, saldoFalso(o.saldo)))
+  const saldos: unknown[] = []
+  await page.route(`${URL_SUPABASE}/rest/v1/rpc/saldo_empresa`, (route: Route) => {
+    saldos.push(route.request().postDataJSON())
+    return json(route, saldoFalso(o.saldo))
+  })
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/categorias_disponiveis`, (route: Route) =>
     json(route, {
       ok: true,
@@ -77,7 +82,7 @@ async function abrir(page: Page, o: { saldo: Record<string, unknown>; detalhes?:
     return json(route, { ok: true, atividade_id: ID_PEDIDO, reservado_cent: 22000, disponivel_cent: -494000 })
   })
   await page.goto(o.caminho ?? '/')
-  return { chamadas, confirmar }
+  return { chamadas, confirmar, saldos }
 }
 
 const semRolagemLateral = (page: Page) =>
@@ -115,6 +120,37 @@ test.describe('empresa no Faturado (NF)', () => {
     await expect(folha).toContainText('Entra na fatura da quinzena quando a corrida começar')
     await expect(folha).not.toContainText('A cobrança acontece na saída do Ivo')
     expect(await semRolagemLateral(page)).toBe(true)
+  })
+})
+
+test.describe('a forma de cobrança no detalhe do pedido', () => {
+  /** Corrida agendada cujo detalhe já traz a forma da empresa (banco da v2.1). */
+  const agendadaCom = (forma: 'CREDITO' | 'FATURADO') => {
+    const a = agendada()
+    return { ...a, pedido: { ...a.pedido, forma_cobranca: forma } }
+  }
+
+  test('o N3 (visualizador), que não lê o saldo, vê o texto do Faturado pelo detalhe', async ({ page }) => {
+    const { saldos } = await abrir(page, { nivel: 3, saldo: FATURADO, detalhes: [agendadaCom('FATURADO')], caminho: `/corrida/${ID_PEDIDO}` })
+    const folha = page.getByTestId('folha-mapa')
+    await expect(page.getByRole('heading', { name: 'Corrida confirmada' })).toBeVisible()
+    await expect(folha).toContainText('Entra na fatura da quinzena quando a corrida começar')
+    await expect(folha).not.toContainText('A cobrança acontece na saída do Ivo')
+    expect(saldos).toHaveLength(0)
+  })
+
+  test('o detalhe vale mais que o saldo: com a forma no detalhe, o saldo nem é lido', async ({ page }) => {
+    const { saldos } = await abrir(page, { saldo: { forma_cobranca: 'FATURADO' }, detalhes: [agendadaCom('CREDITO')], caminho: `/corrida/${ID_PEDIDO}` })
+    const folha = page.getByTestId('folha-mapa')
+    await expect(folha).toContainText('A cobrança acontece na saída do Ivo. O valor fica reservado até lá.')
+    await expect(folha).not.toContainText('Entra na fatura')
+    expect(saldos).toHaveLength(0)
+  })
+
+  test('sem a forma no detalhe (banco anterior), o N3 fica com o texto do Crédito', async ({ page }) => {
+    await abrir(page, { nivel: 3, saldo: FATURADO, detalhes: [agendada()], caminho: `/corrida/${ID_PEDIDO}` })
+    const folha = page.getByTestId('folha-mapa')
+    await expect(folha).toContainText('A cobrança acontece na saída do Ivo. O valor fica reservado até lá.')
   })
 })
 

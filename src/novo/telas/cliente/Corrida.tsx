@@ -42,18 +42,21 @@ const LinkInicio = () => (
 
 /**
  * Depois da confirmação (ou ao abrir uma corrida já agendada): o que foi reservado e quem vai. v2.1: no Faturado (NF),
- * a forma de cobrança vem do saldo da empresa (só quem pede o lê; o N3 fica com o texto do Crédito) e a corrida "entra
- * na fatura" em vez de ficar reservada no saldo.
+ * a corrida "entra na fatura" em vez de ficar reservada no saldo. A forma de cobrança vem do detalhe do pedido (todos
+ * os níveis, inclusive o N3, que não lê o saldo); sem ela (banco anterior), do saldo da empresa (só quem pede o lê; o N3
+ * fica com o texto do Crédito).
  */
 function CorridaConfirmada({ r, aprovacao }: { r: RespostaPedido; aprovacao: Aprovacao | null }) {
   const titulo = useRef<HTMLHeadingElement>(null)
   useEffect(() => titulo.current?.focus(), [])
   const p = r.pedido
   const { perfil } = useSessao()
-  const leSaldo = podeCriarPedido(perfil)
+  const doDetalhe = p.forma_cobranca ?? null
+  const leSaldo = doDetalhe === null && podeCriarPedido(perfil)
   const saldo = useConsulta(leSaldo ? 'novo-saldo-corrida' : 'novo-saldo-nada', async () => (leSaldo ? dinheiro.saldo(null) : null))
   // `null` enquanto o saldo carrega (nada de texto que mude em seguida); sem saldo (N3 ou falha), o texto do Crédito.
-  const forma = !leSaldo || saldo.erro ? 'CREDITO' : saldo.dados === undefined ? null : (saldo.dados?.forma_cobranca ?? 'CREDITO')
+  const forma =
+    doDetalhe ?? (!leSaldo || saldo.erro ? 'CREDITO' : saldo.dados === undefined ? null : (saldo.dados?.forma_cobranca ?? 'CREDITO'))
   return (
     <FolhaMapa rotulo="Corrida confirmada">
       <div className="mb-3 flex items-center gap-3">

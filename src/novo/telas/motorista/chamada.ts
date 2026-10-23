@@ -4,6 +4,7 @@
 // Fase 4.1 (Tarefa 7): os itens seguem a tarifa da categoria (zerado = não cobra), a categoria de veículo do cliente
 // (IVO Motorista) não usa veículo da IVO, as horas entram na calculadora e a rota passa pelas paradas do pedido.
 import { useCallback, useEffect, useState } from 'react'
+// Alias: o teto das diárias que o cliente pede (30, categorias.ts) não é o da calculadora do Ivo (60, orcar.ts).
 import { DIARIAS_MAX as DIARIAS_MAX_PEDIDO, HORAS_MAX, HORAS_MIN, kmDaRota, kmDoPedido, PREENCHIMENTO, type CodigoCategoria } from '../../../lib/categorias.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { corrida } from '../../../lib/corrida.ts'
