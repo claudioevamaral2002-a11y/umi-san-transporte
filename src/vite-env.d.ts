@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR?: string
   /** '1' só nas builds de desenvolvimento/teste (definido no vite.config.ts); nunca em produção. */
   readonly VITE_VITRINE?: string
+  /** Versão do package.json (definida no vite.config.ts), mostrada em Perfil e segurança na v2. */
+  readonly VITE_VERSAO: string
 }
 
 interface ImportMeta {

@@ -4,7 +4,7 @@ Guia passo a passo para o dono do sistema. Não precisa saber programar. Em todo
 
 - Repositório: https://github.com/claudioevamaral2002-a11y/umi-san-transporte
 - Aba de workflows: https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions
-- Aplicativo (produção): https://umi-san-transporte.pages.dev
+- Aplicativo (produção, v2): https://umi-san-transporte.pages.dev. A v1 (o app anterior) fica em https://ivo-v1.pages.dev (§20).
 - Painel Supabase: https://supabase.com/dashboard
 - Painel Cloudflare: https://dash.cloudflare.com
 
@@ -407,6 +407,8 @@ O **IVO novo** é a interface no estilo Uber (mapa na frente, categorias, calcul
 | App atual | https://umi-san-transporte.pages.dev | `umi-san-transporte` |
 | App novo (teste) | https://ivo-novo.pages.dev | `ivo-novo` |
 
+> **Desde a v2.0 (§20) esta tabela mudou:** o endereço principal serve a v2 (o "app novo"), e o app anterior virou v1 em https://ivo-v1.pages.dev.
+
 - Os dois saem **do mesmo commit da `main`**, no mesmo workflow **Deploy**: primeiro o app atual, depois o novo. O banco e as funções sobem uma vez só, antes dos dois.
 - Cada um é um PWA à parte: instala em separado e guarda a própria versão no celular. O app atual **não muda**.
 - **Deploy vermelho:** abra a execução e veja **qual passo falhou**. Se foram só os passos do "IVO novo" (build, publicar ou verificar a CSP), o app atual **já foi publicado** e está no ar; só o site novo ficou para trás. Rode **Re-run failed jobs**.
@@ -544,3 +546,25 @@ O app novo é um PWA e guarda a versão no aparelho. **Depois do deploy, force a
 | Motorista não consegue orçar a IVO Motorista ou o km não bate com o do cliente em corrida com paradas | O app do motorista está com a versão da fase 4 em cache (19.5). Atualize o app |
 | Mudei km/taxa em Contratos e o preço não mudou | Com tabela por categoria, o preço vem da tabela (19.4). Use **Categorias e preços** |
 | Publicar pela tela **Contratos** do app atual | A versão nova **herda** as tarifas da anterior; para mudar preço, use **Categorias e preços** |
+
+## 20. Versões: v1 e v2
+
+A partir da **v2.0** o app novo (estilo Uber, `src/novo`) **substitui** o anterior no endereço principal. O app anterior continua no ar como **v1**, para consulta e para o gestor de frota (que ainda não tem telas na v2). As melhorias seguintes saem como **v2.1, v2.2…** (o número fica no `package.json` e aparece no fim de ☰ › **Perfil e segurança**).
+
+### 20.1 Os endereços
+| Versão | Endereço | Projeto no Cloudflare Pages | Pasta da build |
+| --- | --- | --- | --- |
+| **v2** (principal) | https://umi-san-transporte.pages.dev | `umi-san-transporte` | `dist-novo` (`npm run build:novo`) |
+| v2 (mesmo app, endereço antigo de teste) | https://ivo-novo.pages.dev | `ivo-novo` | `dist-novo` |
+| **v1** (app anterior) | https://ivo-v1.pages.dev | `ivo-v1` (o Deploy cria) | `dist` (`npm run build`) |
+
+- Os três saem **do mesmo commit da `main`**, no mesmo **Deploy**: primeiro a v2 (principal e ivo-novo), depois a v1. Se só os passos da v1 falharem, a v2 já está no ar; rode **Re-run failed jobs**.
+- Os links de convite e de senha apontam para o endereço principal (v2). O gestor de frota que entrar na v2 vê **"Abrir a versão 1"**.
+- Quem já tinha o app instalado pelo endereço principal recebe a v2 sozinho: ao abrir, aparece **"Nova versão · Atualizar"**; toque. Se o ícone continuar com o app antigo, apague o ícone e instale de novo pelo endereço principal. Quem instalou pelo ivo-novo pode continuar usando (é a mesma v2) ou trocar para o endereço principal.
+- O banco é **um só** para as duas versões: o que se faz numa aparece na outra.
+
+### 20.2 Passos do dono (uma vez, para o endereço da v1)
+Sem estes passos a v1 abre, mas **o login trava no CAPTCHA** e o mapa não aparece. A v2 no endereço principal não depende deles.
+1. **Turnstile (Cloudflare):** dash.cloudflare.com › **Turnstile** › seu widget › **Hostname Management** › **Add hostname** › `ivo-v1.pages.dev` › Salvar (mantenha os que já estão lá).
+2. **Chave do mapa (Google Cloud):** projeto `ivo-transportes-mapas` › **APIs e serviços** › **Credenciais** › **`navegador-mapa`** › **Restrições de aplicativo** › **Adicionar** `https://ivo-v1.pages.dev/*` › Salvar (mantenha as outras linhas).
+3. **Supabase:** nada a fazer; o Deploy adiciona `https://ivo-v1.pages.dev/definir-senha` às Redirect URLs e `https://ivo-v1.pages.dev` às origens das funções.

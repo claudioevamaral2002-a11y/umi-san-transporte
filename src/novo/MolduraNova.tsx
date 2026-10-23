@@ -8,7 +8,7 @@ import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { MapaBase, type CarroNoMapa, type Ponto } from './componentes/MapaBase.tsx'
 import { BarraCliente } from './componentes/BarraCliente.tsx'
-import { APP_ATUAL, itensDoMenu, Menu } from './componentes/Menu.tsx'
+import { APP_V1, itensDoMenu, Menu } from './componentes/Menu.tsx'
 import { temBarraCliente, tituloDaPagina, tituloExato } from './navegacao.ts'
 
 /**
@@ -128,7 +128,7 @@ export function TelaDePagina() {
   )
 }
 
-/** Gestor de frota no app novo: ainda sem telas aqui; as de hoje continuam no app atual. */
+/** Gestor de frota na v2: ainda sem telas aqui; as dele continuam na v1. */
 export function SemAcessoAoApp() {
   const { sair } = useSessao()
   return (
@@ -137,13 +137,13 @@ export function SemAcessoAoApp() {
         <p className="ivo-legenda font-semibold text-alerta-texto">Acesso indisponível</p>
         <h1 className="ivo-h2">Sem acesso a este app</h1>
         <p className="ivo-corpo text-texto-suave">
-          O seu perfil ainda não tem telas no app novo. Continue usando o app de hoje.
+          O seu perfil ainda não tem telas nesta versão. Continue usando a versão 1.
         </p>
         <a
-          href={APP_ATUAL}
+          href={APP_V1}
           className="flex min-h-12 w-full items-center justify-center rounded-botao bg-acao px-5 ivo-botao text-acao-texto"
         >
-          Abrir o app de hoje
+          Abrir a versão 1
         </a>
         <Botao className="w-full" onClick={() => void sair()}>
           Sair

@@ -2,14 +2,21 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
 
-// Fase 4: `--mode novo` gera o segundo site (ivo-novo) em dist-novo, a partir de novo.html (src/novo).
-// Os demais modos geram o app atual em dist, como sempre.
+// Versão mostrada em Perfil e segurança na v2 (a do package.json).
+const VERSAO: string = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
+
+// `--mode novo` gera a v2 (src/novo, a partir de novo.html) em dist-novo: vai para o endereço principal e para o
+// ivo-novo. Os demais modos geram a v1 (o app anterior) em dist, publicada em ivo-v1.
 export default defineConfig(({ mode }) => {
   const novo = mode === 'novo'
   return {
     // Vitrine do design system só em dev e na build de teste do e2e; a de produção nunca a inclui.
-    define: { 'import.meta.env.VITE_VITRINE': JSON.stringify(mode === 'test' || mode === 'development' ? '1' : '') },
+    define: {
+      'import.meta.env.VITE_VITRINE': JSON.stringify(mode === 'test' || mode === 'development' ? '1' : ''),
+      'import.meta.env.VITE_VERSAO': JSON.stringify(VERSAO),
+    },
     // Sem polyfill inline e sem assets em data: — a CSP só permite 'self'.
     build: {
       modulePreload: { polyfill: false },
@@ -35,8 +42,8 @@ export default defineConfig(({ mode }) => {
         // (useRegisterSW, em src/novo/AvisoNovaVersao.tsx). Nenhum script inline nos dois.
         injectRegister: novo ? false : 'script',
         manifest: {
-          name: novo ? 'IVO Transportes (novo)' : 'IVO Transportes',
-          short_name: novo ? 'IVO novo' : 'IVO',
+          name: novo ? 'IVO Transportes' : 'IVO Transportes v1',
+          short_name: novo ? 'IVO' : 'IVO v1',
           description: 'Agendamento, orçamento e execução de transportes.',
           lang: 'pt-BR',
           start_url: '/',
