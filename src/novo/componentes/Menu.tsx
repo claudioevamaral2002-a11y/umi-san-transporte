@@ -9,8 +9,8 @@ import { useSessao } from '../../lib/sessao.tsx'
 import { gravarDisponivel, lerDisponivel } from '../disponivel.ts'
 import { itemAtual } from '../navegacao.ts'
 
-/** O app atual (outra origem). No app novo, só o gestor de frota é mandado para lá (Ruling R13). */
-export const APP_ATUAL = 'https://umi-san-transporte.pages.dev'
+/** A v1 (o app anterior, em outra origem). Na v2, só o gestor de frota é mandado para lá (Ruling R13). */
+export const APP_V1 = 'https://ivo-v1.pages.dev'
 
 export interface ItemMenu {
   rotulo: string

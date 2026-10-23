@@ -58,9 +58,9 @@ jobs:
           npx supabase config diff --project-ref "$REF" || echo "config diff indisponível ou falhou (não bloqueia)"
           npx supabase config push --project-ref "$REF" --yes
           npx supabase db push --yes
-          # A primeira origem é a dos links gerados (convite, recuperação): continua o app atual. Fase 4: o ivo-novo
-          # também chama as Edge Functions.
-          npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev,https://ivo-novo.pages.dev --project-ref "$REF"
+          # A primeira origem é a dos links gerados (convite, recuperação): o endereço principal, que serve a v2.
+          # O ivo-novo (também v2) e o ivo-v1 (o app anterior) também chamam as Edge Functions.
+          npx supabase secrets set APP_ORIGENS=https://umi-san-transporte.pages.dev,https://ivo-novo.pages.dev,https://ivo-v1.pages.dev --project-ref "$REF"
           # Fase 3A: chave de servidor do Google (Places New e Routes). Sem ela, a função `enderecos` devolve
           # MAPAS_INDISPONIVEL e o app cai no texto livre (RUNBOOK §Google Maps).
           if [ -n "${GOOGLE_MAPS_CHAVE_SERVIDOR:-}" ]; then
@@ -75,50 +75,57 @@ jobs:
           else
             echo "Nenhuma Edge Function para publicar"
           fi
-      - name: Build
+      # v2 (src/novo) no endereço principal e no ivo-novo; a v1 (o app anterior) no ivo-v1. Todos do mesmo commit.
+      # A v2 vai primeiro: uma falha nos passos da v1 não a bloqueia.
+      - name: Build da v2
         run: |
           test -n "$VITE_TURNSTILE_SITE_KEY" || { echo "VITE_TURNSTILE_SITE_KEY ausente" >&2; exit 1; }
           test -n "$VITE_SUPABASE_URL" || { echo "VITE_SUPABASE_URL ausente" >&2; exit 1; }
-          npm run build
+          npm run build:novo
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
-          # Fase 3A: chave de navegador, restrita ao domínio do app e só à Map Tiles API (pode faltar: sem mapa).
+          # Fase 3A: chave de navegador, restrita aos domínios do app e só à Map Tiles API (pode faltar: sem mapa).
           # Aceita variável ou segredo do ambiente `producao` (ela vai no app de qualquer forma; a proteção é a restrição).
           VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR: ${{ vars.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR || secrets.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR }}
-      - name: Nenhum segredo no bundle
-        run: node scripts/varrer-segredos.ts dist
-      - name: Publicar no Cloudflare Pages
+      - name: Nenhum segredo no bundle da v2
+        run: node scripts/varrer-segredos.ts dist-novo
+      - name: Publicar a v2 no endereço principal (umi-san-transporte)
         run: |
           npx wrangler pages project create umi-san-transporte --production-branch main || echo "Projeto Pages já existe"
-          npx wrangler pages deploy dist --project-name umi-san-transporte --branch main --commit-hash "${{ github.event.workflow_run.head_sha }}"
-      - name: Verificar CSP publicada
+          npx wrangler pages deploy dist-novo --project-name umi-san-transporte --branch main --commit-hash "${{ github.event.workflow_run.head_sha }}"
+      - name: Publicar a v2 também no ivo-novo (quem instalou por lá continua atualizado)
+        run: |
+          npx wrangler pages project create ivo-novo --production-branch main || true
+          npx wrangler pages deploy dist-novo --project-name ivo-novo --branch main --commit-hash "${{ github.event.workflow_run.head_sha }}"
+      - name: Verificar CSP publicada da v2
         run: |
           set -euo pipefail
           sleep 20
           # Sem barra final: a CSP lista a origem, não o caminho.
           URL_SB="${VITE_SUPABASE_URL%/}"
-          headers=$(curl -sfI https://umi-san-transporte.pages.dev)
-          echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${URL_SB}"
-          echo "$headers" | grep -i "strict-transport-security"
-      # Fase 4: o segundo site (ivo-novo), do mesmo commit. Depois do app atual: uma falha aqui não o bloqueia.
-      - name: Build do IVO novo
+          for site in umi-san-transporte ivo-novo; do
+            headers=$(curl -sfI "https://$site.pages.dev")
+            echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${URL_SB}"
+            echo "$headers" | grep -i "strict-transport-security"
+          done
+      - name: Build da v1
         run: |
           test -n "$VITE_TURNSTILE_SITE_KEY" || { echo "VITE_TURNSTILE_SITE_KEY ausente" >&2; exit 1; }
-          npm run build:novo
+          npm run build
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
           VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR: ${{ vars.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR || secrets.VITE_GOOGLE_MAPS_CHAVE_NAVEGADOR }}
-      - name: Nenhum segredo no bundle do IVO novo
-        run: node scripts/varrer-segredos.ts dist-novo
-      - name: Publicar o IVO novo no Cloudflare Pages
+      - name: Nenhum segredo no bundle da v1
+        run: node scripts/varrer-segredos.ts dist
+      - name: Publicar a v1 no ivo-v1
         run: |
-          npx wrangler pages project create ivo-novo --production-branch main || true
-          npx wrangler pages deploy dist-novo --project-name ivo-novo --branch main --commit-hash "${{ github.event.workflow_run.head_sha }}"
-      - name: Verificar CSP publicada do IVO novo
+          npx wrangler pages project create ivo-v1 --production-branch main || true
+          npx wrangler pages deploy dist --project-name ivo-v1 --branch main --commit-hash "${{ github.event.workflow_run.head_sha }}"
+      - name: Verificar CSP publicada da v1
         run: |
           set -euo pipefail
           sleep 20
           URL_SB="${VITE_SUPABASE_URL%/}"
-          headers=$(curl -sfI https://ivo-novo.pages.dev)
+          headers=$(curl -sfI https://ivo-v1.pages.dev)
           echo "$headers" | grep -i "content-security-policy" | grep -F "connect-src 'self' ${URL_SB}"
           echo "$headers" | grep -i "strict-transport-security"

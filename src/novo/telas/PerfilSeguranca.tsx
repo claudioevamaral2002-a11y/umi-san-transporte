@@ -127,6 +127,7 @@ export function PerfilSeguranca() {
           perdido), peça um novo link ao administrador da IVO: o link leva às telas de senha e de verificação.
         </p>
       </Cartao>
+      <p className="ivo-legenda text-center text-texto-suave">IVO Transportes · versão {import.meta.env.VITE_VERSAO}</p>
     </main>
   )
 }
