@@ -110,16 +110,12 @@ function LinhaFatura({ fatura }: { fatura: Fatura }) {
     setErro(null)
     setOcupado('nf')
     try {
-      const link = await linkNota(caminho)
-      const a = document.createElement('a')
-      a.href = link
-      a.target = '_blank'
-      a.rel = 'noopener noreferrer'
-      document.body.append(a)
-      a.click()
-      a.remove()
+      // Anexo (download): ir ao link baixa o PDF e a tela fica onde está. Abrir uma janela depois do `await` seria
+      // bloqueado como pop-up.
+      const link = await linkNota(caminho, { baixar: true })
+      window.location.assign(link)
     } catch {
-      setErro('Não foi possível abrir a NF. Tente de novo.')
+      setErro('Não foi possível baixar a NF. Tente de novo.')
     } finally {
       setOcupado(null)
     }
@@ -177,7 +173,7 @@ function LinhaFatura({ fatura }: { fatura: Fatura }) {
             aria-label={`Baixar NF (PDF) da ${nome}`}
             onClick={() => void abrirNf(fatura.nf_pdf_caminho!)}
           >
-            {ocupado === 'nf' ? 'Abrindo…' : 'Baixar NF (PDF)'}
+            {ocupado === 'nf' ? 'Baixando…' : 'Baixar NF (PDF)'}
           </button>
         )}
         <button

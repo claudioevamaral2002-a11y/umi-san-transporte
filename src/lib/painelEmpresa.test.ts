@@ -55,6 +55,10 @@ describe('csvDoMes', () => {
     const linha = csvDoMes([pedido({ centro_custo: '=SOMA(A1)' })]).split('\r\n')[1]
     expect(linha?.split(';')[7]).toBe("'=SOMA(A1)")
   })
+  it.each(['+5511999', '-2+3', '@SOMA(A1)'])('"%s" também ganha o apóstrofo (fórmula na planilha)', (texto) => {
+    const linha = csvDoMes([pedido({ solicitante_nome: texto })]).split('\r\n')[1]
+    expect(linha?.split(';')[1]).toBe(`'${texto}`)
+  })
   it('paradas separadas por barra e horas com vírgula', () => {
     const linha = csvDoMes([pedido({ paradas: ['Posto', 'Cliente'], horas_estimadas: 2.5 })]).split('\r\n')[1]
     expect(linha).toBe(

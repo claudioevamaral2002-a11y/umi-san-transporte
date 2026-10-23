@@ -54,8 +54,8 @@ function ResumoFaturado({ resumo, faturas }: { resumo: Painel['resumo']; faturas
           </p>
         </div>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-4 border-t border-borda pt-4 sm:grid-cols-3">
-          <Total rotulo="A faturar" detalhe="quinzena atual" centavos={resumo.a_faturar_cent ?? 0} testId="a-faturar" />
-          <Total rotulo="Em aberto" centavos={resumo.em_aberto_cent ?? 0} testId="em-aberto" />
+          <Total rotulo="A faturar" detalhe="ainda sem fatura" centavos={resumo.a_faturar_cent ?? 0} testId="a-faturar" />
+          <Total rotulo="Em aberto" detalhe="faturas emitidas não pagas" centavos={resumo.em_aberto_cent ?? 0} testId="em-aberto" />
           <Total rotulo="Vencidas" centavos={resumo.vencidas_cent ?? 0} testId="vencidas" />
         </dl>
       </div>

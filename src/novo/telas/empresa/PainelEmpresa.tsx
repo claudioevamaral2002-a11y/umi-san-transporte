@@ -1,5 +1,5 @@
-import { useId } from 'react'
-import { NavLink, Outlet, useSearchParams } from 'react-router'
+import { useEffect, useId, useRef } from 'react'
+import { NavLink, Outlet, useLocation, useSearchParams } from 'react-router'
 import { SimboloIvo } from '../../../design/componentes/SimboloIvo.tsx'
 import { api, type Empresa } from '../../../lib/api.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
@@ -111,6 +111,15 @@ export function PainelEmpresa() {
   const semEmpresa = ehAdm && listaEmpresas.dados !== undefined && listaEmpresas.dados.length === 0
   const painel = useLeituraDoPainel(ehAdm, empresa)
   const forma = formaDoPainel(painel)
+  // Dinheiro: voltar à aba Painel (vindo de outra aba) relê os valores. A primeira abertura usa a leitura de cima.
+  const { pathname } = useLocation()
+  const caminhoAnterior = useRef(pathname)
+  const recarregarPainel = painel.recarregar
+  useEffect(() => {
+    const voltouAoPainel = /^\/empresa\/?$/.test(pathname) && caminhoAnterior.current !== pathname
+    caminhoAnterior.current = pathname
+    if (voltouAoPainel) recarregarPainel()
+  }, [pathname, recarregarPainel])
   const contexto: ContextoPainel = {
     ehAdm,
     empresa,

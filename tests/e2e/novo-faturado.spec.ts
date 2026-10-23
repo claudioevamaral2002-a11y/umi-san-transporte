@@ -222,7 +222,7 @@ async function abrir(page: Page, perfil: PerfilFalso, caminho: string, forma: Fo
       ),
     ),
   )
-  // Link assinado da NF: um novo a cada toque (vale 60 s). O GET é o PDF aberto na aba nova.
+  // Link assinado da NF: um novo a cada toque (vale 60 s). O GET é o PDF, como anexo (o `download` do link).
   await page.context().route(`${URL_SUPABASE}/storage/v1/object/sign/**`, (r) => {
     if (r.request().method() === 'POST') {
       chamadas.assinaturas.push(r.request().url())
@@ -231,8 +231,12 @@ async function abrir(page: Page, perfil: PerfilFalso, caminho: string, forma: Fo
         signedURL: `/object/sign/${caminho}?token=assinado-${chamadas.assinaturas.length}`,
       })
     }
-    // HTML no lugar do PDF: o Chromium sem janela baixaria o PDF e a aba nova ficaria sem endereço.
-    return r.fulfill({ status: 200, contentType: 'text/html', body: '<title>NF</title>' })
+    return r.fulfill({
+      status: 200,
+      contentType: 'application/pdf',
+      headers: { 'content-disposition': 'attachment; filename="nf.pdf"' },
+      body: '%PDF-1.4 falso',
+    })
   })
   await page.goto(caminho)
   return chamadas
@@ -245,8 +249,14 @@ test.describe('no computador', () => {
   test.use(COMPUTADOR)
 
   test('o painel no Faturado mostra A faturar, Em aberto e Vencidas, sem saldo nem recarga', async ({ page }) => {
-    await abrir(page, N1, '/empresa')
+    const chamadas = await abrir(page, N1, '/empresa')
     const resumo = page.getByTestId('resumo-mes')
+    await expect(resumo.getByTestId('a-faturar')).toContainText('ainda sem fatura')
+    await expect(resumo.getByTestId('a-faturar')).not.toContainText('quinzena atual')
+    await expect(resumo.getByTestId('em-aberto')).toContainText('faturas emitidas não pagas')
+    // Uma leitura só do painel na primeira abertura (o cabeçalho e a aba dividem a mesma).
+    await page.waitForTimeout(500)
+    expect(chamadas.painel).toEqual([{ p_empresa: null, p_mes: null }])
     await expect(resumo).toContainText('Gasto no mês')
     await expect(resumo).toContainText('R$ 4.380')
     await expect(resumo.getByTestId('a-faturar')).toContainText('A faturar')
@@ -269,6 +279,21 @@ test.describe('no computador', () => {
     await expect(abas(page).getByRole('link')).toHaveCount(4)
     await expect(abas(page).getByRole('link', { name: 'Faturas' })).toHaveAttribute('href', '/empresa/faturas')
     await expect(abas(page).getByRole('link', { name: 'Carteira' })).toHaveCount(0)
+  })
+
+  test('voltar ao Painel de outra aba relê os valores', async ({ page }) => {
+    const chamadas = await abrir(page, N1, '/empresa')
+    await expect(page.getByTestId('a-faturar')).toBeVisible()
+    await abas(page).getByRole('link', { name: 'Corridas' }).click()
+    await expect(page).toHaveURL(/\/empresa\/corridas$/)
+    await page.waitForTimeout(500)
+    const antes = chamadas.painel.length
+    await abas(page).getByRole('link', { name: 'Painel' }).click()
+    await expect(page.getByTestId('a-faturar')).toBeVisible()
+    // Voltar ao Painel relê os valores do banco, uma vez.
+    await expect.poll(() => chamadas.painel.length).toBe(antes + 1)
+    await page.waitForTimeout(500)
+    expect(chamadas.painel).toHaveLength(antes + 1)
   })
 
   test('a aba Faturas mostra o "A faturar" com as corridas e as faturas com a etiqueta', async ({ page }) => {
@@ -311,7 +336,7 @@ test.describe('no computador', () => {
     expect(chamadas.faturas[0]).toEqual({ p_empresa: null })
   })
 
-  test('"Baixar NF (PDF)" pede um link assinado novo a cada toque e abre o PDF', async ({ page }) => {
+  test('"Baixar NF (PDF)" pede um link assinado novo a cada toque e baixa o PDF, sem pop-up', async ({ page }) => {
     const chamadas = await abrir(page, N1, '/empresa/faturas')
     const botao = page.getByRole('button', {
       name: 'Baixar NF (PDF) da fatura nº 7',
@@ -320,19 +345,24 @@ test.describe('no computador', () => {
     // O link não é pedido antes do toque (vale só 60 s).
     expect(chamadas.assinaturas).toHaveLength(0)
 
-    const abrindo = page.waitForEvent('popup')
+    const janelas: unknown[] = []
+    page.on('popup', (p) => janelas.push(p))
+    const baixando = page.waitForEvent('download')
     await botao.click()
-    const pdf = await abrindo
-    await expect.poll(() => pdf.url()).toContain(`/storage/v1/object/sign/notas-fiscais/${CAMINHO_NF}?token=assinado-1`)
+    const pdf = await baixando
+    expect(pdf.url()).toContain(`/storage/v1/object/sign/notas-fiscais/${CAMINHO_NF}?token=assinado-1&download=`)
+    expect(pdf.suggestedFilename()).toBe('nf.pdf')
     expect(chamadas.assinaturas).toHaveLength(1)
     expect(chamadas.assinaturas[0]).toContain(`/object/sign/notas-fiscais/${CAMINHO_NF}`)
-    await pdf.close()
+    // A tela continua nas Faturas.
+    await expect(page).toHaveURL(/\/empresa\/faturas$/)
+    await expect(botao).toBeEnabled()
 
-    const deNovo = page.waitForEvent('popup')
+    const deNovo = page.waitForEvent('download')
     await botao.click()
-    const outro = await deNovo
-    await expect.poll(() => outro.url()).toContain('token=assinado-2')
+    expect((await deNovo).url()).toContain('token=assinado-2&download=')
     expect(chamadas.assinaturas).toHaveLength(2)
+    expect(janelas).toHaveLength(0)
   })
 
   test('"CSV da fatura" baixa fatura-<número>.csv com as colunas do CSV do mês e o total', async ({ page }) => {
@@ -392,12 +422,17 @@ test.describe('no computador', () => {
     await expect(abas(page).getByRole('link', { name: 'Painel' })).toHaveAttribute('href', `/empresa?empresa=${EMPRESA_PORTO.id}`)
   })
 
-  test('o Extrato do ☰ vira "Lançamentos" e o saldo negativo aparece como Em aberto', async ({ page }) => {
+  test('o Extrato do ☰ vira "Lançamentos" e o saldo negativo aparece como Total devido', async ({ page }) => {
     await abrir(page, N1, '/extrato')
     await expect(page.getByRole('heading', { level: 1, name: 'Lançamentos' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-    await expect(page.getByTestId('em-aberto-lancamentos')).toContainText('Em aberto')
-    await expect(page.getByTestId('em-aberto-lancamentos')).toContainText('R$ 5.050,00')
+    const total = page.getByTestId('total-devido')
+    await expect(total).toContainText('Total devido')
+    await expect(total).toContainText('R$ 5.050,00')
+    await expect(total).toContainText('faturado e a faturar')
+    await expect(page.getByText('Em aberto')).toHaveCount(0)
+    // Nunca mostrou "Extrato" antes de saber a forma.
+    await expect(page.getByRole('heading', { name: 'Extrato', exact: true })).toHaveCount(0)
     await expect(page.getByText('Disponível para novos pedidos')).toHaveCount(0)
     await expect(page.getByTestId('extrato')).toBeVisible()
   })

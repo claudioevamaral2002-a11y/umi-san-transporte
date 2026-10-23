@@ -177,11 +177,17 @@ export async function enviarPdfNota(
   }
 }
 
-/** Link assinado de 60 s para abrir ou baixar a NF (Master, ou o N1 da empresa). Sem permissão: `ErroLeitura`. */
-export async function linkNota(caminho: string): Promise<string> {
+/**
+ * Link assinado de 60 s para abrir ou baixar a NF (Master, ou o N1 da empresa). Sem permissão: `ErroLeitura`.
+ * `baixar`: o storage responde como anexo, e a página pode ir ao link sem abrir janela (nada de pop-up bloqueado).
+ */
+export async function linkNota(caminho: string, opcoes: { baixar?: boolean } = {}): Promise<string> {
   let link: string | null
   try {
-    const { data, error } = await supabase.storage.from(BUCKET_NOTAS).createSignedUrl(caminho, VALIDADE_LINK_S)
+    const notas = supabase.storage.from(BUCKET_NOTAS)
+    const { data, error } = await (opcoes.baixar
+      ? notas.createSignedUrl(caminho, VALIDADE_LINK_S, { download: true })
+      : notas.createSignedUrl(caminho, VALIDADE_LINK_S))
     link = error ? null : (data?.signedUrl ?? null)
   } catch {
     link = null

@@ -321,25 +321,24 @@ function CabecalhoImpressao({ empresa, periodo, tipo }: { empresa: string; perio
 }
 
 /**
- * v2.1 (§5.3): no Faturado não há saldo a recarregar. O saldo contábil negativo é o que a empresa deve (faturas em
- * aberto e o que ainda vai para a fatura): aparece como "Em aberto".
+ * v2.1 (§5.3): no Faturado não há saldo a recarregar. O saldo contábil (≤ 0) é o que a empresa deve, faturado e a
+ * faturar: o "Total devido". (O "Em aberto" do painel é outra conta: só as faturas emitidas e não pagas.)
  */
-function EmAberto({ saldo }: { saldo: Saldo }) {
-  const devendo = saldo.saldo_contabil_cent < 0
+function TotalDevido({ saldo }: { saldo: Saldo }) {
+  const aFavor = saldo.saldo_contabil_cent > 0
   return (
-    <Cartao className="space-y-1" data-testid="em-aberto-lancamentos">
-      <p className="ivo-legenda font-semibold text-texto-suave">{devendo ? 'Em aberto' : 'Saldo a favor'}</p>
+    <Cartao className="space-y-1" data-testid="total-devido">
+      <p className="ivo-legenda font-semibold text-texto-suave">{aFavor ? 'Saldo a favor' : 'Total devido'}</p>
       <p className="ivo-valor tabular-nums">{formatarCentavos(Math.abs(saldo.saldo_contabil_cent))}</p>
-      <p className="ivo-legenda text-texto-suave">
-        {devendo ? 'Corridas cobradas e ainda não pagas: as faturas em aberto e o que entra na próxima fatura.' : 'Nada em aberto.'}
-      </p>
+      {!aFavor && <p className="ivo-legenda text-texto-suave">faturado e a faturar</p>}
     </Cartao>
   )
 }
 
 /**
  * /extrato do app novo (v2.1): igual ao de hoje no Crédito; no Faturado (NF), o título vira "Lançamentos" e o cartão de
- * saldo dá lugar ao "Em aberto". A forma vem do próprio saldo da empresa (uma leitura só).
+ * saldo dá lugar ao "Total devido". A forma vem do próprio saldo da empresa (uma leitura só); até ela chegar, o título
+ * espera (nada de "Extrato" que vira "Lançamentos").
  */
 function ExtratoPelaForma() {
   const { perfil } = useSessao()
@@ -352,20 +351,27 @@ function ExtratoPelaForma() {
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
       <div className="nao-imprimir">
-        <ContextoTituloPagina value={contexto}>
-          <CabecalhoTela
-            sobretitulo={nome}
-            titulo={faturado ? 'Lançamentos' : 'Extrato'}
-            descricao={
-              faturado ? 'Reservas, cobranças e pagamentos de faturas da empresa.' : 'Recargas, reservas, liberações e cobranças da empresa.'
-            }
-          />
-        </ContextoTituloPagina>
+        {saldo.dados === undefined && !saldo.erro ? (
+          <div aria-hidden="true" className="space-y-2" data-testid="titulo-carregando">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-9 w-64" />
+          </div>
+        ) : (
+          <ContextoTituloPagina value={contexto}>
+            <CabecalhoTela
+              sobretitulo={nome}
+              titulo={faturado ? 'Lançamentos' : 'Extrato'}
+              descricao={
+                faturado ? 'Reservas, cobranças e pagamentos de faturas da empresa.' : 'Recargas, reservas, liberações e cobranças da empresa.'
+              }
+            />
+          </ContextoTituloPagina>
+        )}
       </div>
       <div className="nao-imprimir">
         {saldo.dados ? (
           faturado ? (
-            <EmAberto saldo={saldo.dados} />
+            <TotalDevido saldo={saldo.dados} />
           ) : (
             <CartaoSaldo saldo={saldo.dados} />
           )
@@ -387,7 +393,7 @@ function ExtratoPelaForma() {
 
 /**
  * /extrato — clientes da empresa (todos os níveis): saldo + extrato. `pelaFormaDeCobranca` (só o app novo, v2.1): no
- * Faturado, "Lançamentos" e o "Em aberto" no lugar do saldo. Sem ela (a v1), nada muda.
+ * Faturado, "Lançamentos" e o "Total devido" no lugar do saldo. Sem ela (a v1), nada muda.
  */
 export function Extrato({ pelaFormaDeCobranca = false }: { pelaFormaDeCobranca?: boolean } = {}) {
   return pelaFormaDeCobranca ? <ExtratoPelaForma /> : <ExtratoDeHoje />
