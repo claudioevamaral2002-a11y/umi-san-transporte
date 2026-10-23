@@ -1,11 +1,12 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useContext, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo, CampoSelecao } from '../../design/componentes/Campo.tsx'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
-import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
+import { CabecalhoTela, ContextoTituloPagina, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
+import { formatarCentavos } from '../../design/dinheiro.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import {
   ESTORNAVEIS,
@@ -21,13 +22,13 @@ import {
   type Periodo,
   type Preset,
 } from '../../lib/extrato.ts'
-import { TIPOS_LANCAMENTO, dinheiro, type ItemExtrato, type TipoLancamento } from '../../lib/saldo.ts'
+import { TIPOS_LANCAMENTO, dinheiro, type ItemExtrato, type Saldo, type TipoLancamento } from '../../lib/saldo.ts'
 import { useSessao } from '../../lib/sessao.tsx'
 import { hoje, numeroPedido } from '../../lib/tempo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
 import { topicoSaldo } from '../../lib/topicos.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
-import { SaldoDaEmpresa } from '../saldo/CartaoSaldo.tsx'
+import { CartaoSaldo, SaldoDaEmpresa, useSaldo } from '../saldo/CartaoSaldo.tsx'
 
 const LIMITE = 500
 const PRESETS: Preset[] = ['mes', '7d', '30d', 'mes_anterior', 'personalizado']
@@ -319,8 +320,86 @@ function CabecalhoImpressao({ empresa, periodo, tipo }: { empresa: string; perio
   )
 }
 
-/** /extrato — clientes da empresa (todos os níveis): saldo + extrato. */
-export function Extrato() {
+/**
+ * v2.1 (§5.3): no Faturado não há saldo a recarregar. O saldo contábil (≤ 0) é o que a empresa deve, faturado e a
+ * faturar: o "Total devido". (O "Em aberto" do painel é outra conta: só as faturas emitidas e não pagas.)
+ */
+function TotalDevido({ saldo }: { saldo: Saldo }) {
+  const aFavor = saldo.saldo_contabil_cent > 0
+  return (
+    <Cartao className="space-y-1" data-testid="total-devido">
+      <p className="ivo-legenda font-semibold text-texto-suave">{aFavor ? 'Saldo a favor' : 'Total devido'}</p>
+      <p className="ivo-valor tabular-nums">{formatarCentavos(Math.abs(saldo.saldo_contabil_cent))}</p>
+      {!aFavor && <p className="ivo-legenda text-texto-suave">faturado e a faturar</p>}
+    </Cartao>
+  )
+}
+
+/**
+ * /extrato do app novo (v2.1): igual ao de hoje no Crédito; no Faturado (NF), o título vira "Lançamentos" e o cartão de
+ * saldo dá lugar ao "Total devido". A forma vem do próprio saldo da empresa (uma leitura só); até ela chegar, o título
+ * espera (nada de "Extrato" que vira "Lançamentos").
+ */
+function ExtratoPelaForma() {
+  const { perfil } = useSessao()
+  const nome = perfil?.empresa_nome ?? 'Empresa'
+  const saldo = useSaldo(perfil?.empresa_id ?? null)
+  const faturado = saldo.dados?.forma_cobranca === 'FATURADO'
+  // No app novo o h1 usa o nome do item do ☰ ("Carteira da empresa"); no Faturado, "Lançamentos".
+  const pagina = useContext(ContextoTituloPagina)
+  const contexto = useMemo(() => (pagina && faturado ? { ...pagina, titulo: 'Lançamentos' } : pagina), [pagina, faturado])
+  return (
+    <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
+      <div className="nao-imprimir">
+        {saldo.dados === undefined && !saldo.erro ? (
+          <div aria-hidden="true" className="space-y-2" data-testid="titulo-carregando">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-9 w-64" />
+          </div>
+        ) : (
+          <ContextoTituloPagina value={contexto}>
+            <CabecalhoTela
+              sobretitulo={nome}
+              titulo={faturado ? 'Lançamentos' : 'Extrato'}
+              descricao={
+                faturado ? 'Reservas, cobranças e pagamentos de faturas da empresa.' : 'Recargas, reservas, liberações e cobranças da empresa.'
+              }
+            />
+          </ContextoTituloPagina>
+        )}
+      </div>
+      <div className="nao-imprimir">
+        {saldo.dados ? (
+          faturado ? (
+            <TotalDevido saldo={saldo.dados} />
+          ) : (
+            <CartaoSaldo saldo={saldo.dados} />
+          )
+        ) : saldo.erro ? (
+          <Cartao className="space-y-2" role="alert">
+            <p className="font-bold">Não foi possível carregar o saldo.</p>
+            <button type="button" onClick={saldo.recarregar} className="min-h-12 font-semibold text-link underline">
+              Tentar de novo
+            </button>
+          </Cartao>
+        ) : (
+          <Skeleton className="h-52" />
+        )}
+      </div>
+      <ExtratoEmpresa empresa={null} empresaIdTopico={perfil?.empresa_id ?? null} empresaNome={nome} />
+    </main>
+  )
+}
+
+/**
+ * /extrato — clientes da empresa (todos os níveis): saldo + extrato. `pelaFormaDeCobranca` (só o app novo, v2.1): no
+ * Faturado, "Lançamentos" e o "Total devido" no lugar do saldo. Sem ela (a v1), nada muda.
+ */
+export function Extrato({ pelaFormaDeCobranca = false }: { pelaFormaDeCobranca?: boolean } = {}) {
+  return pelaFormaDeCobranca ? <ExtratoPelaForma /> : <ExtratoDeHoje />
+}
+
+function ExtratoDeHoje() {
   const { perfil } = useSessao()
   const nome = perfil?.empresa_nome ?? 'Empresa'
   return (

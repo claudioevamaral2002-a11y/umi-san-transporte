@@ -125,6 +125,11 @@ describe('linkNota', () => {
     expect(from).toHaveBeenCalledWith('notas-fiscais')
     expect(createSignedUrl).toHaveBeenCalledWith('emp-1/a.pdf', 60)
   })
+  it('com `baixar`, o link pede o anexo (download)', async () => {
+    createSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://x/assinado?download=' }, error: null })
+    expect(await linkNota('emp-1/a.pdf', { baixar: true })).toBe('https://x/assinado?download=')
+    expect(createSignedUrl).toHaveBeenCalledWith('emp-1/a.pdf', 60, { download: true })
+  })
   it('sem permissão: erro de leitura', async () => {
     createSignedUrl.mockResolvedValue({ data: null, error: { message: 'negado' } })
     await expect(linkNota('emp-2/a.pdf')).rejects.toThrow()

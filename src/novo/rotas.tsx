@@ -41,6 +41,12 @@ const tela =
   <M extends Record<string, unknown>>(carregar: () => Promise<M>, nome: keyof M & string) =>
   async () => ({ Component: (await carregar())[nome] as ComponentType })
 
+/** Extrato do cliente com o título e o saldo conforme a forma de cobrança (v2.1, §5.3). */
+const extratoPelaForma = async () => {
+  const { Extrato } = await import('../telas/extrato/Extrato.tsx')
+  return { Component: () => <Extrato pelaFormaDeCobranca /> }
+}
+
 /** Cadastrar/editar veículo pelo ADM (escolhe o motorista ao cadastrar). */
 const veiculoDoAdm = async () => {
   const { CadastrarVeiculo } = await import('./telas/motorista/CadastrarVeiculo.tsx')
@@ -59,7 +65,8 @@ const TELAS_DO_APP_ATUAL = [
   { path: 'agenda', lazy: tela(() => import('../telas/agenda/Agenda.tsx'), 'Agenda') },
   {
     element: <GuardaPerfil permite={ehCliente} />,
-    children: [{ path: 'extrato', lazy: tela(() => import('../telas/extrato/Extrato.tsx'), 'Extrato') }],
+    // v2.1: no Faturado, o Extrato vira "Lançamentos" (a v1 não passa a prop e fica como está).
+    children: [{ path: 'extrato', lazy: extratoPelaForma }],
   },
   {
     element: <GuardaPerfil permite={gereEquipe} />,
@@ -116,6 +123,8 @@ const PAINEL_EMPRESA = {
         { path: 'corridas', lazy: tela(() => import('./telas/empresa/AbaCorridas.tsx'), 'AbaCorridas') },
         { path: 'pessoas', lazy: tela(() => import('./telas/empresa/AbaPessoas.tsx'), 'AbaPessoas') },
         { path: 'carteira', lazy: tela(() => import('./telas/empresa/AbaCarteira.tsx'), 'AbaCarteira') },
+        // v2.1: no Faturado (NF), Faturas substitui a Carteira; cada uma leva à outra conforme a forma de cobrança.
+        { path: 'faturas', lazy: tela(() => import('./telas/empresa/AbaFaturas.tsx'), 'AbaFaturas') },
       ],
     },
   ],
