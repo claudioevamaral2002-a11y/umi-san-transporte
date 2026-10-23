@@ -1,6 +1,9 @@
 // Fase 4: veículos do motorista (o ADM vê e cadastra de todos). O banco confere dono, placa e categorias.
-import type { CodigoCategoria } from './categorias.ts'
+import type { CategoriaAdm } from './categoriasAdm.ts'
 import { chamar, ler } from './pedidos.ts'
+
+/** Código de qualquer categoria do banco (fase 4.1: o Master cria novas). */
+export type CodigoDaCategoria = string
 
 export type SituacaoVeiculo = 'ATIVO' | 'MANUTENCAO' | 'INATIVO'
 
@@ -13,7 +16,7 @@ export interface Veiculo {
   lugares: number
   carga_max_kg: number
   reboque_desc: string | null
-  categorias: CodigoCategoria[]
+  categorias: CodigoDaCategoria[]
   situacao: SituacaoVeiculo
   criado_em: string
   /** Só para o ADM. */
@@ -28,7 +31,7 @@ export interface EntradaVeiculo {
   lugares: number
   carga_max_kg: number
   reboque_desc?: string | null
-  categorias: CodigoCategoria[]
+  categorias: CodigoDaCategoria[]
   /** Só o ADM, ao criar. */
   motorista_id?: string
 }
@@ -38,18 +41,31 @@ export function normalizarPlaca(s: string): string {
   return s.replace(/[\s-]/g, '').toUpperCase()
 }
 
+/** Uma categoria em `api.categorias_veiculo` (motorista e ADM): só o nome e as marcações, nenhum preço. */
+export type CategoriaDoVeiculo = Pick<CategoriaAdm, 'codigo' | 'nome' | 'ordem' | 'ativa' | 'veiculo_cliente'>
+
 export const veiculos = {
+  /** Todas as categorias do banco (também as inativas e a de veículo do cliente), com os nomes atuais, na ordem. */
+  categorias: async () => (await ler<{ categorias: CategoriaDoVeiculo[] }>('categorias_veiculo', {})).categorias,
   meus: async () => (await ler<{ veiculos: Veiculo[] }>('meus_veiculos', {})).veiculos,
   salvar: (p: EntradaVeiculo) => chamar('salvar_veiculo', { p: { ...p, placa: normalizarPlaca(p.placa) } }),
   mudarSituacao: (id: string, situacao: SituacaoVeiculo) =>
     chamar('mudar_situacao_veiculo', { p_id: id, p_situacao: situacao }),
 }
 
-/** Nome curto da categoria nas etiquetas do veículo (mockups 8 e 9). */
-export const NOMES_CATEGORIA: Record<CodigoCategoria, string> = {
-  PASSAGEIROS: 'Passageiros',
-  CARGA_LEVE: 'Carga Leve',
-  CARGA_PESADA: 'Carga Pesada',
+/** As categorias que um veículo pode atender: ativas e que usam veículo da IVO (não a de veículo do cliente). */
+export function categoriasDeVeiculo<T extends Pick<CategoriaAdm, 'ativa' | 'veiculo_cliente'>>(cats: readonly T[]): T[] {
+  return cats.filter((c) => c.ativa && !c.veiculo_cliente)
+}
+
+/** `{codigo: nome}` das categorias do banco (`categoriasAdm.listar()` ou `categorias_disponiveis`). */
+export function nomesDasCategorias(cats: readonly Pick<CategoriaAdm, 'codigo' | 'nome'>[]): Record<string, string> {
+  return Object.fromEntries(cats.map((c) => [c.codigo, c.nome]))
+}
+
+/** Nome da categoria nas etiquetas do veículo; sem a categoria na lista, o próprio código. */
+export function nomeDaCategoria(codigo: string, nomes: Readonly<Record<string, string>>): string {
+  return Object.hasOwn(nomes, codigo) ? (nomes[codigo] ?? codigo) : codigo
 }
 
 export const SITUACOES: Record<SituacaoVeiculo, string> = {
@@ -69,7 +85,7 @@ export interface FormVeiculo {
   lugares: string
   cargaMaxKg: string
   reboqueDesc: string
-  categorias: CodigoCategoria[]
+  categorias: CodigoDaCategoria[]
 }
 
 export const FORM_VEICULO_VAZIO: FormVeiculo = {

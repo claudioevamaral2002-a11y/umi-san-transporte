@@ -301,7 +301,7 @@ test.describe('propor outro valor (calculadora)', () => {
     await expect(page.getByRole('group', { name: 'Espera (horas)' })).toBeVisible()
     await expect(page.getByRole('group', { name: 'Hospedagem (diárias)' })).toBeVisible()
     await expect(page.getByLabel('Pedágio / balsa')).toBeVisible()
-    await expect(page.getByText('Reboque: sem reboque (fixo pela categoria)')).toBeVisible()
+    await expect(page.getByText('Reboque: não cobrado pela tabela da categoria')).toBeVisible()
     await expect(page.getByRole('main').getByRole('switch')).toHaveCount(0)
     // Nenhum teclado de valor livre: o único campo de valor é o pedágio (e os "Outros", quando houver).
     await expect(page.getByRole('main').locator('input')).toHaveCount(1)

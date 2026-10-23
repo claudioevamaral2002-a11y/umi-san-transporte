@@ -66,7 +66,8 @@ test('R12: "Minhas corridas" abre a lista de hoje no app novo, com o ☰ e sem s
   const menu = await abrirMenu(page)
   await menu.getByRole('link', { name: 'Minhas corridas' }).click()
   await expect(page).toHaveURL(/127\.0\.0\.1:8789\/pedidos$/)
-  await expect(page.getByRole('heading', { name: 'Pedidos', exact: true })).toBeVisible()
+  // Um nome só por página (Tarefa 8 da fase 4.1): o h1 de hoje usa o nome do menu.
+  await expect(page.getByRole('heading', { name: 'Minhas corridas', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible()
   // Sem a barra de abas do app atual.
   await expect(page.getByRole('navigation', { name: 'Navegação' })).toHaveCount(0)
@@ -102,7 +103,7 @@ test('R12 + R13: a Equipe do N1 abre no app novo com os níveis Administrador, S
 
 test('R12: a Carteira (extrato) e a Agenda abrem no app novo; o N2/N3 não abre a Equipe', async ({ page }) => {
   await abrir(page, N3, '/extrato')
-  await expect(page.getByRole('heading', { name: 'Extrato' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Carteira da empresa' })).toBeVisible()
   await page.goto('/agenda')
   await expect(page).toHaveURL(/\/agenda$/)
   await page.goto('/equipe')
@@ -184,7 +185,7 @@ for (const tema of ['light', 'dark'] as const) {
       await expect(page.getByLabel('Telefone')).toBeVisible()
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
       await page.goto('/pedidos')
-      await expect(page.getByRole('heading', { name: 'Pedidos', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Minhas corridas', exact: true })).toBeVisible()
       // A etiqueta "Aguardando" da lista de hoje (StatusBadge do app atual, reusada sem mudança) fica em 4,25:1 no tema
       // claro: herdada do app atual, anotada no relatório da Tarefa 11. O resto da tela passa no axe.
       expect((await new AxeBuilder({ page }).disableRules(['color-contrast']).analyze()).violations).toEqual([])

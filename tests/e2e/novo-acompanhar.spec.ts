@@ -300,13 +300,15 @@ test.describe('fim', () => {
     await expect(page).toHaveURL(/\/$/)
     const folha = page.getByTestId('folha-mapa')
     await expect(folha).toContainText('Estaleiro Navegantes')
-    await expect(folha).toContainText('até Porto de Itajaí')
+    // Fase 4.1 (Tarefa 6): o percurso aparece em De → Para.
+    await expect(page.getByTestId('rota-de-para')).toContainText('Porto de Itajaí')
     await expect(page.getByRole('radio', { name: /IVO Carga Leve/ })).toBeChecked()
     // Sem data: nenhum horário escolhido e nada de "Pedir" até a pessoa escolher.
     await expect(page.getByRole('button', { name: /^Agendar · escolha/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /^Pedir IVO/ })).toHaveCount(0)
     await page.getByRole('radio', { name: '08:30' }).click()
-    await expect(page.getByRole('button', { name: /^Pedir IVO Carga Leve · \w{3} 08:30$/ })).toBeVisible()
+    // \S, não \w: "sáb" tem acento (o teste falhava quando amanhã era sábado).
+    await expect(page.getByRole('button', { name: /^Pedir IVO Carga Leve · \S{3} 08:30$/ })).toBeVisible()
   })
 })
 

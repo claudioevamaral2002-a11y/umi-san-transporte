@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { MENSAGENS, VEICULO_AO_ORCAR, mensagemAoOrcar, mensagemDoCodigo, mensagemErroAuth } from './erros.ts'
+import { MENSAGENS, VEICULO_AO_ORCAR, mensagemAoOrcar, mensagemDoCodigo, mensagemDoPedido, mensagemErroAuth } from './erros.ts'
 
 /**
  * Códigos conhecidos, levantados por grep em `supabase/migrations` (interno.negar / 'codigo', '…')
@@ -26,6 +26,7 @@ const CODIGOS_CONHECIDOS = [
   'SEM_PERMISSAO',
   'ULTIMO_ADM',
   'VIGENCIA_NO_PASSADO',
+  'VERSAO_FUTURA_PENDENTE',
   'EXPIRADO',
   'SEM_CONTRATO',
   'SEM_MOTORISTA',
@@ -60,6 +61,7 @@ const CODIGOS_CONHECIDOS = [
   'NOTA_INVALIDA',
   'TELEFONE_INVALIDO',
   'VALOR_INVALIDO',
+  'CATEGORIA_DUPLICADA',
   // Edge Functions
   'ERRO_AUTH',
   'ERRO_INESPERADO',
@@ -148,5 +150,22 @@ describe('erros', () => {
     expect(mensagemErroAuth({ code: 'outro' }, '2fa')).toBe(MENSAGENS.ERRO_INESPERADO)
     expect(mensagemErroAuth({ status: 422 }, 'codigo')).toMatch(/Código incorreto/)
     expect(mensagemErroAuth({ status: 422 }, '2fa')).toBe(MENSAGENS.ERRO_INESPERADO)
+  })
+})
+
+describe('mensagemDoPedido (fase 4.1)', () => {
+  it('CATEGORIA_INDISPONIVEL e CATEGORIA_DUPLICADA têm texto próprio', () => {
+    expect(mensagemDoPedido('CATEGORIA_INDISPONIVEL')).toBe('Esta categoria está indisponível no momento. Escolha outra.')
+    expect(mensagemDoPedido('CATEGORIA_DUPLICADA')).toBe('Já existe uma categoria ativa com este nome.')
+  })
+  it('CAMPOS_INVALIDOS com detalhe paradas, horas_estimadas ou centro_custo diz qual campo', () => {
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['paradas'])).toBe('Confira as paradas: use até 3, cada uma com 3 a 200 caracteres.')
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['horas_estimadas'])).toBe('Informe as horas estimadas, de 0,5 a 24, de meia em meia hora.')
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['centro_custo'])).toBe('O centro de custo pode ter até 80 caracteres.')
+  })
+  it('sem detalhe conhecido, cai na mensagem geral', () => {
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS')).toBe(MENSAGENS.CAMPOS_INVALIDOS)
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['origem'])).toBe(MENSAGENS.CAMPOS_INVALIDOS)
+    expect(mensagemDoPedido('XPTO')).toBe(MENSAGENS.ERRO_INESPERADO)
   })
 })

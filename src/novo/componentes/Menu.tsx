@@ -7,6 +7,7 @@ import type { Perfil } from '../../lib/estadoSessao.ts'
 import { rotuloCurto, useRotulos, type Rotulos } from '../../lib/rotulos.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 import { gravarDisponivel, lerDisponivel } from '../disponivel.ts'
+import { itemAtual } from '../navegacao.ts'
 
 /** O app atual (outra origem). No app novo, só o gestor de frota é mandado para lá (Ruling R13). */
 export const APP_ATUAL = 'https://umi-san-transporte.pages.dev'
@@ -16,6 +17,8 @@ export interface ItemMenu {
   icone: NomeIcone
   /** Caminho do app novo. As telas de hoje (pedidos, agenda, extrato, equipe, /adm/*) abrem aqui dentro (Ruling R12). */
   para: string
+  /** Nome da página (cabeçalho e h1), quando o rótulo do menu é uma descrição ("Minhas corridas e Pendências"). */
+  titulo?: string
 }
 
 const PERFIL_E_SEGURANCA: ItemMenu = { rotulo: 'Perfil e segurança', icone: 'escudo', para: '/perfil' }
@@ -40,7 +43,7 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
       ]
     case 'MOTORISTA':
       return [
-        { rotulo: 'Minhas corridas e Pendências', icone: 'lista', para: '/pedidos' },
+        { rotulo: 'Minhas corridas e Pendências', titulo: 'Minhas corridas', icone: 'lista', para: '/pedidos' },
         { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
         { rotulo: 'Meus veículos', icone: 'caminhao', para: '/veiculos' },
         { rotulo: 'Corridas do mês', icone: 'grafico', para: '/corridas-do-mes' },
@@ -49,7 +52,7 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
       ]
     case 'ADM':
       return [
-        { rotulo: 'Painel e Corridas em andamento', icone: 'grafico', para: '/adm/painel' },
+        { rotulo: 'Painel e Corridas em andamento', titulo: 'Painel', icone: 'grafico', para: '/adm/painel' },
         { rotulo: 'Contratos', icone: 'tabela', para: '/adm/contratos' },
         { rotulo: 'Créditos', icone: 'dinheiro', para: '/adm/creditos' },
         { rotulo: 'Usuários', icone: 'usuarios', para: '/adm/usuarios' },
@@ -84,6 +87,10 @@ function subtitulo(p: Perfil, rotulos: Rotulos): string {
 }
 
 const CLASSE_ITEM = 'flex min-h-12 w-full items-center gap-3.5 border-b border-borda py-1 font-semibold text-texto'
+/** Item atual: o fundo transborda 0,75 rem para os lados (-mx-3 + px-3), então o ícone e o texto não saem do lugar. */
+const CLASSE_LINK = 'flex min-h-12 items-center gap-3.5 border-b py-1 font-semibold text-texto'
+const CLASSE_LINK_ATUAL = `${CLASSE_LINK} -mx-3 w-[calc(100%+1.5rem)] rounded-xl border-transparent bg-selecao-suave px-3`
+const CLASSE_LINK_OUTRO = `${CLASSE_LINK} w-full border-borda`
 
 /**
  * Menu ☰ do canto superior esquerdo (mockups 12 e 13): botão redondo sobre o mapa e uma gaveta à esquerda.
@@ -98,6 +105,8 @@ export function Menu({ perfil }: { perfil: Perfil }) {
   const rotulos = useRotulos()
   const [disponivel, setDisponivel] = useState(lerDisponivel)
   const itens = itensDoMenu(perfil)
+  // A página atual fica destacada (especificação §6.4): troca de uma para outra direto pelo ☰.
+  const atual = itemAtual(itens, local.pathname)
 
   // Fecha ao trocar de tela (toque num item do app novo).
   useEffect(() => {
@@ -166,8 +175,12 @@ export function Menu({ perfil }: { perfil: Perfil }) {
             )}
             {itens.map((item) => (
               <li key={item.rotulo}>
-                <Link to={item.para} className={CLASSE_ITEM}>
-                  <Icone nome={item.icone} tamanho={20} className="text-texto-suave" />
+                <Link
+                  to={item.para}
+                  aria-current={item === atual ? 'page' : undefined}
+                  className={item === atual ? CLASSE_LINK_ATUAL : CLASSE_LINK_OUTRO}
+                >
+                  <Icone nome={item.icone} tamanho={20} className={item === atual ? 'text-laranja' : 'text-texto-suave'} />
                   <span className="flex-1">{item.rotulo}</span>
                 </Link>
               </li>

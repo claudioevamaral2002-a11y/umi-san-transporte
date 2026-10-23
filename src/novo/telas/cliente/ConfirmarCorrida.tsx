@@ -6,7 +6,7 @@ import { Folha } from '../../../design/componentes/Folha.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
-import { categorias, kmDaRota, toleranciaKm } from '../../../lib/categorias.ts'
+import { categorias, kmDaRota, MAX_CENTRO_CUSTO, toleranciaKm } from '../../../lib/categorias.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { corrida, resumoDaProposta } from '../../../lib/corrida.ts'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
@@ -20,6 +20,7 @@ import { SaldoInsuficiente, type Aprovacao } from '../../../telas/pedidos/Aprova
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { iniciais, quandoCompleto, reaisCurto } from '../../formatos.ts'
 import { gravarUltimoCentroCusto, lerUltimoCentroCusto } from '../../preferencias.ts'
+import { paradasDoDetalhe } from './paradasDoDetalhe.ts'
 
 const MUDOU = ['ORCAMENTO_ALTERADO', 'ORCAMENTO_VENCIDO', 'STATUS_INVALIDO', 'HORARIO_OCUPADO']
 
@@ -34,14 +35,29 @@ type Estado = { fase: 'pronto' } | { fase: 'confirmando' } | { fase: 'erro'; cod
 
 const primeiroNome = (nome: string | null) => nome?.trim().split(/\s+/)[0] ?? 'motorista'
 
-/** "Pela tabela" = a estimativa da mesma categoria para a mesma rota (o banco calcula; a tela só compara). */
-function useTabela(r: RespostaPedido, km: number | null) {
+/**
+ * "Pela tabela" = a estimativa da mesma categoria para a mesma rota, com as paradas e as horas estimadas do pedido
+ * (o banco calcula; a tela só compara).
+ */
+function useTabela(r: RespostaPedido, km: number | null, kmVolta: number | null) {
   const p = r.pedido
   const codigo = p.categoria ?? null
-  const chave = codigo && km !== null ? `novo-tabela-${p.id}-${kmDaRota(km)}-${p.levar}-${p.trazer}` : 'novo-tabela-nada'
+  const paradas = paradasDoDetalhe(p).quantidade
+  const horas = paradasDoDetalhe(p).horas
+  const chave =
+    codigo && km !== null
+      ? `novo-tabela-${p.id}-${kmDaRota(km)}-${kmVolta}-${p.levar}-${p.trazer}-${paradas}-${horas ?? ''}`
+      : 'novo-tabela-nada'
   const { dados } = useConsulta(chave, async () => {
     if (!codigo || km === null) return null
-    const lista = await categorias.disponiveis({ km: kmDaRota(km), levar: p.levar, trazer: p.trazer })
+    const lista = await categorias.disponiveis({
+      km: kmDaRota(km),
+      kmVolta,
+      levar: p.levar,
+      trazer: p.trazer,
+      paradas: paradas > 0 ? paradas : null,
+      horas,
+    })
     const c = lista.categorias.find((x) => x.codigo === codigo)
     return c && c.total_cent !== null ? { total_cent: c.total_cent, linhas: c.linhas ?? [] } : null
   })
@@ -126,11 +142,14 @@ function FolhaResposta({
 export function ConfirmarCorrida({
   r,
   km,
+  kmVolta = null,
   aoConfirmado,
   aoMudou,
 }: {
   r: RespostaPedido
   km: number | null
+  /** Fase 4.1: km da volta direta, em ida e volta (`null` em trecho único ou sem rota da volta). */
+  kmVolta?: number | null
   aoConfirmado: (a: Aprovacao) => void
   aoMudou: () => void
 }) {
@@ -139,11 +158,14 @@ export function ConfirmarCorrida({
   const o = r.orcamento
   const idCalculo = useId()
   const [verCalculo, setVerCalculo] = useState(false)
-  const [centro, setCentro] = useState(() => lerUltimoCentroCusto())
+  // O centro de custo informado ao pedir; sem ele, o último usado neste aparelho.
+  // Pedido por categoria (app novo): o centro de custo informado ao pedir, mesmo vazio — quem confirma não aplica sem
+  // ver o último deste aparelho. Pedido sem categoria (app atual): o último usado neste aparelho, como antes.
+  const [centro, setCentro] = useState(() => (p.categoria ? (p.centro_custo ?? '') : (p.centro_custo ?? lerUltimoCentroCusto())))
   const [estado, setEstado] = useState<Estado>({ fase: 'pronto' })
   const [resposta, setResposta] = useState<'revisao' | 'recusar' | null>(null)
   const [intencao] = useState(() => new Intencao())
-  const tabela = useTabela(r, km)
+  const tabela = useTabela(r, km, kmVolta)
   const pode = r.acoes.aprovar
   const saldo = useConsulta(pode ? 'novo-saldo-confirmar' : 'novo-saldo-nada', async () => (pode ? dinheiro.saldo(null) : null))
   useTempoReal(pode ? topicoSaldo(perfil?.empresa_id) : null, saldo.recarregar, 'saldo')
@@ -171,7 +193,8 @@ export function ConfirmarCorrida({
     if (!completo || confirmando) return
     setEstado({ fase: 'confirmando' })
     const chave = intencao.chave(`${p.id}|${completo.versao}|${completo.hash}`)
-    const cc = centro.trim() === '' ? null : centro.trim()
+    // Vazio limpa o centro de custo gravado ao pedir; `null` (nada a trocar) o mantém.
+    const cc = centro.trim() === '' ? (p.centro_custo ? '' : null) : centro.trim()
     const res = await corrida.confirmar(p.id, completo.versao, completo.hash, chave, cc, resumoDispositivo(navigator.userAgent))
     if (res.ok) {
       intencao.encerrar()
@@ -240,11 +263,11 @@ export function ConfirmarCorrida({
       {pode ? (
         <div className="mt-2 space-y-3">
           <Campo
-            rotulo="Centro de custo"
-            ajuda="Opcional. Fica neste aparelho para a próxima corrida."
+            rotulo="Centro de custo (opcional)"
+            ajuda="Fica neste aparelho para a próxima corrida."
             value={centro}
             onChange={(e) => setCentro(e.target.value)}
-            maxLength={80}
+            maxLength={MAX_CENTRO_CUSTO}
             autoComplete="off"
             disabled={confirmando}
           />

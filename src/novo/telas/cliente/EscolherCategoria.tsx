@@ -6,32 +6,47 @@ import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { Segmentado } from '../../../design/componentes/Segmentado.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
+import { RotaDePara } from '../../../design/componentes/RotaDePara.tsx'
 import {
   categorias,
   comPreenchimento,
+  horasValidas,
   kmDaRota,
+  MAX_CENTRO_CUSTO,
+  mudarHoras,
   pedidoDaCategoria,
   primeiroHorarioAgora,
   type CategoriaComPreco,
 } from '../../../lib/categorias.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import type { Local } from '../../../lib/enderecos.ts'
-import { pontoDaRota } from '../../../lib/enderecosRemoto.ts'
-import { mensagemDoCodigo } from '../../../lib/erros.ts'
+import { pontoDaRota, type PontoRota } from '../../../lib/enderecosRemoto.ts'
+import { mensagemDoPedido } from '../../../lib/erros.ts'
 import { DURACAO_PADRAO, FORM_VAZIO, mascararTelefone, validarPasso, type ErrosPedido, type FormPedido } from '../../../lib/novoPedido.ts'
+import { mensagemDeParadas, paradaDoLocal } from '../../../lib/paradas.ts'
 import { pedidos } from '../../../lib/pedidos.ts'
 import { diaDe, formatarDuracao, hoje, somarDias } from '../../../lib/tempo.ts'
 import { CaixaChip, Contador } from '../../../telas/pedidos/componentes.tsx'
+import { DIAS_NO_SELETOR, EscolherHorario } from './EscolherHorario.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
-import { diaCurto, formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
+import { formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
-import { gravarUltimaCategoria, lerUltimaCategoria } from '../../preferencias.ts'
-import { useRota } from '../../useRota.ts'
+import { gravarUltimaCategoria, gravarUltimoCentroCusto, lerUltimaCategoria, lerUltimoCentroCusto } from '../../preferencias.ts'
+import { useRotaComParadas } from './rotaComParadas.ts'
 
 export type EnderecoEscolhido = { texto: string; local: Local }
 
-/** Dias que o seletor "Agendar" oferece (hoje e os próximos). */
-const DIAS_NO_SELETOR = 14
+/**
+ * Dá para pedir esta categoria: disponível, com preenchimento conhecido e com preço — ou, na categoria cobrada por
+ * hora, com o preço pendente até as horas estimadas (o banco devolve `total_cent` nulo sem as horas).
+ */
+const escolhivel = (c: CategoriaComPreco) =>
+  c.disponivel && comPreenchimento(c) !== null && (c.total_cent !== null || c.cobra_hora)
+
+/** "1 h", "1,5 h". */
+const formatarHoras = (h: number) => `${h.toLocaleString('pt-BR')} h`
+
+const paradasNaLegenda = (n: number) => (n === 0 ? '' : n === 1 ? ' com 1 parada' : ` com ${n} paradas`)
 
 type Modo = 'agendar' | 'agora'
 
@@ -78,7 +93,9 @@ function CartaoCategoria({
   minutos: number | null
   aoEscolher: () => void
 }) {
-  const disponivel = c.disponivel && c.total_cent !== null && comPreenchimento(c) !== null
+  const disponivel = escolhivel(c)
+  // No cartão marcado (fundo marinho) o texto suave perde contraste: a legenda usa a cor do cartão, um pouco apagada.
+  const suave = marcada ? 'opacity-85' : 'text-texto-suave'
   return (
     <button
       type="button"
@@ -95,94 +112,22 @@ function CartaoCategoria({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block font-bold">{c.nome}</span>
-        <span className="block ivo-legenda text-texto-suave">
+        <span className={`block ivo-legenda ${suave}`}>
           {disponivel
             ? [c.descricao_curta, minutos !== null ? formatarDuracao(minutos) : null].filter(Boolean).join(' · ')
             : 'Indisponível no momento'}
         </span>
       </span>
-      {disponivel && (
-        <span className="shrink-0 text-right">
-          <span className="block font-extrabold tabular-nums">~{reaisCurto(c.total_cent!)}</span>
-          <span className="block ivo-legenda text-texto-suave">estimado</span>
-        </span>
-      )}
-    </button>
-  )
-}
-
-/** Dia e horário do "Agendar": faixa de dias e os horários livres do dia escolhido. */
-function EscolherHorario({
-  dia,
-  inicio,
-  aoMudarDia,
-  aoMudarInicio,
-}: {
-  dia: string
-  inicio: string | null
-  aoMudarDia: (d: string) => void
-  aoMudarInicio: (i: string) => void
-}) {
-  const idDias = useId()
-  const idHoras = useId()
-  const hojeSp = hoje()
-  const dias = Array.from({ length: DIAS_NO_SELETOR }, (_, i) => somarDias(hojeSp, i))
-  const livres = useConsulta(`novo-livres-${dia}`, () => pedidos.horariosLivres(dia, DURACAO_PADRAO))
-  return (
-    <div className="space-y-3">
-      <div>
-        <p id={idDias} className="mb-2 font-semibold">
-          Dia
-        </p>
-        <div role="radiogroup" aria-labelledby={idDias} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-          {dias.map((d) => (
-            <button
-              key={d}
-              type="button"
-              role="radio"
-              aria-checked={d === dia}
-              onClick={() => aoMudarDia(d)}
-              className={`min-h-12 shrink-0 rounded-full border-[1.5px] px-4 font-semibold tabular-nums ${
-                d === dia ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
-              }`}
-            >
-              {d === hojeSp ? 'Hoje' : diaCurto(`${d}T15:00:00Z`)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p id={idHoras} className="mb-2 font-semibold">
-          Horário
-        </p>
-        {livres.dados === undefined ? (
-          livres.erro ? (
-            <p className="ivo-legenda text-texto-suave">Não foi possível ler os horários livres agora.</p>
-          ) : (
-            <Skeleton className="h-12" />
-          )
-        ) : livres.dados.horarios.length === 0 ? (
-          <p className="ivo-legenda text-texto-suave">Sem horário livre neste dia. Escolha outro.</p>
+      {disponivel &&
+        (c.total_cent !== null ? (
+          <span className="shrink-0 text-right">
+            <span className="block font-extrabold tabular-nums">~{reaisCurto(c.total_cent)}</span>
+            <span className={`block ivo-legenda ${suave}`}>estimado</span>
+          </span>
         ) : (
-          <div role="radiogroup" aria-labelledby={idHoras} className="flex flex-wrap gap-2">
-            {livres.dados.horarios.map((h) => (
-              <button
-                key={h}
-                type="button"
-                role="radio"
-                aria-checked={h === inicio}
-                onClick={() => aoMudarInicio(h)}
-                className={`min-h-12 rounded-full border-[1.5px] px-4 font-semibold tabular-nums ${
-                  h === inicio ? 'ivo-escolhido' : 'border-borda bg-superficie text-texto'
-                }`}
-              >
-                {quandoCurto(h).split(' ')[1]}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+          <span className={`shrink-0 text-right ivo-legenda ${suave}`}>por hora</span>
+        ))}
+    </button>
   )
 }
 
@@ -193,6 +138,8 @@ function EscolherHorario({
 export function EscolherCategoria({
   origem,
   destino,
+  paradas = [],
+  aoAdicionarParada,
   categoriaInicial,
   idaEVoltaInicial = false,
   semData = false,
@@ -200,6 +147,10 @@ export function EscolherCategoria({
 }: {
   origem: EnderecoEscolhido
   destino: EnderecoEscolhido
+  /** Fase 4.1: paradas entre a origem e o destino (até 3), na ordem, todas com local. */
+  paradas?: readonly EnderecoEscolhido[]
+  /** "+ Adicionar parada": volta aos endereços com um campo de parada novo (ausente com 3 paradas). */
+  aoAdicionarParada?: () => void
   /** "Pedir de novo": a categoria da corrida anterior (vem marcada; sem ela, a última pedida neste aparelho). */
   categoriaInicial?: string
   idaEVoltaInicial?: boolean
@@ -229,24 +180,55 @@ export function EscolherCategoria({
   const [erros, setErros] = useState<ErrosPedido>({})
   const [enviando, setEnviando] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+  const [horas, setHoras] = useState<number | null>(null)
+  const [centro, setCentro] = useState(() => lerUltimoCentroCusto())
   const detalhes = useRef<HTMLDetailsElement>(null)
 
-  const { estado: rota, tentarDeNovo } = useRota(pontoDaRota(origem.local), pontoDaRota(destino.local))
+  const pontosParadas = paradas.map((p) => pontoDaRota(p.local)).filter((p): p is PontoRota => p !== null)
+  const {
+    estado: rota,
+    falhou: rotaFalhou,
+    km,
+    kmVolta,
+    tentarDeNovo,
+  } = useRotaComParadas(pontoDaRota(origem.local), pontoDaRota(destino.local), pontosParadas, idaEVolta)
   const pontos = rota.fase === 'pronta' ? rota.rota.pontos : []
   const fimDaRota = pontos.at(-1)
   const destinoNoMapa =
     fimDaRota ?? (destino.local.lat !== null && destino.local.lng !== null ? { lat: destino.local.lat, lng: destino.local.lng } : undefined)
   useCamadasDoMapa({ rota: pontos, destino: destinoNoMapa })
 
-  const km = rota.fase === 'pronta' ? kmDaRota(rota.rota.km) : null
+  const kmTrajeto = rota.fase === 'pronta' ? kmDaRota(rota.rota.km) : null
   const minutos = rota.fase === 'pronta' ? rota.rota.minutos : null
-  const lista = useConsulta(km === null ? 'novo-categorias-nada' : `novo-categorias-${km}-${idaEVolta}`, async () =>
-    km === null ? null : (await categorias.disponiveis({ km, levar: true, trazer: idaEVolta })).categorias,
+  const nParadas = paradas.length
+  // Preço com as paradas (quantidade) e as horas estimadas; ao mudar as horas, a lista anterior fica na tela.
+  // Só as horas mantêm a lista anterior: outra rota, outras paradas ou ida e volta esperam o preço novo.
+  const trajeto = `${km}-${kmVolta}-${idaEVolta}-${nParadas}`
+  const lista = useConsulta(
+    km === null ? 'novo-categorias-nada' : `novo-categorias-${trajeto}-${horas ?? ''}`,
+    async () =>
+      km === null
+        ? null
+        : {
+            trajeto,
+            categorias: (
+              await categorias.disponiveis({
+                km,
+                kmVolta,
+                levar: true,
+                trazer: idaEVolta,
+                paradas: nParadas > 0 ? nParadas : null,
+                horas,
+              })
+            ).categorias,
+          },
+    { manterAnterior: true },
   )
-  const cats = lista.dados ?? null
-  const disponiveis = (cats ?? []).filter((c) => c.disponivel && c.total_cent !== null && comPreenchimento(c) !== null)
+  const cats = km !== null && lista.dados?.trajeto === trajeto ? lista.dados.categorias : null
+  const disponiveis = (cats ?? []).filter(escolhivel)
   const atual = disponiveis.find((c) => c.codigo === escolhida) ?? disponiveis[0] ?? null
   const preenchida = atual ? comPreenchimento(atual) : null
+  const faltamHoras = !!atual?.cobra_hora && (horas === null || !horasValidas(horas))
 
   // Padrão do "Agendar": o primeiro horário livre a partir de amanhã.
   useEffect(() => {
@@ -306,8 +288,20 @@ export function EscolherCategoria({
     }
   }
 
+  /** Paradas no formato do pedido: do Google só o `place_id`; marcada no mapa, as coordenadas. */
+  const paradasDoPedido = paradas.map((p) => paradaDoLocal(p.texto, p.local))
+
   async function pedir() {
     if (!preenchida || !inicio || enviando) return
+    // O banco não devolve qual campo falhou (CAMPOS_INVALIDOS): a tela confere antes de enviar.
+    const problema =
+      mensagemDeParadas(paradasDoPedido) ??
+      (faltamHoras ? mensagemDoPedido('CAMPOS_INVALIDOS', ['horas_estimadas']) : null) ??
+      (centro.trim().length > MAX_CENTRO_CUSTO ? mensagemDoPedido('CAMPOS_INVALIDOS', ['centro_custo']) : null)
+    if (problema) {
+      setErroEnvio(problema)
+      return
+    }
     const f = corpoDoForm(inicio)
     const e = { ...validarPasso(2, f), ...validarPasso(3, f) }
     if (Object.keys(e).length > 0) {
@@ -335,14 +329,22 @@ export function EscolherCategoria({
       }
       ini = novo
     }
-    const r = await pedidos.criar(pedidoDaCategoria(preenchida, corpoDoForm(ini), { agora: modo === 'agora' }))
+    const r = await pedidos.criar(
+      pedidoDaCategoria(preenchida, corpoDoForm(ini), {
+        agora: modo === 'agora',
+        paradas: paradasDoPedido,
+        horas,
+        centroCusto: centro,
+      }),
+    )
     if (r.ok && typeof r.id === 'string') {
       gravarUltimaCategoria(preenchida.codigo)
+      gravarUltimoCentroCusto(centro)
       navegar(`/corrida/${r.id}`)
       return
     }
     setEnviando(false)
-    setErroEnvio(mensagemDoCodigo(r.codigo))
+    setErroEnvio(mensagemDoPedido(r.codigo))
     if (r.codigo === 'CATEGORIA_INDISPONIVEL') lista.recarregar()
     if (r.codigo === 'HORARIO_OCUPADO') {
       if (modo === 'agora') setAgora(null)
@@ -368,14 +370,22 @@ export function EscolherCategoria({
         >
           <Icone nome="setaEsquerda" />
         </button>
-        <div className="min-w-0 pt-1">
+        <div className="min-w-0 flex-1 pt-1">
           <h1 className="sr-only">Escolher a categoria</h1>
-          <p className="truncate font-semibold">{origem.texto}</p>
-          <p className="truncate ivo-legenda text-texto-suave">até {destino.texto}</p>
+          <RotaDePara origem={origem.texto} destino={destino.texto} paradas={paradas.map((p) => p.texto)} />
+          {aoAdicionarParada && (
+            <button
+              type="button"
+              onClick={aoAdicionarParada}
+              className="flex min-h-12 items-center ivo-legenda font-semibold text-link underline underline-offset-4"
+            >
+              + Adicionar parada
+            </button>
+          )}
         </div>
       </div>
 
-      {rota.fase === 'carregando' || (km !== null && cats === null && !lista.erro) ? (
+      {!rotaFalhou && (rota.fase === 'carregando' || (rota.fase === 'pronta' && km === null) || (km !== null && cats === null && !lista.erro)) ? (
         <div className="space-y-2" aria-busy="true">
           <p role="status" className="sr-only">
             Calculando o trajeto e os preços…
@@ -384,7 +394,7 @@ export function EscolherCategoria({
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
         </div>
-      ) : rota.fase === 'falhou' ? (
+      ) : rotaFalhou ? (
         <div className="space-y-3">
           <Mensagem tipo="erro">
             Não foi possível calcular o trajeto agora. Confira os endereços ou tente de novo em instantes.
@@ -392,6 +402,16 @@ export function EscolherCategoria({
           <Botao className="w-full" onClick={tentarDeNovo}>
             Tentar de novo
           </Botao>
+          {/* Só a volta falhou (ida e volta com paradas): dá para seguir só com a ida. */}
+          {rota.fase === 'pronta' && idaEVolta && (
+            <button
+              type="button"
+              onClick={() => setIdaEVolta(false)}
+              className="min-h-12 w-full ivo-legenda font-semibold text-texto-suave underline"
+            >
+              Pedir só a ida
+            </button>
+          )}
         </div>
       ) : lista.erro || cats === null ? (
         <div className="space-y-3">
@@ -412,10 +432,27 @@ export function EscolherCategoria({
                 aoEscolher={() => {
                   setEscolhida(c.codigo)
                   setErros({})
+                  setErroEnvio(null)
                 }}
               />
             ))}
           </div>
+
+          {atual?.cobra_hora && (
+            <Contador
+              rotulo="Horas estimadas"
+              valor={horas ?? 0}
+              min={0.5}
+              max={24}
+              passo={0.5}
+              formatar={() => (horas === null ? '—' : formatarHoras(horas))}
+              aoMudar={(v) => {
+                setHoras(horas === null ? 1 : mudarHoras(horas, v > horas ? 1 : -1))
+                setErroEnvio(null)
+              }}
+              detalhe="O Ivo confirma as horas."
+            />
+          )}
 
           <div className="flex items-center justify-between gap-3">
             <button
@@ -429,7 +466,12 @@ export function EscolherCategoria({
               <span>{rotuloQuando}</span>
               <Icone nome="setaBaixo" tamanho={16} />
             </button>
-            {km !== null && <span className="shrink-0 ivo-legenda text-texto-suave tabular-nums">{formatarKm(km)}</span>}
+            {kmTrajeto !== null && (
+              <span className="shrink-0 ivo-legenda text-texto-suave tabular-nums">
+                {formatarKm(kmTrajeto)}
+                {paradasNaLegenda(nParadas)}
+              </span>
+            )}
           </div>
           {quandoAberto && (
             <div id={idQuando} className="space-y-3 rounded-cartao border border-borda p-3">
@@ -519,11 +561,21 @@ export function EscolherCategoria({
             </div>
           </details>
 
+          <Campo
+            rotulo="Centro de custo (opcional)"
+            value={centro}
+            onChange={(e) => setCentro(e.target.value)}
+            maxLength={MAX_CENTRO_CUSTO}
+            autoComplete="off"
+          />
+
           {erroEnvio && <Mensagem tipo="erro">{erroEnvio}</Mensagem>}
           {Object.keys(erros).length > 0 && !detalhesAbertos && (
             <Mensagem tipo="erro">Confira os detalhes da corrida.</Mensagem>
           )}
-          {preenchida && inicio ? (
+          {preenchida && faltamHoras ? (
+            <p className="ivo-legenda text-texto-suave">Informe as horas estimadas para pedir.</p>
+          ) : preenchida && inicio ? (
             <Botao
               variante="principal"
               className="w-full"

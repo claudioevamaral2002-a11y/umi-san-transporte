@@ -16,9 +16,12 @@ export type EstadoRota =
   | { fase: 'pronta'; rota: RotaDaTela }
   | { fase: 'falhou' }
 
-/** Km, tempo e linha do trajeto entre dois pontos; `tentarDeNovo` refaz a chamada quando o Google falhou. */
-export function useRota(origem: PontoRota | null, destino: PontoRota | null) {
-  const chave = origem && destino ? JSON.stringify([origem, destino]) : null
+/**
+ * Km, tempo e linha do trajeto entre dois pontos, passando pelas `paradas` (fase 4.1, até 3) quando houver;
+ * `tentarDeNovo` refaz a chamada quando o Google falhou.
+ */
+export function useRota(origem: PontoRota | null, destino: PontoRota | null, paradas: readonly PontoRota[] = []) {
+  const chave = origem && destino ? JSON.stringify(paradas.length > 0 ? [origem, destino, paradas] : [origem, destino]) : null
   const [resultado, setResultado] = useState<{ chave: string; rota: RotaDaTela | null } | null>(null)
   const [rodada, setRodada] = useState(0)
 
@@ -27,8 +30,8 @@ export function useRota(origem: PontoRota | null, destino: PontoRota | null) {
     let vivo = true
     let promessa = memoria.get(chave)
     if (!promessa) {
-      const [o, d] = JSON.parse(chave) as [PontoRota, PontoRota]
-      promessa = rotaAte(o, d).catch(() => null)
+      const [o, d, ps] = JSON.parse(chave) as [PontoRota, PontoRota, PontoRota[] | undefined]
+      promessa = (ps ? rotaAte(o, d, ps) : rotaAte(o, d)).catch(() => null)
       memoria.set(chave, promessa)
     }
     void promessa.then((rota) => {

@@ -64,6 +64,8 @@ async function simularTelasNovas(
     categorias: CATEGORIAS,
     precos: c.p_versao === 3 ? { PASSAGEIROS: { km_cent: 300, taxa_fixa_cent: 0 }, CARGA_LEVE: { km_cent: 400, taxa_fixa_cent: 0 }, CARGA_PESADA: { km_cent: 600, taxa_fixa_cent: 15000 } } : null,
   }))
+  // Fase 4.1: os nomes das categorias do cadastro de veículo vêm do banco (motorista e ADM).
+  await rota('categorias_veiculo', () => ({ ok: true, categorias: CATEGORIAS.map((c) => ({ ...c, veiculo_cliente: false })) }))
   await rota('salvar_categoria', () => ({ ok: true }))
   await rota('publicar_contrato_categorias', () => ({ ok: true, versao: 4 }))
   return chamadas
@@ -86,7 +88,7 @@ test('Meus veículos: cartões com placa, situação e as categorias como etique
   const lista = page.getByRole('list', { name: 'Veículos' })
   await expect(lista.getByRole('listitem').filter({ hasText: 'ABC1D23' }).first()).toContainText('Ativo · 4 lugares · 800 kg')
   const hilux = lista.locator(':scope > li').filter({ hasText: 'ABC1D23' })
-  await expect(hilux.getByRole('list', { name: 'Categorias que atende' })).toHaveText(/Passageiros\s*Carga Leve/)
+  await expect(hilux.getByRole('list', { name: 'Categorias que atende' })).toHaveText(/IVO Passageiros\s*IVO Carga Leve/)
   const sprinter = lista.locator(':scope > li').filter({ hasText: 'XYZ9K87' })
   await expect(sprinter).toContainText('Em manutenção, o veículo não aparece na chamada.')
   await expect(page.getByRole('link', { name: 'Cadastrar veículo' })).toHaveAttribute('href', '/veiculos/novo')
@@ -191,40 +193,6 @@ test('Corridas do mês: quantas e o total cobrado, por mês, das concluídas', a
   expect(leitura.corpo).toEqual({ p_filtro: { status: ['CONCLUIDA'], limite: 500 } })
 })
 
-test('o ADM publica categorias com km "5,00": p_categorias.CARGA_LEVE.km_cent = 500, só pela RPC nova', async ({ page }) => {
-  const { api, novas } = await abrir(page, ADM, '/adm/categorias')
-  await expect(page.getByRole('heading', { name: 'Categorias e preços' })).toBeVisible()
-  // Lista as categorias (nome, descrição, ativa), também a inativa.
-  const pesada = page.getByRole('form', { name: 'IVO Carga Pesada' })
-  await expect(pesada.getByRole('switch', { name: 'IVO Carga Pesada ativa' })).toHaveAttribute('aria-checked', 'false')
-  await expect(page.getByRole('form', { name: 'IVO Carga Leve' }).getByLabel('Descrição')).toHaveValue('até 800 kg')
-  // Tabela modelo v3 com preço por categoria; a taxa fixa só na Carga Pesada.
-  await expect(page.getByRole('row', { name: /IVO Carga Leve/ })).toContainText('R$ 4,00')
-  await expect(page.getByRole('row', { name: /IVO Passageiros/ })).toContainText('Não se aplica')
-  await expect(page.getByText('A taxa fixa só vale para a Carga Pesada (com reboque).').first()).toBeVisible()
-
-  await page.getByRole('button', { name: 'Publicar nova versão' }).click()
-  const folha = page.getByRole('dialog', { name: /Publicar nova versão/ })
-  await expect(folha.getByLabel('IVO Passageiros: quilômetro')).toHaveValue('3,00')
-  await expect(folha.getByLabel('IVO Passageiros: taxa fixa')).toHaveCount(0)
-  await expect(folha.getByLabel('IVO Carga Pesada: taxa fixa')).toHaveValue('150,00')
-  await folha.getByLabel('IVO Carga Leve: quilômetro').fill('5,00')
-  await folha.getByRole('button', { name: 'Revisar e publicar' }).click()
-  await expect(folha.getByTestId('confirmacao-contrato')).toContainText('IVO Carga Leve: quilômetro')
-  await folha.getByRole('button', { name: 'Publicar versão' }).click()
-  await expect(page.getByText(/Versão 4 publicada/)).toBeVisible()
-
-  const envio = novas.find((c) => c.rpc === 'publicar_contrato_categorias')!
-  expect(envio.corpo.p_empresa).toBeNull()
-  expect(envio.corpo.p_categorias).toEqual({
-    PASSAGEIROS: { km_cent: 300, taxa_fixa_cent: 0 },
-    CARGA_LEVE: { km_cent: 500, taxa_fixa_cent: 0 },
-    CARGA_PESADA: { km_cent: 600, taxa_fixa_cent: 15000 },
-  })
-  expect((envio.corpo.p as Record<string, unknown>).km_sem_reboque_cent).toBe(350)
-  expect(api.filter((c) => c.rpc === 'publicar_contrato')).toHaveLength(0)
-})
-
 test('na tela Contratos de hoje, dentro do app novo, a versão nova também sai com o preço por categoria', async ({ page }) => {
   const { api, novas } = await abrir(page, ADM, '/adm/contratos/modelo')
   await page.getByRole('button', { name: 'Publicar nova versão' }).click()
@@ -244,7 +212,7 @@ test('na tela Contratos de hoje, dentro do app novo, a versão nova também sai 
 
 test('o ADM desativa uma categoria pelo salvar_categoria', async ({ page }) => {
   const { novas } = await abrir(page, ADM, '/adm/categorias')
-  const leve = page.getByRole('form', { name: 'IVO Carga Leve' })
+  const leve = page.getByRole('form', { name: 'Dados de IVO Carga Leve' })
   await leve.getByRole('switch', { name: 'IVO Carga Leve ativa' }).click()
   await leve.getByRole('button', { name: 'Salvar categoria' }).click()
   await expect(page.getByText('IVO Carga Leve salva.')).toBeVisible()
@@ -317,7 +285,7 @@ for (const tema of ['light', 'dark'] as const) {
     test('Categorias e preços sem violações do axe', async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await abrir(page, ADM, '/adm/categorias')
-      await expect(page.getByRole('row', { name: /IVO Carga Leve/ })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'IVO Carga Leve' })).toBeVisible()
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
     })
   })

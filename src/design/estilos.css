@@ -169,3 +169,34 @@
 .leaflet-marker-icon.marcador-destino { color: var(--cor-laranja); filter: drop-shadow(0 1px 1px rgb(10 37 64 / 0.4)); }
 .marcador-destino svg path { fill: currentColor; }
 @media (prefers-reduced-motion: reduce) { .marcador-carro { transition: none; } }
+
+/* Fase 4.1 (Tarefa 10): rolagem lateral personalizada da agenda do app novo. Só vale onde o markup novo usa a classe. */
+.rolagem-ivo {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  --polegar: var(--cor-marinho);
+  scrollbar-color: var(--polegar) transparent;
+  overscroll-behavior-x: contain;
+}
+.rolagem-ivo > * { scroll-snap-align: start; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .rolagem-ivo { --polegar: var(--cor-laranja); } }
+.rolagem-ivo::-webkit-scrollbar { height: 6px; }
+.rolagem-ivo::-webkit-scrollbar-track { background: var(--cor-borda); border-radius: 9999px; }
+.rolagem-ivo::-webkit-scrollbar-thumb { background: var(--polegar); border-radius: 9999px; }
+@media (prefers-reduced-motion: no-preference) { .rolagem-ivo { scroll-behavior: smooth; } }
+@media (prefers-reduced-motion: reduce) { .rolagem-ivo { scroll-behavior: auto; } }
+/* Setas ‹ › só com mouse/trackpad; no celular a rolagem é com o dedo. */
+.rolagem-seta { display: none; }
+@media (pointer: fine) {
+  .rolagem-seta {
+    position: absolute; top: 0; z-index: 1; width: 2rem; height: 3rem;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--cor-borda); border-radius: 9999px;
+    background: var(--cor-superficie); color: var(--cor-texto);
+  }
+  .rolagem-seta:disabled { opacity: 0.35; }
+  .rolagem-seta-esq { left: 0; }
+  .rolagem-seta-dir { right: 0; }
+  .rolagem-ivo { margin-inline: 2.25rem; }
+}

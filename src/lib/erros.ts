@@ -38,6 +38,8 @@ export const MENSAGENS = {
   CHAVE_INVALIDA: 'Permissão desconhecida. Atualize a página e tente de novo.',
   CAMINHO_INVALIDO: 'Arquivo de logo inválido. Envie um PNG ou WebP.',
   VIGENCIA_NO_PASSADO: 'A vigência precisa começar agora ou no futuro.',
+  // publicar_tarifas com uma versão do contrato já agendada para o futuro (fase 4.1).
+  VERSAO_FUTURA_PENDENTE: 'Já existe uma versão agendada para o futuro. Espere ela começar a valer ou fale com o suporte.',
 
   // Pedidos, agenda e orçamento (fase 2A)
   SEM_CONTRATO: 'Sua empresa ainda não tem contrato vigente. Fale com a IVO Transportes.',
@@ -82,6 +84,9 @@ export const MENSAGENS = {
   NOTA_INVALIDA: 'Escolha uma nota de 1 a 5 estrelas.',
   TELEFONE_INVALIDO: 'Informe o telefone com DDD, por exemplo (47) 99999-1234.',
   VALOR_INVALIDO: 'O valor do orçamento precisa ser maior que zero. Confira os km e os valores informados.',
+
+  // Categorias livres (fase 4.1)
+  CATEGORIA_DUPLICADA: 'Já existe uma categoria ativa com este nome.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
@@ -89,6 +94,25 @@ export type Codigo = keyof typeof MENSAGENS
 export function mensagemDoCodigo(codigo: string | null | undefined): string {
   if (codigo && Object.hasOwn(MENSAGENS, codigo)) return MENSAGENS[codigo as Codigo]
   return MENSAGENS.ERRO_INESPERADO
+}
+
+/**
+ * Mensagens de CAMPOS_INVALIDOS por campo do pedido (fase 4.1). O banco audita o campo em `detalhe.invalidos`, mas a
+ * resposta ao app traz só o código: a tela confere paradas, horas e centro de custo antes de enviar e usa estas
+ * mensagens; se o banco recusar mesmo assim, `mensagemDoPedido(codigo, campos)` diz qual campo.
+ */
+export const MENSAGENS_CAMPO_DO_PEDIDO = {
+  paradas: 'Confira as paradas: use até 3, cada uma com 3 a 200 caracteres.',
+  horas_estimadas: 'Informe as horas estimadas, de 0,5 a 24, de meia em meia hora.',
+  centro_custo: 'O centro de custo pode ter até 80 caracteres.',
+} as const satisfies Record<string, string>
+
+/** Mensagem de uma recusa de `criar_pedido`; `campos` (opcional) são os campos inválidos conhecidos pela tela. */
+export function mensagemDoPedido(codigo: string | null | undefined, campos?: readonly string[]): string {
+  if (codigo === 'CAMPOS_INVALIDOS') {
+    for (const c of campos ?? []) if (Object.hasOwn(MENSAGENS_CAMPO_DO_PEDIDO, c)) return MENSAGENS_CAMPO_DO_PEDIDO[c as keyof typeof MENSAGENS_CAMPO_DO_PEDIDO]
+  }
+  return mensagemDoCodigo(codigo)
 }
 
 /** VEICULO_INVALIDO no envio do orçamento (a mensagem de MENSAGENS é a do cadastro do veículo). */

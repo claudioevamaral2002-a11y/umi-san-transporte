@@ -1,7 +1,7 @@
 import { Cartao } from '../../../design/componentes/Cartao.tsx'
 import { Dinheiro } from '../../../design/componentes/Dinheiro.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
-import { EstadoVazio, ErroAoCarregar } from '../../../design/componentes/Tela.tsx'
+import { EstadoVazio, ErroAoCarregar, useTituloNaTela } from '../../../design/componentes/Tela.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { resumirPorMes } from '../../../lib/corridasDoMes.ts'
 import { pedidos } from '../../../lib/pedidos.ts'
@@ -16,6 +16,8 @@ const corridas = (n: number) => (n === 1 ? '1 corrida' : `${n} corridas`)
  * clientes em cada mês. Não é o repasse ao motorista, que ainda não existe. Dinheiro sempre do servidor (sem cache).
  */
 export function CorridasDoMes() {
+  // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
+  useTituloNaTela('visivel')
   const { dados, erro, recarregar } = useConsulta('novo-corridas-do-mes', () => pedidos.listar(['CONCLUIDA'], LIMITE))
   const meses = dados ? resumirPorMes(dados) : undefined
   const [atual, ...anteriores] = meses ?? []

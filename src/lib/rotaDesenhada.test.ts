@@ -23,6 +23,14 @@ describe('rotaAte', () => {
   const o = { lat: -26.9, lng: -48.66 }
   const d = { place_id: 'ChIJabc' }
 
+  it('repassa as paradas ao consultarRota', async () => {
+    vi.mocked(consultarRota).mockResolvedValueOnce({ km: 48.2, minutos: 50, polyline: null })
+    const paradas = [{ place_id: 'ChIJxyz' }]
+    const r = await rotaAte(o, d, paradas)
+    expect(consultarRota).toHaveBeenLastCalledWith(o, d, paradas)
+    expect(r).toEqual({ km: 48.2, minutos: 50, pontos: [] })
+  })
+
   it('devolve km, minutos e os pontos decodificados', async () => {
     vi.mocked(consultarRota).mockResolvedValueOnce({ km: 38.2, minutos: 45, polyline: '_p~iF~ps|U_ulLnnqC' })
     const r = await rotaAte(o, d)
