@@ -506,6 +506,8 @@ Roteiro de teste: [fase-4-1-o-que-testar.md](fases/fase-4-1-o-que-testar.md). De
 - a **IVO Motorista fica "Indisponível no momento"**, porque ainda não tem tabela;
 - **toda categoria criada depois da última publicação** também fica "Indisponível no momento" até a próxima publicação.
 
+**Versão agendada para o futuro:** se já existe uma versão do contrato (da empresa ou do modelo) que só começa a valer depois de agora, **Publicar tabela** recusa com "Já existe uma versão agendada para o futuro. Espere ela começar a valer ou fale com o suporte." (código `VERSAO_FUTURA_PENDENTE`). Motivo: a tabela publicada agora valeria só até a versão agendada começar, e essa versão não tem a tabela nova (a IVO Motorista ficaria indisponível e os preços voltariam aos de antes). Espere a data da versão agendada e publique depois. A regra vale por contrato: a versão agendada de uma empresa não trava as outras nem o modelo, e a do modelo não trava as empresas.
+
 Se a revisão avisar que uma categoria passa a cobrar por hora, é porque o app do cliente de antes da 4.1 (em cache) não manda as horas e o pedido dessa categoria seria recusado até ele atualizar. Para Passageiros e Carga Leve, o normal é deixar o valor por hora **zerado**.
 
 ### 19.3 Migrations e RPCs novas
@@ -515,19 +517,21 @@ Se a revisão avisar que uma categoria passa a cobrar por hora, é porque o app 
 | `20261022120100_paradas_pedido.sql` | `app.atividades_paradas` (até 3), `horas_estimadas` e centro de custo em `criar_pedido`, `meus_pedidos` e pendências com as paradas |
 | `20261022120200_categorias_veiculo.sql` | `api.categorias_veiculo()`: nomes das categorias para o cadastro e a lista de veículos (Master e motorista) |
 | `20261022120300_km_volta.sql` | `km_volta` opcional em `categorias_disponiveis` (km da ida pelas paradas + volta direta) |
+| `20261022120400_tarifas_versao_futura.sql` | `publicar_tarifas` recusa com `VERSAO_FUTURA_PENDENTE` enquanto o contrato (empresa ou modelo) tem uma versão agendada para o futuro |
 
 - **RPCs novas:** `api.publicar_tarifas`, `api.categorias_veiculo`; `api.categorias_disponiveis` aceita `km_volta`, `paradas` e `horas` e devolve `veiculo_cliente`, `cobra_hora` e `cobra_parada`.
 - Nenhuma migration antiga foi editada. A migração sobre dados de produção do CI já cobre o padrão `2026102*`.
-- Auditoria nova: `PUBLICAR_TARIFAS`. `publicar_contrato` e `publicar_contrato_categorias` copiam as tarifas da versão anterior.
+- Auditoria nova: `PUBLICAR_TARIFAS` (a recusa por versão agendada fica como `NEGADO` / `VERSAO_FUTURA_PENDENTE`). `publicar_contrato` e `publicar_contrato_categorias` copiam as tarifas da versão anterior.
 
 ### 19.4 Compatibilidade no deploy (app em cache e app atual)
 - **App atual** (pedidos sem categoria, `publicar_contrato`, `enviar_orcamento` sem as chaves novas): continua igual.
 - **`diarias` é ignorada** no caminho de categoria: o Orçar do app atual manda `diarias` para a IVO Motorista, e o banco aceita e descarta (a diária de hospedagem vem da tabela).
 - **Carga Leve com reboque é aceita de app em cache:** o app da fase 4 já publicado continua conseguindo pedir a Carga Leve; o pedido é aceito e o reboque passa a ser cobrado pela tabela.
+- **Tela Contratos do app atual depois da tabela:** quando o contrato já tem tabela por categoria, o preço sai da tabela. Mudar **km** ou **taxa fixa** em Contratos (inclusive o preço por categoria antigo) **não muda mais o preço** das categorias com tarifa: a versão nova só herda a tabela da anterior. Para mudar preço, use **Categorias e preços** no app novo.
 - **App da fase 4 em cache não manda `horas_estimadas`:** se o valor por hora de uma categoria for maior que zero, o `criar_pedido` recusa com CAMPOS_INVALIDOS até o app atualizar. Por isso o valor por hora só deve ficar preenchido na IVO Motorista (que o app antigo não conhecia).
 
 ### 19.5 Atualização do service worker
-O app novo é um PWA e guarda a versão no aparelho. Depois do deploy, **cada celular precisa pegar a versão nova** (aviso **"Nova versão · Atualizar"**; se não aparecer, feche e abra o app, ou apague o ícone e instale de novo). Antes de anunciar a publicação da tabela aos clientes, confira o seu próprio celular e o do Ivo. Sem a versão nova, não aparecem paradas, horas, centro de custo ao pedir nem os nomes novos das categorias.
+O app novo é um PWA e guarda a versão no aparelho. **Depois do deploy, force a atualização nos dois apps: o do cliente e o do motorista.** O app do motorista da fase 4 em cache traça a rota **sem as paradas** (o km sai menor que o da prévia do cliente) e **não consegue orçar a IVO Motorista** até atualizar. Cada celular precisa pegar a versão nova (aviso **"Nova versão · Atualizar"**; se não aparecer, feche e abra o app, ou apague o ícone e instale de novo). Antes de anunciar a publicação da tabela aos clientes, confira o seu próprio celular e o do Ivo. Sem a versão nova, não aparecem paradas, horas, centro de custo ao pedir nem os nomes novos das categorias.
 
 ### 19.6 Problemas comuns
 | Sintoma | O que fazer |
@@ -536,4 +540,7 @@ O app novo é um PWA e guarda a versão no aparelho. Depois do deploy, **cada ce
 | Pedido recusado para uma categoria com valor por hora | O celular está com a versão antiga (19.4 e 19.5). Atualize o app |
 | Preço de uma categoria "mudou sozinho" | Foi a publicação: confira a revisão e a versão do contrato em Contratos |
 | Quarta parada não deixa adicionar | O limite é 3 paradas |
+| "Já existe uma versão agendada para o futuro" ao publicar a tabela | Há uma versão do contrato que começa depois de agora (19.2). Espere ela começar a valer e publique de novo |
+| Motorista não consegue orçar a IVO Motorista ou o km não bate com o do cliente em corrida com paradas | O app do motorista está com a versão da fase 4 em cache (19.5). Atualize o app |
+| Mudei km/taxa em Contratos e o preço não mudou | Com tabela por categoria, o preço vem da tabela (19.4). Use **Categorias e preços** |
 | Publicar pela tela **Contratos** do app atual | A versão nova **herda** as tarifas da anterior; para mudar preço, use **Categorias e preços** |
