@@ -3,9 +3,9 @@
 --   * app.contratos_versoes.forma_cobranca: CREDITO (pré-pago, como hoje) ou FATURADO (NF). As versões existentes ficam
 --     CREDITO;
 --   * interno.validar_contrato aceita, além dos 13 campos de hoje, o opcional `forma_cobranca` (valor inválido → detalhe
---     `forma_cobranca`; nulo = ausente). interno.inserir_contrato grava a recebida; sem ela, a da versão vigente da mesma
---     empresa; sem vigente, a do modelo; sem modelo, CREDITO. Assim o app v1 e a v2.0 em cache (que não mandam a chave)
---     continuam publicando, sem trocar a forma. api.publicar_tarifas copia a versão vigente inteira (to_jsonb), então a
+--     `forma_cobranca`; nulo = ausente). interno.inserir_contrato grava a recebida; sem ela, a da última versão (maior
+--     número, mesmo agendada) da mesma empresa; sem versão, a do modelo vigente; sem modelo, CREDITO. Assim o app v1
+--     e a v2.0 em cache (que não mandam a chave) continuam publicando, sem trocar a forma. api.publicar_tarifas copia a versão vigente inteira (to_jsonb), então a
 --     forma vai junto sem mudar a função;
 --   * interno.forma_cobranca(empresa): a do contrato vigente (sem contrato: CREDITO);
 --   * FATURADO: api.criar_pedido não confere SEM_CREDITO e api.aprovar_orcamento (e api.confirmar_corrida, que a chama)
@@ -93,8 +93,8 @@ begin
 end $$;
 
 -- Grava uma versão (p já validado). Numeração por empresa (modelo = empresa nula), serializada por lock.
--- v2.1: forma_cobranca de p; sem ela, a da versão vigente da mesma empresa; sem vigente, a do modelo; sem modelo,
--- CREDITO. Corpo de 20261009120100_contratos_papeis_niveis.sql.
+-- v2.1: forma_cobranca de p; sem ela, a da última versão (maior número) da mesma empresa; sem versão, a do modelo;
+-- sem modelo, CREDITO. Corpo de 20261009120100_contratos_papeis_niveis.sql.
 create or replace function interno.inserir_contrato(p_empresa uuid, p jsonb, p_vigente_desde timestamptz,
                                                     p_publicado_por uuid, p_publicado_por_nome text)
 returns int language plpgsql security definer set search_path = '' as $$
@@ -107,9 +107,12 @@ begin
     from app.contratos_versoes c
    where (p_empresa is null and c.empresa_id is null) or c.empresa_id = p_empresa;
 
-  -- v2.1: a forma herdada
+  -- v2.1: a forma herdada da última versão publicada da mesma empresa (a de maior número, inclusive uma agendada para
+  -- o futuro: quem publica sem a chave não desfaz a troca já agendada)
   v_forma := coalesce(p ->> 'forma_cobranca',
-                      (select k.forma_cobranca from interno.contrato_vigente(p_empresa) k),
+                      (select c.forma_cobranca from app.contratos_versoes c
+                        where (p_empresa is null and c.empresa_id is null) or c.empresa_id = p_empresa
+                        order by c.versao desc limit 1),
                       case when p_empresa is not null
                            then (select k.forma_cobranca from interno.contrato_vigente(null) k) end,
                       'CREDITO');

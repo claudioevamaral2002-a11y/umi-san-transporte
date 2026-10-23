@@ -1,14 +1,16 @@
 -- v2.1, Tarefa 1 (migration 20261023120000_forma_cobranca.sql; docs/fases/v2-1-ajustes-faturamento-nf-desenho.md §4.1,
 -- §4.2): forma de cobrança no contrato (CREDITO ou FATURADO).
---   * sem a chave, a versão nova herda a forma da vigente da mesma empresa; sem vigente, a do modelo; sem modelo, CREDITO;
+--   * sem a chave, a versão nova herda a forma da última versão (maior número, mesmo agendada) da mesma empresa; sem
+--     versão, a do modelo; sem modelo, CREDITO;
 --   * FATURADO grava; valor inválido → CAMPOS_INVALIDOS com o detalhe forma_cobranca; publicar_tarifas mantém a forma;
 --   * no FATURADO, criar_pedido não exige crédito e aprovar_orcamento não recusa por saldo: a reserva e o RESERVA
 --     continuam, o disponível fica negativo e a saída gera o DEBITO;
 --   * a mesma empresa de volta ao CREDITO: SEM_CREDITO e SALDO_INSUFICIENTE como antes;
---   * saldo_empresa, painel_empresa e as leituras de contrato trazem a forma.
+--   * saldo_empresa, painel_empresa e as leituras de contrato trazem a forma; no FATURADO o alerta não se aplica (nem no
+--     painel do ADM).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(39);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -138,6 +140,9 @@ select is((select valor_cent from app.lancamentos where atividade_id = current_s
 select ok((select ativa from app.reservas where atividade_id = current_setting('t.a1')::uuid), 'reserva ativa');
 select is((current_setting('t.s1')::jsonb ->> 'disponivel_cent')::bigint, -current_setting('t.tot1')::bigint,
   'o disponível fica negativo (o valor devido)');
+select is((current_setting('t.s1')::jsonb ->> 'alerta_cent')::bigint, 0::bigint, 'FATURADO: alerta_cent 0');
+select is((current_setting('t.s1')::jsonb ->> 'abaixo_alerta')::boolean, false,
+  'FATURADO: abaixo_alerta false (o contrato tem alerta de 20000 e o disponível é negativo)');
 
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca2'), true);
@@ -154,6 +159,9 @@ select set_config('t.painel', api.painel_empresa('00000000-0000-0000-0000-000000
 select is(current_setting('t.painel')::jsonb #>> '{resumo,forma_cobranca}', 'FATURADO', 'painel_empresa: o resumo traz a forma');
 select is((select forma_cobranca from api.listar_contratos() where empresa_id = '00000000-0000-0000-0000-0000000000e1'),
   'FATURADO', 'listar_contratos traz a forma da vigente');
+-- as duas empresas estão no FATURADO com o disponível abaixo do alerta do contrato: nenhuma conta
+select is(api.painel_adm() #>> '{pendencias,empresas_abaixo_alerta}', '0',
+  'painel_adm: empresa no FATURADO não conta em empresas_abaixo_alerta');
 
 ------------------------------------------------------------------ 5. a mesma empresa no CREDITO: como antes
 select set_config('t.p5', api.publicar_contrato('00000000-0000-0000-0000-0000000000e1',
@@ -172,6 +180,22 @@ select is(current_setting('t.p5')::jsonb ->> 'ok', 'true', 'volta ao CREDITO (li
 select is(current_setting('t.r3')::jsonb ->> 'codigo', 'SEM_CREDITO', 'CREDITO sem crédito: SEM_CREDITO, como antes');
 select is(current_setting('t.ap2')::jsonb ->> 'codigo', 'SALDO_INSUFICIENTE', 'CREDITO sem saldo: SALDO_INSUFICIENTE, como antes');
 select is(current_setting('t.s2')::jsonb ->> 'forma_cobranca', 'CREDITO', 'saldo_empresa no CREDITO');
+
+------------------------------------------------------------------ 5b. herda da última versão, mesmo agendada
+-- vigente CREDITO (v5); o Master agenda a troca para FATURADO (v6, daqui a 10 dias) e depois publica outra versão sem a
+-- chave (v7, como a v1 envia): ela herda a troca agendada, não a vigente.
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca1'), true);
+select set_config('t.p6', api.publicar_contrato('00000000-0000-0000-0000-0000000000e1',
+  current_setting('t.base')::jsonb || '{"forma_cobranca": "FATURADO"}', now() + interval '10 days')::text, true);
+select set_config('t.p7', api.publicar_contrato('00000000-0000-0000-0000-0000000000e1',
+  current_setting('t.base')::jsonb, now() + interval '20 days')::text, true);
+reset role;
+select ok((current_setting('t.p6')::jsonb ->> 'ok')::boolean and (current_setting('t.p7')::jsonb ->> 'ok')::boolean
+          and interno.forma_cobranca('00000000-0000-0000-0000-0000000000e1') = 'CREDITO',
+  'FATURADO agendado e mais uma versão sem a chave; a vigente continua CREDITO');
+select is(pg_temp.forma('00000000-0000-0000-0000-0000000000e1', 7), 'FATURADO',
+  'sem a chave: herda da última versão publicada (a agendada), não da vigente');
 
 ------------------------------------------------------------------ 6. privilégios
 select ok(not has_function_privilege('authenticated', 'interno.forma_cobranca(uuid)', 'EXECUTE')
