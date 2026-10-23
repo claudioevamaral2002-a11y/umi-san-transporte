@@ -134,6 +134,12 @@ test.describe('pedido no estilo Uber (fase 4)', () => {
         Retorno: '50',
         'Diária de hospedagem': '0,00',
       })
+      // v2.1: cada cartão abre só para ver; o lápis ("Editar <nome>") mostra os campos.
+      for (const nome of ['IVO Passageiros', 'IVO Carga Leve', 'IVO Motorista']) {
+        const lapis = cartao(nome).getByRole('button', { name: `Editar ${nome}`, exact: true })
+        await expect(lapis).toBeVisible({ timeout: 30_000 })
+        await lapis.click()
+      }
       await expect(cartao('IVO Carga Leve').getByLabel('Por km', { exact: true })).toBeEditable({ timeout: 30_000 })
       await preencher('IVO Passageiros', tabela('3,00'))
       await preencher('IVO Carga Leve', { ...tabela('4,00'), Reboque: '0,00' })

@@ -184,6 +184,12 @@ test.describe('categorias com tabela, por hora e com paradas (fase 4.1)', () => 
       const preencher = async (nome: string, valores: Record<string, string>) => {
         for (const [campo, valor] of Object.entries(valores)) await cartao(nome).getByLabel(campo, { exact: true }).fill(valor)
       }
+      // v2.1: cada cartão abre só para ver; o lápis ("Editar <nome>") mostra os campos.
+      for (const nome of ['IVO Passageiros', 'IVO Motorista']) {
+        const lapis = cartao(nome).getByRole('button', { name: `Editar ${nome}`, exact: true })
+        await expect(lapis).toBeVisible({ timeout: 30_000 })
+        await lapis.click()
+      }
       await expect(cartao('IVO Passageiros').getByLabel('Por parada', { exact: true })).toBeEditable({ timeout: 30_000 })
       await expect(cartao('IVO Motorista').getByLabel('Por hora', { exact: true })).toBeEditable()
       // Zerado = não cobra: só o km e a parada em Passageiros; só a hora na IVO Motorista. A Carga Leve fica como veio.
