@@ -136,13 +136,14 @@ test('R12: o motorista abre a chamada nova a partir de "Minhas corridas e Pendê
 test('R13: o gestor de frota vê "Sem acesso a este app"', async ({ page }) => {
   await abrir(page, GESTOR, '/pedidos')
   await expect(page.getByRole('heading', { name: 'Sem acesso a este app' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Abrir o app de hoje' })).toHaveAttribute('href', 'https://umi-san-transporte.pages.dev')
+  await expect(page.getByRole('link', { name: 'Abrir a versão 1' })).toHaveAttribute('href', 'https://ivo-v1.pages.dev')
   await expect(page.getByRole('button', { name: 'Abrir menu' })).toHaveCount(0)
 })
 
 test('R15: Perfil e segurança mostra nome e e-mail só para ler e grava o telefone só com os dígitos', async ({ page }) => {
   const { telefone } = await abrir(page, MOTORISTA, '/perfil', { telefone: '4733445566' })
   await expect(page.getByRole('heading', { name: 'Perfil e segurança' })).toBeVisible()
+  await expect(page.getByText(/^IVO Transportes · versão \d+\.\d+\.\d+$/)).toBeVisible()
   await expect(page.locator('main')).toContainText('Ivo Barbosa')
   await expect(page.locator('main')).toContainText('pessoa@exemplo.com.br')
   await expect(page.getByRole('textbox', { name: 'Nome' })).toHaveCount(0)

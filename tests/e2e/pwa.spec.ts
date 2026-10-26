@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('manifest instalável', async ({ request }) => {
   const manifest = await (await request.get('/manifest.webmanifest')).json()
-  expect(manifest).toMatchObject({ name: 'IVO Transportes', display: 'standalone', lang: 'pt-BR', start_url: '/' })
+  expect(manifest).toMatchObject({ name: 'IVO Transportes v1', short_name: 'IVO v1', display: 'standalone', lang: 'pt-BR', start_url: '/' })
   const icones = manifest.icons as Array<{ sizes: string; purpose?: string }>
   expect(icones.map((i) => i.sizes)).toEqual(expect.arrayContaining(['192x192', '512x512']))
   expect(icones.some((i) => i.purpose === 'maskable')).toBe(true)

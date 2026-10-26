@@ -16,11 +16,11 @@ async function comServiceWorkerAtivo(page: Page) {
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 }
 
-test('manifesto próprio do IVO novo', async ({ request }) => {
+test('manifesto próprio da v2', async ({ request }) => {
   const manifesto = await (await request.get('/manifest.webmanifest')).json()
   expect(manifesto).toMatchObject({
-    name: 'IVO Transportes (novo)',
-    short_name: 'IVO novo',
+    name: 'IVO Transportes',
+    short_name: 'IVO',
     display: 'standalone',
     lang: 'pt-BR',
     start_url: '/',

@@ -129,6 +129,13 @@ O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deplo
 - `interno.tarifa_da_categoria` ficou sem uso; falta teste de fallback com preços por categoria da fase 4 (inclusive Carga Pesada inativa).
 - Na migration `20261022120000`, a seção 10 vem antes da 9 (cosmético).
 
+## 5D. v2.0: o app novo vira o principal
+
+- **Decisão do dono (23/10):** o app novo (`src/novo`) substitui o anterior. O endereço principal (https://umi-san-transporte.pages.dev) serve a **v2**; o app anterior vira **v1** em https://ivo-v1.pages.dev. O ivo-novo continua servindo a v2. Daqui em diante as melhorias são **v2.1, v2.2…** (versão no `package.json`, visível em Perfil e segurança).
+- O código não mudou de lugar: `src/` (fora de `src/novo`) é a v1 e também fornece telas que a v2 reaproveita. Por isso a v1 continua sendo compilada e testada no CI.
+- Passos do dono para a v1 (Turnstile e chave do mapa para `ivo-v1.pages.dev`): RUNBOOK §20.2.
+- **Próxima: v2.1**, com os 3 ajustes pedidos em 23/10 (tirar as etiquetas do cartão da categoria; Categorias e preços abre só para ver, com lápis para editar e "Desativar" no lugar de excluir; diárias e outros custos ao pedir, e fim do "Ida e volta") e o **faturamento por NF** para a Umi San: quinzenal, sem teto, NF emitida pelo dono no site da prefeitura e anexada no portal. O adiantamento de R$ 15.000 é controle interno do dono e fica fora do app.
+
 ## 6. Onde está cada coisa
 
 | Precisa de… | Veja |
