@@ -41,6 +41,12 @@ const tela =
   <M extends Record<string, unknown>>(carregar: () => Promise<M>, nome: keyof M & string) =>
   async () => ({ Component: (await carregar())[nome] as ComponentType })
 
+/** Extrato do cliente com o título e o saldo conforme a forma de cobrança (v2.1, §5.3). */
+const extratoPelaForma = async () => {
+  const { Extrato } = await import('../telas/extrato/Extrato.tsx')
+  return { Component: () => <Extrato pelaFormaDeCobranca /> }
+}
+
 /** Cadastrar/editar veículo pelo ADM (escolhe o motorista ao cadastrar). */
 const veiculoDoAdm = async () => {
   const { CadastrarVeiculo } = await import('./telas/motorista/CadastrarVeiculo.tsx')
@@ -59,7 +65,8 @@ const TELAS_DO_APP_ATUAL = [
   { path: 'agenda', lazy: tela(() => import('../telas/agenda/Agenda.tsx'), 'Agenda') },
   {
     element: <GuardaPerfil permite={ehCliente} />,
-    children: [{ path: 'extrato', lazy: tela(() => import('../telas/extrato/Extrato.tsx'), 'Extrato') }],
+    // v2.1: no Faturado, o Extrato vira "Lançamentos" (a v1 não passa a prop e fica como está).
+    children: [{ path: 'extrato', lazy: extratoPelaForma }],
   },
   {
     element: <GuardaPerfil permite={gereEquipe} />,
@@ -69,7 +76,8 @@ const TELAS_DO_APP_ATUAL = [
     path: 'adm',
     element: <GuardaPerfil permite={ehAdm} />,
     children: [
-      { path: 'painel', lazy: tela(() => import('../telas/adm/Painel.tsx'), 'Painel') },
+      // v2.1: o Painel de hoje com as pendências das faturas (prop opcional; a v1 continua sem elas).
+      { path: 'painel', lazy: tela(() => import('./telas/adm/PainelComFaturas.tsx'), 'PainelComFaturas') },
       { path: 'contratos', lazy: tela(() => import('../telas/adm/Contratos.tsx'), 'Contratos') },
       { path: 'contratos/:alvo', lazy: tela(() => import('../telas/adm/Contratos.tsx'), 'ContratoDetalhe') },
       { path: 'creditos', lazy: tela(() => import('../telas/adm/Creditos.tsx'), 'Creditos') },
@@ -83,6 +91,9 @@ const TELAS_DO_APP_ATUAL = [
       { path: 'veiculos', lazy: tela(() => import('./telas/adm/Veiculos.tsx'), 'Veiculos') },
       { path: 'veiculos/novo', lazy: veiculoDoAdm },
       { path: 'veiculos/:id', lazy: veiculoDoAdm },
+      // v2.1: faturamento por NF (só o Master).
+      { path: 'faturas', lazy: tela(() => import('./telas/adm/Faturas.tsx'), 'Faturas') },
+      { path: 'faturas/:empresa', lazy: tela(() => import('./telas/adm/FaturasEmpresa.tsx'), 'FaturasEmpresa') },
     ],
   },
 ]
@@ -116,6 +127,8 @@ const PAINEL_EMPRESA = {
         { path: 'corridas', lazy: tela(() => import('./telas/empresa/AbaCorridas.tsx'), 'AbaCorridas') },
         { path: 'pessoas', lazy: tela(() => import('./telas/empresa/AbaPessoas.tsx'), 'AbaPessoas') },
         { path: 'carteira', lazy: tela(() => import('./telas/empresa/AbaCarteira.tsx'), 'AbaCarteira') },
+        // v2.1: no Faturado (NF), Faturas substitui a Carteira; cada uma leva à outra conforme a forma de cobrança.
+        { path: 'faturas', lazy: tela(() => import('./telas/empresa/AbaFaturas.tsx'), 'AbaFaturas') },
       ],
     },
   ],

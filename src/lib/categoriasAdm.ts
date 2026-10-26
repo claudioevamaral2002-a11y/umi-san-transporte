@@ -30,6 +30,11 @@ export interface CategoriaAdm {
    * valores são os preços de hoje; `null` = sem contrato.
    */
   tarifa?: (Tarifa & { inicial: boolean }) | null
+  /**
+   * v2.1: a categoria nunca foi usada (nenhum pedido, contrato, tabela publicada ou veículo): mostra **Excluir**; nas
+   * outras, **Desativar**. Opcional: o banco anterior não devolvia (sem ele, só Desativar).
+   */
+  pode_excluir?: boolean
 }
 
 /** O que `api.salvar_categoria` aceita. Sem `codigo`, cria (o banco gera o código e o devolve em `codigo`). */
@@ -113,6 +118,8 @@ export const categoriasAdm = {
     for (const k of CHAVES_ENTRADA) if (c[k] !== undefined && c[k] !== null) p[k] = c[k]
     return chamar('salvar_categoria', { p })
   },
+  /** v2.1: apaga a categoria que nunca foi usada; usada → `CATEGORIA_EM_USO` (a tela oferece Desativar). */
+  excluir: (codigo: string) => chamar('excluir_categoria', { p_codigo: codigo }),
   /** Todas as categorias (também as inativas), com a tarifa da versão (ou da vigente). */
   listar: async (empresa: string | null = null, versao: number | null = null) =>
     (await categoriasAdm.ler(empresa, versao)).categorias,

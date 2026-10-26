@@ -226,7 +226,8 @@ select is(api.saldo_empresa('00000000-0000-0000-0000-0000000000e2') ->> 'limite_
 reset role;
 select is(current_setting('t.s_n3')::jsonb - 'atualizado_em',
   '{"ok": true, "empresa_id": "00000000-0000-0000-0000-0000000000e1", "saldo_contabil_cent": -29500, "reservado_cent": 0,
-    "disponivel_cent": -29500, "limite_cent": 50000, "alerta_cent": 20000, "abaixo_alerta": true}'::jsonb,
+    "disponivel_cent": -29500, "limite_cent": 50000, "alerta_cent": 20000, "abaixo_alerta": true,
+    "forma_cobranca": "CREDITO"}'::jsonb,
   'N3 vê o saldo da própria empresa (limite e alerta do contrato vigente)');
 
 ------------------------------------------------------------------ 7. extrato
@@ -304,7 +305,7 @@ select is((select x - 'atualizado_em' from jsonb_array_elements(current_setting(
             where x ->> 'empresa_id' = '00000000-0000-0000-0000-0000000000e1'),
   '{"empresa_id": "00000000-0000-0000-0000-0000000000e1", "empresa_nome": "Empresa A", "tem_contrato": true,
     "saldo_contabil_cent": -29500, "reservado_cent": 10, "disponivel_cent": -29510, "limite_cent": 50000,
-    "alerta_cent": 20000, "abaixo_alerta": true}'::jsonb,
+    "alerta_cent": 20000, "abaixo_alerta": true, "forma_cobranca": "CREDITO"}'::jsonb,
   'painel: crédito por empresa com limite, alerta e sinal de alerta');
 select is(current_setting('t.painel')::jsonb #>> '{ultima_reconciliacao,ok}', 'false', 'painel: última reconciliação (com divergência)');
 select ok((current_setting('t.painel')::jsonb #>> '{ultima_reconciliacao,divergencias_qtd}')::int >= 2,

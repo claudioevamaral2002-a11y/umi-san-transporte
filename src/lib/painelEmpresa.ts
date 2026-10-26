@@ -2,6 +2,7 @@
 // só, `api.painel_empresa`, devolve os blocos (resumo do mês, próximas corridas, recentes, pessoas) e as corridas do mês
 // para o CSV. Só formatação aqui: todo valor vem do banco (livro-razão e orçamentos).
 import type { Status } from '../design/componentes/StatusBadge.tsx'
+import type { FormaCobranca } from './contratos.ts'
 import { ler } from './pedidos.ts'
 import { FUSO } from './valores.ts'
 
@@ -35,6 +36,12 @@ export interface ResumoPainel {
   /** Saldo no 1º dia + recargas do mês + limite de crédito do contrato. */
   total_mes_cent: number
   contato_recarga: string | null
+  /** v2.1 (opcional: o banco anterior não devolvia; sem ela, Crédito). */
+  forma_cobranca?: FormaCobranca
+  /** v2.1, só no Faturado: o que ainda não foi faturado, as faturas abertas e, delas, as vencidas. */
+  a_faturar_cent?: number
+  em_aberto_cent?: number
+  vencidas_cent?: number
 }
 
 export interface Painel {
@@ -87,24 +94,47 @@ function campo(texto: string | null): string {
   return /[;"\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
 }
 
+/** Uma linha no formato do CSV do mês (também o da fatura, v2.1). `data` em ISO. */
+export interface LinhaCsv {
+  data: string
+  solicitante_nome: string | null
+  origem: string | null
+  paradas?: string[] | null
+  destino: string | null
+  categoria_nome: string | null
+  horas_estimadas?: number | null
+  centro_custo: string | null
+  valor_cent: number
+}
+
+/** Valor do CSV: R$ 1.234,50 → "1234,50" (sem separador de milhar). */
+export function valorCsv(centavos: number): string {
+  return VALOR.format(centavos / 100)
+}
+
+/** CSV com o cabeçalho do CSV do mês e o `rodape` (linhas já montadas) no fim; cada linha termina em CRLF. */
+export function csvDeLinhas(linhas: readonly LinhaCsv[], rodape: readonly string[] = []): string {
+  const corpo = linhas.map((i) =>
+    [
+      DATA.format(new Date(i.data)),
+      campo(i.solicitante_nome),
+      campo(i.origem),
+      campo((i.paradas ?? []).join(' | ')),
+      campo(i.destino),
+      campo(i.categoria_nome),
+      i.horas_estimadas == null ? '' : HORAS.format(i.horas_estimadas),
+      campo(i.centro_custo),
+      valorCsv(i.valor_cent),
+    ].join(';'),
+  )
+  return [CABECALHO_CSV, ...corpo, ...rodape].map((l) => `${l}\r\n`).join('')
+}
+
 /** CSV do mês (separador `;`, como o Excel em português abre), uma corrida com valor por linha. */
 export function csvDoMes(itens: readonly PedidoPainel[]): string {
-  const linhas = itens
-    .filter((i) => i.valor_cent !== null)
-    .map((i) =>
-      [
-        DATA.format(new Date(i.inicio)),
-        campo(i.solicitante_nome),
-        campo(i.origem),
-        campo((i.paradas ?? []).join(' | ')),
-        campo(i.destino),
-        campo(i.categoria_nome),
-        i.horas_estimadas == null ? '' : HORAS.format(i.horas_estimadas),
-        campo(i.centro_custo),
-        VALOR.format((i.valor_cent ?? 0) / 100),
-      ].join(';'),
-    )
-  return [CABECALHO_CSV, ...linhas].map((l) => `${l}\r\n`).join('')
+  return csvDeLinhas(
+    itens.filter((i) => i.valor_cent !== null).map((i) => ({ ...i, data: i.inicio, valor_cent: i.valor_cent ?? 0 })),
+  )
 }
 
 export const painelEmpresa = {

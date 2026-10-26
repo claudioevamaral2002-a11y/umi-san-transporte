@@ -180,7 +180,7 @@ test.describe('pedir com paradas', () => {
     expect(p.horas_estimadas).toBeUndefined()
   })
 
-  test('ida e volta: a ida passa pelas paradas e a volta direta vai em km_volta', async ({ page }) => {
+  test('v2.1: sem "Ida e volta" (ir e voltar é uma parada e o Para igual ao De); nenhuma volta direta é buscada', async ({ page }) => {
     const { mapas, categorias } = await abrir(page)
     await page.getByRole('button', { name: '+ Adicionar parada' }).click()
     await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
@@ -188,76 +188,9 @@ test.describe('pedir com paradas', () => {
     await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
     await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
     await page.getByText('Detalhes da corrida (pessoas, carga, contato)').click()
-    await page.getByRole('checkbox', { name: 'Ida e volta' }).check()
-    await expect.poll(() => categorias.at(-1)).toEqual({ km: 42, km_volta: 38.6, levar: true, trazer: true, paradas: 1 })
-    const volta = mapas.filter((c) => c.acao === 'rota').at(-1)!
-    expect(volta).toMatchObject({ origem: { place_id: 'ChIJpor' }, destino: { place_id: 'ChIJdef' } })
-    expect(volta.paradas).toBeUndefined()
-  })
-
-  test('ida e volta com paradas e a volta falhou: sem preço até "Tentar de novo" refazer a volta', async ({ page }) => {
-    const { mapas, categorias } = await abrir(page)
-    // A volta direta (destino Estaleiro Navegantes) falha uma vez; depois responde.
-    let falhas = 0
-    await page.route(`${URL_SUPABASE}/functions/v1/enderecos`, (route: Route) => {
-      const c = route.request().postDataJSON() as { acao: string; destino?: { place_id?: string } }
-      if (c.acao === 'rota' && c.destino?.place_id === 'ChIJdef' && falhas === 0) {
-        falhas++
-        mapas.push(c)
-        return json(route, { ok: false, codigo: 'MAPAS_INDISPONIVEL' })
-      }
-      return route.fallback()
-    })
-    await page.getByRole('button', { name: '+ Adicionar parada' }).click()
-    await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
-    await escolher(page, 'Parada 1', 'Detroit', /Estaleiro Detroit/)
-    await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
-    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
-    await page.getByText('Detalhes da corrida (pessoas, carga, contato)').click()
-    // click (não check): a lista, com os detalhes, sai da tela enquanto a volta é buscada.
-    await page.getByRole('checkbox', { name: 'Ida e volta' }).click()
-    await expect(page.getByText('Não foi possível calcular o trajeto agora.', { exact: false })).toBeVisible()
-    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Pedir só a ida' })).toBeVisible()
-    // Nenhum preço de ida e volta sem a volta (o banco dobraria a ida pelas paradas).
-    expect(categorias.filter((c) => c.trazer === true)).toHaveLength(0)
-
-    await page.getByRole('button', { name: 'Tentar de novo' }).click()
-    await expect.poll(() => categorias.at(-1)).toEqual({ km: 42, km_volta: 38.6, levar: true, trazer: true, paradas: 1 })
-    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
-    expect(mapas.filter((c) => c.acao === 'rota' && (c.destino as { place_id?: string } | undefined)?.place_id === 'ChIJdef')).toHaveLength(2)
-  })
-
-  test('ida e volta com paradas e a volta falhou: "Pedir só a ida" volta ao trecho único', async ({ page }) => {
-    const { categorias } = await abrir(page)
-    await page.route(`${URL_SUPABASE}/functions/v1/enderecos`, (route: Route) => {
-      const c = route.request().postDataJSON() as { acao: string; destino?: { place_id?: string } }
-      if (c.acao === 'rota' && c.destino?.place_id === 'ChIJdef') return json(route, { ok: false, codigo: 'MAPAS_INDISPONIVEL' })
-      return route.fallback()
-    })
-    await page.getByRole('button', { name: '+ Adicionar parada' }).click()
-    await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
-    await escolher(page, 'Parada 1', 'Detroit', /Estaleiro Detroit/)
-    await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
-    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
-    await page.getByText('Detalhes da corrida (pessoas, carga, contato)').click()
-    await page.getByRole('checkbox', { name: 'Ida e volta' }).click()
-    await page.getByRole('button', { name: 'Pedir só a ida' }).click()
-    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: 'Ida e volta' })).toHaveCount(0)
     expect(categorias.at(-1)).toEqual({ km: 42, levar: true, trazer: false, paradas: 1 })
-    expect(categorias.filter((c) => c.trazer === true)).toHaveLength(0)
-  })
-
-  test('ida e volta sem paradas: uma chamada de rota só e sem km_volta (o banco dobra a ida, como o motorista)', async ({ page }) => {
-    const { mapas, categorias } = await abrir(page)
-    await escolher(page, 'De', 'Estaleiro Navegantes', /Estaleiro Navegantes/)
-    await escolher(page, 'Para', 'Porto', /Porto de Itajaí/)
-    await expect(page.getByRole('radiogroup', { name: 'Categorias' })).toBeVisible()
-    await page.getByText('Detalhes da corrida (pessoas, carga, contato)').click()
-    await page.getByRole('checkbox', { name: 'Ida e volta' }).check()
-    await expect.poll(() => categorias.at(-1)).toEqual({ km: 42, levar: true, trazer: true })
-    await expect(page.getByRole('radio', { name: /IVO Passageiros/ })).toContainText('~R$ 180')
-    expect(mapas.filter((c) => c.acao === 'rota')).toHaveLength(1)
+    expect(mapas.filter((c) => c.acao === 'rota' && (c.destino as { place_id?: string } | undefined)?.place_id === 'ChIJdef')).toHaveLength(0)
   })
 
   test('da escolha de categoria, "+ Adicionar parada" volta aos endereços com uma parada nova', async ({ page }) => {

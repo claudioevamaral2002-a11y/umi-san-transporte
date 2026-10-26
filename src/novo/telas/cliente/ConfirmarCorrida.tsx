@@ -37,16 +37,19 @@ const primeiroNome = (nome: string | null) => nome?.trim().split(/\s+/)[0] ?? 'm
 
 /**
  * "Pela tabela" = a estimativa da mesma categoria para a mesma rota, com as paradas e as horas estimadas do pedido
- * (o banco calcula; a tela só compara).
+ * (o banco calcula; a tela só compara). v2.1: com as diárias estimadas e a volta à origem do pedido; o pedido antigo de
+ * ida e volta (`trazer`) continua com o preço de ida e volta.
  */
 function useTabela(r: RespostaPedido, km: number | null, kmVolta: number | null) {
   const p = r.pedido
   const codigo = p.categoria ?? null
   const paradas = paradasDoDetalhe(p).quantidade
   const horas = paradasDoDetalhe(p).horas
+  const diarias = p.diarias_estimadas ?? null
+  const volta = p.volta_a_origem === true
   const chave =
     codigo && km !== null
-      ? `novo-tabela-${p.id}-${kmDaRota(km)}-${kmVolta}-${p.levar}-${p.trazer}-${paradas}-${horas ?? ''}`
+      ? `novo-tabela-${p.id}-${kmDaRota(km)}-${kmVolta}-${p.levar}-${p.trazer}-${paradas}-${horas ?? ''}-${diarias ?? ''}-${volta}`
       : 'novo-tabela-nada'
   const { dados } = useConsulta(chave, async () => {
     if (!codigo || km === null) return null
@@ -57,6 +60,8 @@ function useTabela(r: RespostaPedido, km: number | null, kmVolta: number | null)
       trazer: p.trazer,
       paradas: paradas > 0 ? paradas : null,
       horas,
+      diarias,
+      voltaAOrigem: volta,
     })
     const c = lista.categorias.find((x) => x.codigo === codigo)
     return c && c.total_cent !== null ? { total_cent: c.total_cent, linhas: c.linhas ?? [] } : null
@@ -208,7 +213,9 @@ export function ConfirmarCorrida({
   }
 
   const saldoDados = saldo.dados ?? null
-  const depois = saldoDados ? saldoAposAprovacao(saldoDados, total) : null
+  // v2.1: no Faturado (NF) a corrida não depende do saldo: entra na fatura da quinzena.
+  const faturado = saldoDados?.forma_cobranca === 'FATURADO'
+  const depois = saldoDados && !faturado ? saldoAposAprovacao(saldoDados, total) : null
 
   return (
     <FolhaMapa rotulo="Confirmar a corrida">
@@ -273,6 +280,8 @@ export function ConfirmarCorrida({
           />
           {saldo.dados === undefined && !saldo.erro ? (
             <Skeleton className="h-5 w-48" />
+          ) : faturado ? (
+            <p className="ivo-legenda text-texto-suave">Será cobrada na fatura da quinzena (NF)</p>
           ) : saldoDados ? (
             <div className="space-y-1">
               <p className="ivo-legenda text-texto-suave tabular-nums">

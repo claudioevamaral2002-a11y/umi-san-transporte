@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi } from './apoio/apiFalsa.ts'
 import { saldoFalso } from './apoio/dinheiroFalso.ts'
-import { DIA_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
+import { DIA_PEDIDO, ID_PEDIDO, simularPedidos } from './apoio/pedidosFalsos.ts'
 import { escolherDiaNaAgenda, escolherDiaNoPedido } from './apoio/escolherDia.ts'
 import { comSessaoFalsa, json, URL_SUPABASE } from './apoio/sessaoFalsa.ts'
 
@@ -103,5 +103,32 @@ test.describe('crédito ao criar pedido', () => {
     await page.getByRole('button', { name: 'Enviar pedido' }).click()
     await expect(page.getByRole('alert').filter({ hasText: SEM_CREDITO })).toBeVisible()
     await expect(page.getByTestId('pedido-enviado')).toHaveCount(0)
+  })
+
+  test('v2.1, Faturado (NF): o saldo negativo não bloqueia o pedido e o recibo da aprovação não mostra saldo nem falta', async ({ page }) => {
+    await comSessaoFalsa(page, CLIENTE_N2)
+    await simularApi(page)
+    await simularPedidos(page)
+    // O banco, no Faturado: limite e alerta zerados e o disponível negativo (o valor devido).
+    await comSaldo(page, {
+      forma_cobranca: 'FATURADO',
+      saldo_contabil_cent: -450000,
+      reservado_cent: 0,
+      disponivel_cent: -450000,
+      limite_cent: 0,
+      alerta_cent: 0,
+      abaixo_alerta: false,
+    })
+
+    await page.goto('/')
+    await expect(page.getByTestId('novo-pedido-indisponivel')).toHaveCount(0)
+    await expect(page.getByText(SEM_CREDITO)).toHaveCount(0)
+
+    await page.goto(`/pedidos/${ID_PEDIDO}`)
+    await page.getByRole('button', { name: 'Aprovar' }).click()
+    const recibo = page.getByRole('dialog', { name: 'Recibo da aprovação' })
+    await expect(recibo.getByTestId('recibo-faturado')).toHaveText('Será cobrada na fatura da quinzena (NF)')
+    await expect(recibo.getByTestId('recibo-saldo')).toHaveCount(0)
+    await expect(recibo).not.toContainText('faltariam')
   })
 })

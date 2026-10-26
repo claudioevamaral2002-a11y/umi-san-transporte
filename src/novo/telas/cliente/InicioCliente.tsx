@@ -93,7 +93,7 @@ export function InicioCliente() {
         paradas={paradas.filter(temPonto)}
         aoAdicionarParada={paradas.length < MAX_PARADAS ? adicionarParada : undefined}
         categoriaInicial={de?.categoria ?? undefined}
-        idaEVoltaInicial={de?.idaEVolta}
+        diariasIniciais={de?.diarias}
         semData={de !== null}
         aoVoltar={() => {
           setEscolhendo(false)

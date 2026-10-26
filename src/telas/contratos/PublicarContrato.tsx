@@ -1,10 +1,11 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo } from '../../design/componentes/Campo.tsx'
 import { Folha } from '../../design/componentes/Folha.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
+import { Segmentado } from '../../design/componentes/Segmentado.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { ErroAoCarregar } from '../../design/componentes/Tela.tsx'
 import { api } from '../../lib/api.ts'
@@ -25,18 +26,22 @@ import { mensagemDoCodigo } from '../../lib/erros.ts'
 import { usePublicacaoPorCategoria } from '../../lib/publicacaoPorCategoria.tsx'
 import {
   diferencas,
+  FORMAS_COBRANCA,
   formularioDe,
   GRUPOS,
+  ROTULO_FORMA_COBRANCA,
   MAX_FAIXAS,
   validarFormulario,
   type CampoNumerico,
   type DefinicaoCampo,
   type ErrosFormulario,
+  type FormaCobranca,
   type FormularioContrato,
   type ValoresContrato,
   type VersaoContrato,
 } from '../../lib/contratos.ts'
 import { formatarCentavos } from '../../design/dinheiro.ts'
+import { dinheiro } from '../../lib/saldo.ts'
 import { deEntradaDataHora, formatarDataHora, paraEntradaDataHora } from '../../lib/valores.ts'
 
 const ANO_MS = 365 * 24 * 3600_000
@@ -79,6 +84,8 @@ export interface OpcaoCategorias {
    */
   comTarifas?: boolean
 }
+
+const OPCOES_FORMA = FORMAS_COBRANCA.map((f) => ({ valor: f, rotulo: ROTULO_FORMA_COBRANCA[f] }))
 
 const NOTA_TAXA = 'Só a Carga Pesada (com reboque) cobra taxa fixa. Passageiros e Carga Leve cobram só o km.'
 
@@ -162,6 +169,23 @@ function Conteudo({
   const [falha, setFalha] = useState<string | null>(null)
   const formulario = useRef<HTMLFormElement>(null)
   const topo = useRef<HTMLDivElement>(null)
+  const idForma = useId()
+  // v2.1: o saldo contábil da empresa, lido ao trocar para o Faturado (aviso sem bloquear: acertar antes com um Ajuste).
+  const [saldoContabil, setSaldoContabil] = useState<number | null>(null)
+  // A forma só vai quando o Master a muda em relação à partida (`validarFormulario`); sem mexer, o banco herda a forma em
+  // vigor na data escolhida. Sem a forma na partida (banco anterior), a tela mostra Crédito.
+  const forma: FormaCobranca = form.forma_cobranca ?? 'CREDITO'
+  const faturado = forma === 'FATURADO'
+
+  function mudarForma(nova: FormaCobranca) {
+    setForm((f) => ({ ...f, forma_cobranca: nova }))
+    if (nova === 'FATURADO' && alvo.empresa && partida?.forma_cobranca !== 'FATURADO' && saldoContabil === null) {
+      dinheiro
+        .saldo(alvo.empresa)
+        .then((s) => setSaldoContabil(s.saldo_contabil_cent))
+        .catch(() => undefined)
+    }
+  }
 
   const mudarCampo = (campo: CampoNumerico, valor: string) =>
     setForm((f) => ({ ...f, campos: { ...f.campos, [campo]: valor } }))
@@ -278,7 +302,27 @@ function Conteudo({
         )}
       </div>
 
-      {GRUPOS.map((g) => {
+      <fieldset className="space-y-2">
+        <legend id={idForma} className="mb-1 ivo-sobretitulo text-texto-suave">
+          Forma de cobrança
+        </legend>
+        <Segmentado rotulo="Forma de cobrança" rotuladoPor={idForma} opcoes={OPCOES_FORMA} valor={forma} aoMudar={mudarForma} />
+        <p className="ivo-legenda text-texto-suave">
+          {faturado
+            ? 'A empresa pede sem saldo e paga por fatura quinzenal com NF. O limite e o alerta de saldo não se aplicam.'
+            : 'Saldo pré-pago: a empresa recarrega e cada corrida é debitada do saldo.'}
+        </p>
+        {faturado && saldoContabil !== null && saldoContabil !== 0 && (
+          <div data-testid="aviso-saldo-faturado">
+            <Mensagem tipo="info">
+              O saldo de {alvo.nome} não está zerado ({formatarCentavos(saldoContabil)}). Acerte antes com um Ajuste em
+              Créditos, para a primeira fatura começar do zero.
+            </Mensagem>
+          </div>
+        )}
+      </fieldset>
+
+      {GRUPOS.filter((g) => !(faturado && g.id === 'credito')).map((g) => {
         const campos = g.campos.filter((c) => !mostrados.has(c.campo))
         const repetidos = g.campos.filter((c) => mostrados.has(c.campo))
         campos.forEach((c) => mostrados.add(c.campo))

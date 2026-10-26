@@ -55,11 +55,11 @@ select interno.migrar_parametros(current_setting('t.base')::jsonb || '{
 select is(
   (select to_jsonb(c) - array['id', 'empresa_id', 'versao', 'vigente_desde', 'publicado_por', 'publicado_por_nome', 'publicado_em']
    from app.contratos_versoes c where c.empresa_id is null),
-  current_setting('t.base')::jsonb, 'migração: modelo v1 tem exatamente os valores da versão antiga');
+  current_setting('t.base')::jsonb || '{"forma_cobranca": "CREDITO"}', 'migração: modelo v1 tem exatamente os valores da versão antiga');
 select is(
   (select to_jsonb(c) - array['id', 'empresa_id', 'versao', 'vigente_desde', 'publicado_por', 'publicado_por_nome', 'publicado_em']
    from app.contratos_versoes c where c.empresa_id = current_setting('t.umi')::uuid),
-  current_setting('t.base')::jsonb, 'migração: contrato Umi San v1 = modelo v1 = versão antiga');
+  current_setting('t.base')::jsonb || '{"forma_cobranca": "CREDITO"}', 'migração: contrato Umi San v1 = modelo v1 = versão antiga');
 select ok(
   (select count(*) = 2 and bool_and(versao = 1 and vigente_desde <= now() and publicado_por_nome = 'Ana Migração'
                                     and publicado_por = '00000000-0000-0000-0000-0000000000a1')

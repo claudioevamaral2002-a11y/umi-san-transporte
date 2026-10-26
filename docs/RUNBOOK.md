@@ -568,3 +568,57 @@ Sem estes passos a v1 abre, mas **o login trava no CAPTCHA** e o mapa não apare
 1. **Turnstile (Cloudflare):** dash.cloudflare.com › **Turnstile** › seu widget › **Hostname Management** › **Add hostname** › `ivo-v1.pages.dev` › Salvar (mantenha os que já estão lá).
 2. **Chave do mapa (Google Cloud):** projeto `ivo-transportes-mapas` › **APIs e serviços** › **Credenciais** › **`navegador-mapa`** › **Restrições de aplicativo** › **Adicionar** `https://ivo-v1.pages.dev/*` › Salvar (mantenha as outras linhas).
 3. **Supabase:** nada a fazer; o Deploy adiciona `https://ivo-v1.pages.dev/definir-senha` às Redirect URLs e `https://ivo-v1.pages.dev` às origens das funções.
+
+## 21. Faturamento por NF e ajustes (v2.1)
+
+Roteiro de teste: [v2-1-o-que-testar.md](fases/v2-1-o-que-testar.md). Desenho: [v2-1-ajustes-faturamento-nf-desenho.md](fases/v2-1-ajustes-faturamento-nf-desenho.md).
+
+### 21.1 Forma de cobrança
+- Cada contrato tem uma **Forma de cobrança**: **Crédito (pré-pago)**, que funciona como sempre, ou **Faturado (NF)**. Ela é escolhida em ☰ › **Contratos**, ao publicar uma versão.
+- **No Faturado:**
+  - o pedido e a aprovação **não pedem saldo**;
+  - a reserva e o débito na saída acontecem como antes, e o saldo fica negativo: é o valor devido;
+  - limite e alerta de saldo não se aplicam;
+  - **não há teto**: fatura vencida só avisa.
+- Publicar **sem mexer na Forma de cobrança** (ou pela v1, que não tem o seletor) **mantém** a forma da versão em vigor na data escolhida. A tela só manda a forma quando ela é trocada: assim, uma troca para Faturado já agendada não é desfeita por uma versão nova publicada depois.
+- **Antes de trocar para Faturado**, deixe o saldo da empresa em zero com um **Ajuste** em ☰ › **Créditos**, e faça esse Ajuste **antes de a versão Faturado passar a valer**. A primeira fatura soma só o que acontecer **depois** que ela vale, e um Ajuste feito com a empresa já no Faturado **entra na próxima fatura** (a tela avisa: "Este ajuste entra na próxima fatura.").
+
+### 21.2 Quinzenas e faturas
+- As quinzenas vão do **dia 1 ao 15** e do **16 ao último dia** do mês, no horário de Brasília.
+- Entram na fatura as **cobranças** (corridas que saíram, multas de cancelamento, aditivos e ajustes) e os **estornos** delas, ainda não faturados, até o fim da quinzena. Um estorno que chega depois do fechamento entra na fatura seguinte.
+- **Gerar** (☰ › **Faturas** › empresa › **Gerar fatura**):
+  - só depois que a quinzena termina;
+  - pede o número da NF, a data de emissão, o PDF (até 5 MB) e o vencimento, que vem preenchido com emissão + 30 dias;
+  - a NF é emitida **no site da prefeitura**; o app não emite NF.
+- **Uma fatura por quinzena.** Para refazer, **Cancelar fatura** (com motivo) devolve as corridas para "A faturar", e aí dá para gerar de novo. A cancelada fica no histórico.
+- **Marcar como paga** lança um **Pagamento de fatura** no extrato, que devolve o saldo. A data do pagamento não pode ser futura nem anterior à emissão.
+- **Trocar PDF** só funciona enquanto a fatura está aberta.
+- **PDFs de tentativas que falharam** (por exemplo, quando a quinzena não tinha nada a faturar) ficam guardados sem uso. Eles não aparecem para ninguém e ocupam pouco espaço.
+
+### 21.3 O que o cliente vê no Faturado
+- Ao confirmar a corrida: "Será cobrada na fatura da quinzena (NF)".
+- **Painel da empresa:**
+  - **A faturar**: o que ainda não tem fatura;
+  - **Em aberto**: as faturas emitidas e não pagas;
+  - **Vencidas**.
+- A aba **Faturas**, para o Administrador (N1) e o Master, tem **Baixar NF (PDF)** e **CSV da fatura**. O Solicitante e o Visualizador não veem faturas.
+- Em ☰ › **Carteira da empresa**, a página se chama **Lançamentos**, e o cartão **Total devido** soma o faturado e o que falta faturar.
+- O **Total devido** só é igual a **Em aberto** + **A faturar** quando o saldo foi zerado antes da troca para o Faturado; um saldo que sobrou do Crédito continua somado nele.
+
+### 21.4 Ajustes de tela
+- **Categorias e preços** abre só para ver. O **lápis** edita uma categoria, e **Cancelar** descarta a edição.
+  - **Excluir** só aparece numa categoria que nunca foi usada. Nas outras, use **Desativar**.
+  - As inativas ficam em **Inativas (N)**, com **Reativar**.
+- **Ao pedir:**
+  - não existe mais "Ida e volta": para ir e voltar, ponha a parada e repita a saída no **Para**. Quando o Para é o mesmo lugar do De, **não** se cobra o retorno de trecho único;
+  - há **Diárias (hospedagem)**, de 0 a 30, que entram no preço;
+  - há **Outros custos (opcional)**, só em texto; o Ivo põe o valor no orçamento.
+- Pedidos antigos de ida e volta continuam com o mesmo preço.
+
+### 21.5 Problemas comuns
+| Sintoma | O que fazer |
+| --- | --- |
+| "A quinzena ainda não terminou" | Só dá para gerar a fatura depois do dia 15 ou do último dia do mês. |
+| "Não há nada a faturar" | A quinzena não teve cobranças, ou já tem fatura. Para refazer, cancele a fatura e gere de novo. |
+| Empresa voltou ao Crédito com fatura em aberto | Ela continua listada em ☰ › Faturas até a fatura ser paga e não sobrar nada a faturar. |
+| Cliente no Faturado vê "sem crédito" | O app dele está desatualizado: feche e abra de novo e toque em "Atualizar". |

@@ -62,6 +62,13 @@ const CODIGOS_CONHECIDOS = [
   'TELEFONE_INVALIDO',
   'VALOR_INVALIDO',
   'CATEGORIA_DUPLICADA',
+  'NAO_FATURADO',
+  'QUINZENA_INVALIDA',
+  'QUINZENA_EM_ANDAMENTO',
+  'NADA_A_FATURAR',
+  'FATURA_PAGA',
+  'FATURA_CANCELADA',
+  'CATEGORIA_EM_USO',
   // Edge Functions
   'ERRO_AUTH',
   'ERRO_INESPERADO',
@@ -167,5 +174,18 @@ describe('mensagemDoPedido (fase 4.1)', () => {
     expect(mensagemDoPedido('CAMPOS_INVALIDOS')).toBe(MENSAGENS.CAMPOS_INVALIDOS)
     expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['origem'])).toBe(MENSAGENS.CAMPOS_INVALIDOS)
     expect(mensagemDoPedido('XPTO')).toBe(MENSAGENS.ERRO_INESPERADO)
+  })
+})
+
+describe('faturas e categorias (v2.1)', () => {
+  it('cada recusa nova tem texto próprio', () => {
+    for (const c of ['NAO_FATURADO', 'QUINZENA_INVALIDA', 'QUINZENA_EM_ANDAMENTO', 'NADA_A_FATURAR', 'FATURA_PAGA', 'FATURA_CANCELADA', 'CATEGORIA_EM_USO', 'PDF_INVALIDO']) {
+      expect(mensagemDoCodigo(c), c).not.toBe(MENSAGENS.ERRO_INESPERADO)
+    }
+    expect(mensagemDoCodigo('PDF_INVALIDO')).toBe('Envie a NF em PDF de até 5 MB.')
+  })
+  it('CAMPOS_INVALIDOS com diárias ou outros custos diz qual campo', () => {
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['diarias_estimadas'])).toBe('Informe as diárias de 0 a 30.')
+    expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['outros_custos'])).toBe('Os outros custos podem ter até 120 caracteres.')
   })
 })

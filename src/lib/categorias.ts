@@ -5,6 +5,7 @@ import { ler } from './pedidos.ts'
 import { type FormPedido, montarPedido } from './novoPedido.ts'
 import { MAX_PARADAS, type Parada, paraPedido } from './paradas.ts'
 import type { Carga, Reboque } from './situacao.ts'
+import { DIARIAS_MAX } from './limitesPedido.ts'
 
 /** As três categorias de antes da 4.1 (preços e telas antigos). Categorias novas usam `string`: ver `CategoriaComPreco`. */
 export type CodigoCategoria = 'PASSAGEIROS' | 'CARGA_LEVE' | 'CARGA_PESADA'
@@ -27,6 +28,11 @@ export interface CategoriaComPreco {
   cobra_hora: boolean
   /** A tarifa tem valor por parada. */
   cobra_parada: boolean
+  /**
+   * v2.1: a tarifa tem diária de hospedagem (`hospedagem_diaria_cent` > 0): a tela mostra "Diárias (hospedagem)".
+   * Opcional: o banco anterior não devolvia (sem ela, a categoria não cobra diária).
+   */
+  cobra_diaria?: boolean
 }
 
 /**
@@ -55,6 +61,19 @@ export const HORAS_MAX = 24
 export const PASSO_HORAS = 0.5
 /** Centro de custo: texto livre, opcional, até 80 caracteres. */
 export const MAX_CENTRO_CUSTO = 80
+
+// Diárias ao pedir (0 a 30) e "Outros custos" (até 120): num módulo sem importações, que `novo/pedirDeNovo.ts` também usa.
+export { DIARIAS_MAX, MAX_OUTROS_CUSTOS } from './limitesPedido.ts'
+
+/** Diárias que vão ao banco: inteiro de 1 a 30 (0 = sem diárias, a chave não vai). */
+function diariasParaEnviar(d: number | null | undefined): number | null {
+  return typeof d === 'number' && Number.isInteger(d) && d > 0 && d <= DIARIAS_MAX ? d : null
+}
+
+/** Botões − / + das diárias: de 1 em 1, preso entre 0 e 30. */
+export function mudarDiarias(diarias: number, sentido: 1 | -1): number {
+  return Math.min(DIARIAS_MAX, Math.max(0, diarias + sentido))
+}
 
 export function horasValidas(h: number): boolean {
   return Number.isFinite(h) && h >= HORAS_MIN && h <= HORAS_MAX && h * 2 === Math.trunc(h * 2)
@@ -103,22 +122,30 @@ export const categorias = {
   /**
    * `km` vai como número JSON (o banco confere o formato); categorias inativas nem vêm. `paradas` é a quantidade (0 a 3)
    * e `horas` as horas estimadas; sem eles, o preço sai sem essas linhas. Chaves vazias não vão.
+   * v2.1: `diarias` (1 a 30) entram como HOSPEDAGEM e `voltaAOrigem` tira o RETORNO. Sem "Ida e volta" na v2.1, o
+   * `trazer` vai falso; `true` só para o preço de tabela de um pedido antigo de ida e volta (ConfirmarCorrida).
    */
   disponiveis: (p: {
     km: number
     /** Fase 4.1: km da volta direta (destino → origem). Só vai em ida e volta; o banco soma `km + km_volta`. */
     kmVolta?: number | null
     levar: boolean
-    trazer: boolean
+    trazer?: boolean
     paradas?: number | null
     horas?: number | null
+    diarias?: number | null
+    voltaAOrigem?: boolean
   }) => {
-    const corpo: Record<string, unknown> = { km: p.km, levar: p.levar, trazer: p.trazer }
+    const trazer = p.trazer === true
+    const corpo: Record<string, unknown> = { km: p.km, levar: p.levar, trazer }
     if (p.paradas !== undefined && p.paradas !== null && Number.isFinite(p.paradas)) {
       corpo.paradas = Math.min(MAX_PARADAS, Math.max(0, Math.trunc(p.paradas)))
     }
     if (p.horas !== undefined && p.horas !== null && horasValidas(p.horas)) corpo.horas = p.horas
-    if (p.levar && p.trazer && typeof p.kmVolta === 'number' && Number.isFinite(p.kmVolta)) {
+    const diarias = diariasParaEnviar(p.diarias)
+    if (diarias !== null) corpo.diarias = diarias
+    if (p.voltaAOrigem) corpo.volta_a_origem = true
+    if (p.levar && trazer && typeof p.kmVolta === 'number' && Number.isFinite(p.kmVolta)) {
       const volta = kmDaRota(p.kmVolta)
       if (volta >= 0 && volta <= KM_VOLTA_MAX) corpo.km_volta = volta
     }
@@ -130,11 +157,22 @@ export const categorias = {
  * Corpo de `api.criar_pedido(p)` para a categoria escolhida: carga e reboque da categoria; modalidade VEICULO_CLIENTE
  * na categoria de veículo do cliente (IVO Motorista), VEICULO_PROPRIO nas demais. `paradas` (até 3), `horas`
  * (→ `horas_estimadas`) e `centroCusto` (aparado, vazio não vai) só entram quando informados.
+ * v2.1: sem "Ida e volta", o pedido novo vai sempre com `trazer: false` (ir e voltar é uma parada e o Para igual ao De);
+ * `diarias` (1 a 30 → `diarias_estimadas`) e `outrosCustos` (aparado, vazio não vai) só quando informados, e
+ * `volta_a_origem` sempre (falso por padrão).
  */
 export function pedidoDaCategoria(
   c: CategoriaComPreco & { carga: Carga; reboque: Reboque },
   base: FormPedido,
-  opcoes: { agora?: boolean; paradas?: readonly Parada[]; horas?: number | null; centroCusto?: string | null } = {},
+  opcoes: {
+    agora?: boolean
+    paradas?: readonly Parada[]
+    horas?: number | null
+    centroCusto?: string | null
+    diarias?: number | null
+    outrosCustos?: string | null
+    voltaAOrigem?: boolean
+  } = {},
 ): Record<string, unknown> {
   const p = montarPedido({
     ...base,
@@ -143,11 +181,17 @@ export function pedidoDaCategoria(
     reboque: c.reboque,
   })
   p.categoria = c.codigo
+  p.trazer = false
   if (opcoes.agora) p.agora = true
   if (opcoes.paradas && opcoes.paradas.length > 0) p.paradas = paraPedido(opcoes.paradas)
   if (c.cobra_hora && opcoes.horas !== undefined && opcoes.horas !== null) p.horas_estimadas = opcoes.horas
   const cc = opcoes.centroCusto?.trim()
   if (cc) p.centro_custo = cc
+  const diarias = diariasParaEnviar(opcoes.diarias)
+  if (diarias !== null) p.diarias_estimadas = diarias
+  const outros = opcoes.outrosCustos?.trim()
+  if (outros) p.outros_custos = outros
+  p.volta_a_origem = opcoes.voltaAOrigem === true
   return p
 }
 

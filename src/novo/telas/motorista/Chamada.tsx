@@ -21,7 +21,9 @@ import {
   entradaDaChamada,
   enviarProposta,
   formDaTabela,
+  diariasDoPedido,
   kmDaTabela,
+  outrosCustosDoPedido,
   paradasDoPedido,
   rotuloVeiculo,
   useChamada,
@@ -143,6 +145,9 @@ function Responder({
   const entrada = montado?.ok ? montado.entrada : null
   const tabela = usePrevia(p.id, entrada, 0)
   const total = tabela?.estado === 'ok' ? tabela.total : null
+  // v2.1: o que o cliente avisou ao pedir (as diárias já entram no valor pela tabela).
+  const diarias = diariasDoPedido(p)
+  const outrosCustos = outrosCustosDoPedido(p)
 
   async function aceitar() {
     if (!entrada || total === null || (!doCliente && !veiculo)) return
@@ -167,6 +172,12 @@ function Responder({
         {p.empresa_nome} · {quandoCompleto(p.inicio)}
       </h1>
       <RotaDePara origem={p.origem} destino={p.destino} paradas={paradasDoPedido(p).map((x) => x.texto)} className="mt-1" />
+      {(diarias > 0 || outrosCustos) && (
+        <ul className="mt-1 space-y-0.5 ivo-legenda" data-testid="pedido-extras">
+          {diarias > 0 && <li className="font-semibold">Diárias: {diarias}</li>}
+          {outrosCustos && <li className="break-words">Outros custos: {outrosCustos}</li>}
+        </ul>
+      )}
       <p className="ivo-legenda font-semibold text-texto-suave" aria-live="polite">
         Responda até {prazoAte(p.prazo_orcar_ate, agora)}
       </p>

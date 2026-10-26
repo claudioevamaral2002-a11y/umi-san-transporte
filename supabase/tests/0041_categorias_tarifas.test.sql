@@ -108,7 +108,7 @@ select is((select string_agg(x ->> 'codigo', ',') from jsonb_array_elements(curr
 select is((pg_temp.cat(current_setting('t.d0')::jsonb, 'MOTORISTA') ->> 'disponivel')::boolean, false,
   'IVO Motorista sem tarifa: indisponível');
 select is(pg_temp.cat(current_setting('t.d0')::jsonb, 'PASSAGEIROS')
-            - array['codigo', 'nome', 'descricao_curta', 'disponivel', 'total_cent', 'linhas', 'carga', 'reboque'],
+            - array['codigo', 'nome', 'descricao_curta', 'disponivel', 'total_cent', 'linhas', 'carga', 'reboque', 'cobra_diaria'],
   '{"veiculo_cliente": false, "cobra_hora": false, "cobra_parada": false}'::jsonb,
   'cada categoria traz veiculo_cliente, cobra_hora e cobra_parada');
 select ok(current_setting('t.d0x')::jsonb ->> 'codigo' = 'CAMPOS_INVALIDOS'

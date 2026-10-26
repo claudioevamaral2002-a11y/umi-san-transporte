@@ -4,7 +4,8 @@
 // Fase 4.1 (Tarefa 7): os itens seguem a tarifa da categoria (zerado = não cobra), a categoria de veículo do cliente
 // (IVO Motorista) não usa veículo da IVO, as horas entram na calculadora e a rota passa pelas paradas do pedido.
 import { useCallback, useEffect, useState } from 'react'
-import { HORAS_MAX, HORAS_MIN, kmDaRota, kmDoPedido, PREENCHIMENTO, type CodigoCategoria } from '../../../lib/categorias.ts'
+// Alias: o teto das diárias que o cliente pede (30, categorias.ts) não é o da calculadora do Ivo (60, orcar.ts).
+import { DIARIAS_MAX as DIARIAS_MAX_PEDIDO, HORAS_MAX, HORAS_MIN, kmDaRota, kmDoPedido, PREENCHIMENTO, type CodigoCategoria } from '../../../lib/categorias.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
 import { corrida } from '../../../lib/corrida.ts'
 import { pontoDaRota, type PontoRota } from '../../../lib/enderecosRemoto.ts'
@@ -210,10 +211,27 @@ function meiasDeHoras(h: unknown): number | null {
 /** As horas do pedido (horas estimadas pelo cliente), em meias horas; sem elas, `null`. */
 export const horasDoPedido = (p: PedidoDaChamada): number | null => meiasDeHoras(p.horas_estimadas)
 
-/** A tabela pura: só os km da rota, sem espera, pedágio, hospedagem ou outros (as horas e paradas são as do pedido). */
+/** v2.1: as diárias (hospedagem) que o cliente estimou ao pedir, de 0 a 30 (pedido antigo ou valor estranho: 0). */
+export function diariasDoPedido(p: Pick<DetalhePedido, 'diarias_estimadas'>): number {
+  const d = p.diarias_estimadas
+  return typeof d === 'number' && Number.isInteger(d) && d > 0 && d <= DIARIAS_MAX_PEDIDO ? d : 0
+}
+
+/** v2.1: os "outros custos" que o cliente avisou ao pedir (texto aparado), ou `null`. */
+export function outrosCustosDoPedido(p: Pick<DetalhePedido, 'outros_custos'>): string | null {
+  const t = typeof p.outros_custos === 'string' ? p.outros_custos.trim() : ''
+  return t === '' ? null : t
+}
+
+/**
+ * A tabela pura: só os km da rota, sem espera, pedágio ou outros (as horas e paradas são as do pedido). v2.1: a
+ * hospedagem começa com as diárias do pedido, como na prévia do cliente (o banco só cobra se a categoria tem diária).
+ * A volta à origem não vai na entrada: o banco usa sempre a do pedido.
+ */
 export function formDaTabela(p: PedidoDaChamada, kmRota: number | null, kmVolta: number | null = null): FormCalculadora {
   const f = formInicial('VEICULO_PROPRIO', usaReboque(p) ? 'SIM' : 'NAO')
   if (kmRota !== null) f.kmDecimos = kmDecimosDaRota(kmRota, trechos(p), kmVolta)
+  f.hospedagemDiarias = diariasDoPedido(p)
   return { ...f, horasMeias: horasDoPedido(p) }
 }
 

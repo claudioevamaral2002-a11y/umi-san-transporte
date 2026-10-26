@@ -53,7 +53,16 @@ function Calculadora({ r, precos }: { r: RespostaPedido; precos: PrecosParaOrcar
   const anterior = r.orcamento_anterior ?? null
   const navegar = useNavigate()
   // Revisão pedida: começa do orçamento anterior (o motorista só ajusta o que o cliente pediu).
-  const [f, setF] = useState<FormOrcamento>(() => formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque))
+  // v2.1: sem revisão, a hospedagem começa com as diárias que o cliente estimou (a entrada sempre manda
+  // hospedagem_diarias, e um 0 explícito tiraria as diárias do pedido).
+  const [f, setF] = useState<FormOrcamento>(() => {
+    const inicial = formDaEntrada(anterior?.entrada ?? null, p.modalidade, p.reboque)
+    const d = p.diarias_estimadas
+    if (!anterior && typeof d === 'number' && Number.isInteger(d) && d > 0 && d <= DIARIAS_MAX) {
+      inicial.hospedagemDiarias = d
+    }
+    return inicial
+  })
   const [kmTexto, setKmTexto] = useState(() => kmParaTexto(f.kmDecimos))
   // Fase 3A: sem revisão, os km começam com a rota calculada agora (o app não guarda km nem coordenadas do Google).
   // Com Levar e Trazer o banco diz que são 2 trechos (ida e volta). O motorista confere e ajusta.

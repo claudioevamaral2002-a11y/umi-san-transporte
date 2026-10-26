@@ -3,6 +3,7 @@ import { Link, useNavigate, useOutletContext } from 'react-router'
 import { RotaDePara } from '../../../design/componentes/RotaDePara.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
+import type { FormaCobranca } from '../../../lib/contratos.ts'
 import { csvDoMes, painelEmpresa, rotuloStatus, type Painel, type PedidoPainel } from '../../../lib/painelEmpresa.ts'
 import { diaDe, horaDe, hoje, somarDias } from '../../../lib/tempo.ts'
 import { diaCurto } from '../../formatos.ts'
@@ -17,20 +18,47 @@ export interface ContextoPainel {
   nomeEmpresa: string
   erroEmpresas: boolean
   recarregarEmpresas: () => void
+  /** O painel do mês atual, lido uma vez pelo cabeçalho (a quarta aba e a forma de cobrança dependem dele). */
+  painel: ConsultaPainel
+  /**
+   * v2.1: a forma de cobrança da empresa em exibição; `undefined` enquanto o painel carrega. Sem ela na resposta
+   * (banco anterior) ou com erro na leitura, Crédito: tudo como antes.
+   */
+  forma: FormaCobranca | undefined
 }
 
 export const useContextoPainel = () => useOutletContext<ContextoPainel>()
 
+function lerPainel(ehAdm: boolean, empresa: string | null, mes: string | null) {
+  return ehAdm && !empresa ? new Promise<Painel>(() => {}) : painelEmpresa.ler(empresa, mes)
+}
+
+const chavePainel = (ehAdm: boolean, empresa: string | null, mes: string | null) =>
+  `painel-empresa:${empresa ?? (ehAdm ? '?' : 'minha')}:${mes ?? 'atual'}`
+
 /**
- * Leitura do painel da empresa para o mês (`null` = mês atual). O Master espera a lista de empresas para saber qual
+ * Leitura do painel do mês atual, feita pelo cabeçalho do painel. O Master espera a lista de empresas para saber qual
  * abrir. Sem memória: é dinheiro, os valores vêm do banco a cada abertura.
  */
+export function useLeituraDoPainel(ehAdm: boolean, empresa: string | null) {
+  return useConsulta(chavePainel(ehAdm, empresa, null), () => lerPainel(ehAdm, empresa, null))
+}
+
+export type ConsultaPainel = ReturnType<typeof useLeituraDoPainel>
+
+/** A forma de cobrança a partir da leitura do painel (ver `ContextoPainel.forma`). */
+export function formaDoPainel(painel: ConsultaPainel): FormaCobranca | undefined {
+  if (painel.dados) return painel.dados.resumo.forma_cobranca ?? 'CREDITO'
+  return painel.erro ? 'CREDITO' : undefined
+}
+
+/** Painel da empresa para o mês: `null` = mês atual (a mesma leitura do cabeçalho); outro mês, uma leitura própria. */
 export function usePainelDaEmpresa(mes: string | null = null) {
-  const { ehAdm, empresa } = useContextoPainel()
-  return useConsulta(
-    `painel-empresa:${empresa ?? (ehAdm ? '?' : 'minha')}:${mes ?? 'atual'}`,
-    () => (ehAdm && !empresa ? new Promise<Painel>(() => {}) : painelEmpresa.ler(empresa, mes)),
+  const { ehAdm, empresa, painel } = useContextoPainel()
+  const outroMes = useConsulta(mes === null ? 'painel-empresa:mes-atual' : chavePainel(ehAdm, empresa, mes), () =>
+    mes === null ? new Promise<Painel>(() => {}) : lerPainel(ehAdm, empresa, mes),
   )
+  return mes === null ? painel : outroMes
 }
 
 export const CARTAO = 'rounded-[20px] bg-superficie shadow-[var(--sombra)]'
@@ -240,20 +268,27 @@ export function Secao({
   )
 }
 
-/** Baixa o CSV das corridas dadas (BOM para o Excel abrir os acentos certos). `mes` = "2026-10". */
-export function baixarCsv(itens: readonly PedidoPainel[], mes: string) {
-  const blob = new Blob([String.fromCharCode(0xfeff), csvDoMes(itens)], { type: 'text/csv;charset=utf-8' })
+/** Baixa um CSV (BOM para o Excel abrir os acentos certos). */
+export function baixarArquivoCsv(nome: string, conteudo: string) {
+  const blob = new Blob([String.fromCharCode(0xfeff), conteudo], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `corridas-${mes}.csv`
+  a.download = nome
   document.body.append(a)
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/** Baixa o CSV das corridas dadas. `mes` = "2026-10". */
+export function baixarCsv(itens: readonly PedidoPainel[], mes: string) {
+  baixarArquivoCsv(`corridas-${mes}.csv`, csvDoMes(itens))
+}
+
+export type Aba = '' | '/corridas' | '/pessoas' | '/carteira' | '/faturas'
+
 /** Endereço de cada aba; o Master leva a empresa escolhida junto (`?empresa=`). */
-export function enderecoDaAba(aba: '' | '/corridas' | '/pessoas' | '/carteira', ehAdm: boolean, empresa: string | null): string {
+export function enderecoDaAba(aba: Aba, ehAdm: boolean, empresa: string | null): string {
   return `/empresa${aba}${ehAdm && empresa ? `?empresa=${empresa}` : ''}`
 }

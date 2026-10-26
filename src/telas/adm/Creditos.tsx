@@ -12,6 +12,7 @@ import { formatarCentavos } from '../../design/dinheiro.ts'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
 import { api } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
+import { ROTULO_FORMA_COBRANCA } from '../../lib/contratos.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
 import { ROTULO_TIPO, formatarComSinal } from '../../lib/extrato.ts'
 import {
@@ -34,6 +35,15 @@ export function SeloAlerta() {
     <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cor-laranja)] px-2.5 py-0.5 text-xs font-extrabold text-marinho">
       <Icone nome="alerta" tamanho={14} />
       Abaixo do alerta
+    </span>
+  )
+}
+
+/** v2.1: a empresa no Faturado (NF) paga por fatura; a Recarga fica escondida para ela. */
+export function SeloFaturado() {
+  return (
+    <span className="rounded-full border border-borda px-2.5 py-0.5 text-xs font-bold text-texto">
+      {ROTULO_FORMA_COBRANCA.FATURADO}
     </span>
   )
 }
@@ -61,6 +71,7 @@ export function CartaoCreditoEmpresa({ e }: { e: EmpresaPainel }) {
         <p className="min-w-0 truncate ivo-h3">{e.empresa_nome}</p>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {e.abaixo_alerta && <SeloAlerta />}
+          {e.forma_cobranca === 'FATURADO' && <SeloFaturado />}
           {!e.tem_contrato && (
             <span className="rounded-full border border-borda px-2.5 py-0.5 text-xs font-bold text-texto-suave">Sem contrato</span>
           )}
@@ -134,10 +145,13 @@ interface Pronto {
 function Formulario({
   op,
   empresa,
+  faturado,
   aoRevisar,
 }: {
   op: Operacao
   empresa: string
+  /** v2.1: empresa no Faturado (NF): o ajuste entra na próxima fatura. */
+  faturado: boolean
   aoRevisar: (p: Pronto) => void
 }) {
   const [valor, setValor] = useState('')
@@ -214,6 +228,11 @@ function Formulario({
               </div>
             </fieldset>
           )}
+          {op.tipo === 'ajuste' && faturado && (
+            <p className="ivo-legenda text-texto-suave" data-testid="aviso-ajuste-fatura">
+              Este ajuste entra na próxima fatura.
+            </p>
+          )}
           <Campo
             rotulo="Valor"
             prefixo="R$"
@@ -272,7 +291,8 @@ function ConteudoLancamento({
   const [estado, setEstado] = useState<{ fase: 'confirmar' | 'processando' } | { fase: 'erro'; codigo: string }>({ fase: 'confirmar' })
   const [intencao] = useState(() => new Intencao())
 
-  if (!pronto) return <Formulario op={op} empresa={empresa} aoRevisar={setPronto} />
+  if (!pronto)
+    return <Formulario op={op} empresa={empresa} faturado={saldo.forma_cobranca === 'FATURADO'} aoRevisar={setPronto} />
 
   async function enviar(p: Pronto) {
     setEstado({ fase: 'processando' })
@@ -360,6 +380,9 @@ export function CreditoEmpresa() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [versao, setVersao] = useState(0)
   const nome = empresas.dados?.find((e) => e.id === empresa)?.nome ?? 'Empresa'
+  // v2.1: no Faturado (NF) não há recarga. Um Ajuste feito agora entra na próxima fatura (não acerta o saldo do
+  // Crédito): o saldo antigo se zera com um Ajuste ANTES de a troca para o Faturado valer.
+  const faturado = saldo.dados?.forma_cobranca === 'FATURADO'
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
@@ -384,9 +407,16 @@ export function CreditoEmpresa() {
           <Skeleton className="h-52" />
         )}
         <Cartao className="grid gap-3 md:w-56">
-          <Botao variante="principal" disabled={!saldo.dados} onClick={() => setOp({ tipo: 'recarga' })}>
-            Recarga
-          </Botao>
+          {faturado ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <SeloFaturado />
+              <span className="ivo-legenda text-texto-suave">Cobrança por fatura, sem recarga.</span>
+            </div>
+          ) : (
+            <Botao variante="principal" disabled={!saldo.dados} onClick={() => setOp({ tipo: 'recarga' })}>
+              Recarga
+            </Botao>
+          )}
           <Botao disabled={!saldo.dados} onClick={() => setOp({ tipo: 'ajuste' })}>
             Ajuste
           </Botao>
