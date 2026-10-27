@@ -13,7 +13,6 @@ import { mensagemDoCodigo } from '../../../lib/erros.ts'
 import { pedidos, type LinhaOrcamento, type RespostaPedido } from '../../../lib/pedidos.ts'
 import { dinheiro, Intencao, resumoDispositivo, saldoAposAprovacao, semResposta } from '../../../lib/saldo.ts'
 import { useTempoReal } from '../../../lib/tempoReal.ts'
-import { numeroPedido } from '../../../lib/tempo.ts'
 import { topicoSaldo } from '../../../lib/topicos.ts'
 import { useSessao } from '../../../lib/sessao.tsx'
 import { Memorial } from '../../../telas/pedidos/componentes.tsx'
@@ -21,6 +20,7 @@ import { SaldoInsuficiente, type Aprovacao } from '../../../telas/pedidos/Aprova
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { iniciais, quandoCompleto, reaisCurto } from '../../formatos.ts'
 import { gravarUltimoCentroCusto, lerUltimoCentroCusto } from '../../preferencias.ts'
+import { NumeroPedido } from './Aguardando.tsx'
 import { DetalhesPedido } from './DetalhesPedido.tsx'
 import { paradasDoDetalhe } from './paradasDoDetalhe.ts'
 
@@ -222,9 +222,7 @@ export function ConfirmarCorrida({
   return (
     <FolhaMapa rotulo="Confirmar a corrida">
       <h1 className="sr-only">Confirmar a corrida</h1>
-      <p className="mb-2 ivo-legenda font-bold text-texto-suave tabular-nums" data-testid="numero-pedido">
-        Pedido {numeroPedido(p.numero)}
-      </p>
+      <NumeroPedido numero={p.numero} className="mb-2" />
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"

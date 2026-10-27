@@ -8,7 +8,7 @@ import type { Chegada } from '../../../lib/acompanhamento.ts'
 import type { Acompanhamento } from '../../acompanhamento.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { iniciais } from '../../formatos.ts'
-import { TrilhoCorrida } from './Aguardando.tsx'
+import { NumeroPedido, TrilhoCorrida } from './Aguardando.tsx'
 import { DetalhesPedido } from './DetalhesPedido.tsx'
 
 /** Texto de "Compartilhar": sem link de rastreio no MVP. Só a chegada que o motorista transmitiu entra; estimativa não. */
@@ -49,6 +49,7 @@ export function Acompanhar({ r, a }: { r: RespostaPedido; a: Acompanhamento }) {
   return (
     <FolhaMapa rotulo="Acompanhando a corrida">
       <h1 className="sr-only">Acompanhando a corrida</h1>
+      <NumeroPedido numero={p.numero} className="mb-1" />
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="ivo-legenda font-semibold text-texto-suave">
@@ -108,7 +109,7 @@ export function Acompanhar({ r, a }: { r: RespostaPedido; a: Acompanhamento }) {
         {aviso}
       </p>
       <div className="mt-1">
-        <DetalhesPedido r={r} antes={<TrilhoCorrida r={r} />} />
+        <DetalhesPedido r={r} antes={<TrilhoCorrida r={r} semNumero />} />
       </div>
     </FolhaMapa>
   )

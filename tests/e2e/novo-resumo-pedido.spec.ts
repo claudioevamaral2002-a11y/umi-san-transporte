@@ -98,6 +98,31 @@ test('só pessoas, sem extras: os detalhes não inventam linhas', async ({ page 
   expect(await linhas(page)).toEqual(['Pessoas: 1 pessoa'])
 })
 
+test('em andamento e concluída: o número à vista no topo', async ({ page }) => {
+  const o = pedidoOrcadoCliente()
+  const andamento = {
+    ...o,
+    pedido: { ...o.pedido, status: 'EM_ANDAMENTO', saiu_em: new Date().toISOString(), pode_ver_rastreio: true },
+    orcamento: { ...o.orcamento, status: 'APROVADO' },
+    acoes: SEM_ACOES,
+  }
+  await abrir(page, `/corrida/${ID_PEDIDO}`, [andamento])
+  await expect(page.getByRole('heading', { name: 'Acompanhando a corrida' })).toBeAttached()
+  // Um número só, fora dos detalhes recolhidos.
+  await expect(page.getByTestId('numero-pedido')).toHaveCount(1)
+  await expect(page.getByTestId('numero-pedido')).toBeVisible()
+  await expect(page.getByTestId('numero-pedido')).toHaveText('Pedido #0042')
+
+  const concluida = {
+    ...andamento,
+    pedido: { ...andamento.pedido, status: 'CONCLUIDA', concluiu_em: new Date().toISOString(), km_rodados: 41.4 },
+  }
+  await abrir(page, `/corrida/${ID_PEDIDO}`, [concluida])
+  await expect(page.getByRole('heading', { name: 'Corrida concluída' })).toBeVisible()
+  await expect(page.getByTestId('numero-pedido')).toHaveText('Pedido #0042')
+  expect(await semRolagemLateral(page)).toBe(true)
+})
+
 test('confirmar a proposta: o número e os detalhes', async ({ page }) => {
   await abrir(page, `/corrida/${ID_PEDIDO}`, [pedidoOrcadoCliente()])
   await expect(page.getByRole('button', { name: /^Confirmar corrida/ })).toBeVisible()

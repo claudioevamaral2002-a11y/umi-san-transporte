@@ -12,14 +12,24 @@ import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { prazoAte, quandoCompleto } from '../../formatos.ts'
 import { DetalhesPedido } from './DetalhesPedido.tsx'
 
-/** Número do pedido, origem, dia e categoria, destino: o trilho do mockup 3 (v2.2: com o número, como nas listas). */
-export function TrilhoCorrida({ r }: { r: RespostaPedido }) {
+/** v2.2: "Pedido #0042", como nas listas, no topo de toda tela da corrida. */
+export function NumeroPedido({ numero, className = '' }: { numero: number; className?: string }) {
+  return (
+    <p className={`ivo-legenda font-bold text-texto-suave tabular-nums ${className}`} data-testid="numero-pedido">
+      Pedido {numeroPedido(numero)}
+    </p>
+  )
+}
+
+/**
+ * Número do pedido, origem, dia e categoria, destino: o trilho do mockup 3 (v2.2: com o número, como nas listas).
+ * `semNumero` quando a tela já mostra o número no topo (Acompanhar, onde o trilho fica dentro dos detalhes).
+ */
+export function TrilhoCorrida({ r, semNumero = false }: { r: RespostaPedido; semNumero?: boolean }) {
   const p = r.pedido
   return (
     <div className="rounded-cartao border-[1.5px] border-borda p-3">
-      <p className="mb-1.5 ivo-legenda font-bold text-texto-suave tabular-nums" data-testid="numero-pedido">
-        Pedido {numeroPedido(p.numero)}
-      </p>
+      {!semNumero && <NumeroPedido numero={p.numero} className="mb-1.5" />}
       <div className="flex gap-3">
         <div aria-hidden="true" className="flex flex-col items-center pt-1.5">
           <span className="size-2.5 rounded-full bg-marinho-2" />

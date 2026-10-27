@@ -1,11 +1,13 @@
 // v2.2 (Tarefa 4, especificação §2 "Cancelada", §5.2 e §5.3): cancelada ou expirada abre a tela "Encerrada" com o que
-// de fato foi lançado ("Cancelada sem cobrança · reserva de R$ X devolvida" ou "Multa R$ X"), o motivo, o resumo, o
+// de fato foi lançado ("Cancelada sem cobrança · reserva de R$ X devolvida", "Expirada · sem cobrança"… ou "Multa R$ X"),
+// o motivo, o resumo, o
 // "Orçamento (não cobrado)" e o histórico. A lista diz o mesmo ("Sem cobrança" / "Multa R$ X") no lugar do orçamento, e
 // o detalhe de hoje (recusada/reprovada) mostra o selo e esconde "Se precisar cancelar depois de aprovado".
 // Roda no projeto Playwright `novo` (dist-novo).
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { simularApi, vigiarCsp } from './apoio/apiFalsa.ts'
+import { simularDinheiro } from './apoio/dinheiroFalso.ts'
 import { simularBlocosDoMapa, simularMapas } from './apoio/mapasFalsos.ts'
 import {
   detalheFalso,
@@ -80,7 +82,7 @@ test('cancelada com multa: "Multa R$ X" no topo, sem dizer "sem cobrança"', asy
   await expect(page.getByRole('region', { name: 'Orçamento (não cobrado)' })).toBeVisible()
 })
 
-test('expirada sem orçamento nem cobrança lançada: "Cancelada sem cobrança", sem o bloco do orçamento', async ({ page }) => {
+test('expirada sem orçamento nem cobrança lançada: "Expirada · sem cobrança", sem o bloco do orçamento', async ({ page }) => {
   const expirada = {
     ok: true,
     pedido: detalheFalso({ status: 'EXPIRADA', prazo_vencido: true }),
@@ -91,9 +93,74 @@ test('expirada sem orçamento nem cobrança lançada: "Cancelada sem cobrança",
   }
   await abrir(page, `/pedidos/${ID_PEDIDO}`, { detalhes: [expirada] })
   await expect(page).toHaveURL(new RegExp(`/corrida/${ID_PEDIDO}$`))
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Cancelada sem cobrança')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Expirada · sem cobrança')
   await expect(page.getByTestId('folha-mapa')).not.toContainText('Motivo:')
   await expect(page.getByRole('region', { name: 'Orçamento (não cobrado)' })).toHaveCount(0)
+})
+
+for (const [status, titulo] of [
+  ['RECUSADA', 'Recusada pelo Ivo · sem cobrança'],
+  ['REPROVADA', 'Reprovada · sem cobrança'],
+] as const) {
+  test(`${status.toLowerCase()} sem multa: "${titulo}"`, async ({ page }) => {
+    const r = {
+      ok: true,
+      pedido: detalheFalso({ status }),
+      historico: [...HISTORICO_ORCADO, { de: 'ORCADA', para: status, em: AGORA, observacao: null, por_nome: 'Bruno Lima' }],
+      orcamento: orcamentoCliente({ status: 'REPROVADO' }),
+      acoes: SEM_ACOES,
+      cobranca: { debito_cent: null, multa_cent: null, liberado_cent: null },
+    }
+    await abrir(page, `/corrida/${ID_PEDIDO}`, { detalhes: [r] })
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(titulo)
+  })
+}
+
+test('agendada: cancelar mostra a multa do servidor antes, confirma e cai na Encerrada com o aviso', async ({ page }) => {
+  const o = orcamentoCliente({ status: 'APROVADO' })
+  const agendada = {
+    ok: true,
+    pedido: detalheFalso({ status: 'AGENDADA' }),
+    historico: [...HISTORICO_ORCADO, AGENDADO],
+    orcamento: o,
+    acoes: { ...SEM_ACOES, cancelar_agendado: true },
+  }
+  const depois = cancelada({ debito_cent: null, multa_cent: 35500, liberado_cent: 71000 }, null)
+  await abrir(page, `/corrida/${ID_PEDIDO}`, { detalhes: [agendada, depois] })
+  const chamadas = await simularDinheiro(page)
+  await page.getByRole('button', { name: 'Cancelar agendamento' }).click()
+  const folha = page.getByRole('dialog', { name: 'Cancelar agendamento' })
+  // A prévia é a do servidor (`simular_cancelamento`), com a faixa do contrato (`fraseMulta`).
+  await expect(folha.getByTestId('previa-multa')).toContainText(
+    /Cancelando agora: multa de R\$\s355,00 \(50% — de 6 h a menos de 24 h antes\)/,
+  )
+  await folha.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+  await expect(folha).toBeHidden()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Multa R\$\s355,00 · reserva de R\$\s710,00 devolvida$/)
+  await expect(page.getByRole('status').filter({ hasText: 'Agendamento cancelado.' })).toHaveText(
+    /Agendamento cancelado\. Liberado: R\$\s710,00\. Multa: R\$\s355,00\./,
+  )
+  expect(chamadas.find((c) => c.rpc === 'cancelar_agendado')?.corpo).toMatchObject({ p_atividade: ID_PEDIDO, p_multa_esperada_cent: 35500 })
+  expect(await semRolagemLateral(page)).toBe(true)
+})
+
+test('agendada que já tinha sido cancelada: o aviso "já tinha sido cancelado" na Encerrada', async ({ page }) => {
+  const agendada = {
+    ok: true,
+    pedido: detalheFalso({ status: 'AGENDADA' }),
+    historico: [...HISTORICO_ORCADO, AGENDADO],
+    orcamento: orcamentoCliente({ status: 'APROVADO' }),
+    acoes: { ...SEM_ACOES, cancelar_agendado: true },
+  }
+  const depois = cancelada({ debito_cent: null, multa_cent: null, liberado_cent: 71000 }, null)
+  await abrir(page, `/corrida/${ID_PEDIDO}`, { detalhes: [agendada, depois] })
+  await simularDinheiro(page, { respostas: { cancelar_agendado: [{ ok: false, codigo: 'JA_PROCESSADO' }] } })
+  await page.getByRole('button', { name: 'Cancelar agendamento' }).click()
+  await page.getByRole('dialog', { name: 'Cancelar agendamento' }).getByRole('button', { name: 'Confirmar cancelamento' }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Cancelada sem cobrança')
+  await expect(page.getByRole('status').filter({ hasText: 'já tinha sido cancelado' })).toContainText(
+    'Este agendamento já tinha sido cancelado.',
+  )
 })
 
 test('lista: encerrada mostra "Sem cobrança" ou "Multa R$ X" no lugar do orçamento', async ({ page }) => {

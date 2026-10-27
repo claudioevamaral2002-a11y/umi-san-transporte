@@ -14,7 +14,7 @@ import { useSessao } from '../../../lib/sessao.tsx'
 import { useTempoReal } from '../../../lib/tempoReal.ts'
 import { podeCriarPedido } from '../../../telas/pedidos/Pedidos.tsx'
 import type { Aprovacao } from '../../../telas/pedidos/Aprovar.tsx'
-import { FolhaCancelarAgendado } from '../../../telas/pedidos/CancelarAgendado.tsx'
+import { avisoCancelamento, FolhaCancelarAgendado } from '../../../telas/pedidos/CancelarAgendado.tsx'
 import { useAcompanhamento } from '../../acompanhamento.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
@@ -52,7 +52,18 @@ const LinkInicio = () => (
  * os níveis, inclusive o N3, que não lê o saldo); sem ela (banco anterior), do saldo da empresa (só quem pede o lê; o N3
  * fica com o texto do Crédito).
  */
-function CorridaConfirmada({ r, aprovacao, aoMudou }: { r: RespostaPedido; aprovacao: Aprovacao | null; aoMudou: () => void }) {
+function CorridaConfirmada({
+  r,
+  aprovacao,
+  aoMudou,
+  aoAvisar,
+}: {
+  r: RespostaPedido
+  aprovacao: Aprovacao | null
+  aoMudou: () => void
+  /** O resultado do cancelamento, mostrado na tela seguinte (Encerrada), como no detalhe de hoje. */
+  aoAvisar: (aviso: string) => void
+}) {
   const [cancelando, setCancelando] = useState(false)
   const titulo = useRef<HTMLHeadingElement>(null)
   useEffect(() => titulo.current?.focus(), [])
@@ -123,12 +134,14 @@ function CorridaConfirmada({ r, aprovacao, aoMudou }: { r: RespostaPedido; aprov
         numero={p.numero}
         faixas={r.orcamento?.regras?.faixas_cancelamento}
         aoFechar={() => setCancelando(false)}
-        aoCancelado={() => {
+        aoCancelado={(c) => {
           setCancelando(false)
+          aoAvisar(avisoCancelamento(c))
           aoMudou()
         }}
         aoJaCancelado={() => {
           setCancelando(false)
+          aoAvisar('Este agendamento já tinha sido cancelado.')
           aoMudou()
         }}
         aoMudou={aoMudou}
@@ -161,6 +174,7 @@ export function CorridaCliente() {
   const { id = '' } = useParams()
   const { dados, erro, recarregar } = useConsulta(`novo-corrida-${id}`, () => pedidos.detalhe(id))
   const [aprovacao, setAprovacao] = useState<Aprovacao | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   useTempoReal(id ? `atividade:${id}` : null, recarregar)
 
   const status = dados?.pedido.status
@@ -215,7 +229,7 @@ export function CorridaCliente() {
     )
   }
 
-  if (ENCERRADAS.has(dados.pedido.status)) return <Encerrada r={dados} />
+  if (ENCERRADAS.has(dados.pedido.status)) return <Encerrada r={dados} aviso={aviso} />
   if (aprovacao || dados.pedido.status === 'AGENDADA') {
     return (
       <CorridaConfirmada
@@ -225,6 +239,7 @@ export function CorridaCliente() {
           setAprovacao(null)
           recarregar()
         }}
+        aoAvisar={setAviso}
       />
     )
   }

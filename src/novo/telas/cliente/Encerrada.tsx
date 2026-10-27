@@ -5,7 +5,8 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { Icone } from '../../../design/componentes/Icone.tsx'
-import { StatusBadge } from '../../../design/componentes/StatusBadge.tsx'
+import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
+import { StatusBadge, type Status } from '../../../design/componentes/StatusBadge.tsx'
 import { textoCobranca } from '../../../lib/cobrancaPedido.ts'
 import type { RespostaPedido } from '../../../lib/pedidos.ts'
 import { formatarQuando } from '../../../lib/tempo.ts'
@@ -16,14 +17,25 @@ import { DetalhesPedido } from './DetalhesPedido.tsx'
 
 const positivo = (v: number | null | undefined): v is number => typeof v === 'number' && v > 0
 
-export function Encerrada({ r }: { r: RespostaPedido }) {
+/** Título sem multa, pela situação (com multa, "Multa R$ X" em todas). */
+const SEM_COBRANCA: Partial<Record<Status, string>> = {
+  CANCELADA: 'Cancelada sem cobrança',
+  EXPIRADA: 'Expirada · sem cobrança',
+  RECUSADA: 'Recusada pelo Ivo · sem cobrança',
+  REPROVADA: 'Reprovada · sem cobrança',
+}
+
+/** `aviso`: o resultado do cancelamento que acabou de ser feito nesta tela (como no detalhe de hoje). */
+export function Encerrada({ r, aviso = null }: { r: RespostaPedido; aviso?: string | null }) {
   const titulo = useRef<HTMLHeadingElement>(null)
   useEffect(() => titulo.current?.focus(), [])
   const p = r.pedido
   const cobranca = r.cobranca ?? null
   const multa = cobranca?.multa_cent ?? null
-  // "Cancelada sem cobrança" ou "Multa R$ X" (o mesmo texto da lista, de `textoCobranca`).
-  const resultado = positivo(multa) ? (textoCobranca(p.status, multa) ?? `Multa ${formatarCentavos(multa)}`) : 'Cancelada sem cobrança'
+  // "Multa R$ X" (o mesmo texto da lista, de `textoCobranca`) ou "… sem cobrança" conforme a situação.
+  const resultado = positivo(multa)
+    ? (textoCobranca(p.status, multa) ?? `Multa ${formatarCentavos(multa)}`)
+    : (SEM_COBRANCA[p.status] ?? 'Sem cobrança')
   const liberado = cobranca?.liberado_cent
   const motivo = r.historico.at(-1)?.observacao?.trim() || null
   const o = r.orcamento
@@ -32,6 +44,11 @@ export function Encerrada({ r }: { r: RespostaPedido }) {
 
   return (
     <FolhaMapa rotulo="Corrida encerrada">
+      {aviso && (
+        <div className="mb-3">
+          <Mensagem tipo="sucesso">{aviso}</Mensagem>
+        </div>
+      )}
       <div className="mb-3 flex items-start gap-3">
         <span
           aria-hidden="true"
