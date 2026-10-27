@@ -25,11 +25,12 @@ import { useConsulta } from '../../../lib/consulta.ts'
 import type { Local } from '../../../lib/enderecos.ts'
 import { pontoDaRota, type PontoRota } from '../../../lib/enderecosRemoto.ts'
 import { mensagemDoPedido } from '../../../lib/erros.ts'
+import { limitarPessoas, PESSOAS_MAX } from '../../../lib/limitesPedido.ts'
 import { DURACAO_PADRAO, FORM_VAZIO, mascararTelefone, validarPasso, type ErrosPedido, type FormPedido } from '../../../lib/novoPedido.ts'
 import { mensagemDeParadas, paradaDoLocal } from '../../../lib/paradas.ts'
 import { pedidos } from '../../../lib/pedidos.ts'
 import { diaDe, formatarDuracao, hoje, somarDias } from '../../../lib/tempo.ts'
-import { Contador } from '../../../telas/pedidos/componentes.tsx'
+import { Contador, Memorial } from '../../../telas/pedidos/componentes.tsx'
 import { DIAS_NO_SELETOR, EscolherHorario } from './EscolherHorario.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { formatarKm, quandoCompleto, quandoCurto, reaisCurto } from '../../formatos.ts'
@@ -189,6 +190,8 @@ export function EscolherCategoria({
   const [erros, setErros] = useState<ErrosPedido>({})
   const [enviando, setEnviando] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+  // v2.2: ao trocar para uma categoria que leva menos pessoas, o número desce até o limite com este aviso.
+  const [avisoPessoas, setAvisoPessoas] = useState<string | null>(null)
   const [horas, setHoras] = useState<number | null>(null)
   const [centro, setCentro] = useState(() => lerUltimoCentroCusto())
   // v2.1: diárias (hospedagem) e outros custos (texto, sem valor). Sem "Ida e volta": ir e voltar é uma parada e o Para
@@ -245,6 +248,10 @@ export function EscolherCategoria({
   const preenchida = atual ? comPreenchimento(atual) : null
   const faltamHoras = !!atual?.cobra_hora && (horas === null || !horasValidas(horas))
   const cobraDiaria = atual?.cobra_diaria === true
+  // v2.2: até quantas pessoas a categoria leva (`null` = sem limite). O envio nunca passa do limite, mesmo se a
+  // categoria marcada mudou sem um toque (a escolhida ficou indisponível); o banco também recusa acima.
+  const pessoasMax = typeof atual?.pessoas_max === 'number' ? atual.pessoas_max : null
+  const pessoas = limitarPessoas(form.pessoasQtd, pessoasMax).qtd
 
   // Padrão do "Agendar": o primeiro horário livre a partir de amanhã.
   useEffect(() => {
@@ -290,6 +297,7 @@ export function EscolherCategoria({
     return {
       ...FORM_VAZIO,
       ...form,
+      pessoasQtd: pessoas,
       dia: diaDe(ini),
       inicio: ini,
       duracaoMin: DURACAO_PADRAO,
@@ -366,7 +374,8 @@ export function EscolherCategoria({
     }
     setEnviando(false)
     setErroEnvio(mensagemDoPedido(r.codigo))
-    if (r.codigo === 'CATEGORIA_INDISPONIVEL') lista.recarregar()
+    // O limite da categoria pode ter mudado desde a lista: relê as categorias (com o `pessoas_max` novo).
+    if (r.codigo === 'CATEGORIA_INDISPONIVEL' || r.codigo === 'ACIMA_DA_CAPACIDADE') lista.recarregar()
     if (r.codigo === 'HORARIO_OCUPADO') {
       if (modo === 'agora') setAgora(null)
       else setAgendado((a) => (a ? { ...a, inicio: null } : a))
@@ -445,10 +454,30 @@ export function EscolherCategoria({
                   setEscolhida(c.codigo)
                   setErros({})
                   setErroEnvio(null)
+                  const limite = limitarPessoas(pessoas, c.pessoas_max)
+                  const levaPessoas = comPreenchimento(c)?.carga !== 'EQUIPAMENTO'
+                  if (limite.ajustou && levaPessoas) {
+                    setForm((a) => ({ ...a, pessoasQtd: limite.qtd }))
+                    setAvisoPessoas(`${c.nome} leva até ${limite.qtd} pessoas: ajustamos para ${limite.qtd}.`)
+                  } else setAvisoPessoas(null)
                 }}
               />
             ))}
           </div>
+          <p role="status" className={avisoPessoas ? 'ivo-legenda font-semibold text-alerta-texto' : 'sr-only'}>
+            {avisoPessoas ?? ''}
+          </p>
+
+          {atual && atual.total_cent !== null && atual.linhas && atual.linhas.length > 0 && (
+            <details key={atual.codigo} className="rounded-cartao border border-borda" data-testid="ver-calculo">
+              <summary className="flex min-h-12 cursor-pointer items-center px-3 ivo-legenda font-semibold text-link underline underline-offset-4">
+                Ver cálculo
+              </summary>
+              <div className="px-3 pb-3">
+                <Memorial linhas={atual.linhas} total={atual.total_cent} />
+              </div>
+            </details>
+          )}
 
           {atual?.cobra_hora && (
             <Contador
@@ -529,11 +558,14 @@ export function EscolherCategoria({
               {preenchida?.carga !== 'EQUIPAMENTO' && (
                 <Contador
                   rotulo="Pessoas"
-                  valor={form.pessoasQtd}
+                  valor={pessoas}
                   min={1}
-                  max={99}
-                  aoMudar={(v) => mudar({ pessoasQtd: v })}
-                  detalhe={erros.pessoasQtd}
+                  max={pessoasMax ?? PESSOAS_MAX}
+                  aoMudar={(v) => {
+                    mudar({ pessoasQtd: v })
+                    setAvisoPessoas(null)
+                  }}
+                  detalhe={erros.pessoasQtd ?? (pessoasMax !== null ? `até ${pessoasMax} pessoas` : undefined)}
                 />
               )}
               {preenchida && preenchida.carga !== 'PESSOAS' && (

@@ -3,7 +3,6 @@ import { useLocation } from 'react-router'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { Icone } from '../../../design/componentes/Icone.tsx'
 import type { Local } from '../../../lib/enderecos.ts'
-import { pontoDaRota } from '../../../lib/enderecosRemoto.ts'
 import { MAX_PARADAS } from '../../../lib/paradas.ts'
 import { useSessao } from '../../../lib/sessao.tsx'
 import { saudacao } from '../../../lib/tempo.ts'
@@ -13,19 +12,19 @@ import { podeCriarPedido, usePedidoIndisponivel } from '../../../telas/pedidos/P
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
 import { lerPedirDeNovo } from '../../pedirDeNovo.ts'
-import { EscolherCategoria, type EnderecoEscolhido } from './EscolherCategoria.tsx'
-
-const VAZIO: ValorEndereco = { texto: '', local: null }
-
-const temPonto = (v: ValorEndereco): v is EnderecoEscolhido => !!v.local && pontoDaRota(v.local) !== null
-
-/** Todos os pontos com local (origem, cada parada e destino): dá para traçar a rota e ver as categorias. */
-const completo = (o: ValorEndereco, ps: readonly ValorEndereco[], d: ValorEndereco) => temPonto(o) && temPonto(d) && ps.every(temPonto)
+import {
+  comParadaNova,
+  completo,
+  mudarCampo,
+  semParada,
+  temPonto,
+  VAZIO,
+  type CampoDoPedido,
+  type CamposDoPedido,
+} from './camposDoPedido.ts'
+import { EscolherCategoria } from './EscolherCategoria.tsx'
 
 const coordenadas = (l: Local | null) => (l && l.lat !== null && l.lng !== null ? { lat: l.lat, lng: l.lng } : undefined)
-
-/** Campo do mapa aberto em "Marcar no mapa": origem, destino ou a parada de índice `n`. */
-type AlvoDoMapa = 'origem' | 'destino' | number
 
 /**
  * Mockup 1 (fase 4.1): início do cliente sobre o mapa. "De" começa vazio (os locais da empresa aparecem primeiro na
@@ -41,45 +40,42 @@ export function InicioCliente() {
   // "Pedir de novo" (fim da corrida): chega pelo estado da navegação com a rota e a categoria, sem data.
   const { state } = useLocation()
   const [de] = useState(() => lerPedirDeNovo(state))
-  const [origem, setOrigem] = useState<ValorEndereco>(de?.origem ?? VAZIO)
-  const [destino, setDestino] = useState<ValorEndereco>(de?.destino ?? VAZIO)
-  const [paradas, setParadas] = useState<ValorEndereco[]>([])
-  // Identidade estável de cada campo de parada (a `key`): remover a do meio não troca o estado dos outros campos.
-  const [idsParadas, setIdsParadas] = useState<number[]>([])
+  // Os endereços num estado só, mudado por campo a partir do valor atual (v2.2): uma busca que termina tarde não
+  // regrava os outros campos com valores antigos.
+  const [campos, setCampos] = useState<CamposDoPedido>(() => ({
+    origem: de?.origem ?? VAZIO,
+    paradas: [],
+    ids: [],
+    destino: de?.destino ?? VAZIO,
+    escolhendo: de !== null,
+  }))
+  const { origem, paradas, ids: idsParadas, destino, escolhendo } = campos
   const proximoId = useRef(0)
-  const [mapaPara, setMapaPara] = useState<AlvoDoMapa | null>(null)
-  const [escolhendo, setEscolhendo] = useState(de !== null)
+  // Campo do mapa aberto em "Marcar no mapa".
+  const [mapaPara, setMapaPara] = useState<CampoDoPedido | null>(null)
   const titulo = useRef<HTMLHeadingElement>(null)
-  const campos = useRef<HTMLDivElement>(null)
+  const areaCampos = useRef<HTMLDivElement>(null)
 
   useCamadasDoMapa(escolhendo ? {} : { centro: coordenadas(origem.local), destino: coordenadas(destino.local) })
 
-  function mudar(o: ValorEndereco, ps: ValorEndereco[], d: ValorEndereco) {
-    setOrigem(o)
-    setParadas(ps)
-    setDestino(d)
-    if (completo(o, ps, d)) setEscolhendo(true)
-  }
-  const mudarOrigem = (v: ValorEndereco) => mudar(v, paradas, destino)
-  const mudarDestino = (v: ValorEndereco) => mudar(origem, paradas, v)
-  const mudarParada = (i: number, v: ValorEndereco) => mudar(origem, paradas.map((p, j) => (j === i ? v : p)), destino)
+  const mudar = (campo: CampoDoPedido) => (v: ValorEndereco) => setCampos((c) => mudarCampo(c, campo, v))
+  const mudarOrigem = mudar('origem')
+  const mudarDestino = mudar('destino')
 
   /** Abre um campo de parada vazio (até 3) e põe o foco nele. */
   function adicionarParada() {
     if (paradas.length >= MAX_PARADAS) return
     const n = paradas.length + 1
-    setParadas((ps) => [...ps, VAZIO])
-    setIdsParadas((ids) => [...ids, proximoId.current++])
-    setEscolhendo(false)
-    requestAnimationFrame(() => campos.current?.querySelector<HTMLInputElement>(`input[aria-label="Parada ${n}"]`)?.focus())
+    const id = proximoId.current++
+    setCampos((c) => comParadaNova(c, id))
+    requestAnimationFrame(() => areaCampos.current?.querySelector<HTMLInputElement>(`input[aria-label="Parada ${n}"]`)?.focus())
   }
   /** Tira a parada `i` e leva o foco à parada seguinte (que passa a ser a `i`) ou, sem ela, ao "+ Adicionar parada". */
   function removerParada(i: number) {
     const seguinte = i + 1 < paradas.length
-    setParadas((ps) => ps.filter((_, j) => j !== i))
-    setIdsParadas((ids) => ids.filter((_, j) => j !== i))
+    setCampos((c) => semParada(c, i))
     requestAnimationFrame(() =>
-      campos.current
+      areaCampos.current
         ?.querySelector<HTMLElement>(seguinte ? `input[aria-label="Parada ${i + 1}"]` : '[data-adicionar-parada]')
         ?.focus(),
     )
@@ -96,14 +92,14 @@ export function InicioCliente() {
         diariasIniciais={de?.diarias}
         semData={de !== null}
         aoVoltar={() => {
-          setEscolhendo(false)
+          setCampos((c) => ({ ...c, escolhendo: false }))
           requestAnimationFrame(() => titulo.current?.focus())
         }}
       />
     )
   }
 
-  const prontos = completo(origem, paradas, destino)
+  const prontos = completo(campos)
   const semLocal = [origem, ...paradas, destino].some((v) => v.texto.trim() !== '' && !v.local)
   return (
     <FolhaMapa rotulo="Pedir uma corrida">
@@ -120,7 +116,7 @@ export function InicioCliente() {
           <p className="ivo-corpo">{indisponivel}</p>
         </div>
       ) : (
-        <div ref={campos} className="space-y-3">
+        <div ref={areaCampos} className="space-y-3">
           <CampoEndereco
             rotulo="De"
             placeholder="De onde sai?"
@@ -129,15 +125,15 @@ export function InicioCliente() {
             aoMarcarNoMapa={() => setMapaPara('origem')}
           />
           {paradas.map((p, i) => (
-            <div key={idsParadas[i] ?? `p${i}`} className="flex items-start gap-1.5">
+            <div key={idsParadas[i]} className="flex items-start gap-1.5">
               <div className="min-w-0 flex-1">
                 <CampoEndereco
                   rotulo="Parada"
                   rotuloAcessivel={`Parada ${i + 1}`}
                   placeholder="Onde parar?"
                   valor={p}
-                  aoMudar={(v) => mudarParada(i, v)}
-                  aoMarcarNoMapa={() => setMapaPara(i)}
+                  aoMudar={mudar({ parada: idsParadas[i]! })}
+                  aoMarcarNoMapa={() => setMapaPara({ parada: idsParadas[i]! })}
                 />
               </div>
               <button
@@ -168,7 +164,7 @@ export function InicioCliente() {
             </button>
           )}
           {prontos ? (
-            <Botao variante="principal" className="w-full" onClick={() => setEscolhendo(true)}>
+            <Botao variante="principal" className="w-full" onClick={() => setCampos((c) => ({ ...c, escolhendo: true }))}>
               Ver categorias
             </Botao>
           ) : (
@@ -183,10 +179,7 @@ export function InicioCliente() {
         centro={coordenadas(origem.local) ?? null}
         aoFechar={() => setMapaPara(null)}
         aoUsar={(local) => {
-          const v = { texto: local.nome, local }
-          if (mapaPara === 'origem') mudarOrigem(v)
-          else if (mapaPara === 'destino') mudarDestino(v)
-          else if (mapaPara !== null) mudarParada(mapaPara, v)
+          if (mapaPara !== null) mudar(mapaPara)({ texto: local.nome, local })
           setMapaPara(null)
         }}
       />
