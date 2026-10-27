@@ -35,6 +35,8 @@ export interface CategoriaAdm {
    * outras, **Desativar**. Opcional: o banco anterior não devolvia (sem ele, só Desativar).
    */
   pode_excluir?: boolean
+  /** v2.2: "Até quantas pessoas" (`null` = sem limite). Opcional: o banco anterior não devolvia. */
+  pessoas_max?: number | null
 }
 
 /** O que `api.salvar_categoria` aceita. Sem `codigo`, cria (o banco gera o código e o devolve em `codigo`). */
@@ -47,6 +49,27 @@ export interface EntradaCategoria {
   veiculo_cliente?: boolean
   reboque?: Reboque
   carga?: Carga
+  /**
+   * v2.2: de 1 a 99, ou `null` para tirar o limite. Sem a chave (`undefined`), o banco mantém o valor de hoje: é o que
+   * a v2.1 manda.
+   */
+  pessoas_max?: number | null
+}
+
+/** "Até quantas pessoas": de 1 a 99 (o mesmo check do banco). */
+export const PESSOAS_MAX_MIN = 1
+export const PESSOAS_MAX_MAX = 99
+
+/**
+ * Texto do campo "Até quantas pessoas" → valor para `salvar`: vazio = `null` (sem limite); inteiro de 1 a 99 = o
+ * número; qualquer outra coisa = `undefined` (inválido: a tela mostra o erro e não salva).
+ */
+export function lerPessoasMax(texto: string): number | null | undefined {
+  const t = texto.trim()
+  if (t === '') return null
+  if (!/^\d{1,2}$/.test(t)) return undefined
+  const n = Number(t)
+  return n >= PESSOAS_MAX_MIN && n <= PESSOAS_MAX_MAX ? n : undefined
 }
 
 const CHAVES_ENTRADA = ['codigo', 'nome', 'descricao_curta', 'ordem', 'ativa', 'veiculo_cliente', 'reboque', 'carga'] as const
@@ -116,6 +139,8 @@ export const categoriasAdm = {
   salvar: (c: EntradaCategoria | CategoriaAdm) => {
     const p: Record<string, unknown> = {}
     for (const k of CHAVES_ENTRADA) if (c[k] !== undefined && c[k] !== null) p[k] = c[k]
+    // v2.2: `null` tira o limite, então vai como nulo; sem a chave, o banco mantém o valor de hoje.
+    if (c.pessoas_max !== undefined) p.pessoas_max = c.pessoas_max
     return chamar('salvar_categoria', { p })
   },
   /** v2.1: apaga a categoria que nunca foi usada; usada → `CATEGORIA_EM_USO` (a tela oferece Desativar). */

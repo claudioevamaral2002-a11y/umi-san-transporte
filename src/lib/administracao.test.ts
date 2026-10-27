@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ACOES,
+  GRUPO_ACAO,
   detalheComoTexto,
+  opcoesDeAcao,
   filtrarUsuarios,
   gereEquipe,
   motivoValido,
@@ -57,5 +60,47 @@ describe('administração', () => {
     expect(gereEquipe({ papel: 'CLIENTE', nivel: 2 })).toBe(false)
     expect(gereEquipe({ papel: 'ADM', nivel: null })).toBe(false)
     expect(gereEquipe(null)).toBe(false)
+  })
+})
+
+describe('ações da auditoria (v2.2)', () => {
+  it('toda ação conhecida tem grupo, e todo grupo tem nome', () => {
+    for (const acao of Object.keys(ACOES)) expect(GRUPO_ACAO[acao], acao).toBeDefined()
+    for (const acao of Object.keys(GRUPO_ACAO)) expect(ACOES[acao], acao).toBeDefined()
+  })
+  it('as ações de pedido, dinheiro e fatura têm nome legível', () => {
+    expect(nomeAcao('CRIAR_PEDIDO')).toBe('Criar pedido')
+    expect(nomeAcao('APROVAR_ORCAMENTO')).toBe('Aprovar orçamento')
+    expect(nomeAcao('LANCAR_RECARGA')).toBe('Lançar recarga')
+    expect(nomeAcao('GERAR_FATURA')).toBe('Gerar fatura')
+  })
+  it('opcoesDeAcao agrupa na ordem dos assuntos, ordena por nome e põe a desconhecida em Outras com o código', () => {
+    const r = opcoesDeAcao([
+      { acao: 'GERAR_FATURA', total: 2 },
+      { acao: 'NOVA_ACAO_X', total: 1 },
+      { acao: 'CRIAR_PEDIDO', total: 9 },
+      { acao: 'APROVAR_ORCAMENTO', total: 3 },
+      { acao: 'ALTERAR_PERFIL', total: 4 },
+    ])
+    expect(r.map((g) => g.grupo)).toEqual(['Acesso', 'Pedidos', 'Faturas', 'Outras'])
+    expect(r[1]!.opcoes).toEqual([
+      { valor: 'APROVAR_ORCAMENTO', rotulo: 'Aprovar orçamento', total: 3 },
+      { valor: 'CRIAR_PEDIDO', rotulo: 'Criar pedido', total: 9 },
+    ])
+    expect(r[3]!.opcoes).toEqual([{ valor: 'NOVA_ACAO_X', rotulo: 'NOVA_ACAO_X', total: 1 }])
+  })
+  it('as ações novas da v2.2 têm nome e grupo', () => {
+    expect(GRUPO_ACAO.ACOES_AUDITORIA).toBe('Acesso')
+    expect(GRUPO_ACAO.AJUDA_CLIENTE).toBe('Pedidos')
+    expect(GRUPO_ACAO.CONTATO_IVO).toBe('Pedidos')
+    expect(GRUPO_ACAO.LOCAIS_EMPRESA_TODOS).toBe('Cadastros')
+    expect(GRUPO_ACAO.RENOMEAR_LOCAL).toBe('Cadastros')
+    expect(GRUPO_ACAO.EXCLUIR_LOCAL).toBe('Cadastros')
+    for (const a of ['ACOES_AUDITORIA', 'AJUDA_CLIENTE', 'CONTATO_IVO', 'LOCAIS_EMPRESA_TODOS', 'RENOMEAR_LOCAL', 'EXCLUIR_LOCAL']) {
+      expect(nomeAcao(a)).not.toBe(a)
+    }
+  })
+  it('opcoesDeAcao com lista vazia não devolve grupo', () => {
+    expect(opcoesDeAcao([])).toEqual([])
   })
 })
