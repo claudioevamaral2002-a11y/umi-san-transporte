@@ -29,6 +29,7 @@ import { useTempoReal } from '../../lib/tempoReal.ts'
 import { topicoSaldo } from '../../lib/topicos.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
 import { CartaoSaldo, SaldoDaEmpresa, useSaldo } from '../saldo/CartaoSaldo.tsx'
+import { ContatoRecarga } from '../saldo/ContatoIvo.tsx'
 
 const LIMITE = 500
 const PRESETS: Preset[] = ['mes', '7d', '30d', 'mes_anterior', 'personalizado']
@@ -373,7 +374,11 @@ function ExtratoPelaForma() {
           faturado ? (
             <TotalDevido saldo={saldo.dados} />
           ) : (
-            <CartaoSaldo saldo={saldo.dados} />
+            // v2.2: no Crédito, o contato da IVO para recarregar.
+            <div className="space-y-3">
+              <CartaoSaldo saldo={saldo.dados} />
+              <ContatoRecarga />
+            </div>
           )
         ) : saldo.erro ? (
           <Cartao className="space-y-2" role="alert">

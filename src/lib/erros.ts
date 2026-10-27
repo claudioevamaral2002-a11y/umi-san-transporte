@@ -30,6 +30,7 @@ export const MENSAGENS = {
   ALVO_ADM: 'Essa ação não vale para administradores.',
   MOTIVO_OBRIGATORIO: 'Informe o motivo.',
   JA_EXISTE_ADM: 'Já existe um administrador.',
+  JA_EXISTE: 'Já existe um local salvo com este nome.',
   // Devolvidos por interno.checar_convite (preparar_convite / convidar).
   JA_CADASTRADO: 'Este e-mail já tem cadastro. Use "Gerar novo link" na lista de pessoas.',
   EMAIL_EM_USO: 'Este e-mail já está em uso. Use "Gerar novo link" na lista de pessoas.',

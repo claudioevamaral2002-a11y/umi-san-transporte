@@ -14,13 +14,12 @@ import { Chamada } from './telas/motorista/Chamada.tsx'
 import { InicioMotorista } from './telas/motorista/InicioMotorista.tsx'
 import { ProporValor } from './telas/motorista/ProporValor.tsx'
 import { ViagemNoMapa } from './telas/motorista/ViagemNoMapa.tsx'
-import { EmBreve, InicioProvisorio } from './telas/Provisorias.tsx'
+import { InicioProvisorio } from './telas/Provisorias.tsx'
 import { useSessao } from '../lib/sessao.tsx'
 
 const ehAdm = (p: Perfil) => p.papel === 'ADM'
 const ehMotorista = (p: Perfil) => p.papel === 'MOTORISTA'
 const ehCliente = (p: Perfil) => p.papel === 'CLIENTE'
-const todos = () => true
 
 /** Início sobre o mapa: o cliente pede (Tarefa 8), o motorista responde e dirige (Tarefa 10); o ADM ainda no provisório. */
 function InicioDoPerfil() {
@@ -30,11 +29,6 @@ function InicioDoPerfil() {
   return <InicioProvisorio />
 }
 
-/** Telas de página ainda por fazer ("em breve"), cada uma com a sua guarda. */
-const PROVISORIAS: Array<{ path: string; titulo: string; permite: (p: Perfil) => boolean }> = [
-  { path: 'locais', titulo: 'Locais salvos', permite: ehCliente },
-  { path: 'ajuda', titulo: 'Ajuda', permite: todos },
-]
 
 /** Carrega sob demanda o componente `nome` do módulo (as telas de página e as do app atual reusadas). */
 const tela =
@@ -110,6 +104,12 @@ const TELAS_NOVAS = [
     ],
   },
   { path: 'perfil', lazy: tela(() => import('./telas/PerfilSeguranca.tsx'), 'PerfilSeguranca') },
+  // v2.2 (§5.5): as telas reais no lugar do "em breve" (o `EmBreve` fica, sem uso, para telas futuras).
+  { path: 'ajuda', lazy: tela(() => import('./telas/Ajuda.tsx'), 'Ajuda') },
+  {
+    element: <GuardaPerfil permite={ehCliente} />,
+    children: [{ path: 'locais', lazy: tela(() => import('./telas/cliente/LocaisSalvos.tsx'), 'LocaisSalvos') }],
+  },
 ]
 
 /**
@@ -222,10 +222,6 @@ export const roteadorNovo = createBrowserRouter([
                   ...TELAS_DO_APP_ATUAL,
                   ...TELAS_NOVAS,
                   PAINEL_EMPRESA,
-                  ...PROVISORIAS.map(({ path, titulo, permite }) => ({
-                    element: <GuardaPerfil permite={permite} />,
-                    children: [{ path, element: <EmBreve titulo={titulo} /> }],
-                  })),
                 ],
               },
             ],
