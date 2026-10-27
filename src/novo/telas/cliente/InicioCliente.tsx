@@ -12,7 +12,7 @@ import { FolhaMarcarNoMapa } from '../../../telas/pedidos/FolhaMarcarNoMapa.tsx'
 import { podeCriarPedido, usePedidoIndisponivel } from '../../../telas/pedidos/Pedidos.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
-import { lerPedirDeNovo } from '../../pedirDeNovo.ts'
+import { lerPedirDaqui, lerPedirDeNovo } from '../../pedirDeNovo.ts'
 import { EscolherCategoria, type EnderecoEscolhido } from './EscolherCategoria.tsx'
 
 const VAZIO: ValorEndereco = { texto: '', local: null }
@@ -41,7 +41,8 @@ export function InicioCliente() {
   // "Pedir de novo" (fim da corrida): chega pelo estado da navegação com a rota e a categoria, sem data.
   const { state } = useLocation()
   const [de] = useState(() => lerPedirDeNovo(state))
-  const [origem, setOrigem] = useState<ValorEndereco>(de?.origem ?? VAZIO)
+  // v2.2: "Pedir daqui" (Locais salvos): o mesmo caminho, só com o De preenchido.
+  const [origem, setOrigem] = useState<ValorEndereco>(() => de?.origem ?? lerPedirDaqui(state) ?? VAZIO)
   const [destino, setDestino] = useState<ValorEndereco>(de?.destino ?? VAZIO)
   const [paradas, setParadas] = useState<ValorEndereco[]>([])
   // Identidade estável de cada campo de parada (a `key`): remover a do meio não troca o estado dos outros campos.

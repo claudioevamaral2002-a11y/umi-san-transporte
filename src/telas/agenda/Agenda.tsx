@@ -5,8 +5,8 @@ import { Segmentado } from '../../design/componentes/Segmentado.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { StatusBadge } from '../../design/componentes/StatusBadge.tsx'
 import { useConsulta } from '../../lib/consulta.ts'
-import { tipoDoBloco, type EntradaGrade } from '../../lib/gradeAgenda.ts'
-import { pedidos, type Bloco } from '../../lib/pedidos.ts'
+import { entradasConcluidas, tipoDoBloco, type EntradaGrade } from '../../lib/gradeAgenda.ts'
+import { pedidos, type Bloco, type ConcluidaAgenda } from '../../lib/pedidos.ts'
 import { useSessao } from '../../lib/sessao.tsx'
 import {
   faixaHorario,
@@ -24,6 +24,7 @@ import { topicoDoPerfil } from '../../lib/topicos.ts'
 import { podeCriarPedido, usePedidoIndisponivel } from '../pedidos/Pedidos.tsx'
 import { Rota } from '../pedidos/componentes.tsx'
 import { Calendario } from './Calendario.tsx'
+import { CartaoConcluida } from './Concluidas.tsx'
 import { domingoDe, FaixaSemana } from './FaixaSemana.tsx'
 import { GradeHoras } from './GradeHoras.tsx'
 import { useTituloNaTela } from '../../design/componentes/Tela.tsx'
@@ -53,13 +54,13 @@ function guardarVisao(v: Visao) {
   }
 }
 
-/** Blocos e janelas livres de cada dia, já no formato da grade de horas. */
+/** Blocos, corridas em andamento/concluídas (v2.2) e janelas livres de cada dia, já no formato da grade de horas. */
 async function carregarDias(dias: string[], hoje: string, cliente: boolean) {
   const porDia = await Promise.all(
     dias.map(async (dia) => {
       const { de, ate } = intervaloDoDia(dia)
-      const [blocos, livres] = await Promise.all([
-        pedidos.agenda(de, ate),
+      const [{ blocos, concluidas }, livres] = await Promise.all([
+        pedidos.agendaCompleta(de, ate),
         dia >= hoje ? pedidos.horariosLivres(dia, 30) : Promise.resolve({ horarios: [] as string[], dia_cheio: false }),
       ])
       const itens: EntradaGrade[] = [
@@ -70,6 +71,8 @@ async function carregarDias(dias: string[], hoje: string, cliente: boolean) {
           fim: bloco.fim,
           bloco,
         })),
+        // v2.2: as corridas em andamento e concluídas do dia (o banco anterior não as manda: lista vazia).
+        ...entradasConcluidas(concluidas, blocos),
         ...janelasLivres(livres.horarios, 30).map((janela) => ({
           chave: `l-${janela.inicio}`,
           tipo: 'livre' as const,
@@ -78,7 +81,7 @@ async function carregarDias(dias: string[], hoje: string, cliente: boolean) {
           janela,
         })),
       ]
-      return [dia, { blocos, itens }] as const
+      return [dia, { blocos, concluidas, itens }] as const
     }),
   )
   return Object.fromEntries(porDia)
@@ -184,6 +187,7 @@ export function Agenda() {
           <ResumoDoDia
             dia={dia}
             blocos={doDia.dados?.[dia]?.blocos}
+            concluidas={doDia.dados?.[dia]?.concluidas}
             erro={!!doDia.erro && doDia.dados === undefined}
             recarregar={doDia.recarregar}
             abrir={() => mudarVisao('dia')}
@@ -219,18 +223,23 @@ export function Agenda() {
 function ResumoDoDia({
   dia,
   blocos,
+  concluidas = [],
   erro,
   recarregar,
   abrir,
 }: {
   dia: string
   blocos: Bloco[] | undefined
+  /** v2.2: em andamento e concluídas do dia (cartões cinza). */
+  concluidas?: ConcluidaAgenda[]
   erro: boolean
   recarregar: () => void
   abrir: () => void
 }) {
   const proprios = (blocos ?? []).filter((b) => b.atividade_id !== undefined)
   const ocupados = (blocos ?? []).length - proprios.length
+  const comBloco = new Set(proprios.map((b) => b.atividade_id))
+  const feitas = concluidas.filter((c) => !comBloco.has(c.id))
   return (
     <section data-testid="resumo-dia" aria-labelledby="titulo-resumo" className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
@@ -245,7 +254,7 @@ function ResumoDoDia({
         <ErroDia recarregar={recarregar} />
       ) : blocos === undefined ? (
         <Skeleton className="h-20" />
-      ) : proprios.length === 0 ? (
+      ) : proprios.length === 0 && feitas.length === 0 ? (
         <p className="ivo-corpo text-texto-suave">
           {ocupados > 0 ? 'Nenhum pedido seu neste dia. Há horários ocupados.' : 'Nenhum pedido neste dia.'}
         </p>
@@ -260,6 +269,11 @@ function ResumoDoDia({
                 {b.status && <StatusBadge status={b.status} />}
               </div>
               {b.origem && b.destino && <Rota origem={b.origem} destino={b.destino} compacta />}
+            </li>
+          ))}
+          {feitas.map((c) => (
+            <li key={`c-${c.id}`}>
+              <CartaoConcluida corrida={c} />
             </li>
           ))}
         </ul>

@@ -4,6 +4,7 @@ import { useTituloNaTela } from '../../../design/componentes/Tela.tsx'
 import { useSessao } from '../../../lib/sessao.tsx'
 import { ExtratoEmpresa } from '../../../telas/extrato/Extrato.tsx'
 import { SaldoDaEmpresa } from '../../../telas/saldo/CartaoSaldo.tsx'
+import { ContatoRecarga } from '../../../telas/saldo/ContatoIvo.tsx'
 import { BOTAO_CONTORNO, CARTAO, enderecoDaAba, useContextoPainel } from './componentes.tsx'
 
 /**
@@ -31,6 +32,12 @@ export function AbaCarteira() {
           <div className="nao-imprimir">
             <SaldoDaEmpresa empresa={id} comoAdm={ehAdm} />
           </div>
+          {/* v2.2: o cliente (empresa no Crédito) vê com quem falar para recarregar. */}
+          {!ehAdm && (
+            <div className="nao-imprimir">
+              <ContatoRecarga />
+            </div>
+          )}
           {ehAdm && (
             <p className="nao-imprimir">
               <Link to={`/adm/creditos/${id}`} className={BOTAO_CONTORNO}>

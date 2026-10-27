@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Bloco } from './pedidos.ts'
-import { faixaDeHoras, posicionar, tipoDoBloco, topoDoAgora } from './gradeAgenda.ts'
+import type { Bloco, ConcluidaAgenda } from './pedidos.ts'
+import { entradasConcluidas, faixaDeHoras, posicionar, tipoDoBloco, topoDoAgora } from './gradeAgenda.ts'
 
 const sp = (hm: string, dia = '2026-10-13') => new Date(`${dia}T${hm}:00-03:00`).toISOString()
 
@@ -67,5 +67,32 @@ describe('tipoDoBloco', () => {
     expect(tipoDoBloco({ ...base, atividade_id: 'x', status: 'ORCADA' }, true)).toBe('aguardando')
     expect(tipoDoBloco({ ...base, atividade_id: 'x', status: 'ORCADA' }, false)).toBe('meu')
     expect(tipoDoBloco({ ...base, atividade_id: 'x', status: 'AGENDADA' }, true)).toBe('meu')
+  })
+})
+
+describe('entradasConcluidas (v2.2)', () => {
+  const c = (id: string, extra: Partial<ConcluidaAgenda> = {}): ConcluidaAgenda => ({
+    id,
+    numero: 18,
+    inicio: sp('08:00'),
+    duracao_min: 90,
+    origem: 'Porto',
+    destino: 'Base',
+    categoria_nome: null,
+    status: 'CONCLUIDA',
+    ...extra,
+  })
+  it('vira item cinza do início até início + duração, e passa pela posição', () => {
+    const [e] = entradasConcluidas([c('x')], [])
+    expect(e).toMatchObject({ chave: 'c-x', tipo: 'concluida', inicio: sp('08:00'), fim: sp('09:30') })
+    const [p] = posicionar([e!], '2026-10-13', 6, 20, 56)
+    expect(p!.concluida?.id).toBe('x')
+  })
+  it('não repete a corrida que ainda tem bloco na resposta', () => {
+    const bloco = { inicio: sp('08:00'), fim: sp('10:00'), ocupado: true, atividade_id: 'y' } as Bloco
+    expect(entradasConcluidas([c('x'), c('y', { status: 'EM_ANDAMENTO' })], [bloco]).map((e) => e.chave)).toEqual(['c-x'])
+  })
+  it('sem concluídas, nada', () => {
+    expect(entradasConcluidas([], [])).toEqual([])
   })
 })
