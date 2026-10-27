@@ -5,6 +5,7 @@ import { MarcaAgora } from '../../design/componentes/MarcaAgora.tsx'
 import { corDoStatus, StatusBadge } from '../../design/componentes/StatusBadge.tsx'
 import { faixaDeHoras, posicionar, topoDoAgora, type EntradaGrade, type ItemGrade } from '../../lib/gradeAgenda.ts'
 import { diaDaSemanaCurto, faixaHorario, horaDe, numeroPedido } from '../../lib/tempo.ts'
+import { fimDaCorrida, SeloConcluida } from './Concluidas.tsx'
 
 const PX_HORA = 56
 const RESPIRO = 10 // espaço acima da primeira hora, para o rótulo não ser cortado
@@ -60,6 +61,41 @@ function Item({ it, compacto, equipe, pedir }: { it: ItemGrade; compacto: boolea
       <div data-testid="janela-livre" style={posicao} className={classe}>
         <span className="tabular-nums">{texto}</span>
       </div>
+    )
+  }
+
+  if (it.tipo === 'concluida' && it.concluida) {
+    // v2.2: corrida em andamento ou concluída: cartão cinza com o selo, toque abre a corrida.
+    const c = it.concluida
+    return (
+      <Link
+        to={`/pedidos/${c.id}`}
+        viewTransition
+        data-testid="bloco-concluida"
+        aria-label={`Pedido ${numeroPedido(c.numero)}, ${faixaHorario(c.inicio, fimDaCorrida(c))}, ${c.status === 'EM_ANDAMENTO' ? 'em andamento' : 'concluída'}`}
+        style={posicao}
+        className={`${base} bloco-concluido block text-texto`}
+      >
+        <span className="block text-sm font-bold">
+          {compacto ? '' : 'Pedido '}
+          {numeroPedido(c.numero)}
+        </span>
+        <span className="block tabular-nums">{faixaHorario(c.inicio, fimDaCorrida(c))}</span>
+        {compacto ? (
+          <span className="mt-0.5 block">
+            <SeloConcluida status={c.status} />
+          </span>
+        ) : (
+          <>
+            <span className="absolute top-1.5 right-1.5">
+              <SeloConcluida status={c.status} />
+            </span>
+            <span className="block truncate text-texto-suave">
+              {c.origem} até {c.destino}
+            </span>
+          </>
+        )}
+      </Link>
     )
   }
 
@@ -183,6 +219,7 @@ export function GradeHoras({
           {dias.map((d) => (
             <span
               key={d}
+              data-testid="cabecalho-dia"
               className={`flex-1 text-center text-sm font-semibold ${d === hoje ? 'text-alerta-texto' : 'text-texto-suave'}`}
             >
               {diaDaSemanaCurto(d)} <span className="font-bold tabular-nums">{Number(d.slice(8))}</span>

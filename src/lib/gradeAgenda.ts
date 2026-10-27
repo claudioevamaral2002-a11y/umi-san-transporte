@@ -1,8 +1,9 @@
-import type { Bloco } from './pedidos.ts'
+import type { Bloco, ConcluidaAgenda } from './pedidos.ts'
 import { diaDe, intervaloDoDia, type Janela } from './tempo.ts'
 
 /** Grade de horas da Agenda (visões Dia e 3 dias): posição e largura de cada bloco, e a linha do "agora". */
-export type TipoItem = 'meu' | 'aguardando' | 'ocupado' | 'livre'
+/** v2.2: `concluida` = corrida em andamento ou concluída (cartão cinza). */
+export type TipoItem = 'meu' | 'aguardando' | 'ocupado' | 'livre' | 'concluida'
 
 export interface ItemGrade {
   chave: string
@@ -13,6 +14,7 @@ export interface ItemGrade {
   colunas: number
   bloco?: Bloco
   janela?: Janela
+  concluida?: ConcluidaAgenda
 }
 
 export interface EntradaGrade {
@@ -22,6 +24,7 @@ export interface EntradaGrade {
   fim: string
   bloco?: Bloco
   janela?: Janela
+  concluida?: ConcluidaAgenda
 }
 
 /** Horas (fracionárias) desde a meia-noite de `dia` em São Paulo. */
@@ -30,9 +33,26 @@ function horasNoDia(instante: string | Date, dia: string): number {
 }
 
 /** Sem atividade = horário de outra empresa (ocupado); orçamento esperando o cliente = aguardando; senão, meu. */
-export function tipoDoBloco(b: Bloco, cliente: boolean): Exclude<TipoItem, 'livre'> {
+export function tipoDoBloco(b: Bloco, cliente: boolean): Exclude<TipoItem, 'livre' | 'concluida'> {
   if (b.atividade_id === undefined) return 'ocupado'
   return cliente && b.status === 'ORCADA' ? 'aguardando' : 'meu'
+}
+
+/**
+ * v2.2: as corridas em andamento e concluídas como itens da grade (do início até início + duração). Uma que ainda tenha
+ * bloco ativo na resposta (mesma atividade) fica só como bloco, para não aparecer duas vezes.
+ */
+export function entradasConcluidas(concluidas: readonly ConcluidaAgenda[], blocos: readonly Bloco[]): EntradaGrade[] {
+  const comBloco = new Set(blocos.map((b) => b.atividade_id).filter((id) => id !== undefined))
+  return concluidas
+    .filter((c) => !comBloco.has(c.id))
+    .map((c) => ({
+      chave: `c-${c.id}`,
+      tipo: 'concluida' as const,
+      inicio: c.inicio,
+      fim: new Date(new Date(c.inicio).getTime() + Math.max(c.duracao_min, 30) * 60_000).toISOString(),
+      concluida: c,
+    }))
 }
 
 /** Faixa de horas mostrada: 06–20 por padrão, alargada para caber todos os itens (limitada a 0–24). */
@@ -62,8 +82,8 @@ export function posicionar(itens: EntradaGrade[], dia: string, horaIni: number, 
   const fechar = () => {
     const colunas = Math.max(...grupo.map((g) => g.coluna + 1))
     for (const { x, coluna } of grupo) {
-      const { chave, tipo, bloco, janela } = x.it
-      saida.push({ chave, tipo, bloco, janela, topo: (x.ini - horaIni) * pxPorHora, altura: (x.fim - x.ini) * pxPorHora, coluna, colunas })
+      const { chave, tipo, bloco, janela, concluida } = x.it
+      saida.push({ chave, tipo, bloco, janela, ...(concluida ? { concluida } : {}), topo: (x.ini - horaIni) * pxPorHora, altura: (x.fim - x.ini) * pxPorHora, coluna, colunas })
     }
     grupo = []
   }

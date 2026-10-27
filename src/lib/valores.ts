@@ -136,3 +136,30 @@ export function formatarDataLonga(data: Date): string {
   const t = DATA_LONGA.format(data)
   return t.charAt(0).toUpperCase() + t.slice(1)
 }
+
+/** Um campo `<input type="date">`: o valor ("" ou "2026-10-08") e se o navegador o acusou incompleto (`validity.badInput`). */
+export interface CampoData {
+  valor: string
+  invalido: boolean
+}
+
+/** "2026-10-08" que existe no calendário (31/02 não). */
+function dataValida(dia: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dia)
+  if (!m) return false
+  const [ano, mes, d] = m.slice(1).map(Number) as [number, number, number]
+  const data = new Date(Date.UTC(ano, mes - 1, d))
+  return data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === d
+}
+
+/**
+ * v2.2 (filtro da auditoria): o período "De"/"Até". Campo incompleto ou com data que não existe → "Data inválida";
+ * "De" depois de "Até" → "A data inicial é depois da final"; vazio é "sem limite" (não é erro). `null` = pode filtrar.
+ * Nada de ignorar o período em silêncio.
+ */
+export function validarPeriodo(de: CampoData, ate: CampoData): 'Data inválida' | 'A data inicial é depois da final' | null {
+  const ruim = (c: CampoData) => c.invalido || (c.valor !== '' && !dataValida(c.valor))
+  if (ruim(de) || ruim(ate)) return 'Data inválida'
+  if (de.valor && ate.valor && de.valor > ate.valor) return 'A data inicial é depois da final'
+  return null
+}

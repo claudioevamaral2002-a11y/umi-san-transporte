@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { Dinheiro } from '../../design/componentes/Dinheiro.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
@@ -12,6 +13,9 @@ import {
   type ValoresContrato,
   type VersaoContrato,
 } from '../../lib/contratos.ts'
+import { categoriasAdm } from '../../lib/categoriasAdm.ts'
+import { useConsulta } from '../../lib/consulta.ts'
+import { usePublicacaoPorCategoria } from '../../lib/publicacaoPorCategoria.tsx'
 import { formatarDataHora } from '../../lib/valores.ts'
 
 export function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
@@ -60,11 +64,48 @@ export function FaixasCancelamento({ faixas }: { faixas: Faixa[] }) {
 }
 
 /**
- * Os quatro cartões de um contrato (ADM): modalidades, regras e crédito da empresa. v2.1: o último mostra a forma de
- * cobrança (quando o banco a devolve); no Faturado, sem o limite e o alerta de saldo, que não se aplicam.
+ * v2.2 (especificação §2): a versão tem tabela por categoria publicada? O mesmo critério `comTarifas` do Publicar
+ * contrato (alguma categoria com tarifa gravada nesta versão). Sem a versão, ou se a leitura falhar, não.
  */
-export function CartoesContrato({ versao }: { versao: ValoresContrato }) {
+function useVersaoComTarifas(empresa: string | null | undefined, versao: number | undefined): boolean {
+  const consultar = empresa !== undefined && versao !== undefined
+  const { dados } = useConsulta(`contrato-tem-tarifas-${empresa ?? 'modelo'}-${versao ?? 'nenhuma'}`, async () =>
+    consultar ? (await categoriasAdm.ler(empresa, versao)).categorias : null,
+  )
+  return !!dados?.some((c) => c.tarifa && !c.tarifa.inicial)
+}
+
+/** A nota dos km da modalidade: no app novo, com o link para Categorias e preços (a v1 não tem essa tela). */
+function NotaKmCategorias() {
+  const appNovo = usePublicacaoPorCategoria()
+  const destino = appNovo ? (
+    <Link to="/adm/categorias" viewTransition className="font-semibold text-texto underline">
+      Categorias e preços
+    </Link>
+  ) : (
+    <strong>Categorias e preços</strong>
+  )
+  return (
+    <p className="mt-2 rounded-xl bg-fundo px-3 py-2.5 ivo-legenda text-texto-suave" data-testid="nota-km-categorias">
+      Pedidos por categoria usam os preços de {destino}. Estes valores valem para pedidos sem categoria (app v1).
+    </p>
+  )
+}
+
+/**
+ * Os quatro cartões de um contrato (ADM): modalidades, regras e crédito da empresa. v2.1: o último mostra a forma de
+ * cobrança (quando o banco a devolve); no Faturado, sem o limite e o alerta de saldo, que não se aplicam. v2.2: com
+ * `empresa` (nulo = tabela modelo) e a versão numerada, os km ganham a nota quando a versão tem tabela por categoria.
+ */
+export function CartoesContrato({
+  versao,
+  empresa,
+}: {
+  versao: ValoresContrato & { versao?: number }
+  empresa?: string | null
+}) {
   const faturado = versao.forma_cobranca === 'FATURADO'
+  const comTarifas = useVersaoComTarifas(empresa, versao.versao)
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {GRUPOS.map((g) => (
@@ -87,6 +128,7 @@ export function CartoesContrato({ versao }: { versao: ValoresContrato }) {
               </dl>
             )}
             {!(g.id === 'credito' && faturado) && <ListaValores campos={g.campos} valores={versao} />}
+            {g.id === 'proprio' && comTarifas && <NotaKmCategorias />}
           </div>
         </Cartao>
       ))}

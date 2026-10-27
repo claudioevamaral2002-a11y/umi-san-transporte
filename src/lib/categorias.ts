@@ -33,6 +33,11 @@ export interface CategoriaComPreco {
    * Opcional: o banco anterior não devolvia (sem ela, a categoria não cobra diária).
    */
   cobra_diaria?: boolean
+  /**
+   * v2.2: até quantas pessoas a categoria leva (`null` = sem limite). O contador para nele e o banco recusa acima
+   * (`ACIMA_DA_CAPACIDADE`). Opcional: o banco anterior não devolvia (sem ela, sem limite).
+   */
+  pessoas_max?: number | null
 }
 
 /**

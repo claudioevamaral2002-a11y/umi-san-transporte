@@ -4,7 +4,7 @@ import type { ValoresContrato } from './contratos.ts'
 const rpc = vi.fn()
 vi.mock('./supabase.ts', () => ({ supabase: { rpc: (...a: unknown[]) => rpc(...a) } }))
 
-const { categoriasAdm, formularioPrecos, precosDaVersao, validarPrecos } = await import('./categoriasAdm.ts')
+const { categoriasAdm, formularioPrecos, lerPessoasMax, precosDaVersao, validarPrecos } = await import('./categoriasAdm.ts')
 
 beforeEach(() => rpc.mockReset())
 
@@ -177,5 +177,28 @@ describe('categoriasAdm (v2.1)', () => {
     expect(rpc).toHaveBeenLastCalledWith('salvar_categoria', {
       p: { codigo: 'GUINCHO', nome: 'IVO Guincho', descricao_curta: 'x', ordem: 5, ativa: true },
     })
+  })
+  it('v2.2: salvar manda pessoas_max (número ou null para tirar o limite); sem a chave, não manda', async () => {
+    rpc.mockResolvedValue({ data: { ok: true }, error: null })
+    const base = { codigo: 'PASSAGEIROS', nome: 'IVO Passageiros', descricao_curta: 'x', ordem: 1 }
+    await categoriasAdm.salvar({ ...base, pessoas_max: 4 })
+    expect(rpc).toHaveBeenLastCalledWith('salvar_categoria', { p: { ...base, pessoas_max: 4 } })
+    await categoriasAdm.salvar({ ...base, pessoas_max: null })
+    expect(rpc).toHaveBeenLastCalledWith('salvar_categoria', { p: { ...base, pessoas_max: null } })
+    await categoriasAdm.salvar(base)
+    expect(rpc).toHaveBeenLastCalledWith('salvar_categoria', { p: base })
+  })
+})
+
+describe('lerPessoasMax (v2.2)', () => {
+  it('vazio = sem limite; 1 a 99 = o número; o resto é inválido', () => {
+    expect(lerPessoasMax('')).toBeNull()
+    expect(lerPessoasMax('  ')).toBeNull()
+    expect(lerPessoasMax('4')).toBe(4)
+    expect(lerPessoasMax(' 99 ')).toBe(99)
+    expect(lerPessoasMax('0')).toBeUndefined()
+    expect(lerPessoasMax('100')).toBeUndefined()
+    expect(lerPessoasMax('4,5')).toBeUndefined()
+    expect(lerPessoasMax('-1')).toBeUndefined()
   })
 })

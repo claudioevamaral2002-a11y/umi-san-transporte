@@ -6,32 +6,49 @@ import { Folha } from '../../../design/componentes/Folha.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
 import { pedidos, type RespostaPedido } from '../../../lib/pedidos.ts'
+import { numeroPedido } from '../../../lib/tempo.ts'
 import { useAgora } from '../../../lib/useAgora.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { prazoAte, quandoCompleto } from '../../formatos.ts'
+import { DetalhesPedido } from './DetalhesPedido.tsx'
 
-/** Origem, dia e categoria, destino: o trilho do mockup 3. */
-export function TrilhoCorrida({ r }: { r: RespostaPedido }) {
+/** v2.2: "Pedido #0042", como nas listas, no topo de toda tela da corrida. */
+export function NumeroPedido({ numero, className = '' }: { numero: number; className?: string }) {
+  return (
+    <p className={`ivo-legenda font-bold text-texto-suave tabular-nums ${className}`} data-testid="numero-pedido">
+      Pedido {numeroPedido(numero)}
+    </p>
+  )
+}
+
+/**
+ * Número do pedido, origem, dia e categoria, destino: o trilho do mockup 3 (v2.2: com o número, como nas listas).
+ * `semNumero` quando a tela já mostra o número no topo (Acompanhar, onde o trilho fica dentro dos detalhes).
+ */
+export function TrilhoCorrida({ r, semNumero = false }: { r: RespostaPedido; semNumero?: boolean }) {
   const p = r.pedido
   return (
-    <div className="flex gap-3 rounded-cartao border-[1.5px] border-borda p-3">
-      <div aria-hidden="true" className="flex flex-col items-center pt-1.5">
-        <span className="size-2.5 rounded-full bg-marinho-2" />
-        <span className="my-1 w-0.5 flex-1 bg-borda" />
-        <span className="size-2.5 bg-laranja" />
-      </div>
-      <div className="min-w-0 space-y-1">
-        <p className="font-semibold break-words">
-          <span className="sr-only">Origem: </span>
-          {p.origem}
-        </p>
-        <p className="ivo-legenda text-texto-suave tabular-nums">
-          {[quandoCompleto(p.inicio), p.categoria_nome].filter(Boolean).join(' · ')}
-        </p>
-        <p className="font-semibold break-words">
-          <span className="sr-only">Destino: </span>
-          {p.destino}
-        </p>
+    <div className="rounded-cartao border-[1.5px] border-borda p-3">
+      {!semNumero && <NumeroPedido numero={p.numero} className="mb-1.5" />}
+      <div className="flex gap-3">
+        <div aria-hidden="true" className="flex flex-col items-center pt-1.5">
+          <span className="size-2.5 rounded-full bg-marinho-2" />
+          <span className="my-1 w-0.5 flex-1 bg-borda" />
+          <span className="size-2.5 bg-laranja" />
+        </div>
+        <div className="min-w-0 space-y-1">
+          <p className="font-semibold break-words">
+            <span className="sr-only">Origem: </span>
+            {p.origem}
+          </p>
+          <p className="ivo-legenda text-texto-suave tabular-nums">
+            {[quandoCompleto(p.inicio), p.categoria_nome].filter(Boolean).join(' · ')}
+          </p>
+          <p className="font-semibold break-words">
+            <span className="sr-only">Destino: </span>
+            {p.destino}
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -57,8 +74,9 @@ export function Aguardando({ r, aoMudar }: { r: RespostaPedido; aoMudar: () => v
           )}
         </p>
       </div>
-      <div className="my-3">
+      <div className="my-3 space-y-3">
         <TrilhoCorrida r={r} />
+        <DetalhesPedido r={r} />
       </div>
       {r.acoes.cancelar && (
         <Botao className="w-full" onClick={() => setCancelando(true)}>

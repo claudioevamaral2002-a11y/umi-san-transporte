@@ -102,6 +102,15 @@
     background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cor-ocupado) 22%, transparent) 0 6px, transparent 6px 12px);
     border: 1px solid color-mix(in srgb, var(--cor-ocupado) 45%, transparent);
   }
+  /* v2.2: corrida em andamento ou concluída na agenda: cartão cinza, com o selo "Concluída" / "Em andamento". */
+  .bloco-concluido {
+    background: color-mix(in srgb, var(--cor-ocupado) 14%, var(--cor-superficie));
+    border-left: 3px solid var(--cor-ocupado);
+  }
+  .selo-concluida {
+    color: var(--cor-texto);
+    background: color-mix(in srgb, var(--cor-ocupado) 26%, var(--cor-superficie));
+  }
   /* Carrinho (CarregandoPickup): rodas giram, estrada passa, pickup balança e o reboque vem um pouco atrás. */
   .pickup-roda { transform-box: fill-box; transform-origin: center; animation: pickup-girar 700ms linear infinite; }
   .pickup-corpo { animation: pickup-balancar 900ms ease-in-out infinite alternate; }

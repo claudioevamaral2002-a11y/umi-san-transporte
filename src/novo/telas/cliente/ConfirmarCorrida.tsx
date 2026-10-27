@@ -20,6 +20,8 @@ import { SaldoInsuficiente, type Aprovacao } from '../../../telas/pedidos/Aprova
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { iniciais, quandoCompleto, reaisCurto } from '../../formatos.ts'
 import { gravarUltimoCentroCusto, lerUltimoCentroCusto } from '../../preferencias.ts'
+import { NumeroPedido } from './Aguardando.tsx'
+import { DetalhesPedido } from './DetalhesPedido.tsx'
 import { paradasDoDetalhe } from './paradasDoDetalhe.ts'
 
 const MUDOU = ['ORCAMENTO_ALTERADO', 'ORCAMENTO_VENCIDO', 'STATUS_INVALIDO', 'HORARIO_OCUPADO']
@@ -220,6 +222,7 @@ export function ConfirmarCorrida({
   return (
     <FolhaMapa rotulo="Confirmar a corrida">
       <h1 className="sr-only">Confirmar a corrida</h1>
+      <NumeroPedido numero={p.numero} className="mb-2" />
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
@@ -266,6 +269,9 @@ export function ConfirmarCorrida({
           <Memorial linhas={completo.linhas} total={total} />
         </div>
       )}
+      <div className="mt-2">
+        <DetalhesPedido r={r} />
+      </div>
 
       {pode ? (
         <div className="mt-2 space-y-3">

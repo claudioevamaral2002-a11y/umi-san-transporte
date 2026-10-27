@@ -69,6 +69,8 @@ const CODIGOS_CONHECIDOS = [
   'FATURA_PAGA',
   'FATURA_CANCELADA',
   'CATEGORIA_EM_USO',
+  'ACIMA_DA_CAPACIDADE',
+  'JA_EXISTE',
   // Edge Functions
   'ERRO_AUTH',
   'ERRO_INESPERADO',
@@ -187,5 +189,19 @@ describe('faturas e categorias (v2.1)', () => {
   it('CAMPOS_INVALIDOS com diárias ou outros custos diz qual campo', () => {
     expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['diarias_estimadas'])).toBe('Informe as diárias de 0 a 30.')
     expect(mensagemDoPedido('CAMPOS_INVALIDOS', ['outros_custos'])).toBe('Os outros custos podem ter até 120 caracteres.')
+  })
+})
+
+describe('mensagemDoPedido com valores (v2.2)', () => {
+  it('ACIMA_DA_CAPACIDADE preenche o limite que o banco devolve', () => {
+    expect(mensagemDoPedido('ACIMA_DA_CAPACIDADE', undefined, { pessoas_max: 4 })).toBe('Esta categoria leva até 4 pessoas.')
+  })
+  it('sem o limite (ou inválido), a mensagem sem número', () => {
+    expect(mensagemDoPedido('ACIMA_DA_CAPACIDADE')).toBe('Esta categoria leva menos pessoas.')
+    expect(mensagemDoPedido('ACIMA_DA_CAPACIDADE', undefined, { pessoas_max: null })).toBe('Esta categoria leva menos pessoas.')
+    expect(mensagemDoPedido('ACIMA_DA_CAPACIDADE', undefined, { pessoas_max: '' })).toBe('Esta categoria leva menos pessoas.')
+  })
+  it('códigos sem {chave} não mudam com valores', () => {
+    expect(mensagemDoPedido('CATEGORIA_INDISPONIVEL', undefined, { pessoas_max: 4 })).toBe(MENSAGENS.CATEGORIA_INDISPONIVEL)
   })
 })

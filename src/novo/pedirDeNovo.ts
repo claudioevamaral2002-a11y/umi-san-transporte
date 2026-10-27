@@ -5,9 +5,7 @@
 import type { Local } from '../lib/enderecos.ts'
 import { DIARIAS_MAX } from '../lib/limitesPedido.ts'
 import type { DetalhePedido } from '../lib/pedidos.ts'
-
-/** Dá para traçar a rota: place_id do Google, ou coordenadas de um ponto marcado no mapa (mesma regra de `pontoDaRota`). */
-const temPonto = (l: Pick<Local, 'lat' | 'lng' | 'place_id'>) => !!l.place_id || (l.lat !== null && l.lng !== null)
+import { temPontoNaRota as temPonto } from '../lib/pontoRota.ts'
 
 export interface PedirDeNovo {
   origem: { texto: string; local: Local }
@@ -65,4 +63,25 @@ export function lerPedirDeNovo(estado: unknown): PedirDeNovo | null {
     categoria: typeof e.categoria === 'string' ? e.categoria : null,
     diarias: diariasValidas(e.diarias),
   }
+}
+
+/**
+ * v2.2: "Pedir daqui" (Locais salvos) usa o mesmo caminho, só com o De: abre o Início com a origem preenchida e o Para
+ * vazio. Vai no estado da navegação como `{ pedirDaqui: { texto, local } }`.
+ */
+export interface PedirDaqui {
+  texto: string
+  local: Local
+}
+
+/** O local salvo como origem de um pedido novo; `null` se não der para traçar a rota a partir dele. */
+export function pedirDaquiDe(l: Local): PedirDaqui | null {
+  return temPonto(l) ? { texto: l.nome, local: l } : null
+}
+
+/** Lê o "Pedir daqui" do estado da navegação (dado do navegador: confere o formato antes de usar). */
+export function lerPedirDaqui(estado: unknown): PedirDaqui | null {
+  const e = (estado as { pedirDaqui?: { texto?: unknown; local?: unknown } } | null)?.pedirDaqui
+  if (!e || typeof e.texto !== 'string' || !ehLocal(e.local) || !temPonto(e.local)) return null
+  return { texto: e.texto, local: e.local }
 }

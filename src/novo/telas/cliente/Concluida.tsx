@@ -14,6 +14,7 @@ import { horaDe } from '../../../lib/tempo.ts'
 import { Foto } from '../../../telas/execucao/ResumoConcluido.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { diaCurto } from '../../formatos.ts'
+import { NumeroPedido } from './Aguardando.tsx'
 import { pedirDeNovoDe } from '../../pedirDeNovo.ts'
 
 const NOTAS = [1, 2, 3, 4, 5] as const
@@ -155,6 +156,7 @@ export function Concluida({ r, podePedir, aoMudar }: { r: RespostaPedido; podePe
 
   return (
     <FolhaMapa rotulo="Corrida concluída">
+      <NumeroPedido numero={p.numero} className="mb-2" />
       <div className="mb-3 flex items-center gap-3">
         <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--status-agendada)] text-white">
           <Icone nome="check" />

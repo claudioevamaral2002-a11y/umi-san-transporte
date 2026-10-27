@@ -2,6 +2,7 @@
 import { exigir } from './consulta.ts'
 import type { PrecosParaOrcar, RegrasServico, ValoresContrato, VersaoContrato } from './contratos.ts'
 import type { Nivel, Papel } from './estadoSessao.ts'
+import { ErroLeitura } from './pedidos.ts'
 import { supabase } from './supabase.ts'
 
 export interface Empresa {
@@ -38,6 +39,12 @@ export interface RegistroAuditoria {
   detalhe: unknown
   ip: string | null
   dispositivo: string | null
+}
+
+/** v2.2: uma linha de `api.acoes_auditoria()`: a ação e quantas vezes aparece. */
+export interface AcaoAuditoria {
+  acao: string
+  total: number
 }
 
 export interface FiltroAuditoria {
@@ -140,6 +147,17 @@ export const api = {
         p_limite: f.limite,
       }),
     ) as RegistroAuditoria[],
+
+  /**
+   * v2.2: as ações que já aparecem na auditoria, com a contagem (opções do filtro de Ação; `opcoesDeAcao` agrupa).
+   * Só quem tem a permissão de ver a auditoria (`VER_AUDITORIA`, a mesma de `listar_auditoria`). Recusa ou falha:
+   * `ErroLeitura`.
+   */
+  acoesAuditoria: async (): Promise<AcaoAuditoria[]> => {
+    const r = await rpc('acoes_auditoria', {})
+    if (!r.ok) throw new ErroLeitura(r.codigo ?? 'ERRO_INESPERADO')
+    return Array.isArray(r.acoes) ? (r.acoes as AcaoAuditoria[]) : []
+  },
 
   alterarPerfil: (usuario: string, nome: string, papel: Papel, empresa: string | null, nivel: Nivel | null) =>
     rpc('alterar_perfil', { p_usuario: usuario, p_nome: nome, p_papel: papel, p_empresa: empresa, p_nivel: nivel }),

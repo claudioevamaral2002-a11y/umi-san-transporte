@@ -1,6 +1,7 @@
 import { juntarSugestoes, type Local, type Sugestao, type SugestaoGoogle } from './enderecos.ts'
 import { chamarFuncao } from './funcoes.ts'
 import { supabase } from './supabase.ts'
+import { pontoDaRota, type PontoRota } from './pontoRota.ts'
 
 /**
  * Fase 3A: chamadas reais da busca de endereços. Locais da empresa vêm do banco (sem custo, sempre frescos: nunca da
@@ -58,16 +59,8 @@ export async function detalhar(placeId: string, nome: string, sessao: string): P
   return r.ok ? comoLocal(r.local) : null
 }
 
-export type Coordenada = { lat: number; lng: number }
-
-/** Ponto da rota: do Google pelo place_id; marcado no mapa pelas coordenadas. */
-export type PontoRota = { place_id: string } | Coordenada
-
-/** Ponto da rota: do Google pelo place_id; marcado no mapa pelas coordenadas. */
-export function pontoDaRota(l: Pick<Local, 'lat' | 'lng' | 'place_id'>): PontoRota | null {
-  if (l.place_id) return { place_id: l.place_id }
-  return l.lat !== null && l.lng !== null ? { lat: l.lat, lng: l.lng } : null
-}
+// v2.2: a regra fica em `pontoRota.ts` (sem importações); daqui só é reexportada para quem já importava daqui.
+export { pontoDaRota, type Coordenada, type PontoRota } from './pontoRota.ts'
 
 /** Chamada única da ação `rota`: km, minutos e a linha codificada (cada um `null` quando ausente). `null` se a chamada falhou. */
 export async function consultarRota(

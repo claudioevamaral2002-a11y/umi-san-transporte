@@ -622,3 +622,55 @@ Roteiro de teste: [v2-1-o-que-testar.md](fases/v2-1-o-que-testar.md). Desenho: [
 | "Não há nada a faturar" | A quinzena não teve cobranças, ou já tem fatura. Para refazer, cancele a fatura e gere de novo. |
 | Empresa voltou ao Crédito com fatura em aberto | Ela continua listada em ☰ › Faturas até a fatura ser paga e não sobrar nada a faturar. |
 | Cliente no Faturado vê "sem crédito" | O app dele está desatualizado: feche e abra de novo e toque em "Atualizar". |
+
+## 22. Correções da auditoria (v2.2)
+
+Roteiro de teste: [v2-2-o-que-testar.md](fases/v2-2-o-que-testar.md). Desenho: [v2-2-correcoes-auditoria-desenho.md](fases/v2-2-correcoes-auditoria-desenho.md).
+
+### 22.1 Limite de pessoas
+- Cada categoria tem **"Até quantas pessoas"** (`app.categorias.pessoas_max`, de 1 a 99). Vazio = sem limite. A migration pôs **4** na IVO Passageiros; as outras começam vazias.
+- O Master muda no **lápis** de ☰ › **Categorias e preços** e toca em **Salvar categoria**. Vale na hora, para todas as empresas: não é preciso publicar tabela.
+- Na tela de pedir, o **+** de Pessoas para no limite ("até N pessoas"). Ao trocar para uma categoria menor, o número desce e aparece um aviso.
+- **O banco confere:** `api.criar_pedido` recusa com `ACIMA_DA_CAPACIDADE` (e devolve o `pessoas_max`) um pedido por categoria com mais pessoas que o limite. A recusa fica na Auditoria. Pedidos da v1 (sem categoria) não têm limite.
+- Um app v2.0/2.1 desatualizado que mande pessoas demais recebe "não foi possível". Feche e abra o app e toque em **Atualizar**.
+
+### 22.2 Contato da IVO
+- É o mesmo campo de antes (`app.configuracao.contato_recarga`), agora chamado **"Contato da IVO (aparece na Ajuda e na Carteira)"** em ☰ › **Configurações**. O campo se chama **"Telefone ou WhatsApp"**.
+- Aparece em três lugares: na **Ajuda** de todos os perfis ("Falar com a IVO", com link de ligação ou WhatsApp quando é número), na **Carteira** de empresa no Crédito ("Para recarregar, fale com a IVO: …") e no **Painel da empresa**.
+- Vazio: a Ajuda e a Carteira mostram **"Contato ainda não cadastrado"**, e Configurações mostra um aviso ao Master.
+
+### 22.3 Locais salvos
+- Os locais continuam sendo **guardados sozinhos** quando a empresa pede uma corrida. A tela ☰ › **Locais salvos** lista **todos** os da empresa, os mais usados primeiro (até 200).
+- **Pedir daqui** abre o Início com o **De** preenchido. Todos os níveis do cliente veem.
+- Só o **Administrador (N1)** da empresa vê o lápis para **renomear** (de 2 a 80 caracteres; nome repetido → "Já existe um local salvo com este nome.") e **excluir**. Excluir apaga só o local; os pedidos antigos não mudam.
+- O banco confere o nível e a empresa: um local de outra empresa responde "não encontrado".
+
+### 22.4 Como ler a cobrança de um cancelado
+- A lista de pedidos e a tela da corrida mostram o que foi **lançado no livro-razão**, e não o orçamento:
+  - **"Sem cobrança"**: nada foi cobrado;
+  - **"Multa R$ X"**: houve multa de cancelamento (pela faixa do contrato).
+- No topo da corrida encerrada aparece **"Cancelada sem cobrança"** (ou "Expirada · sem cobrança", ou "Multa R$ X"; recusada e reprovada abertas pela lista continuam no detalhe da v1, com o selo "Sem cobrança"), mais **"· reserva de R$ X devolvida"** quando havia valor reservado no saldo. O orçamento fica embaixo, como **"Orçamento (não cobrado)"**.
+- Por trás, `api.pedido` devolve `cobranca = {debito_cent, multa_cent, liberado_cent}`, e `api.meus_pedidos` devolve `multa_cent` em cada item. As regras:
+  - os valores são **líquidos de estornos**: uma multa estornada pelo Master volta a "Sem cobrança";
+  - `liberado_cent` (a reserva devolvida) só aparece quando **não há débito líquido**. Numa corrida que saiu, a reserva vira o débito, e isso não é dinheiro devolvido;
+  - cada valor é nulo quando dá zero; `cobranca` é nula para o motorista e o gestor de frota.
+- Para conferir um caso: ☰ › **Carteira da empresa** (ou o extrato no Painel) mostra os lançamentos do pedido: RESERVA, LIBERACAO_RESERVA e, se houver, MULTA ou ESTORNO.
+
+### 22.5 Outras mudanças
+- **Início do Master:** pendências com atalho e, embaixo, o resumo do painel.
+- **Agenda:** o dia mostra também as corridas **em andamento** e **concluídas** da empresa, em cartões cinza que abrem a corrida. O número do mês e o dia contam o mesmo. O Solicitante (N2) vê só os pedidos dele.
+- **Pedir:** o Para não some mais quando a origem termina de carregar; **Ver cálculo**, embaixo da lista de categorias, mostra as linhas do preço.
+- **Corrida:** todas as telas mostram o número do pedido e os **Detalhes do pedido**. A agendada abre a tela nova, com **Cancelar agendamento**.
+- **Contratos:** a nota diz que os km do contrato só valem para pedidos sem categoria (app v1).
+- **Auditoria:** a lista de **Ação** vem do banco (`api.acoes_auditoria`), agrupada por assunto; datas incompletas ou invertidas mostram o erro e não filtram.
+
+### 22.6 Problemas comuns
+| Sintoma | O que fazer |
+| --- | --- |
+| "Esta categoria leva até N pessoas" ao pedir | O pedido tem mais pessoas que o limite. Diminua as pessoas ou escolha outra categoria. Se o limite estiver errado, o Master muda em Categorias e preços. |
+| Cliente com app antigo recebe "não foi possível" com muitas pessoas | É a recusa de capacidade. Feche e abra o app e toque em **Atualizar**. |
+| A Ajuda diz "Contato ainda não cadastrado" | Preencha o **Contato da IVO** em ☰ › Configurações. |
+| O Solicitante não consegue renomear um local | Só o Administrador (N1) renomeia e exclui. |
+| A lista mostra "Multa R$ X" e o cliente diz que não pagou | Abra a Carteira da empresa: a multa está no extrato. Se ela foi estornada depois, a lista volta a "Sem cobrança" quando o app reler. |
+| A agenda do dia está vazia, mas o mês conta pedidos | O app está desatualizado (a agenda antiga só mostrava os ativos). Feche e abra o app e toque em **Atualizar**. |
+| A "3 dias" corta ou some em algum celular | Não foi reproduzido na v2.2. Peça o print e o modelo do celular e abra um defeito. |

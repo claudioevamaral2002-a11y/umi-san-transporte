@@ -24,6 +24,8 @@ export interface ItemPedido {
   valido_ate: string | null
   prazo_vencido: boolean
   empresa_nome: string | null
+  /** v2.2: soma das MULTAS lançadas na atividade (nulo = sem multa). Opcional: o banco anterior não devolvia. */
+  multa_cent?: number | null
 }
 
 export interface DetalhePedido {
@@ -171,6 +173,19 @@ export interface OrcamentoAnterior {
   motivo_revisao: string | null
 }
 
+/**
+ * v2.2: o que de fato foi lançado para a atividade (somado dos lançamentos), não o orçamento. Cada valor é positivo
+ * (o que saiu ou voltou) ou nulo quando não houve lançamento daquele tipo.
+ */
+export interface CobrancaPedido {
+  /** Débito da corrida (o que foi cobrado). */
+  debito_cent: number | null
+  /** Multa de cancelamento. */
+  multa_cent: number | null
+  /** Reserva devolvida ao saldo (Crédito) ao cancelar ou expirar. */
+  liberado_cent: number | null
+}
+
 export interface RespostaPedido {
   pedido: DetalhePedido
   historico: PassoHistorico[]
@@ -178,6 +193,8 @@ export interface RespostaPedido {
   /** Ausente/nulo para cliente e gestor de frota, e fora de uma revisão. */
   orcamento_anterior?: OrcamentoAnterior | null
   acoes: Acoes
+  /** v2.2: nulo para o motorista (como a forma de cobrança). Opcional: o banco anterior não devolvia. */
+  cobranca?: CobrancaPedido | null
 }
 
 /** Bloco da agenda: de outra empresa (cliente) só {inicio, fim, ocupado}. */
@@ -196,6 +213,25 @@ export interface Bloco {
   pode_abrir?: boolean
   empresa_nome?: string
   motorista_nome?: string | null
+}
+
+/** v2.2: corrida em andamento ou concluída do período que a pessoa pode ver (cartão cinza da agenda). */
+export interface ConcluidaAgenda {
+  id: string
+  numero: number
+  inicio: string
+  duracao_min: number
+  origem: string
+  destino: string
+  categoria_nome: string | null
+  status: Extract<Status, 'EM_ANDAMENTO' | 'CONCLUIDA'>
+}
+
+/** Resposta de `api.agenda`: os blocos de sempre e, a partir da v2.2, as corridas em andamento e concluídas. */
+export interface DiaAgenda {
+  blocos: Bloco[]
+  /** Opcional: o banco anterior não devolvia (a tela trata como lista vazia). */
+  concluidas?: ConcluidaAgenda[]
 }
 
 export interface DiaDoMes {
@@ -277,14 +313,22 @@ export async function ler<T>(nome: string, args: Record<string, unknown>): Promi
   return r as unknown as T
 }
 
+/** `api.agenda(p_de, p_ate)`; `concluidas` sempre lista (vazia quando o banco anterior não a devolve). */
+async function lerAgenda(de: Date, ate: Date): Promise<Required<DiaAgenda>> {
+  const r = await ler<DiaAgenda>('agenda', { p_de: de.toISOString(), p_ate: ate.toISOString() })
+  return { blocos: r.blocos, concluidas: r.concluidas ?? [] }
+}
+
 export const pedidos = {
   listar: async (status: readonly Status[] | null, limite = 100) =>
     (await ler<{ itens: ItemPedido[] }>('meus_pedidos', { p_filtro: status ? { status, limite } : { limite } })).itens,
 
   detalhe: (id: string) => ler<RespostaPedido>('pedido', { p_id: id }),
 
-  agenda: async (de: Date, ate: Date) =>
-    (await ler<{ blocos: Bloco[] }>('agenda', { p_de: de.toISOString(), p_ate: ate.toISOString() })).blocos,
+  agenda: async (de: Date, ate: Date) => (await lerAgenda(de, ate)).blocos,
+
+  /** v2.2: os blocos e as corridas em andamento/concluídas do período. */
+  agendaCompleta: lerAgenda,
 
   horariosLivres: (dia: string, duracaoMin: number) =>
     ler<{ horarios: string[]; dia_cheio: boolean }>('horarios_livres', { p_dia: dia, p_duracao_min: duracaoMin }),
