@@ -1,6 +1,6 @@
 # v2.2: correções da auditoria externa
 
-Estado: **rascunho para o dono aprovar** (27/10/2026). Base: v2.1 no ar (versão 2.1.0, PRs #42, #43 e #44). Origem: o relatório *Auditoria_IVO_Transportes_Consolidada* (testes de 26/10, perfis Master e Cliente/Administrador da Umi San) e o pedido do dono em 27/10 para corrigir:
+Estado: **aprovada pelo dono em 27/10/2026**. Base: v2.1 no ar (versão 2.1.0, PRs #42, #43 e #44). Origem: o relatório *Auditoria_IVO_Transportes_Consolidada* (testes de 26/10, perfis Master e Cliente/Administrador da Umi San) e o pedido do dono em 27/10 para corrigir:
 - capacidade;
 - destino apagado;
 - preços;
