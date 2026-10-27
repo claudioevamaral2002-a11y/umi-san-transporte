@@ -18,7 +18,7 @@ begin
     return interno.negar('LOCAIS_DA_EMPRESA', 'locais', 'LIMITE_EXCEDIDO');
   end if;
   -- Curingas do LIKE viram texto comum.
-  t := replace(replace(replace(interno.sem_acento(btrim(p_texto)), '\', '\'), '%', '\%'), '_', '\_');
+  t := replace(replace(replace(interno.sem_acento(btrim(p_texto)), '\', '\\'), '%', '\%'), '_', '\_');
   -- v2.2.1: sem texto, os últimos usados primeiro; com texto, os mais usados (as duas primeiras chaves ficam nulas).
   return jsonb_build_object('ok', true, 'locais', coalesce((
     select jsonb_agg(jsonb_build_object('nome', l.nome, 'lat', l.lat, 'lng', l.lng, 'place_id', l.place_id)

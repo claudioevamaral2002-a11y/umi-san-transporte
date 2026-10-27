@@ -3,7 +3,7 @@
 -- de outra empresa nunca aparecem.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(10);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
@@ -41,6 +41,8 @@ select is((select jsonb_agg(l ->> 'nome') from jsonb_array_elements(api.locais_d
 select is(api.locais_da_empresa('') -> 'locais' -> 0, '{"nome": "Marina Itajaí", "lat": null, "lng": null,
   "place_id": "ChIJmarin"}'::jsonb, 'mesma forma de resposta: nome, lat, lng e place_id');
 select is(api.locais_da_empresa('') ->> 'ok', 'true', 'ok');
+select is(api.locais_da_empresa('itajai\') ->> 'ok', 'true', 'barra invertida no fim é texto comum (não quebra o LIKE)');
+select is(api.locais_da_empresa('\i') -> 'locais', '[]'::jsonb, 'barra invertida não vira curinga');
 select ok(not (api.locais_da_empresa('') -> 'locais') @> '[{"nome": "Itajaí da Empresa B"}]'::jsonb
           and not (api.locais_da_empresa('itajai') -> 'locais') @> '[{"nome": "Itajaí da Empresa B"}]'::jsonb,
   'o local mais recente de outra empresa não aparece para A');
