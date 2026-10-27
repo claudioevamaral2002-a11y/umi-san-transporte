@@ -5,11 +5,10 @@ import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../../design/componentes/Skeleton.tsx'
 import { ErroAoCarregar } from '../../../design/componentes/Tela.tsx'
 import { useConsulta } from '../../../lib/consulta.ts'
-import { periodoDe } from '../../../lib/extrato.ts'
 import { faturas } from '../../../lib/faturas.ts'
 import { dinheiro, type Painel } from '../../../lib/saldo.ts'
 import { useSessao } from '../../../lib/sessao.tsx'
-import { PainelResumo } from '../../../telas/adm/Painel.tsx'
+import { ResumoDoPainel } from '../../../telas/adm/Painel.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { BlocoPendenciasFaturas, CHAVE_RESUMO_FATURAS, temPendenciaFaturas } from './PendenciasFaturas.tsx'
 
@@ -34,12 +33,6 @@ export function pendenciasDoPainel(p: Painel): Pendencia[] {
   ].filter((x) => x.total > 0)
 }
 
-/** Painel do mês atual (o mesmo período do atalho "Este mês" do Painel). */
-function painelDoMes(agora: Date) {
-  const periodo = periodoDe('mes', agora)
-  return dinheiro.painel(periodo?.de ?? null, periodo ? new Date(Math.min(periodo.ate.getTime(), Date.now())) : null)
-}
-
 /**
  * Início do Master (v2.2, especificação §5.6): em cima as pendências com atalho (pedidos, corridas, faturas e empresas
  * com saldo baixo); embaixo o resumo do painel. Sem nada pendente: "Nada pendente agora."
@@ -49,11 +42,17 @@ export function InicioMaster() {
   const [agora] = useState(() => new Date())
   const ola = saudacao(agora)
   const primeiroNome = perfil?.nome.trim().split(/\s+/)[0] ?? ''
-  const painel = useConsulta('inicio-master-painel', () => painelDoMes(agora))
+  // A mesma leitura (e a mesma chave) do `PainelResumo`, feita uma vez só: serve às pendências e ao resumo.
+  const painel = useConsulta('painel-resumo', () => dinheiro.painel(null, null))
   const resumo = useConsulta(CHAVE_RESUMO_FATURAS, faturas.resumo)
   const lista = painel.dados ? pendenciasDoPainel(painel.dados) : []
-  const faturasProntas = resumo.dados !== undefined || resumo.erro
-  const nada = painel.dados !== undefined && faturasProntas && lista.length === 0 && !temPendenciaFaturas(resumo.dados)
+  // Só diz "Nada pendente" com as duas respostas na mão: se as faturas falharem, não dá para afirmar.
+  const nada =
+    painel.dados !== undefined &&
+    resumo.dados !== undefined &&
+    !resumo.erro &&
+    lista.length === 0 &&
+    !temPendenciaFaturas(resumo.dados)
 
   return (
     <FolhaMapa rotulo="Início">
@@ -103,7 +102,7 @@ export function InicioMaster() {
             </>
           )}
         </section>
-        <PainelResumo />
+        <ResumoDoPainel dados={painel.dados} />
       </div>
     </FolhaMapa>
   )

@@ -178,7 +178,10 @@ export function Auditoria() {
             name="de"
             value={rascunho.de}
             erro={errosPeriodo.de}
-            onChange={(e) => mudar('de', e.target.value)}
+            onChange={(e) => {
+              mudar('de', e.target.value)
+              setErrosPeriodo((x) => ({ ...x, de: undefined }))
+            }}
           />
           <Campo
             rotulo="Até"
@@ -186,7 +189,10 @@ export function Auditoria() {
             name="ate"
             value={rascunho.ate}
             erro={errosPeriodo.ate}
-            onChange={(e) => mudar('ate', e.target.value)}
+            onChange={(e) => {
+              mudar('ate', e.target.value)
+              setErrosPeriodo((x) => ({ ...x, ate: undefined }))
+            }}
           />
           <CampoSelecao className="col-span-2 sm:col-span-1" rotulo="Usuário" value={rascunho.usuario} onChange={(e) => mudar('usuario', e.target.value)}>
             <option value="">Todos</option>

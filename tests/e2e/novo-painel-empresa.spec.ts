@@ -240,7 +240,7 @@ test.describe('no computador', () => {
     await expect(cartao).toContainText('Não informado')
     await cartao.getByRole('button', { name: 'Alterar contato' }).click()
     const pedido = page.waitForRequest(`${URL_SUPABASE}/rest/v1/rpc/definir_contato_recarga`)
-    await cartao.getByLabel('Telefone ou WhatsApp para recarga').fill('(47) 99999-0000 · WhatsApp')
+    await cartao.getByLabel('Telefone ou WhatsApp', { exact: true }).fill('(47) 99999-0000 · WhatsApp')
     await cartao.getByRole('button', { name: 'Salvar' }).click()
     expect((await pedido).postDataJSON()).toEqual({ p_texto: '(47) 99999-0000 · WhatsApp' })
     await expect(page.getByText('O painel das empresas mostra "(47) 99999-0000 · WhatsApp" para recarregar.')).toBeVisible()

@@ -71,5 +71,3 @@ export function BlocoPendenciasFaturas({ dados }: { dados: readonly ResumoEmpres
     </Cartao>
   )
 }
-
-export default PendenciasFaturas

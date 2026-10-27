@@ -238,7 +238,7 @@ function ContatoRecarga({ atual, onSalvo }: { atual: Configuracao; onSalvo: (tex
       {editando ? (
         <form onSubmit={salvar} noValidate className="space-y-3">
           <Campo
-            rotulo="Telefone ou WhatsApp para recarga"
+            rotulo="Telefone ou WhatsApp"
             autoComplete="off"
             maxLength={60}
             value={contato}

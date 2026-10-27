@@ -32,7 +32,7 @@ const PAINEL_VAZIO = painelFalso({
 async function abrir(
   page: Page,
   caminho: string,
-  opcoes: { painel?: unknown; resumo?: unknown[]; categorias?: unknown[] } = {},
+  opcoes: { painel?: unknown; resumo?: unknown[]; resumoFalha?: boolean; categorias?: unknown[] } = {},
 ) {
   await comSessaoFalsa(page, ADM, AAL2)
   await simularMapas(page)
@@ -46,7 +46,9 @@ async function abrir(
   await simularPedidos(page)
   const dinheiro = await simularDinheiro(page, { painel: opcoes.painel })
   const categorias: Record<string, unknown>[] = []
-  await page.route(`${URL_SUPABASE}/rest/v1/rpc/faturas_resumo`, (r) => json(r, { ok: true, empresas: opcoes.resumo ?? RESUMO }))
+  await page.route(`${URL_SUPABASE}/rest/v1/rpc/faturas_resumo`, (r) =>
+    json(r, opcoes.resumoFalha ? { ok: false, codigo: 'ERRO_INESPERADO' } : { ok: true, empresas: opcoes.resumo ?? RESUMO }),
+  )
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/categorias_adm`, (r) => {
     categorias.push((r.request().postDataJSON() ?? {}) as Record<string, unknown>)
     return json(r, { ok: true, categorias: opcoes.categorias ?? [], precos: null })
@@ -75,8 +77,10 @@ test('as pendências com atalho em cima e o resumo do painel embaixo; sem o text
   await expect(page.getByTestId('painel-resumo')).toBeVisible()
   await expect(page.getByText('As telas novas chegam em breve', { exact: false })).toHaveCount(0)
   await expect(page.getByText('Nada pendente agora.')).toHaveCount(0)
-  // As pendências vêm do painel do mês atual (período com início).
-  await expect.poll(() => dinheiro.filter((c) => c.rpc === 'painel_adm' && c.corpo.p_de !== null).length).toBeGreaterThan(0)
+  // Uma leitura só do painel (a do resumo, sem período) serve às pendências e ao resumo.
+  const painel = () => dinheiro.filter((c) => c.rpc === 'painel_adm')
+  await expect.poll(() => painel().length).toBe(1)
+  expect(painel()[0]!.corpo).toEqual({ p_de: null, p_ate: null })
 
   // O atalho leva à tela que resolve.
   await lista.getByRole('link', { name: /Empresas abaixo do alerta/ }).click()
@@ -91,6 +95,12 @@ test('sem nada pendente: "Nada pendente agora."', async ({ page }) => {
   await expect(pendencias(page)).toContainText('Nada pendente agora.')
   await expect(pendencias(page).getByRole('link')).toHaveCount(0)
   await expect(page.getByTestId('pendencias-faturas')).toHaveCount(0)
+})
+
+test('se as faturas não responderem, não afirma "Nada pendente agora."', async ({ page }) => {
+  await abrir(page, '/', { painel: PAINEL_VAZIO, resumoFalha: true })
+  await expect(page.getByTestId('painel-resumo')).toBeVisible()
+  await expect(page.getByText('Nada pendente agora.')).toHaveCount(0)
 })
 
 test('só as faturas pendentes: não diz "Nada pendente agora."', async ({ page }) => {

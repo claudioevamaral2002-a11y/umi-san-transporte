@@ -90,8 +90,12 @@ test.describe('no computador (o campo de data aceita digitação)', () => {
     await expect(ate).not.toHaveAttribute('aria-invalid', 'true')
     expect(filtros()).toHaveLength(1)
 
-    // Invertida.
+    // Mexer no campo apaga o erro dele.
     await de.fill('2026-10-08')
+    await expect(page.getByText('Data inválida')).toHaveCount(0)
+    await expect(de).not.toHaveAttribute('aria-invalid', 'true')
+
+    // Invertida.
     await ate.fill('2026-10-01')
     await filtrar.click()
     await expect(page.getByText('A data inicial é depois da final')).toBeVisible()

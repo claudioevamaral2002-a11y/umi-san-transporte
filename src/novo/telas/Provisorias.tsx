@@ -1,18 +1,18 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
 import { FolhaMapa } from '../componentes/FolhaMapa.tsx'
 import { useTituloNaTela } from '../../design/componentes/Tela.tsx'
-
-/** v2.1: as pendências das faturas só carregam para o Master, fora do pacote inicial do app. */
-const PendenciasFaturas = lazy(() => import('./adm/PendenciasFaturas.tsx'))
 
 function saudacao(agora: Date): string {
   const h = agora.getHours()
   return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
 }
 
-/** Início provisório sobre o mapa: a tela de cada perfil chega nas Tarefas 8 (cliente) e 10 (motorista). */
+/**
+ * Início provisório sobre o mapa, só para um perfil sem tela própria: o cliente, o motorista e (v2.2) o Master já têm
+ * o seu Início (rotas.tsx, `InicioDoPerfil`).
+ */
 export function InicioProvisorio() {
   const { perfil } = useSessao()
   const [ola] = useState(() => saudacao(new Date()))
@@ -21,14 +21,6 @@ export function InicioProvisorio() {
     <FolhaMapa>
       <h1 className="ivo-h2">{primeiroNome ? `${ola}, ${primeiroNome}` : ola}</h1>
       <p className="mt-1 ivo-corpo text-texto-suave">As telas novas chegam em breve. O menu ☰ leva às de hoje.</p>
-      {/* v2.1: pendências das faturas do Master ("Quinzena fechada: … pronta para faturar", "Faturas vencidas"). */}
-      {perfil?.papel === 'ADM' && (
-        <div className="mt-4">
-          <Suspense fallback={null}>
-            <PendenciasFaturas />
-          </Suspense>
-        </div>
-      )}
     </FolhaMapa>
   )
 }
