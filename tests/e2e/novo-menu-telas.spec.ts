@@ -78,7 +78,7 @@ test('R12: o pedido orçado abre a corrida nova', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/corrida/${ID_PEDIDO}$`))
 })
 
-test('R12: o pedido agendado fica no detalhe de hoje dentro do app novo', async ({ page }) => {
+test('R12 (v2.2): o pedido agendado abre a corrida nova, com o cancelamento do agendamento', async ({ page }) => {
   const agendado = {
     ok: true,
     pedido: detalheFalso({ status: 'AGENDADA' }),
@@ -87,6 +87,15 @@ test('R12: o pedido agendado fica no detalhe de hoje dentro do app novo', async 
     acoes: { ...SEM_ACOES, cancelar_agendado: true },
   }
   await abrir(page, N1, `/pedidos/${ID_PEDIDO}`, { detalhes: [agendado] })
+  await expect(page).toHaveURL(new RegExp(`/corrida/${ID_PEDIDO}$`))
+  await expect(page.getByRole('heading', { name: 'Corrida confirmada' })).toBeVisible()
+  await expect(page.getByTestId('numero-pedido')).toHaveText('Pedido #0042')
+  await expect(page.getByRole('button', { name: 'Cancelar agendamento' })).toBeVisible()
+})
+
+test('R12: o pedido recusado fica no detalhe de hoje dentro do app novo', async ({ page }) => {
+  const recusado = { ok: true, pedido: detalheFalso({ status: 'RECUSADA' }), historico: [], orcamento: null, acoes: SEM_ACOES }
+  await abrir(page, N1, `/pedidos/${ID_PEDIDO}`, { detalhes: [recusado] })
   await expect(page).toHaveURL(new RegExp(`/pedidos/${ID_PEDIDO}$`))
   await expect(page.getByRole('heading', { name: 'Pedido #0042' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible()

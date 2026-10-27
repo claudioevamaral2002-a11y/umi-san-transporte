@@ -5,9 +5,11 @@ const r = (status: string, acoes: Record<string, boolean> = {}, modalidade = 'VE
   ({ pedido: { id: 'p1', status, modalidade }, acoes }) as unknown as Parameters<typeof destinoNoAppNovo>[1]
 
 describe('destinoNoAppNovo', () => {
-  it('cliente: solicitada, orçada, em andamento e concluída abrem a corrida nova; agendada e cancelada, o detalhe', () => {
-    for (const s of ['SOLICITADA', 'ORCADA', 'EM_ANDAMENTO', 'CONCLUIDA']) expect(destinoNoAppNovo('CLIENTE', r(s))).toBe('/corrida/p1')
-    for (const s of ['AGENDADA', 'CANCELADA', 'RECUSADA', 'EXPIRADA']) expect(destinoNoAppNovo('CLIENTE', r(s))).toBeNull()
+  it('cliente: da solicitada à concluída, e também cancelada e expirada, abrem a corrida nova; recusada e reprovada, o detalhe', () => {
+    for (const s of ['SOLICITADA', 'ORCADA', 'AGENDADA', 'EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA', 'EXPIRADA']) {
+      expect(destinoNoAppNovo('CLIENTE', r(s))).toBe('/corrida/p1')
+    }
+    for (const s of ['RECUSADA', 'REPROVADA']) expect(destinoNoAppNovo('CLIENTE', r(s))).toBeNull()
   })
   it('motorista: chamada, saída/viagem e concluída nas telas novas', () => {
     expect(destinoNoAppNovo('MOTORISTA', r('SOLICITADA', { orcar: true }))).toBe('/chamada/p1')

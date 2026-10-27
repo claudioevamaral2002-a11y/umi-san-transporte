@@ -6,6 +6,7 @@ import { Icone } from '../../design/componentes/Icone.tsx'
 import { MarcaAgora } from '../../design/componentes/MarcaAgora.tsx'
 import { RotaDePara, useRotaDePara } from '../../design/componentes/RotaDePara.tsx'
 import { StatusBadge, type Status } from '../../design/componentes/StatusBadge.tsx'
+import { textoCobranca } from '../../lib/cobrancaPedido.ts'
 import type { ItemPedido, LinhaOrcamento } from '../../lib/pedidos.ts'
 import { ETAPAS, etapaDoPedido, statusExibido } from '../../lib/situacao.ts'
 import { formatarContagem, formatarDuracao, formatarQuando, numeroPedido } from '../../lib/tempo.ts'
@@ -220,6 +221,8 @@ export function CartaoPedido({ item, mostrarEmpresa = false }: { item: ItemPedid
       : aberto && item.status === 'ORCADA' && item.valido_ate
         ? { prazo: item.valido_ate, prefixo: 'Aprovar em até' }
         : null
+  // v2.2: encerrado sem serviço mostra o que foi lançado ("Sem cobrança" ou "Multa R$ X"), nunca o orçamento.
+  const cobranca = textoCobranca(statusExibido(item.status, item.prazo_vencido), item.multa_cent)
   return (
     <Link
       to={`/pedidos/${item.id}`}
@@ -241,7 +244,7 @@ export function CartaoPedido({ item, mostrarEmpresa = false }: { item: ItemPedid
       <div className="mt-3">
         <Rota origem={item.origem} destino={item.destino} paradas={item.paradas} compacta />
       </div>
-      {(prazo || item.total_cent !== null) && (
+      {(prazo || cobranca !== null || item.total_cent !== null) && (
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-borda pt-3">
           {prazo ? (
             <span className="flex items-center gap-1.5 ivo-legenda font-semibold text-alerta-texto">
@@ -251,7 +254,13 @@ export function CartaoPedido({ item, mostrarEmpresa = false }: { item: ItemPedid
           ) : (
             <span />
           )}
-          {item.total_cent !== null && <Dinheiro centavos={item.total_cent} className="font-bold" />}
+          {cobranca !== null ? (
+            <span className="font-bold tabular-nums" data-testid="cobranca-pedido">
+              {cobranca}
+            </span>
+          ) : (
+            item.total_cent !== null && <Dinheiro centavos={item.total_cent} className="font-bold" />
+          )}
         </div>
       )}
     </Link>

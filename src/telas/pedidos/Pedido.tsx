@@ -10,11 +10,12 @@ import { Icone } from '../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../design/componentes/Mensagem.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
+import { textoCobranca } from '../../lib/cobrancaPedido.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import { mensagemDoCodigo } from '../../lib/erros.ts'
 import { ErroLeitura, pedidos, type RespostaPedido } from '../../lib/pedidos.ts'
 import { useSessao } from '../../lib/sessao.tsx'
-import { ROTULO_CARGA, ROTULO_MODALIDADE, ROTULO_REBOQUE, rotuloTrajeto } from '../../lib/situacao.ts'
+import { FILTROS, ROTULO_CARGA, ROTULO_MODALIDADE, ROTULO_REBOQUE, rotuloTrajeto, statusExibido } from '../../lib/situacao.ts'
 import { formatarDuracao, formatarQuando, numeroPedido } from '../../lib/tempo.ts'
 import { useTempoReal } from '../../lib/tempoReal.ts'
 import { formatarDataHora } from '../../lib/valores.ts'
@@ -265,6 +266,10 @@ export function Pedido() {
   const decide = dados.acoes.aprovar || dados.acoes.pedir_revisao || dados.acoes.reprovar
   const aberto = !p.prazo_vencido && (p.status === 'SOLICITADA' || p.status === 'ORCADA')
   const comValores = o && o.total_cent !== undefined && o.linhas
+  // v2.2: encerrado (ou vencido antes do cron) não mostra "Se precisar cancelar depois"; o selo diz o que foi lançado.
+  const exibido = statusExibido(p.status, p.prazo_vencido)
+  const encerrado = (FILTROS.encerrados.status as readonly string[]).includes(exibido)
+  const cobranca = textoCobranca(exibido, dados.cobranca?.multa_cent)
 
   return (
     <main>
@@ -277,7 +282,14 @@ export function Pedido() {
           {(prestador || perfil?.papel === 'GESTOR_FROTA') && <p className="ivo-legenda font-semibold text-texto-suave">{p.empresa_nome}</p>}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="ivo-h1 tabular-nums">Pedido {numeroPedido(p.numero)}</h1>
-            <SelosStatus status={p.status} prazoVencido={p.prazo_vencido} />
+            <div className="flex flex-wrap items-center gap-2">
+              <SelosStatus status={p.status} prazoVencido={p.prazo_vencido} />
+              {cobranca && (
+                <span className="inline-flex rounded-full border border-borda bg-superficie px-2.5 py-1 text-[13px] leading-tight font-bold" data-testid="selo-cobranca">
+                  {cobranca}
+                </span>
+              )}
+            </div>
           </div>
           {aberto && p.status === 'SOLICITADA' && (
             <p className="flex items-center gap-2 font-semibold text-alerta-texto">
@@ -345,7 +357,7 @@ export function Pedido() {
               <Mensagem tipo="info">O motorista sugere outro horário: {formatarQuando(o.horario_sugerido)}.</Mensagem>
             )}
             {comValores && <Memorial linhas={o.linhas!} total={o.total_cent!} />}
-            {o.regras && (
+            {o.regras && !encerrado && (
               <section aria-label="Regras de cancelamento" className="space-y-1 border-t border-borda pt-3">
                 <h2 className="font-bold">Se precisar cancelar depois de aprovado</h2>
                 <p className="ivo-legenda text-texto-suave">Multa sobre o valor aprovado, pela antecedência do aviso.</p>

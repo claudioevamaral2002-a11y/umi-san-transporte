@@ -124,7 +124,7 @@ export function AbaCorridas() {
         )
       ) : (
         <>
-          <p className="text-sm text-texto-suave">Corridas em andamento, concluídas e canceladas com cobrança.</p>
+          <p className="text-sm text-texto-suave">Corridas em andamento, concluídas e canceladas (com a multa, quando houve).</p>
           <TabelaCorridas
             titulo="Corridas do mês"
             itens={filtradas}
