@@ -145,7 +145,10 @@ test('agendada: /pedidos/{id} abre a corrida nova, com o número e os detalhes',
   await expect(page.getByRole('heading', { name: 'Corrida confirmada' })).toBeVisible()
   await expect(page.getByTestId('numero-pedido')).toHaveText('Pedido #0042')
   await page.getByTestId('detalhes-pedido').locator('summary').click()
-  await expect(page.getByTestId('detalhes-pedido')).toContainText('Obra Norte')
+  await expect(page.getByTestId('detalhes-pedido')).toContainText('Bomba d’água')
+  // Na confirmada, o centro de custo aparece uma vez só, fora dos detalhes.
+  await expect(page.getByTestId('detalhes-pedido')).not.toContainText('Obra Norte')
+  await expect(page.getByText('Obra Norte', { exact: true })).toHaveCount(1)
   // O cancelamento do agendamento (antes no detalhe de hoje) abre a folha com a multa calculada no servidor.
   await page.getByRole('button', { name: 'Cancelar agendamento' }).click()
   await expect(page.getByRole('dialog', { name: 'Cancelar agendamento' })).toBeVisible()
