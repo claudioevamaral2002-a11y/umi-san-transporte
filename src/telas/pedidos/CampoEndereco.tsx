@@ -46,6 +46,9 @@ export function CampoEndereco({
   const [ativo, setAtivo] = useState(-1)
   const [indisponivel, setIndisponivel] = useState(false)
   const [detalhando, setDetalhando] = useState(false)
+  // v2.2: cada digitação ou escolha conta uma mudança; o detalhe do Google que chega depois de outra mudança neste
+  // campo é velho e não sobrescreve o que o cliente digitou ou escolheu.
+  const mudancas = useRef(0)
 
   useEffect(
     () => () => {
@@ -86,6 +89,7 @@ export function CampoEndereco({
   async function escolher(opcao: Sugestao | 'mapa') {
     // O detalhar usa o token da mesma sessão das sugestões; só depois a sessão é encerrada.
     const token = sessao.current.token()
+    const minha = ++mudancas.current
     fechar(opcao === 'mapa' || opcao.daEmpresa)
     if (opcao === 'mapa') {
       aoMarcarNoMapa()
@@ -100,6 +104,7 @@ export function CampoEndereco({
     setDetalhando(true)
     const local = await detalhar(opcao.place_id, opcao.nome, token)
     sessao.current.encerrar()
+    if (minha !== mudancas.current) return // o cliente já mudou o campo: resposta velha
     setDetalhando(false)
     if (local) aoMudar({ texto: local.nome, local })
     else setIndisponivel(true)
@@ -213,6 +218,8 @@ export function CampoEndereco({
         aria-activedescendant={listaVisivel && ativo >= 0 ? idOpcao(ativo) : undefined}
         onChange={(e) => {
           const texto = e.target.value
+          mudancas.current++
+          setDetalhando(false)
           aoMudar({ texto, local: null })
           setAberta(true)
           agendarBusca(texto)

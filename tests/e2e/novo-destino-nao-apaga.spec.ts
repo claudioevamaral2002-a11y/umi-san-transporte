@@ -115,4 +115,17 @@ test.describe('v2.2: o destino não apaga', () => {
     await expect(parada).toHaveValue('Estaleiro Detroit')
     await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue('Porto de Itajaí')
   })
+
+  test('o cliente escolhe uma sugestão e redigita o mesmo campo antes do detalhe chegar: o texto digitado fica', async ({ page }) => {
+    const { liberar, segurado } = await abrir(page, 'ChIJnav')
+    const de = page.getByRole('combobox', { name: 'De', exact: true })
+    await escolher(page, 'De', 'Navship', /Estaleiro Navship/)
+    await expect.poll(() => segurado.chegou).toBe(true)
+    await de.fill('Rua Nova, 10')
+    liberar()
+    await expect.poll(() => segurado.respondido).toBe(true)
+    await page.waitForTimeout(300)
+    await expect(de).toHaveValue('Rua Nova, 10')
+    await expect(page.getByTestId('endereco-de')).toHaveCount(0)
+  })
 })

@@ -114,40 +114,54 @@ test.describe('v2.2: limite de pessoas e Ver cálculo', () => {
     expect(await pedidoEnviado(chamadas)).toMatchObject({ categoria: 'PASSAGEIROS', pessoas_qtd: 4 })
   })
 
-  test('o banco recusa com ACIMA_DA_CAPACIDADE: a tela mostra o erro e relê as categorias', async ({ page }) => {
-    const { categorias } = await abrir(page, {
-      respostas: { criar_pedido: [{ ok: false, codigo: 'ACIMA_DA_CAPACIDADE', detalhe: { pessoas_max: 4 } }] },
+  test('o banco recusa com ACIMA_DA_CAPACIDADE: a mensagem diz o limite, o contador desce e as categorias são relidas', async ({ page }) => {
+    const { chamadas, categorias } = await abrir(page, {
+      respostas: { criar_pedido: [{ ok: false, codigo: 'ACIMA_DA_CAPACIDADE', pessoas_max: 4 }] },
     })
-    const lidas = categorias.length
-    await page.getByRole('button', { name: /^Pedir IVO Passageiros · / }).click()
-    const erro = page.getByRole('alert')
-    await expect(erro).toBeVisible()
-    await expect(erro).not.toHaveText('')
-    await expect(page).not.toHaveURL(/\/corrida\//)
-    await expect.poll(() => categorias.length).toBeGreaterThan(lidas)
-  })
-
-  test('"Ver cálculo" abre as linhas da prévia da categoria escolhida; 390 px sem rolagem lateral e sem violações', async ({ page }) => {
-    await abrir(page)
-    const calculo = page.getByTestId('ver-calculo')
-    await expect(calculo.getByTestId('memorial')).toBeHidden()
-    await calculo.getByText('Ver cálculo').click()
-    await expect(calculo.getByTestId('memorial')).toContainText('Km rodados')
-    await expect(calculo.getByTestId('memorial')).toContainText('Retorno (50%)')
-    await expect(calculo).toContainText('R$ 220,50')
-    // Outra categoria: as linhas dela.
+    // Carga Leve sem limite na lista; o banco diz que agora leva até 4.
     await page.getByRole('radio', { name: /IVO Carga Leve/ }).click()
-    await page.getByTestId('ver-calculo').getByText('Ver cálculo').click()
-    await expect(page.getByTestId('memorial')).toContainText('Taxa fixa do reboque')
-    expect(await semRolagemLateral(page)).toBe(true)
-    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-    // Escuro, com o aviso de pessoas na tela.
-    await page.emulateMedia({ colorScheme: 'dark' })
     await abrirDetalhes(page)
     for (let i = 0; i < 5; i++) await mais(page).click()
-    await page.getByRole('radio', { name: /IVO Passageiros/ }).click()
+    await expect(pessoas(page).locator('output')).toHaveText('6')
+    await page.getByRole('textbox', { name: 'Descrição da carga' }).fill('Ferramentas')
+    const lidas = categorias.length
+    await page.getByRole('button', { name: /^Pedir IVO Carga Leve · / }).click()
+    const erro = page.getByRole('alert')
+    await expect(erro).toContainText('leva até 4 pessoas')
+    await expect(page).not.toHaveURL(/\/corrida\//)
+    await expect(pessoas(page).locator('output')).toHaveText('4')
     await expect(page.getByRole('status').filter({ hasText: 'ajustamos para 4' })).toBeVisible()
-    expect(await semRolagemLateral(page)).toBe(true)
-    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+    await expect.poll(() => categorias.length).toBeGreaterThan(lidas)
+    expect(chamadas.filter((c) => c.rpc === 'criar_pedido')[0]!.corpo.p).toMatchObject({ pessoas_qtd: 6 })
   })
 })
+
+for (const tema of ['light', 'dark'] as const) {
+  test.describe(`tema ${tema === 'light' ? 'claro' : 'escuro'}`, () => {
+    test.use({ colorScheme: tema })
+
+    test(`"Ver cálculo" abre as linhas da prévia; 390 px sem rolagem lateral e sem violações (tema ${tema === 'light' ? 'claro' : 'escuro'})`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await abrir(page)
+      const calculo = page.getByTestId('ver-calculo')
+      await expect(calculo.getByTestId('memorial')).toBeHidden()
+      await calculo.getByText('Ver cálculo').click()
+      await expect(calculo.getByTestId('memorial')).toContainText('Km rodados')
+      await expect(calculo.getByTestId('memorial')).toContainText('Retorno (50%)')
+      await expect(calculo).toContainText('R$ 220,50')
+      // Outra categoria: as linhas dela.
+      await page.getByRole('radio', { name: /IVO Carga Leve/ }).click()
+      await page.getByTestId('ver-calculo').getByText('Ver cálculo').click()
+      await expect(page.getByTestId('memorial')).toContainText('Taxa fixa do reboque')
+      expect(await semRolagemLateral(page)).toBe(true)
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+      // Com o aviso de pessoas na tela.
+      await abrirDetalhes(page)
+      for (let i = 0; i < 5; i++) await mais(page).click()
+      await page.getByRole('radio', { name: /IVO Passageiros/ }).click()
+      await expect(page.getByRole('status').filter({ hasText: 'ajustamos para 4' })).toBeVisible()
+      expect(await semRolagemLateral(page)).toBe(true)
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+    })
+  })
+}

@@ -373,8 +373,15 @@ export function EscolherCategoria({
       return
     }
     setEnviando(false)
-    setErroEnvio(mensagemDoPedido(r.codigo))
-    // O limite da categoria pode ter mudado desde a lista: relê as categorias (com o `pessoas_max` novo).
+    setErroEnvio(mensagemDoPedido(r.codigo, undefined, { pessoas_max: r.pessoas_max }))
+    if (r.codigo === 'ACIMA_DA_CAPACIDADE') {
+      // O limite mudou desde a lista: o contador desce ao limite que o banco devolveu, e as categorias são relidas.
+      const limite = limitarPessoas(pessoas, typeof r.pessoas_max === 'number' ? r.pessoas_max : null)
+      if (limite.ajustou) {
+        setForm((a) => ({ ...a, pessoasQtd: limite.qtd }))
+        setAvisoPessoas(`${preenchida.nome} leva até ${limite.qtd} pessoas: ajustamos para ${limite.qtd}.`)
+      }
+    }
     if (r.codigo === 'CATEGORIA_INDISPONIVEL' || r.codigo === 'ACIMA_DA_CAPACIDADE') lista.recarregar()
     if (r.codigo === 'HORARIO_OCUPADO') {
       if (modo === 'agora') setAgora(null)

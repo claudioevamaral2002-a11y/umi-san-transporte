@@ -37,4 +37,16 @@ describe('mudarCampo (v2.2: cada campo muda sozinho, a partir do valor atual)', 
     expect(c.escolhendo).toBe(false)
     expect(comParadaNova(comParadaNova(comParadaNova(c, 2), 3), 4).paradas).toHaveLength(3)
   })
+
+  it('depois de voltar aos endereços, uma resposta de um campo que já tinha ponto não reabre a escolha', () => {
+    let c = mudarCampo(inicio, 'origem', local('Estaleiro Navegantes', 'ChIJdef'))
+    c = mudarCampo(c, 'destino', local('Porto de Itajaí', 'ChIJpor'))
+    c = { ...c, escolhendo: false }
+    c = mudarCampo(c, 'origem', local('Estaleiro Navship', 'ChIJnav'))
+    expect(c.escolhendo).toBe(false)
+    // Um campo que perde o ponto (texto digitado) e ganha de novo leva à escolha.
+    c = mudarCampo(c, 'destino', { texto: 'Detroit', local: null })
+    c = mudarCampo(c, 'destino', local('Estaleiro Detroit', 'ChIJdet'))
+    expect(c.escolhendo).toBe(true)
+  })
 })

@@ -98,6 +98,8 @@ export const MENSAGENS = {
   FATURA_CANCELADA: 'Esta fatura foi cancelada. Atualize a página.',
   // Conferido no aparelho antes de enviar a NF (enviarPdfNota).
   PDF_INVALIDO: 'Envie a NF em PDF de até 5 MB.',
+  // v2.2: criar_pedido com mais pessoas do que a categoria leva; o banco devolve `pessoas_max` na resposta.
+  ACIMA_DA_CAPACIDADE: 'Esta categoria leva até {pessoas_max} pessoas.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
@@ -121,12 +123,34 @@ export const MENSAGENS_CAMPO_DO_PEDIDO = {
   outros_custos: 'Os outros custos podem ter até 120 caracteres.',
 } as const satisfies Record<string, string>
 
-/** Mensagem de uma recusa de `criar_pedido`; `campos` (opcional) são os campos inválidos conhecidos pela tela. */
-export function mensagemDoPedido(codigo: string | null | undefined, campos?: readonly string[]): string {
+/** v2.2: a mensagem quando falta o valor de um `{campo}` da mensagem do código. */
+const SEM_VALOR: Partial<Record<Codigo, string>> = {
+  ACIMA_DA_CAPACIDADE: 'Esta categoria leva menos pessoas.',
+}
+
+/**
+ * Mensagem de uma recusa de `criar_pedido`; `campos` (opcional) são os campos inválidos conhecidos pela tela e
+ * `valores` (v2.2, opcional) preenchem os `{chave}` da mensagem (ex.: `{ pessoas_max: 4 }`). Sem um valor (número ou
+ * texto), a mensagem genérica do código, sem o número.
+ */
+export function mensagemDoPedido(
+  codigo: string | null | undefined,
+  campos?: readonly string[],
+  valores?: Readonly<Record<string, unknown>>,
+): string {
   if (codigo === 'CAMPOS_INVALIDOS') {
     for (const c of campos ?? []) if (Object.hasOwn(MENSAGENS_CAMPO_DO_PEDIDO, c)) return MENSAGENS_CAMPO_DO_PEDIDO[c as keyof typeof MENSAGENS_CAMPO_DO_PEDIDO]
   }
-  return mensagemDoCodigo(codigo)
+  const modelo = mensagemDoCodigo(codigo)
+  let faltou = false
+  const texto = modelo.replace(/\{(\w+)\}/g, (_, chave: string) => {
+    const v = valores && Object.hasOwn(valores, chave) ? valores[chave] : undefined
+    if ((typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && v.trim() !== '')) return String(v)
+    faltou = true
+    return ''
+  })
+  if (!faltou) return texto
+  return (codigo && Object.hasOwn(SEM_VALOR, codigo) ? SEM_VALOR[codigo as Codigo] : undefined) ?? MENSAGENS.ERRO_INESPERADO
 }
 
 /** VEICULO_INVALIDO no envio do orçamento (a mensagem de MENSAGENS é a do cadastro do veículo). */
