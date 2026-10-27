@@ -3,8 +3,11 @@
 import type { Papel } from '../lib/estadoSessao.ts'
 import type { RespostaPedido } from '../lib/pedidos.ts'
 
-/** Situações com tela nova do cliente (`/corrida/:id`: aguardando, confirmar, acompanhar e concluída). */
-const DO_CLIENTE = new Set(['SOLICITADA', 'ORCADA', 'EM_ANDAMENTO', 'CONCLUIDA'])
+/**
+ * Situações com tela nova do cliente (`/corrida/:id`: aguardando, confirmar, confirmada, acompanhar, concluída e
+ * encerrada). v2.2: com a agendada, a cancelada e a expirada; recusada e reprovada seguem no detalhe de hoje.
+ */
+const DO_CLIENTE = new Set(['SOLICITADA', 'ORCADA', 'AGENDADA', 'EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA', 'EXPIRADA'])
 
 /** Caminho da tela nova para este pedido e este papel, ou `null` (fica o detalhe de hoje). */
 export function destinoNoAppNovo(papel: Papel, r: Pick<RespostaPedido, 'pedido' | 'acoes'>): string | null {

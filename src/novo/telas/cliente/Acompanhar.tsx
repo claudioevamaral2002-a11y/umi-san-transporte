@@ -9,6 +9,7 @@ import type { Acompanhamento } from '../../acompanhamento.ts'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { iniciais } from '../../formatos.ts'
 import { TrilhoCorrida } from './Aguardando.tsx'
+import { DetalhesPedido } from './DetalhesPedido.tsx'
 
 /** Texto de "Compartilhar": sem link de rastreio no MVP. Só a chegada que o motorista transmitiu entra; estimativa não. */
 export function textoParaCompartilhar(chegada: Chegada | null): string {
@@ -106,14 +107,9 @@ export function Acompanhar({ r, a }: { r: RespostaPedido; a: Acompanhamento }) {
       <p role="status" className="mt-1 min-h-5 ivo-legenda text-texto-suave">
         {aviso}
       </p>
-      <details className="mt-1 rounded-cartao border border-borda">
-        <summary className="flex min-h-12 cursor-pointer items-center px-3 ivo-legenda font-semibold text-texto">
-          Detalhes do pedido
-        </summary>
-        <div className="px-3 pb-3">
-          <TrilhoCorrida r={r} />
-        </div>
-      </details>
+      <div className="mt-1">
+        <DetalhesPedido r={r} antes={<TrilhoCorrida r={r} />} />
+      </div>
     </FolhaMapa>
   )
 }
