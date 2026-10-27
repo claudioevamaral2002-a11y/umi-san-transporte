@@ -150,7 +150,8 @@ export const api = {
 
   /**
    * v2.2: as ações que já aparecem na auditoria, com a contagem (opções do filtro de Ação; `opcoesDeAcao` agrupa).
-   * Só o Master. Recusa ou falha: `ErroLeitura`.
+   * Só quem tem a permissão de ver a auditoria (`VER_AUDITORIA`, a mesma de `listar_auditoria`). Recusa ou falha:
+   * `ErroLeitura`.
    */
   acoesAuditoria: async (): Promise<AcaoAuditoria[]> => {
     const r = await rpc('acoes_auditoria', {})

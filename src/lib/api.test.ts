@@ -15,7 +15,7 @@ describe('api.acoesAuditoria (v2.2)', () => {
     expect(await api.acoesAuditoria()).toEqual([{ acao: 'CRIAR_PEDIDO', total: 9 }])
     expect(rpc).toHaveBeenCalledWith('acoes_auditoria', {})
   })
-  it('recusa (não é Master) vira ErroLeitura com o código', async () => {
+  it('recusa (sem a permissão VER_AUDITORIA) vira ErroLeitura com o código', async () => {
     rpc.mockResolvedValue({ data: { ok: false, codigo: 'SEM_PERMISSAO' }, error: null })
     await expect(api.acoesAuditoria()).rejects.toMatchObject({ codigo: 'SEM_PERMISSAO' })
     await expect(api.acoesAuditoria()).rejects.toBeInstanceOf(ErroLeitura)

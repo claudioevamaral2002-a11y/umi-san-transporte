@@ -17,6 +17,8 @@ export interface AjudaCliente {
 type CancelamentoRecebido = Faixa[] | { faixas_cancelamento?: Faixa[]; faixas?: Faixa[] } | null | undefined
 
 interface RespostaAjuda {
+  /** O banco manda as faixas no topo da resposta, como no contrato. */
+  faixas_cancelamento?: Faixa[] | null
   cancelamento?: CancelamentoRecebido
   prazo_orcar_horas: number
   validade_orcamento_horas: number
@@ -44,7 +46,7 @@ export async function ajudaCliente(): Promise<AjudaCliente | null> {
     throw e
   }
   return {
-    faixas_cancelamento: faixasDe(r.cancelamento),
+    faixas_cancelamento: faixasDe(r.faixas_cancelamento ?? r.cancelamento),
     prazo_orcar_horas: r.prazo_orcar_horas,
     validade_orcamento_horas: r.validade_orcamento_horas,
     forma_cobranca: r.forma_cobranca ?? 'CREDITO',
@@ -53,7 +55,7 @@ export async function ajudaCliente(): Promise<AjudaCliente | null> {
 
 /**
  * Link do "Falar com a IVO": telefone com 10 ou 11 dígitos (DDD + número; a formatação e um "+55" na frente são
- * aceitos) → `tel:+55…`; `wa.me/…` ou `https://wa.me/…` → o link do WhatsApp (sempre com https). Qualquer outra
+ * aceitos; começando com 0, como "0800…", não) → `tel:+55…`; `wa.me/…` ou `https://wa.me/…` → o link do WhatsApp (sempre com https). Qualquer outra
  * coisa → `null`: a tela mostra o texto sem link.
  */
 export function linkContato(contato: string): string | null {
@@ -66,5 +68,6 @@ export function linkContato(contato: string): string | null {
     if (!digitos.startsWith('55')) return null
     digitos = digitos.slice(2)
   }
-  return /^\d{10,11}$/.test(digitos) ? `tel:+55${digitos}` : null
+  // DDD nunca começa com 0: "0800…" e o prefixo de operadora ficam sem link.
+  return /^[1-9]\d{9,10}$/.test(digitos) ? `tel:+55${digitos}` : null
 }

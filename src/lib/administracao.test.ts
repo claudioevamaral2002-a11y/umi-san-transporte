@@ -89,6 +89,17 @@ describe('ações da auditoria (v2.2)', () => {
     ])
     expect(r[3]!.opcoes).toEqual([{ valor: 'NOVA_ACAO_X', rotulo: 'NOVA_ACAO_X', total: 1 }])
   })
+  it('as ações novas da v2.2 têm nome e grupo', () => {
+    expect(GRUPO_ACAO.ACOES_AUDITORIA).toBe('Acesso')
+    expect(GRUPO_ACAO.AJUDA_CLIENTE).toBe('Pedidos')
+    expect(GRUPO_ACAO.CONTATO_IVO).toBe('Pedidos')
+    expect(GRUPO_ACAO.LOCAIS_EMPRESA_TODOS).toBe('Cadastros')
+    expect(GRUPO_ACAO.RENOMEAR_LOCAL).toBe('Cadastros')
+    expect(GRUPO_ACAO.EXCLUIR_LOCAL).toBe('Cadastros')
+    for (const a of ['ACOES_AUDITORIA', 'AJUDA_CLIENTE', 'CONTATO_IVO', 'LOCAIS_EMPRESA_TODOS', 'RENOMEAR_LOCAL', 'EXCLUIR_LOCAL']) {
+      expect(nomeAcao(a)).not.toBe(a)
+    }
+  })
   it('opcoesDeAcao com lista vazia não devolve grupo', () => {
     expect(opcoesDeAcao([])).toEqual([])
   })

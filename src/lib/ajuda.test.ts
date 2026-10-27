@@ -46,6 +46,24 @@ describe('ajudaCliente (v2.2)', () => {
     })
     expect(rpc).toHaveBeenCalledWith('ajuda_cliente', {})
   })
+  it('formato do banco: faixas_cancelamento no topo da resposta', async () => {
+    rpc.mockResolvedValue({
+      data: {
+        ok: true,
+        faixas_cancelamento: FAIXAS,
+        prazo_orcar_horas: 12,
+        validade_orcamento_horas: 48,
+        forma_cobranca: 'CREDITO',
+      },
+      error: null,
+    })
+    expect(await ajudaCliente()).toEqual({
+      faixas_cancelamento: FAIXAS,
+      prazo_orcar_horas: 12,
+      validade_orcamento_horas: 48,
+      forma_cobranca: 'CREDITO',
+    })
+  })
   it('aceita as faixas soltas ou em `faixas`', async () => {
     rpc.mockResolvedValue({
       data: { ok: true, cancelamento: FAIXAS, prazo_orcar_horas: 12, validade_orcamento_horas: 48, forma_cobranca: 'CREDITO' },
@@ -81,6 +99,9 @@ describe('linkContato (v2.2)', () => {
   it('qualquer outra coisa → null', () => {
     expect(linkContato('')).toBeNull()
     expect(linkContato('99999-0000')).toBeNull()
+    expect(linkContato('0800 123 4567')).toBeNull()
+    expect(linkContato('+55 0800 123 4567')).toBeNull()
+    expect(linkContato('04799990000')).toBeNull()
     expect(linkContato('+1 415 555 0100')).toBeNull()
     expect(linkContato('ivo@exemplo.com')).toBeNull()
     expect(linkContato('http://wa.me/5547999990000')).toBeNull()
