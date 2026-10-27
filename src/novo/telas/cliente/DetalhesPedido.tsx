@@ -25,7 +25,7 @@ function linhasDaCarga(p: DetalhePedido): Array<{ rotulo: string; valor: string 
 }
 
 /** As linhas de "Detalhes do pedido" que existem neste pedido, na ordem da especificação. */
-function linhasDoDetalhe(p: DetalhePedido): Array<{ rotulo: string; valor: ReactNode }> {
+function linhasDoDetalhe(p: DetalhePedido, semCentroCusto: boolean): Array<{ rotulo: string; valor: ReactNode }> {
   const linhas: Array<{ rotulo: string; valor: ReactNode }> = [...linhasDaCarga(p)]
   const paradas = paradasDoDetalhe(p).textos.filter((t) => t.trim() !== '')
   if (paradas.length === 1) linhas.push({ rotulo: 'Parada', valor: paradas[0] })
@@ -48,7 +48,7 @@ function linhasDoDetalhe(p: DetalhePedido): Array<{ rotulo: string; valor: React
   const obs = texto(p.observacoes)
   if (obs) linhas.push({ rotulo: 'Observações', valor: obs })
   const centro = texto(p.centro_custo)
-  if (centro) linhas.push({ rotulo: 'Centro de custo', valor: centro })
+  if (centro && !semCentroCusto) linhas.push({ rotulo: 'Centro de custo', valor: centro })
   const contato = [texto(p.contato_nome), texto(p.contato_telefone)].filter(Boolean).join(' · ')
   if (contato) linhas.push({ rotulo: 'Contato', valor: contato })
   return linhas
@@ -56,10 +56,19 @@ function linhasDoDetalhe(p: DetalhePedido): Array<{ rotulo: string; valor: React
 
 /**
  * "Detalhes do pedido", recolhido (`<details>`: abre e fecha pelo teclado e o leitor de tela anuncia o estado). `antes`
- * entra no topo do conteúdo (o Acompanhar põe ali o trilho, que já ficava recolhido). Sem nada a mostrar, não aparece.
+ * entra no topo do conteúdo (o Acompanhar põe ali o trilho, que já ficava recolhido). `semCentroCusto`: a tela já mostra o
+ * centro de custo fora dos detalhes (corrida confirmada). Sem nada a mostrar, não aparece.
  */
-export function DetalhesPedido({ r, antes }: { r: RespostaPedido; antes?: ReactNode }) {
-  const linhas = linhasDoDetalhe(r.pedido)
+export function DetalhesPedido({
+  r,
+  antes,
+  semCentroCusto = false,
+}: {
+  r: RespostaPedido
+  antes?: ReactNode
+  semCentroCusto?: boolean
+}) {
+  const linhas = linhasDoDetalhe(r.pedido, semCentroCusto)
   if (linhas.length === 0 && !antes) return null
   return (
     <details className="rounded-cartao border border-borda" data-testid="detalhes-pedido">

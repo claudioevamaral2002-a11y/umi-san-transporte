@@ -87,7 +87,7 @@ function CorridaConfirmada({
       </div>
       <TrilhoCorrida r={r} />
       <div className="mt-3">
-        <DetalhesPedido r={r} />
+        <DetalhesPedido r={r} semCentroCusto />
       </div>
       <dl className="mt-3 space-y-1.5">
         {p.motorista_nome && (
