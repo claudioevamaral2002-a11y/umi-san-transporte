@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DetalhePedido } from '../lib/pedidos.ts'
-import { lerPedirDaqui, lerPedirDeNovo, pedirDaquiDe, pedirDeNovoDe } from './pedirDeNovo.ts'
+import { lerPedirDeNovo, pedirDeNovoDe } from './pedirDeNovo.ts'
 
 const pedido = (extra: Partial<DetalhePedido> = {}) =>
   ({
@@ -47,20 +47,5 @@ describe('lerPedirDeNovo', () => {
   it('estado estranho vira nulo', () => {
     expect(lerPedirDeNovo(null)).toBeNull()
     expect(lerPedirDeNovo({ pedirDeNovo: { origem: 1 } })).toBeNull()
-  })
-})
-
-describe('pedirDaqui (v2.2)', () => {
-  const local = { nome: 'Porto de Itajaí', endereco: null, lat: null, lng: null, place_id: 'p1' }
-  it('leva o local como origem e volta igual do estado da navegação', () => {
-    const r = pedirDaquiDe(local)!
-    expect(r).toEqual({ texto: 'Porto de Itajaí', local })
-    expect(lerPedirDaqui({ pedirDaqui: JSON.parse(JSON.stringify(r)) })).toEqual(r)
-  })
-  it('sem place_id nem coordenadas, ou estado estranho: nada', () => {
-    expect(pedirDaquiDe({ ...local, place_id: null })).toBeNull()
-    expect(lerPedirDaqui(null)).toBeNull()
-    expect(lerPedirDaqui({ pedirDaqui: { texto: 1, local } })).toBeNull()
-    expect(lerPedirDaqui({ pedirDaqui: { texto: 'x', local: { ...local, place_id: null } } })).toBeNull()
   })
 })

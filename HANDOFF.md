@@ -162,6 +162,13 @@ O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deplo
 - **Pendências do dono:** cancelar o pedido de teste #0018 e preencher o Contato da IVO (roteiro, itens 1 e 2); conferir o "Até quantas pessoas" de cada categoria.
 - **Fora desta versão:** limite de peso; o redesenho visual do relatório (navegação lateral, ícones por categoria, densidade), que fica para a **v2.3**, com protótipo para o dono escolher. A "3 dias" não teve defeito encontrado no código: entrou no roteiro em tela cheia.
 
+## 5G. v2.2.1: Últimos lugares no De/Para; sai Locais salvos e Carteira da empresa
+
+- Pedido do dono, logo depois da v2.2. RUNBOOK §23; roteiro em `docs/fases/v2-2-o-que-testar.md` (itens 25 a 27).
+- **Banco:** migration `20261028120000_locais_ultimos.sql` (`locais_da_empresa('')` com os usados por último primeiro) e pgTAP `0051`.
+- **App:** o `CampoEndereco` mostra **"Últimos lugares"** com o campo vazio. Saem do cliente a tela **Locais salvos** (com o "Pedir daqui" e o `src/lib/locais.ts`) e a **Carteira da empresa**, do ☰ e da barra, que fica com 3 atalhos. `/extrato` vira um redirecionamento: o N1 vai para `/empresa/carteira`, e os outros para `/`.
+- **Ficam:** as RPCs de locais da v2.2 no banco, a aba Carteira do Painel da empresa e o Extrato do app v1.
+
 ## 6. Onde está cada coisa
 
 | Precisa de… | Veja |

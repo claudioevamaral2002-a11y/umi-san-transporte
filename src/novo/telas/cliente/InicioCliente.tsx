@@ -11,7 +11,7 @@ import { FolhaMarcarNoMapa } from '../../../telas/pedidos/FolhaMarcarNoMapa.tsx'
 import { podeCriarPedido, usePedidoIndisponivel } from '../../../telas/pedidos/Pedidos.tsx'
 import { FolhaMapa } from '../../componentes/FolhaMapa.tsx'
 import { useCamadasDoMapa } from '../../MolduraNova.tsx'
-import { lerPedirDaqui, lerPedirDeNovo } from '../../pedirDeNovo.ts'
+import { lerPedirDeNovo } from '../../pedirDeNovo.ts'
 import {
   comParadaNova,
   completo,
@@ -43,7 +43,7 @@ export function InicioCliente() {
   // Os endereços num estado só, mudado por campo a partir do valor atual (v2.2): uma busca que termina tarde não
   // regrava os outros campos com valores antigos.
   const [campos, setCampos] = useState<CamposDoPedido>(() => ({
-    origem: de?.origem ?? lerPedirDaqui(state) ?? VAZIO,
+    origem: de?.origem ?? VAZIO,
     paradas: [],
     ids: [],
     destino: de?.destino ?? VAZIO,

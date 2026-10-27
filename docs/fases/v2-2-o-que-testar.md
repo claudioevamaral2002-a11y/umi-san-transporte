@@ -51,11 +51,11 @@ Marque cada item. **Se algo falhar, pare e anote a tela e a mensagem** (sem link
 22. **Mês igual ao dia.** Em **Mês**, o dia diz "N pedidos seus", e a lista embaixo tem os mesmos N cartões.
 23. **"3 dias" em tela cheia.** Toque em **3 dias** com o celular na vertical e depois na horizontal. Aparecem **três colunas**, cada uma com o dia no topo, sem precisar arrastar para o lado. Se algo cortar ou sumir, **tire um print** e anote o modelo do celular.
 
-## F. Ajuda, Locais salvos e Carteira (celular 1)
+## F. Ajuda, Últimos lugares e Carteira (celular 1)
 24. **Ajuda do cliente.** ☰ › **Ajuda**: **"Falar com a IVO"** com o contato. As respostas falam de orçamento, aprovação, cancelamento (com as faixas de multa **do contrato da Umi San**) e recarga ou fatura.
-25. **Locais salvos (Solicitante).** ☰ › **Locais salvos**: aparecem os locais da empresa, os mais usados primeiro. Toque em **Pedir daqui**: o Início abre com o **De** preenchido. O Solicitante **não** vê o lápis.
-26. **Locais salvos (Administrador).** Entre como Administrador. Agora cada local tem o lápis: **renomeie** um local. **Excluir** pede confirmação; os pedidos antigos não mudam.
-27. **Carteira.** Numa empresa no Crédito, a **Carteira** diz **"Para recarregar, fale com a IVO: …"** com o contato. A aba **Corridas** do Painel diz "Corridas em andamento, concluídas e canceladas (com a multa, quando houve)".
+25. **Últimos lugares (v2.2.1).** No Início, toque no **De** com o campo vazio: abre a lista **"Últimos lugares"** com os locais dos pedidos mais recentes da empresa, o último primeiro. Toque num deles: o De fica preenchido. O mesmo vale para o **Para**. Ao digitar, o grupo volta a se chamar **"Locais da empresa"**.
+26. **Sem Locais salvos nem Carteira da empresa (v2.2.1).** O ☰ do cliente não tem mais **Locais salvos** nem **Carteira da empresa**, e a barra de baixo é **Pedir · Corridas · Agenda**. Como Administrador, abrir o endereço antigo `/extrato` leva a **Painel da empresa › Carteira** (ou às **Faturas**, no Faturado); como Solicitante, ao Início.
+27. **Carteira.** Como Administrador, numa empresa no Crédito, **Painel da empresa › Carteira** diz **"Para recarregar, fale com a IVO: …"** com o contato. A aba **Corridas** do Painel diz "Corridas em andamento, concluídas e canceladas (com a multa, quando houve)".
 
 ## G. Fim
-28. **Versão.** Em ☰ › **Perfil e segurança**, nos dois celulares e no computador, o fim da página mostra **versão 2.2.0**.
+28. **Versão.** Em ☰ › **Perfil e segurança**, nos dois celulares e no computador, o fim da página mostra **versão 2.2.1**.

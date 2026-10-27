@@ -110,9 +110,9 @@ test('R12 + R13: a Equipe do N1 abre no app novo com os níveis Administrador, S
   await expect(corpo.getByText(/^(Administrador|Solicitante|Visualizador)$/).first()).toBeVisible()
 })
 
-test('R12: a Carteira (extrato) e a Agenda abrem no app novo; o N2/N3 não abre a Equipe', async ({ page }) => {
+test('R12: a Agenda abre no app novo; o N2/N3 não abre a Equipe nem a antiga Carteira (v2.2.1)', async ({ page }) => {
   await abrir(page, N3, '/extrato')
-  await expect(page.getByRole('heading', { name: 'Carteira da empresa' })).toBeVisible()
+  await expect(page).toHaveURL(/\/$/)
   await page.goto('/agenda')
   await expect(page).toHaveURL(/\/agenda$/)
   await page.goto('/equipe')

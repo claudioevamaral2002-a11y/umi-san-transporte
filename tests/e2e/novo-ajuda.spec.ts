@@ -1,5 +1,6 @@
 // v2.2 (Tarefa 5, especificação §5.5): a Ajuda real de cada perfil, com "Falar com a IVO" (link de telefone ou
-// WhatsApp, ou "Contato ainda não cadastrado") e perguntas que abrem e fecham; e o contato na Carteira do Crédito.
+// WhatsApp, ou "Contato ainda não cadastrado") e perguntas que abrem e fecham; e o contato na Carteira do Crédito
+// (v2.2.1: só no Painel da empresa › Carteira, do Administrador).
 // Roda no projeto Playwright `novo` (dist-novo).
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
@@ -9,6 +10,7 @@ import { simularMapas } from './apoio/mapasFalsos.ts'
 import { simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa, json, URL_SUPABASE, type PerfilFalso } from './apoio/sessaoFalsa.ts'
 
+const N1: PerfilFalso = { papel: 'CLIENTE', nivel: 1, nome: 'Marina Souza', empresa_nome: 'Umi San' }
 const N2: PerfilFalso = { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
 const N3: PerfilFalso = { papel: 'CLIENTE', nivel: 3, nome: 'Paulo Reis', empresa_nome: 'Umi San' }
 const MOTORISTA: PerfilFalso = { papel: 'MOTORISTA', nome: 'Ivo Barbosa', tem_2fa: true }
@@ -28,6 +30,24 @@ async function abrir(page: Page, perfil: PerfilFalso, caminho: string, { contato
   await simularApi(page)
   await simularPedidos(page, {})
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/saldo_empresa`, (r) => json(r, saldoFalso({ forma_cobranca: forma })))
+  await page.route(`${URL_SUPABASE}/rest/v1/rpc/painel_empresa`, (r) =>
+    json(r, {
+      ok: true,
+      resumo: {
+        mes: '2026-10-01',
+        gasto_cent: 0,
+        reservado_cent: 0,
+        disponivel_cent: 100000,
+        total_mes_cent: 0,
+        contato_recarga: contato,
+        forma_cobranca: forma,
+      },
+      proximas: [],
+      recentes: [],
+      do_mes: [],
+      pessoas: { sem_corridas: 0, convites_pendentes: 0 },
+    }),
+  )
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/contato_ivo`, (r) => json(r, { ok: true, contato }))
   await page.route(`${URL_SUPABASE}/rest/v1/rpc/ajuda_cliente`, (r) =>
     json(r, {
@@ -64,6 +84,8 @@ test('cliente: o ☰ abre a Ajuda real, com o contato em link de telefone e as f
   await expect(faixas).toContainText('Menos de 6 h antes: multa de 100%')
   await expect(page.getByText('Como recarregar o saldo?')).toBeVisible()
   await expect(page.getByText('Como a empresa paga?')).toHaveCount(0)
+  await page.getByText('Como recarregar o saldo?').click()
+  await expect(page.getByText(/saldo e o extrato em Painel da empresa › Carteira/)).toBeVisible()
   expect(await semRolagemLateral(page)).toBe(false)
 })
 
@@ -97,22 +119,22 @@ test('Master: onde fica cada coisa', async ({ page }) => {
   }
 })
 
-test('Carteira no Crédito: "Para recarregar, fale com a IVO" com o link', async ({ page }) => {
-  await abrir(page, N2, '/extrato')
+test('Painel da empresa › Carteira no Crédito: "Para recarregar, fale com a IVO" com o link', async ({ page }) => {
+  await abrir(page, N1, '/empresa/carteira')
   const contato = page.getByTestId('contato-recarga')
   await expect(contato).toContainText('Para recarregar, fale com a IVO:')
   await expect(contato.getByRole('link', { name: '(47) 99999-0000' })).toHaveAttribute('href', 'tel:+5547999990000')
   expect(await semRolagemLateral(page)).toBe(false)
 })
 
-test('Carteira no Faturado: sem o contato de recarga', async ({ page }) => {
-  await abrir(page, N2, '/extrato', { forma: 'FATURADO' })
-  await expect(page.getByTestId('total-devido')).toBeVisible()
+test('Carteira no Faturado: vira Faturas, sem o contato de recarga', async ({ page }) => {
+  await abrir(page, N1, '/empresa/carteira', { forma: 'FATURADO' })
+  await expect(page).toHaveURL(/\/empresa\/faturas$/)
   await expect(page.getByTestId('contato-recarga')).toHaveCount(0)
 })
 
 test('Carteira sem contato: "Contato ainda não cadastrado"', async ({ page }) => {
-  await abrir(page, N2, '/extrato', { contato: '' })
+  await abrir(page, N1, '/empresa/carteira', { contato: '' })
   await expect(page.getByTestId('contato-recarga')).toContainText('Contato ainda não cadastrado')
 })
 

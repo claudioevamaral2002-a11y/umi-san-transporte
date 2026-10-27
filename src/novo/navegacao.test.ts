@@ -47,10 +47,10 @@ describe('navegação do app novo', () => {
     expect(tituloDaPagina([], '/qualquer')).toBe('')
   })
 
-  it('a barra do cliente só fica em Corridas, Agenda e Carteira', () => {
+  it('a barra do cliente só fica em Corridas e Agenda', () => {
     expect(temBarraCliente('/pedidos')).toBe(true)
     expect(temBarraCliente('/agenda/')).toBe(true)
-    expect(temBarraCliente('/extrato')).toBe(true)
+    expect(temBarraCliente('/extrato')).toBe(false)
     expect(temBarraCliente('/pedidos/42')).toBe(false)
     expect(temBarraCliente('/perfil')).toBe(false)
     expect(temBarraCliente('/')).toBe(false)

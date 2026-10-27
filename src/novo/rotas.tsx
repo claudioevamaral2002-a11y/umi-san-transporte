@@ -44,10 +44,14 @@ const tela =
   <M extends Record<string, unknown>>(carregar: () => Promise<M>, nome: keyof M & string) =>
   async () => ({ Component: (await carregar())[nome] as ComponentType })
 
-/** Extrato do cliente com o título e o saldo conforme a forma de cobrança (v2.1, §5.3). */
-const extratoPelaForma = async () => {
-  const { Extrato } = await import('../telas/extrato/Extrato.tsx')
-  return { Component: () => <Extrato pelaFormaDeCobranca /> }
+/**
+ * v2.2.1: sai a "Carteira da empresa" do cliente. O endereço antigo (/extrato, de favoritos e apps em cache) leva o
+ * Administrador da empresa (N1) à aba Carteira do Painel da empresa (que manda o Faturado para as Faturas); os
+ * outros, ao Início. O saldo e o extrato continuam só no Painel da empresa.
+ */
+function ExtratoAntigo() {
+  const { perfil } = useSessao()
+  return <Navigate to={perfil && gereEquipe(perfil) ? '/empresa/carteira' : '/'} replace />
 }
 
 /** Cadastrar/editar veículo pelo ADM (escolhe o motorista ao cadastrar). */
@@ -57,8 +61,7 @@ const veiculoDoAdm = async () => {
 }
 
 /**
- * Telas do app atual reusadas dentro da moldura nova, na mesma origem (Ruling R12): Pedidos, Agenda, Extrato
- * (Carteira), Equipe e as /adm/* do ADM, com as mesmas guardas de hoje. O banco filtra o que cada um vê.
+ * Telas do app atual reusadas dentro da moldura nova, na mesma origem (Ruling R12): Pedidos, Agenda, Equipe e as /adm/* do ADM, com as mesmas guardas de hoje. O banco filtra o que cada um vê.
  */
 const TELAS_DO_APP_ATUAL = [
   { path: 'pedidos', lazy: tela(() => import('../telas/pedidos/Pedidos.tsx'), 'Pedidos') },
@@ -66,11 +69,8 @@ const TELAS_DO_APP_ATUAL = [
   { path: 'pedidos/novo', element: <Navigate to="/" replace /> },
   { path: 'pedidos/:id', lazy: tela(() => import('./telas/PedidoNoAppNovo.tsx'), 'PedidoNoAppNovo') },
   { path: 'agenda', lazy: tela(() => import('../telas/agenda/Agenda.tsx'), 'Agenda') },
-  {
-    element: <GuardaPerfil permite={ehCliente} />,
-    // v2.1: no Faturado, o Extrato vira "Lançamentos" (a v1 não passa a prop e fica como está).
-    children: [{ path: 'extrato', lazy: extratoPelaForma }],
-  },
+  // v2.2.1: sem a "Carteira da empresa"; o endereço antigo só redireciona.
+  { path: 'extrato', Component: ExtratoAntigo },
   {
     element: <GuardaPerfil permite={gereEquipe} />,
     children: [{ path: 'equipe', lazy: tela(() => import('../telas/pessoas/Pessoas.tsx'), 'Equipe') }],
@@ -115,10 +115,6 @@ const TELAS_NOVAS = [
   { path: 'perfil', lazy: tela(() => import('./telas/PerfilSeguranca.tsx'), 'PerfilSeguranca') },
   // v2.2 (§5.5): as telas reais no lugar do "em breve" (o `EmBreve` fica, sem uso, para telas futuras).
   { path: 'ajuda', lazy: tela(() => import('./telas/Ajuda.tsx'), 'Ajuda') },
-  {
-    element: <GuardaPerfil permite={ehCliente} />,
-    children: [{ path: 'locais', lazy: tela(() => import('./telas/cliente/LocaisSalvos.tsx'), 'LocaisSalvos') }],
-  },
 ]
 
 /**
