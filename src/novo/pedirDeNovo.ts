@@ -5,9 +5,7 @@
 import type { Local } from '../lib/enderecos.ts'
 import { DIARIAS_MAX } from '../lib/limitesPedido.ts'
 import type { DetalhePedido } from '../lib/pedidos.ts'
-
-/** Dá para traçar a rota: place_id do Google, ou coordenadas de um ponto marcado no mapa (mesma regra de `pontoDaRota`). */
-const temPonto = (l: Pick<Local, 'lat' | 'lng' | 'place_id'>) => !!l.place_id || (l.lat !== null && l.lng !== null)
+import { temPontoNaRota as temPonto } from '../lib/pontoRota.ts'
 
 export interface PedirDeNovo {
   origem: { texto: string; local: Local }
