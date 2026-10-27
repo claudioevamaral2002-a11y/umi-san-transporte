@@ -222,7 +222,7 @@ export function ContratoDetalhe() {
                   A versão {proxima.versao} entra em vigor em {formatarDataHora(proxima.vigente_desde)}.
                 </Mensagem>
               )}
-              <CartoesContrato versao={vigente} />
+              <CartoesContrato versao={vigente} empresa={empresa} />
             </>
           ) : (
             <Cartao className="space-y-3 text-center" data-testid="sem-contrato">

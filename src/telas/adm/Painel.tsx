@@ -239,6 +239,11 @@ export function Painel({ extra }: { extra?: ReactNode } = {}) {
 /** Resumo do painel no Início do ADM. */
 export function PainelResumo() {
   const { dados } = useConsulta('painel-resumo', () => dinheiro.painel(null, null))
+  return <ResumoDoPainel dados={dados} />
+}
+
+/** v2.2: o resumo a partir do painel já lido (o Início do Master lê uma vez para as pendências e para o resumo). */
+export function ResumoDoPainel({ dados }: { dados: DadosPainel | undefined }) {
   if (!dados) return null
   return (
     <section aria-labelledby="titulo-painel-resumo" className="space-y-2" data-testid="painel-resumo">

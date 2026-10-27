@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
 import { CarregandoPickup } from '../design/componentes/CarregandoPickup.tsx'
 import type { Perfil } from '../lib/estadoSessao.ts'
@@ -21,11 +21,20 @@ const ehAdm = (p: Perfil) => p.papel === 'ADM'
 const ehMotorista = (p: Perfil) => p.papel === 'MOTORISTA'
 const ehCliente = (p: Perfil) => p.papel === 'CLIENTE'
 
-/** Início sobre o mapa: o cliente pede (Tarefa 8), o motorista responde e dirige (Tarefa 10); o ADM ainda no provisório. */
+/** v2.2: o Início do Master (pendências e resumo do painel) carrega só para ele, fora do pacote inicial. */
+const InicioMaster = lazy(() => import('./telas/adm/InicioMaster.tsx'))
+
+/** Início sobre o mapa: o cliente pede (Tarefa 8), o motorista responde e dirige (Tarefa 10), o Master vê as pendências. */
 function InicioDoPerfil() {
   const { perfil } = useSessao()
   if (perfil?.papel === 'CLIENTE') return <InicioCliente />
   if (perfil?.papel === 'MOTORISTA') return <InicioMotorista />
+  if (perfil?.papel === 'ADM')
+    return (
+      <Suspense fallback={null}>
+        <InicioMaster />
+      </Suspense>
+    )
   return <InicioProvisorio />
 }
 

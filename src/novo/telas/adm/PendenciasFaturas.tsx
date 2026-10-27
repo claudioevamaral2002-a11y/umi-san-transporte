@@ -3,7 +3,7 @@ import { Cartao } from '../../../design/componentes/Cartao.tsx'
 import { Icone } from '../../../design/componentes/Icone.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
 import { useConsulta } from '../../../lib/consulta.ts'
-import { faturas, rotuloQuinzena } from '../../../lib/faturas.ts'
+import { faturas, rotuloQuinzena, type ResumoEmpresaFaturas } from '../../../lib/faturas.ts'
 
 /** Chave da leitura de `faturas_resumo` (só o Master): a mesma na lista de Faturas e nas pendências. */
 export const CHAVE_RESUMO_FATURAS = 'adm-faturas-resumo'
@@ -14,6 +14,16 @@ export const CHAVE_RESUMO_FATURAS = 'adm-faturas-resumo'
  */
 export function PendenciasFaturas() {
   const { dados } = useConsulta(CHAVE_RESUMO_FATURAS, faturas.resumo)
+  return <BlocoPendenciasFaturas dados={dados} />
+}
+
+/** Há fatura a gerar (quinzena fechada) ou vencida no resumo. */
+export function temPendenciaFaturas(dados: readonly ResumoEmpresaFaturas[] | null | undefined): boolean {
+  return (dados ?? []).some((e) => e.quinzena_pronta || e.vencidas_cent > 0)
+}
+
+/** O bloco das pendências a partir do resumo já lido (o Início do Master lê uma vez e decide o "Nada pendente"). */
+export function BlocoPendenciasFaturas({ dados }: { dados: readonly ResumoEmpresaFaturas[] | null | undefined }) {
   const prontas = (dados ?? []).filter((e) => e.quinzena_pronta)
   const vencidas = (dados ?? []).filter((e) => e.vencidas_cent > 0)
   if (prontas.length === 0 && vencidas.length === 0) return null
@@ -61,5 +71,3 @@ export function PendenciasFaturas() {
     </Cartao>
   )
 }
-
-export default PendenciasFaturas

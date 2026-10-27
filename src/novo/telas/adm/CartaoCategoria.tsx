@@ -9,7 +9,7 @@ import { Folha } from '../../../design/componentes/Folha.tsx'
 import { Icone } from '../../../design/componentes/Icone.tsx'
 import { Mensagem } from '../../../design/componentes/Mensagem.tsx'
 import { formatarCentavos } from '../../../design/dinheiro.ts'
-import { categoriasAdm, type CategoriaAdm } from '../../../lib/categoriasAdm.ts'
+import { categoriasAdm, lerPessoasMax, type CategoriaAdm } from '../../../lib/categoriasAdm.ts'
 import { mensagemDoCodigo } from '../../../lib/erros.ts'
 import {
   CAMPOS_TARIFA,
@@ -54,7 +54,14 @@ export function resumoTarifa(c: CategoriaAdm, t: Tarifa): string {
     .join(' · ')
 }
 
-/** Nome e descrição; o código, a carga, o reboque e o veículo do cliente não mudam aqui. */
+/** v2.2: "até 4 pessoas" no modo de ver; sem limite, nada. */
+export const textoPessoasMax = (n: number | null | undefined) => (n ? `até ${n} pessoa${n === 1 ? '' : 's'}` : null)
+
+const ERRO_PESSOAS = 'De 1 a 99. Deixe vazio para não limitar.'
+
+/**
+ * Nome, descrição e (v2.2) "Até quantas pessoas"; o código, a carga, o reboque e o veículo do cliente não mudam aqui.
+ */
 function DadosDaCategoria({
   c,
   aoSalvar,
@@ -66,12 +73,14 @@ function DadosDaCategoria({
 }) {
   const [nome, setNome] = useState(c.nome)
   const [descricao, setDescricao] = useState(c.descricao_curta)
-  const [erros, setErros] = useState<{ nome?: string; descricao?: string }>({})
+  const [pessoas, setPessoas] = useState(c.pessoas_max ? String(c.pessoas_max) : '')
+  const [erros, setErros] = useState<{ nome?: string; descricao?: string; pessoas?: string }>({})
   const [falha, setFalha] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const caixa = useRef<HTMLFormElement>(null)
   // Só espaço a mais nas pontas não é mudança (o salvar apara).
-  const mudou = nome.trim() !== c.nome || descricao.trim() !== c.descricao_curta
+  const mudou =
+    nome.trim() !== c.nome || descricao.trim() !== c.descricao_curta || pessoas.trim() !== (c.pessoas_max ? String(c.pessoas_max) : '')
 
   // O nome ou a descrição não salvos também contam como rascunho (sair da página pergunta).
   useEffect(() => {
@@ -84,7 +93,8 @@ function DadosDaCategoria({
     if (enviando) return
     const n = nome.trim()
     const d = descricao.trim()
-    const novos = validarNomeDescricao(n, d)
+    const max = lerPessoasMax(pessoas)
+    const novos = { ...validarNomeDescricao(n, d), ...(max === undefined ? { pessoas: ERRO_PESSOAS } : {}) }
     setErros(novos)
     if (Object.keys(novos).length > 0) {
       requestAnimationFrame(() => caixa.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
@@ -92,7 +102,15 @@ function DadosDaCategoria({
     }
     setEnviando(true)
     setFalha(null)
-    const r = await categoriasAdm.salvar({ codigo: c.codigo, nome: n, descricao_curta: d, ordem: c.ordem, ativa: c.ativa })
+    const r = await categoriasAdm.salvar({
+      codigo: c.codigo,
+      nome: n,
+      descricao_curta: d,
+      ordem: c.ordem,
+      ativa: c.ativa,
+      // Só manda o limite quando mudou: sem a chave, o banco mantém o de hoje.
+      ...(max !== (c.pessoas_max ?? null) ? { pessoas_max: max ?? null } : {}),
+    })
     setEnviando(false)
     if (r.ok) aoSalvar(`${n} salva.`)
     else setFalha(mensagemDoCodigo(r.codigo))
@@ -108,6 +126,16 @@ function DadosDaCategoria({
           erro={erros.descricao}
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
+        />
+        <Campo
+          rotulo="Até quantas pessoas"
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={2}
+          ajuda="Vazio = sem limite."
+          erro={erros.pessoas}
+          value={pessoas}
+          onChange={(e) => setPessoas(e.target.value)}
         />
       </div>
       <div aria-live="assertive">{falha && <Mensagem tipo="erro">{falha}</Mensagem>}</div>
@@ -206,6 +234,7 @@ export function CartaoCategoria({
   // Saem "Com reboque" e "Leva: …" (§2): ficam só as marcações que mudam o comportamento.
   const marcas = [...(c.veiculo_cliente ? ['Veículo do cliente'] : []), ...(c.ativa ? [] : ['Inativa'])]
   const resumo = c.tarifa ? resumoTarifa(c, c.tarifa) : ''
+  const pessoasMax = textoPessoasMax(c.pessoas_max)
   const secao = useRef<HTMLElement>(null)
   const lapis = useRef<HTMLButtonElement>(null)
   const editandoAntes = useRef(editando)
@@ -272,6 +301,11 @@ export function CartaoCategoria({
                 {c.nome}
               </h2>
               <p className="ivo-legenda text-texto-suave">{c.descricao_curta}</p>
+              {pessoasMax && (
+                <p data-testid="pessoas-max" className="ivo-legenda font-semibold">
+                  {pessoasMax}
+                </p>
+              )}
               {marcas.length > 0 && (
                 <ul aria-label="Marcações" className="flex flex-wrap gap-1.5">
                   {marcas.map((m) => (
@@ -301,7 +335,7 @@ export function CartaoCategoria({
           ) : (
             <>
               <DadosDaCategoria
-                key={`${c.nome}-${c.descricao_curta}`}
+                key={`${c.nome}-${c.descricao_curta}-${c.pessoas_max ?? ''}`}
                 c={c}
                 aoSalvar={aoSalvar}
                 aoRascunho={aoRascunho}
