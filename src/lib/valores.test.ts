@@ -11,6 +11,7 @@ import {
   paraEntradaDataHora,
   percentualParaBp,
   reaisParaCentavos,
+  validarPeriodo,
 } from './valores.ts'
 
 describe('reaisParaCentavos', () => {
@@ -101,5 +102,25 @@ describe('datas em America/Sao_Paulo', () => {
   it('formatos pt-BR', () => {
     expect(formatarDataHora('2026-10-08T17:30:00Z')).toBe('08/10/2026 14:30')
     expect(formatarDataLonga(new Date('2026-10-08T15:00:00Z'))).toBe('Quinta-feira, 8 de outubro')
+  })
+})
+
+describe('validarPeriodo (v2.2)', () => {
+  const c = (valor: string, invalido = false) => ({ valor, invalido })
+  it('vazio é sem limite', () => {
+    expect(validarPeriodo(c(''), c(''))).toBeNull()
+    expect(validarPeriodo(c('2026-10-01'), c(''))).toBeNull()
+  })
+  it('campo incompleto (o navegador acusa) ou data que não existe → Data inválida', () => {
+    expect(validarPeriodo(c('', true), c('2026-10-10'))).toBe('Data inválida')
+    expect(validarPeriodo(c('2026-10-01'), c('2026-02-31'))).toBe('Data inválida')
+    expect(validarPeriodo(c('2026-1-01'), c(''))).toBe('Data inválida')
+  })
+  it('De depois de Até → A data inicial é depois da final', () => {
+    expect(validarPeriodo(c('2026-10-20'), c('2026-10-10'))).toBe('A data inicial é depois da final')
+  })
+  it('período válido (inclusive o mesmo dia)', () => {
+    expect(validarPeriodo(c('2026-10-10'), c('2026-10-10'))).toBeNull()
+    expect(validarPeriodo(c('2028-02-29'), c('2028-03-01'))).toBeNull()
   })
 })

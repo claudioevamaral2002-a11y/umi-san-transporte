@@ -61,9 +61,142 @@ export const ACOES: Record<string, string> = {
   CRIAR_LINK_CURTO: 'Criar link de acesso',
   RESGATAR_LINK: 'Abrir link de acesso (Continuar)',
   VERIFICAR_LINK: 'Validar link de acesso',
+  AUDITORIA_LIMITADA: 'Limite de chamadas atingido',
+  SALVAR_TELEFONE: 'Salvar telefone',
+  MEU_TELEFONE: 'Ver o próprio telefone',
+  // v2.2: pedidos (`grep -ho "interno.negar('…'\|auditar('…'" supabase/migrations`)
+  CRIAR_PEDIDO: 'Criar pedido',
+  LISTAR_PEDIDOS: 'Listar pedidos',
+  VER_PEDIDO: 'Ver pedido',
+  VER_PENDENCIAS: 'Ver pendências',
+  VER_AGENDA: 'Ver agenda',
+  DIAS_DO_MES: 'Ver dias do mês',
+  HORARIOS_LIVRES: 'Ver horários livres',
+  CALCULAR_ORCAMENTO: 'Calcular orçamento',
+  PREVIA_ORCAMENTO: 'Prévia do orçamento',
+  ENVIAR_ORCAMENTO: 'Enviar orçamento',
+  APROVAR_ORCAMENTO: 'Aprovar orçamento',
+  REPROVAR_ORCAMENTO: 'Reprovar orçamento',
+  PEDIR_REVISAO: 'Pedir revisão do orçamento',
+  RECUSAR_PEDIDO: 'Recusar pedido',
+  CANCELAR_PEDIDO: 'Cancelar pedido',
+  CANCELAR_AGENDADO: 'Cancelar pedido agendado',
+  CANCELAR_SEM_SAIDA: 'Cancelar sem saída do motorista',
+  SIMULAR_CANCELAMENTO: 'Simular cancelamento',
+  EXPIRAR_VENCIDOS: 'Expirar pedidos vencidos',
+  CONFIRMAR_CORRIDA: 'Confirmar corrida',
+  REGISTRAR_SAIDA: 'Registrar saída',
+  REGISTRAR_ETA: 'Registrar previsão de chegada',
+  INFORMAR_PREVISAO: 'Informar nova previsão',
+  ENVIAR_POSICAO: 'Enviar posição',
+  CONCLUIR: 'Concluir corrida',
+  AVALIAR: 'Avaliar corrida',
+  ENVIAR_FOTO: 'Enviar foto',
+  AUTORIZAR_FOTO: 'Autorizar envio de foto',
+  CONFIRMAR_FOTO: 'Confirmar foto',
+  VER_FOTOS: 'Ver fotos',
+  CATEGORIAS_DISPONIVEIS: 'Ver categorias e preços do pedido',
+  LOCAIS_DA_EMPRESA: 'Buscar locais da empresa',
+  USO_MAPAS: 'Busca de endereço (mapas)',
+  // v2.2: dinheiro
+  VER_SALDO: 'Ver saldo',
+  VER_EXTRATO: 'Ver extrato',
+  LANCAR_RECARGA: 'Lançar recarga',
+  LANCAR_AJUSTE: 'Lançar ajuste',
+  ESTORNAR_LANCAMENTO: 'Estornar lançamento',
+  RECONCILIAR_SALDOS: 'Reconciliar saldos',
+  PAINEL_EMPRESA: 'Ver painel da empresa',
+  VER_PAINEL_ADM: 'Ver painel do Master',
+  // v2.2: faturas
+  VER_FATURAS: 'Ver faturas',
+  VER_FATURA: 'Ver fatura',
+  PREVIA_FATURA: 'Prévia da fatura',
+  GERAR_FATURA: 'Gerar fatura',
+  MARCAR_FATURA_PAGA: 'Marcar fatura como paga',
+  CANCELAR_FATURA: 'Cancelar fatura',
+  TROCAR_PDF_FATURA: 'Trocar PDF da nota fiscal',
+  // v2.2: cadastros
+  PUBLICAR_TARIFAS: 'Publicar tabela de categorias',
+  CATEGORIAS_ADM: 'Ver categorias (Master)',
+  SALVAR_CATEGORIA: 'Salvar categoria',
+  EXCLUIR_CATEGORIA: 'Excluir categoria',
+  CATEGORIAS_VEICULO: 'Alterar categorias do veículo',
+  SALVAR_VEICULO: 'Salvar veículo',
+  MEUS_VEICULOS: 'Ver os próprios veículos',
+  MUDAR_SITUACAO_VEICULO: 'Mudar situação do veículo',
+  DEFINIR_TETO_MAPAS: 'Alterar teto de buscas de endereço',
+  DEFINIR_CONTATO_RECARGA: 'Alterar contato da IVO',
+  RENOMEAR_LOCAL: 'Renomear local salvo',
+  EXCLUIR_LOCAL: 'Excluir local salvo',
 }
 
 export const nomeAcao = (acao: string) => ACOES[acao] ?? acao
+
+export type GrupoAcao = 'Acesso' | 'Pedidos' | 'Dinheiro' | 'Faturas' | 'Cadastros'
+
+/** Ordem dos grupos no filtro de Ação. */
+export const GRUPOS_ACAO: readonly GrupoAcao[] = ['Acesso', 'Pedidos', 'Dinheiro', 'Faturas', 'Cadastros']
+
+const grupo = (g: GrupoAcao, acoes: string[]) => Object.fromEntries(acoes.map((a) => [a, g])) as Record<string, GrupoAcao>
+
+/** v2.2: o assunto de cada ação conhecida (o filtro de Ação agrupa por ele). */
+export const GRUPO_ACAO: Record<string, GrupoAcao> = {
+  ...grupo('Acesso', [
+    'PREPARAR_CONVITE', 'CONVIDAR_LINK', 'GERAR_LINK', 'ALTERAR_PERFIL', 'DEFINIR_ATIVO', 'DESATIVAR_AUTH',
+    'REATIVAR_AUTH', 'RESETAR_2FA', 'AUTORIZAR_OPERACAO_USUARIO', 'DEFINIR_PERMISSAO', 'AUTORIZAR_DEFINIR_SENHA',
+    'DEFINIR_SENHA', 'CONFIRMAR_SENHA', 'CONVITE_PRIMEIRO_ADM', 'LINK_PRIMEIRO_ADM', 'CRIAR_LINK_CURTO', 'RESGATAR_LINK',
+    'VERIFICAR_LINK', 'AUDITORIA_LIMITADA', 'SALVAR_TELEFONE', 'MEU_TELEFONE',
+  ]),
+  ...grupo('Pedidos', [
+    'CRIAR_PEDIDO', 'LISTAR_PEDIDOS', 'VER_PEDIDO', 'VER_PENDENCIAS', 'VER_AGENDA', 'DIAS_DO_MES', 'HORARIOS_LIVRES',
+    'CALCULAR_ORCAMENTO', 'PREVIA_ORCAMENTO', 'ENVIAR_ORCAMENTO', 'APROVAR_ORCAMENTO', 'REPROVAR_ORCAMENTO',
+    'PEDIR_REVISAO', 'RECUSAR_PEDIDO', 'CANCELAR_PEDIDO', 'CANCELAR_AGENDADO', 'CANCELAR_SEM_SAIDA',
+    'SIMULAR_CANCELAMENTO', 'EXPIRAR_VENCIDOS', 'CONFIRMAR_CORRIDA', 'REGISTRAR_SAIDA', 'REGISTRAR_ETA',
+    'INFORMAR_PREVISAO', 'ENVIAR_POSICAO', 'CONCLUIR', 'AVALIAR', 'ENVIAR_FOTO', 'AUTORIZAR_FOTO', 'CONFIRMAR_FOTO',
+    'VER_FOTOS', 'CATEGORIAS_DISPONIVEIS', 'LOCAIS_DA_EMPRESA', 'USO_MAPAS',
+  ]),
+  ...grupo('Dinheiro', [
+    'VER_SALDO', 'VER_EXTRATO', 'LANCAR_RECARGA', 'LANCAR_AJUSTE', 'ESTORNAR_LANCAMENTO', 'RECONCILIAR_SALDOS',
+    'PAINEL_EMPRESA', 'VER_PAINEL_ADM',
+  ]),
+  ...grupo('Faturas', [
+    'VER_FATURAS', 'VER_FATURA', 'PREVIA_FATURA', 'GERAR_FATURA', 'MARCAR_FATURA_PAGA', 'CANCELAR_FATURA',
+    'TROCAR_PDF_FATURA',
+  ]),
+  ...grupo('Cadastros', [
+    'PUBLICAR_PARAMETROS', 'PUBLICAR_CONTRATO', 'PUBLICAR_TARIFAS', 'DEFINIR_RETENCAO_FOTOS', 'SALVAR_EMPRESA',
+    'DEFINIR_LOGO_EMPRESA', 'CATEGORIAS_ADM', 'SALVAR_CATEGORIA', 'EXCLUIR_CATEGORIA', 'CATEGORIAS_VEICULO',
+    'SALVAR_VEICULO', 'MEUS_VEICULOS', 'MUDAR_SITUACAO_VEICULO', 'DEFINIR_TETO_MAPAS', 'DEFINIR_CONTATO_RECARGA',
+    'RENOMEAR_LOCAL', 'EXCLUIR_LOCAL',
+  ]),
+}
+
+export interface OpcaoAcao {
+  /** O código, que vai no filtro (`p_acao`). */
+  valor: string
+  /** O nome legível, ou o próprio código quando a ação é desconhecida. */
+  rotulo: string
+  total: number
+}
+
+/**
+ * v2.2: opções do filtro de Ação a partir de `api.acoesAuditoria()`: agrupadas por assunto (na ordem de `GRUPOS_ACAO`),
+ * em ordem alfabética do rótulo dentro do grupo. Ação sem grupo conhecido vai para "Outras", no fim, com o código
+ * como rótulo. Grupos vazios não aparecem.
+ */
+export function opcoesDeAcao(
+  lista: readonly { acao: string; total: number }[],
+): { grupo: GrupoAcao | 'Outras'; opcoes: OpcaoAcao[] }[] {
+  const ordem: (GrupoAcao | 'Outras')[] = [...GRUPOS_ACAO, 'Outras']
+  const porGrupo = new Map<GrupoAcao | 'Outras', OpcaoAcao[]>(ordem.map((g) => [g, []]))
+  for (const { acao, total } of lista) {
+    const g = Object.hasOwn(GRUPO_ACAO, acao) ? GRUPO_ACAO[acao]! : 'Outras'
+    porGrupo.get(g)!.push({ valor: acao, rotulo: Object.hasOwn(ACOES, acao) ? ACOES[acao]! : acao, total })
+  }
+  return ordem
+    .map((g) => ({ grupo: g, opcoes: porGrupo.get(g)!.sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR')) }))
+    .filter((g) => g.opcoes.length > 0)
+}
 
 /** Normaliza para busca sem acento e sem caixa. */
 export function normalizar(texto: string): string {
