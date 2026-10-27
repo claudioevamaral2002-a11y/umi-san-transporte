@@ -165,3 +165,17 @@ Cada item abaixo diz o achado, a causa encontrada no código e a correção. Os 
 - O contato de recarga vira **"Contato da IVO"**, usado na Ajuda e na Carteira.
 - O redesenho visual fica para a **v2.3**.
 - Versão do app: **2.2.0**.
+
+## 10. Desvios na implementação
+
+Notas do que saiu diferente do aprovado. As decisões acima não mudaram.
+
+- **Título da Encerrada por situação (§2 "Cancelada", §5.2):** sem multa, o topo diz "Cancelada sem cobrança", **"Expirada · sem cobrança"**, **"Recusada pelo Ivo · sem cobrança"** ou **"Reprovada · sem cobrança"**. Com multa, "Multa R$ X" em todas. A reserva devolvida vem depois ("· reserva de R$ X devolvida").
+- **Agendada (§5.2):** abre `/corrida/{id}`, e o **"Cancelar agendamento"** (com a multa calculada no servidor) está nessa tela, e não só no detalhe de hoje.
+- **Agenda do N2 (§7):** quem vê só os próprios pedidos é o **N2 (Solicitante)**. O N3 (Visualizador) vê os da empresa, como no resto do app. O pgTAP testa assim.
+- **Locais (§4.3):** os ids dos locais são **bigint** (os da tabela que já existia).
+- **Código novo `JA_EXISTE`:** renomear um local para um nome que a empresa já usa é recusado com `JA_EXISTE` ("Já existe um local salvo com este nome."). É uma recusa nova só das RPCs novas; nenhuma chamada antiga muda.
+- **Cobrança (§4.6):** `debito_cent`, `multa_cent` e `liberado_cent` são **líquidos de estornos** (uma multa estornada volta a nulo), e `liberado_cent` só aparece **quando não há débito líquido**: na saída do motorista, a reserva vira débito e não é dinheiro devolvido. Cada valor é nulo quando dá zero.
+- **v1 (§2 "Preço no contrato"):** a nota dos km aparece na tela de Contratos da v1 **sem o link**.
+- **"Ver cálculo" (§5.1):** fica **embaixo da lista de categorias**, para a categoria escolhida, e não dentro do cartão.
+- **Configurações (§5.6):** o título do bloco é "Contato da IVO (aparece na Ajuda e na Carteira)", e o campo se chama **"Telefone ou WhatsApp"**.

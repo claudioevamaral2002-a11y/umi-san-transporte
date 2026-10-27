@@ -147,6 +147,21 @@ O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deplo
 - **Pendências do dono:** trocar a Umi San para Faturado (RUNBOOK §21.1), acertando o saldo antes, e gerar a fatura a cada dia 1 e 16.
 - **Possível melhoria:** o `PainelEmpresa` remonta a cada troca de aba (relê o painel); vem de antes da v2.1.
 
+## 5F. v2.2: correções da auditoria externa
+
+- Especificação: `docs/fases/v2-2-correcoes-auditoria-desenho.md` (aprovada em 27/10, com os desvios na §10). Plano: `docs/fases/v2-2-plano.md`. Roteiro: `docs/fases/v2-2-o-que-testar.md`. RUNBOOK §22.
+- **Origem:** o relatório *Auditoria_IVO_Transportes_Consolidada* (26/10). Nove itens: capacidade, destino apagado, preços, resumo do pedido, agenda, telas "em breve", início do Master, filtro da auditoria e cancelada sem cobrança.
+- **Banco** (migrations `20261027120000` e `20261027120100`, pgTAP `0050`):
+  - `categorias.pessoas_max` (Passageiros = 4) e a recusa nova `ACIMA_DA_CAPACIDADE` em `criar_pedido`, que mantém a trava da agenda;
+  - `agenda.concluidas`;
+  - `locais_empresa_todos`, `renomear_local` e `excluir_local` (só o N1);
+  - `contato_ivo`, `ajuda_cliente` e `acoes_auditoria`;
+  - `multa_cent` em `meus_pedidos` e `cobranca` em `pedido`, líquidas de estornos (`interno.cobranca_atividade`).
+- **Telas:** Ajuda e Locais salvos de verdade (sai o `EmBreve` das rotas); Início do Master com pendências; tela "Encerrada" para cancelada, expirada, recusada e reprovada; número e "Detalhes do pedido" na corrida; agendada abre `/corrida/{id}`.
+- **e2e real:** `tests/e2e/real/v2-2-auditoria.spec.ts` (limite de 4 → pedido com 4 → cancelado sem cobrança → concluída na agenda).
+- **Pendências do dono:** cancelar o pedido de teste #0018 e preencher o Contato da IVO (roteiro, itens 1 e 2); conferir o "Até quantas pessoas" de cada categoria.
+- **Fora desta versão:** limite de peso; o redesenho visual do relatório (navegação lateral, ícones por categoria, densidade), que fica para a **v2.3**, com protótipo para o dono escolher. A "3 dias" não teve defeito encontrado no código: entrou no roteiro em tela cheia.
+
 ## 6. Onde está cada coisa
 
 | Precisa de… | Veja |
