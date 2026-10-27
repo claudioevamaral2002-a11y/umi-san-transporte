@@ -47,7 +47,7 @@ Branch `v2-2`, a partir de `origin/main` (v2.1 + PR #44). **Um PR só**, e o mer
 
 1. **Resposta atrasada:** a origem resolve depois de o usuário digitar o Para, ou de trocar uma parada. Nenhum campo volta a um valor antigo (Tarefa 3).
 2. **Troca de categoria com pessoas acima do limite:** o contador desce, e o pedido enviado nunca passa do limite. O banco recusa mesmo se o app mandar mais (Tarefas 1 e 3).
-3. **Agenda:** um pedido concluído de **outra empresa**, ou de outro solicitante para o N3, nunca aparece em `concluidas`. O número do mês bate com o dia (Tarefas 1 e 5).
+3. **Agenda:** um pedido concluído de **outra empresa**, ou de outro solicitante para o N2, nunca aparece em `concluidas` (o N3, visualizador, vê os da empresa toda). O número do mês bate com o dia (Tarefas 1 e 5).
 4. **Encerrado com multa versus sem multa:** a lista, o detalhe novo e a tela da v1 dizem a mesma coisa, e o orçamento nunca aparece como valor cobrado (Tarefas 1 e 4).
 5. **Locais:** o N2/N3, ou um N1 de outra empresa, não renomeia nem exclui. Excluir um local não mexe em pedidos (Tarefas 1 e 5).
 
@@ -102,7 +102,7 @@ Branch `v2-2`, a partir de `origin/main` (v2.1 + PR #44). **Um PR só**, e o mer
   - pedido sem categoria (v1) com 5 → ok;
   - `salvar_categoria` sem a chave mantém o 4; com `null`, sem limite; com 0 ou 100 → `CAMPOS_INVALIDOS`;
   - `categorias_disponiveis` traz `pessoas_max`;
-  - `agenda.concluidas`: a do próprio N1 aparece; a de outra empresa não; o N3 vê só os próprios pedidos;
+  - `agenda.concluidas`: a do próprio N1 aparece; a de outra empresa não; o N2 (solicitante) vê só os próprios pedidos e o N3 (visualizador) os da empresa;
   - locais: listar como N2 ok; renomear como N2 → `SEM_PERMISSAO`; id de outra empresa → `NAO_ENCONTRADO`; renomear e excluir como N1 ok, e o pedido continua;
   - `contato_ivo` como motorista ok; `ajuda_cliente` como motorista → `SEM_PERMISSAO`; `acoes_auditoria` como cliente → `SEM_PERMISSAO` e, como Master, traz `CRIAR_PEDIDO`;
   - `meus_pedidos.multa_cent` e `pedido.cobranca`, com e sem multa; o motorista recebe `cobranca` nulo;

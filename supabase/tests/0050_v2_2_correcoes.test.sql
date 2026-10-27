@@ -9,25 +9,30 @@
 --   * meus_pedidos.multa_cent e pedido.cobranca, com e sem multa; o motorista recebe nulo.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(65);
 
 insert into app.empresas (id, nome) values
   ('00000000-0000-0000-0000-0000000000e1', 'Empresa A'),
-  ('00000000-0000-0000-0000-0000000000e2', 'Empresa B');
+  ('00000000-0000-0000-0000-0000000000e2', 'Empresa B'),
+  ('00000000-0000-0000-0000-0000000000e3', 'Empresa C (sem contrato)');
 insert into app.convites (email, nome, papel, empresa_id, nivel) values
   ('adm@teste.local', 'Admin Teste',     'ADM',       null, null),
   ('mot@teste.local', 'Motorista Teste', 'MOTORISTA', null, null),
   ('n1a@teste.local', 'Gestora A',       'CLIENTE', '00000000-0000-0000-0000-0000000000e1', 1),
   ('n2a@teste.local', 'Solicitante A',   'CLIENTE', '00000000-0000-0000-0000-0000000000e1', 2),
   ('n3a@teste.local', 'Visualizador A',  'CLIENTE', '00000000-0000-0000-0000-0000000000e1', 3),
-  ('n1b@teste.local', 'Gestor B',        'CLIENTE', '00000000-0000-0000-0000-0000000000e2', 1);
+  ('n1b@teste.local', 'Gestor B',        'CLIENTE', '00000000-0000-0000-0000-0000000000e2', 1),
+  ('n1c@teste.local', 'Gestor C',        'CLIENTE', '00000000-0000-0000-0000-0000000000e3', 1),
+  ('ges@teste.local', 'Gestor Frota',    'GESTOR_FROTA', null, null);
 insert into auth.users (id, instance_id, aud, role, email) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'adm@teste.local'),
   ('00000000-0000-0000-0000-0000000000a4', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'mot@teste.local'),
   ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n1a@teste.local'),
   ('00000000-0000-0000-0000-0000000000a5', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n2a@teste.local'),
   ('00000000-0000-0000-0000-0000000000a6', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n3a@teste.local'),
-  ('00000000-0000-0000-0000-0000000000a7', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n1b@teste.local');
+  ('00000000-0000-0000-0000-0000000000a7', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n1b@teste.local'),
+  ('00000000-0000-0000-0000-0000000000a8', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n1c@teste.local'),
+  ('00000000-0000-0000-0000-0000000000a9', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'ges@teste.local');
 update app.perfis set senha_pendente = false;
 
 select set_config('t.contrato', '{
@@ -45,8 +50,8 @@ insert into app.configuracao (id, retencao_fotos_dias, contato_recarga) values (
   on conflict (id) do update set contato_recarga = excluded.contato_recarga;
 
 select set_config('t.c' || u, json_build_object('sub', '00000000-0000-0000-0000-0000000000' || u, 'role', 'authenticated',
-                                                 'aal', case when u in ('a1', 'a4') then 'aal2' else 'aal1' end)::text, true)
-from unnest(array['a1', 'a3', 'a4', 'a5', 'a6', 'a7']) u;
+                                                 'aal', case when u in ('a1', 'a4', 'a9') then 'aal2' else 'aal1' end)::text, true)
+from unnest(array['a1', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9']) u;
 create function pg_temp.inicio(p_horas int) returns text language sql stable as $$
   select to_char((now() + make_interval(hours => p_horas)) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 $$;
@@ -84,6 +89,32 @@ insert into app.veiculos (id, motorista_id, modelo, cor, placa, lugares, carga_m
    array['PASSAGEIROS', 'CARGA_LEVE']);
 select ok(current_setting('t.pub')::jsonb ->> 'ok' = 'true' and current_setting('t.rec')::jsonb ->> 'ok' = 'true',
   'tabela publicada e recarga');
+
+-- Uma corrida feita de ponta a ponta (daqui a 10 min): aprovada, saída (LIBERACAO_RESERVA + DEBITO) e conclusão.
+select set_config('t.qv', (jsonb_build_object('duracao_min', 30, 'origem', 'Glória', 'destino', 'Porto de Vitória',
+  'levar', true, 'trazer', false, 'carga', 'PESSOAS', 'pessoas_qtd', 1, 'modalidade', 'VEICULO_PROPRIO', 'reboque', 'NAO',
+  'inicio', to_char((now() + interval '10 minutes') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')))::text, true);
+do $$
+declare
+  x record;
+begin
+  perform set_config('request.jwt.claims', current_setting('t.ca5'), true);
+  perform set_config('t.v', api.criar_pedido(current_setting('t.qv')::jsonb) ->> 'id', true);
+  perform set_config('request.jwt.claims', current_setting('t.ca4'), true);
+  perform api.enviar_orcamento(current_setting('t.v')::uuid, '{"pedagio_cent": 8000}', null);
+  perform set_config('request.jwt.claims', current_setting('t.ca5'), true);
+  select o.versao, o.hash into x from app.orcamentos o
+   where o.atividade_id = current_setting('t.v')::uuid and o.status = 'PENDENTE';
+  perform api.aprovar_orcamento(current_setting('t.v')::uuid, x.versao, x.hash, gen_random_uuid(), null);
+  perform set_config('request.jwt.claims', current_setting('t.ca4'), true);
+  perform set_config('t.v_saida', api.registrar_saida(current_setting('t.v')::uuid, gen_random_uuid())::text, true);
+  perform set_config('t.v_fim', api.concluir(current_setting('t.v')::uuid, null)::text, true);
+  perform set_config('t.v_total', (select o.total_cent::text from app.orcamentos o
+                                    where o.atividade_id = current_setting('t.v')::uuid and o.status = 'APROVADO'), true);
+end $$;
+select ok((current_setting('t.v_saida')::jsonb ->> 'ok')::boolean and (current_setting('t.v_fim')::jsonb ->> 'ok')::boolean
+          and (select status::text from app.atividades where id = current_setting('t.v')::uuid) = 'CONCLUIDA',
+  'corrida aprovada, saída e conclusão');
 
 ------------------------------------------------------------------ 1. capacidade
 select has_column('app', 'categorias', 'pessoas_max', 'categorias tem pessoas_max');
@@ -184,15 +215,15 @@ alter table app.atividades enable trigger atividades_status;
 
 set local role authenticated;
 select set_config('request.jwt.claims', current_setting('t.ca3'), true);
-select set_config('t.ag3', api.agenda(now(), now() + interval '30 days')::text, true);
+select set_config('t.ag3', api.agenda(now() + interval '1 hour', now() + interval '30 days')::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca5'), true);
-select set_config('t.ag5', api.agenda(now(), now() + interval '30 days')::text, true);
+select set_config('t.ag5', api.agenda(now() + interval '1 hour', now() + interval '30 days')::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca6'), true);
-select set_config('t.ag6', api.agenda(now(), now() + interval '30 days')::text, true);
+select set_config('t.ag6', api.agenda(now() + interval '1 hour', now() + interval '30 days')::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca7'), true);
-select set_config('t.ag7', api.agenda(now(), now() + interval '30 days')::text, true);
+select set_config('t.ag7', api.agenda(now() + interval '1 hour', now() + interval '30 days')::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca4'), true);
-select set_config('t.ag4', api.agenda(now(), now() + interval '30 days')::text, true);
+select set_config('t.ag4', api.agenda(now() + interval '1 hour', now() + interval '30 days')::text, true);
 select set_config('t.agx', api.agenda(now() + interval '30 days', now() + interval '31 days')::text, true);
 reset role;
 
@@ -233,12 +264,15 @@ select set_config('t.ren_n2', api.renomear_local(current_setting('t.l2')::bigint
 select set_config('t.exc_n2', api.excluir_local(current_setting('t.l2')::bigint)::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca6'), true);
 select set_config('t.ren_n3', api.renomear_local(current_setting('t.l2')::bigint, 'Base Nova')::text, true);
+select set_config('t.exc_n3', api.excluir_local(current_setting('t.l2')::bigint)::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca4'), true);
 select set_config('t.lst_mot', api.locais_empresa_todos()::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca3'), true);
 select set_config('t.ren_b', api.renomear_local(current_setting('t.lb')::bigint, 'Minha')::text, true);
 select set_config('t.exc_b', api.excluir_local(current_setting('t.lb')::bigint)::text, true);
 select set_config('t.ren_curto', api.renomear_local(current_setting('t.l2')::bigint, ' X ')::text, true);
+select set_config('t.ren_nulo', api.renomear_local(null, 'Base Nova')::text, true);
+select set_config('t.exc_nulo', api.excluir_local(null)::text, true);
 select set_config('t.ren_dup', api.renomear_local(current_setting('t.l3')::bigint, ' BASE ')::text, true);
 select set_config('t.ren_ok', api.renomear_local(current_setting('t.l2')::bigint, '  Base Navegantes  ')::text, true);
 select set_config('t.ren_g', api.renomear_local(current_setting('t.l1')::bigint, 'Porto')::text, true);
@@ -258,6 +292,9 @@ select is(array[current_setting('t.ren_b')::jsonb ->> 'codigo', current_setting(
 select is((select nome from app.locais_empresa where id = current_setting('t.lb')::bigint), 'Sede B',
   'o local da outra empresa não muda');
 select is(current_setting('t.ren_curto')::jsonb ->> 'codigo', 'CAMPOS_INVALIDOS', 'nome com 1 caractere: CAMPOS_INVALIDOS');
+select is(array[current_setting('t.ren_nulo')::jsonb ->> 'codigo', current_setting('t.exc_nulo')::jsonb ->> 'codigo'],
+  array['CAMPOS_INVALIDOS', 'CAMPOS_INVALIDOS'], 'renomear e excluir com id nulo: CAMPOS_INVALIDOS');
+select is(current_setting('t.exc_n3')::jsonb ->> 'codigo', 'SEM_PERMISSAO', 'N3 não exclui local');
 select is(current_setting('t.ren_dup')::jsonb ->> 'codigo', 'JA_EXISTE', 'mesma chave de outro local: JA_EXISTE');
 select is((select row(nome, chave)::text from app.locais_empresa where id = current_setting('t.l2')::bigint),
   row('Base Navegantes', 'base navegantes@-26.90000,-48.60000')::text, 'N1 renomeia (aparado; a chave do ponto muda)');
@@ -281,6 +318,12 @@ select set_config('t.aj_n2', api.ajuda_cliente()::text, true);
 select set_config('t.ac_n1', api.acoes_auditoria()::text, true);
 select set_config('request.jwt.claims', current_setting('t.ca1'), true);
 select set_config('t.ac_adm', api.acoes_auditoria()::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca9'), true);
+select set_config('t.ac_ges', api.acoes_auditoria()::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca4'), true);
+select set_config('t.ac_mot', api.acoes_auditoria()::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca8'), true);
+select set_config('t.aj_sem', api.ajuda_cliente()::text, true);
 reset role;
 
 select is(current_setting('t.ct_mot')::jsonb, '{"ok": true, "contato": "(47) 99999-1234"}'::jsonb, 'contato_ivo como motorista');
@@ -296,6 +339,10 @@ select ok(exists (select 1 from jsonb_array_elements(current_setting('t.ac_adm')
           and (current_setting('t.ac_adm')::jsonb -> 'acoes' -> 0) ?& array['acao', 'total'],
   'acoes_auditoria como Master: traz CRIAR_PEDIDO com o total');
 select has_index('app', 'auditoria', 'auditoria_acao', 'índice em auditoria.acao');
+select is(array[current_setting('t.ac_ges')::jsonb ->> 'codigo', current_setting('t.ac_mot')::jsonb ->> 'codigo'],
+  array['SEM_PERMISSAO', 'SEM_PERMISSAO'], 'acoes_auditoria como gestor de frota e como motorista: SEM_PERMISSAO');
+select is(current_setting('t.aj_sem')::jsonb ->> 'codigo', 'SEM_CONTRATO', 'ajuda_cliente de empresa sem contrato: SEM_CONTRATO');
+select has_index('app', 'atividades', 'atividades_inicio_execucao', 'índice das corridas em execução por início');
 
 ------------------------------------------------------------------ 5. cobrança: com e sem multa
 select set_config('t.qm', (pg_temp.ped(30) - 'categoria')::text, true);
@@ -332,6 +379,24 @@ select set_config('t.p4', api.pedido((current_setting('t.r4')::jsonb ->> 'id')::
 select set_config('request.jwt.claims', current_setting('t.ca4'), true);
 select set_config('t.mp_mot', api.meus_pedidos('{}')::text, true);
 select set_config('t.pm_mot', api.pedido(current_setting('t.m')::uuid)::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca9'), true);
+select set_config('t.pm_ges', api.pedido(current_setting('t.m')::uuid)::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.pa3_n2', api.pedido(current_setting('t.a3')::uuid)::text, true);
+select set_config('t.pv', api.pedido(current_setting('t.v')::uuid)::text, true);
+reset role;
+select set_config('t.l_multa', (select id::text from app.lancamentos where atividade_id = current_setting('t.m')::uuid
+                                   and tipo = 'MULTA'), true);
+select set_config('t.l_debito', (select id::text from app.lancamentos where atividade_id = current_setting('t.v')::uuid
+                                    and tipo = 'DEBITO'), true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca1'), true);
+select set_config('t.est_m', api.estornar_lancamento(current_setting('t.l_multa')::bigint, 'Multa perdoada', gen_random_uuid())::text, true);
+select set_config('t.est_d', api.estornar_lancamento(current_setting('t.l_debito')::bigint, 'Serviço devolvido', gen_random_uuid())::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca5'), true);
+select set_config('t.mp2', api.meus_pedidos('{}')::text, true);
+select set_config('t.pm2', api.pedido(current_setting('t.m')::uuid)::text, true);
+select set_config('t.pv2', api.pedido(current_setting('t.v')::uuid)::text, true);
 reset role;
 
 select ok((current_setting('t.cm')::jsonb ->> 'ok')::boolean and (current_setting('t.cs')::jsonb ->> 'ok')::boolean
@@ -355,6 +420,37 @@ select is(current_setting('t.p4')::jsonb -> 'cobranca',
 select ok(current_setting('t.pm_mot')::jsonb -> 'cobranca' = 'null'::jsonb
           and pg_temp.item(current_setting('t.mp_mot')::jsonb, current_setting('t.m')) -> 'multa_cent' = 'null'::jsonb,
   'motorista: cobranca e multa_cent nulos');
+select is(current_setting('t.pm_ges')::jsonb -> 'cobranca', 'null'::jsonb, 'gestor de frota: cobranca nula');
+select is(current_setting('t.pa3_n2')::jsonb ->> 'codigo', 'NAO_ENCONTRADO', 'N2 não abre o pedido de outro solicitante');
+select is(current_setting('t.pv')::jsonb -> 'cobranca',
+  jsonb_build_object('debito_cent', current_setting('t.v_total')::bigint, 'multa_cent', null, 'liberado_cent', null),
+  'concluída: débito, e a reserva que virou débito não aparece como devolvida');
+select ok((current_setting('t.est_m')::jsonb ->> 'ok')::boolean and (current_setting('t.est_d')::jsonb ->> 'ok')::boolean,
+  'ADM estorna a multa e o débito');
+select ok(pg_temp.item(current_setting('t.mp2')::jsonb, current_setting('t.m')) -> 'multa_cent' = 'null'::jsonb
+          and current_setting('t.pm2')::jsonb #> '{cobranca,multa_cent}' = 'null'::jsonb,
+  'multa estornada: multa_cent nulo na lista e no detalhe');
+select is(current_setting('t.pv2')::jsonb -> 'cobranca',
+  jsonb_build_object('debito_cent', null, 'multa_cent', null, 'liberado_cent', current_setting('t.v_total')::bigint),
+  'débito estornado: sem débito, e a reserva aparece devolvida');
+
+------------------------------------------------------------------ 7. capacidade numa categoria AMBOS
+select set_config('t.qamb3', (pg_temp.ped(80, '{"categoria": "CARGA_LEVE", "carga": "AMBOS", "pessoas_qtd": 3,
+  "equipamento_desc": "caixas de ferramentas"}'))::text, true);
+select set_config('t.qamb2', (pg_temp.ped(82, '{"categoria": "CARGA_LEVE", "carga": "AMBOS", "pessoas_qtd": 2,
+  "equipamento_desc": "caixas de ferramentas"}'))::text, true);
+set local role authenticated;
+select set_config('request.jwt.claims', current_setting('t.ca1'), true);
+select set_config('t.samb', api.salvar_categoria('{"codigo":"CARGA_LEVE","nome":"IVO Carga Leve","descricao_curta":"até 800 kg",
+  "ordem":2,"carga":"AMBOS","pessoas_max":2}')::text, true);
+select set_config('request.jwt.claims', current_setting('t.ca3'), true);
+select set_config('t.ramb3', api.criar_pedido(current_setting('t.qamb3')::jsonb)::text, true);
+select set_config('t.ramb2', api.criar_pedido(current_setting('t.qamb2')::jsonb)::text, true);
+reset role;
+select ok((current_setting('t.samb')::jsonb ->> 'ok')::boolean
+          and current_setting('t.ramb3')::jsonb = '{"ok": false, "codigo": "ACIMA_DA_CAPACIDADE", "pessoas_max": 2}'::jsonb
+          and (current_setting('t.ramb2')::jsonb ->> 'ok')::boolean,
+  'categoria AMBOS com até 2: 3 pessoas recusado, 2 passa');
 
 ------------------------------------------------------------------ 6. privilégios
 select ok(has_function_privilege('authenticated', 'api.locais_empresa_todos()', 'EXECUTE')

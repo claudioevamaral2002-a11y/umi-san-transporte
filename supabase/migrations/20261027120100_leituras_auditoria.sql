@@ -7,9 +7,37 @@
 --     local não mexe em pedido nenhum;
 --   * api.contato_ivo() (qualquer perfil ativo) e api.ajuda_cliente() (cliente; regras do contrato vigente);
 --   * api.acoes_auditoria(): as ações distintas da auditoria com a contagem (só quem vê a auditoria), com índice;
---   * api.meus_pedidos: cada item ganha `multa_cent`; api.pedido ganha `cobranca` (nula para o motorista).
+--   * api.meus_pedidos: cada item ganha `multa_cent`; api.pedido ganha `cobranca` (nula para o motorista e o gestor de
+--     frota). As duas vêm de interno.cobranca_atividade: líquidas de estornos, e a reserva liberada só sem débito.
 -- Todas as mudanças de resposta são chaves novas. Corpos copiados das últimas versões (agenda: 20261009132000;
 -- meus_pedidos: 20261022120100; pedido: 20261023120300), salvo os trechos marcados com "v2.2".
+
+------------------------------------------------------------------------------------------------
+-- 0. Apoio: a cobrança líquida de uma atividade e o índice das corridas em execução por início.
+------------------------------------------------------------------------------------------------
+
+-- {debito_cent, multa_cent, liberado_cent}: somas positivas, cada uma nula quando zero. O ESTORNO de um DEBITO ou de
+-- uma MULTA (mesma atividade, valor = −original) entra no balde do lançamento estornado e o anula. A reserva liberada
+-- só aparece quando não há débito líquido: na saída do motorista a reserva vira DEBITO (LIBERACAO_RESERVA + DEBITO), e
+-- isso não é dinheiro devolvido.
+create function interno.cobranca_atividade(p_atividade uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+           'debito_cent', nullif(s.debito, 0),
+           'multa_cent', nullif(s.multa, 0),
+           'liberado_cent', case when s.debito = 0 then nullif(s.liberado, 0) end)
+    from (select coalesce(sum(-l.valor_cent) filter (where coalesce(o.tipo, l.tipo) = 'DEBITO'), 0) as debito,
+                 coalesce(sum(-l.valor_cent) filter (where coalesce(o.tipo, l.tipo) = 'MULTA'), 0) as multa,
+                 coalesce(sum(l.valor_cent) filter (where l.tipo = 'LIBERACAO_RESERVA'), 0) as liberado
+            from app.lancamentos l
+            left join app.lancamentos o on o.id = l.estorna_id
+           where l.atividade_id = p_atividade
+             and l.tipo in ('DEBITO', 'MULTA', 'LIBERACAO_RESERVA', 'ESTORNO')) s
+$$;
+
+-- concluidas da agenda: corridas em andamento e concluídas por início.
+create index if not exists atividades_inicio_execucao on app.atividades (inicio)
+  where status in ('EM_ANDAMENTO', 'CONCLUIDA');
 
 ------------------------------------------------------------------------------------------------
 -- 1. Agenda (corpo de 20261009132000_revisao_2a.sql) + concluidas.
@@ -160,10 +188,9 @@ begin
              'empresa_nome', case when v_equipe then e.nome end,
              -- 4.1
              'paradas', interno.paradas_textos(a.id),
-             -- v2.2: a multa cobrada (positiva), ou nula; só para quem vê valores do cliente (ADM e cliente)
+             -- v2.2: a multa líquida (positiva; estornada = nula), ou nula; só para quem vê valores do cliente
              'multa_cent', case when v.papel in ('ADM', 'CLIENTE') then
-                             (select nullif(sum(-l.valor_cent), 0) from app.lancamentos l
-                               where l.atividade_id = a.id and l.tipo = 'MULTA') end) as item
+                             interno.cobranca_atividade(a.id) -> 'multa_cent' end) as item
     from app.atividades a
     join app.empresas e on e.id = a.empresa_id
     left join lateral interno.orcamento_vigente(a.id) o on true
@@ -268,15 +295,9 @@ begin
     'historico', v_historico,
     'orcamento', interno.orcamento_para(v, o),
     'orcamento_anterior', interno.orcamento_anterior(v, a),
-    -- v2.2: o que foi cobrado e devolvido (somas positivas; nulo quando zero). Só o ADM e o cliente (nula para o
-    -- motorista e o gestor de frota, que não veem valores do cliente).
-    'cobranca', case when v.papel in ('ADM', 'CLIENTE') then
-                  (select jsonb_build_object(
-                            'debito_cent', nullif(coalesce(sum(-l.valor_cent) filter (where l.tipo = 'DEBITO'), 0), 0),
-                            'multa_cent', nullif(coalesce(sum(-l.valor_cent) filter (where l.tipo = 'MULTA'), 0), 0),
-                            'liberado_cent', nullif(coalesce(sum(l.valor_cent) filter (where l.tipo = 'LIBERACAO_RESERVA'), 0), 0))
-                     from app.lancamentos l
-                    where l.atividade_id = a.id and l.tipo in ('DEBITO', 'MULTA', 'LIBERACAO_RESERVA')) end,
+    -- v2.2: o que foi cobrado e devolvido (interno.cobranca_atividade, líquido de estornos). Só o ADM e o cliente
+    -- (nula para o motorista e o gestor de frota, que não veem valores do cliente).
+    'cobranca', case when v.papel in ('ADM', 'CLIENTE') then interno.cobranca_atividade(a.id) end,
     'acoes', jsonb_build_object(
       'orcar', a.status = 'SOLICITADA' and not v_vencido and interno.pode_orcar(v, a),
       'recusar', a.status = 'SOLICITADA' and not v_vencido and interno.pode_orcar(v, a),
@@ -457,6 +478,7 @@ end $$;
 ------------------------------------------------------------------------------------------------
 -- 7. Privilégios: as substituídas ("create or replace") mantêm os seus; as novas nascem fechadas.
 ------------------------------------------------------------------------------------------------
+revoke execute on function interno.cobranca_atividade(uuid) from public, anon, authenticated;
 revoke all on function api.locais_empresa_todos(), api.renomear_local(bigint, text), api.excluir_local(bigint),
   api.contato_ivo(), api.ajuda_cliente(), api.acoes_auditoria()
 from public, anon, authenticated, service_role;

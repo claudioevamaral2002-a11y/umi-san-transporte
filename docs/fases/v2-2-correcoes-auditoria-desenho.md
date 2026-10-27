@@ -132,7 +132,7 @@ Cada item abaixo diz o achado, a causa encontrada no código e a correção. Os 
   - capacidade: 4 entra, 5 é recusado, categoria sem limite aceita 99, pedido v1 sem categoria não muda;
   - a trava da agenda continua (repete o 0049);
   - `pessoas_max` em `categorias_disponiveis`;
-  - `agenda.concluidas` respeita a visibilidade, sem pedido de outra empresa e com o N3 vendo só os próprios;
+  - `agenda.concluidas` respeita a visibilidade, sem pedido de outra empresa, com o N2 (solicitante) vendo só os próprios e o N3 (visualizador) os da empresa;
   - locais: listar, renomear e excluir, com N2/N3 e outra empresa recusados;
   - `contato_ivo`, `ajuda_cliente` e `acoes_auditoria` com a permissão de cada perfil;
   - `multa_cent` e `cobranca`;
