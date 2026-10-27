@@ -42,7 +42,7 @@ const diaDe = (iso: string) =>
     new Date(iso),
   )
 
-async function abrir(page: Page, { comConcluidas = true }: { comConcluidas?: boolean } = {}) {
+async function abrir(page: Page, { comConcluidas = true, blocos = [] }: { comConcluidas?: boolean; blocos?: unknown[] } = {}) {
   await page.setViewportSize(TELA)
   await page.addInitScript(() => localStorage.removeItem('agenda-visao'))
   await comSessaoFalsa(page, N2)
@@ -60,7 +60,7 @@ async function abrir(page: Page, { comConcluidas = true }: { comConcluidas?: boo
     const c = r.request().postDataJSON() as { p_de: string }
     const hoje = diaDe(c.p_de) === HOJE
     // Banco anterior: só `blocos`.
-    return json(r, comConcluidas ? { ok: true, blocos: [], concluidas: hoje ? CONCLUIDAS : [] } : { ok: true, blocos: [] })
+    return json(r, comConcluidas ? { ok: true, blocos: hoje ? blocos : [], concluidas: hoje ? CONCLUIDAS : [] } : { ok: true, blocos: [] })
   })
   await page.goto('/agenda')
 }
@@ -94,6 +94,29 @@ test('o mês diz "2 pedidos seus" e a lista do dia tem os 2 cartões', async ({ 
   await expect(resumo).not.toContainText('Nenhum pedido neste dia')
   await expect(resumo.getByRole('link', { name: /Pedido #0019/ })).toHaveAttribute('href', `/pedidos/${ID_B}`)
   expect(await semRolagemLateral(page)).toBe(false)
+})
+
+test('a lista do dia junta ativos e concluídos pela hora de início', async ({ page }) => {
+  const ativo = {
+    inicio: instanteSp(HOJE, '10:00'),
+    fim: instanteSp(HOJE, '11:00'),
+    ocupado: true,
+    tipo: 'RESERVA',
+    atividade_id: '00000000-0000-4000-8000-0000000000c3',
+    numero: 42,
+    status: 'AGENDADA',
+    origem: 'Base Navegantes',
+    destino: 'Porto de Itajaí',
+    propria_empresa: true,
+    pode_abrir: true,
+  }
+  await abrir(page, { blocos: [ativo] })
+  await page.getByRole('radio', { name: 'Mês' }).click()
+  const itens = page.getByTestId('resumo-dia').getByRole('listitem')
+  await expect(itens).toHaveCount(3)
+  await expect(itens.nth(0)).toContainText('#0018')
+  await expect(itens.nth(1)).toContainText('#0042')
+  await expect(itens.nth(2)).toContainText('#0019')
 })
 
 test('"3 dias" mostra três colunas com cabeçalho, sem rolagem lateral', async ({ page }) => {

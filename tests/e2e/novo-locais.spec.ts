@@ -116,6 +116,16 @@ test('N1: recusa do banco aparece na folha, sem mudar a lista', async ({ page })
   await expect(page.getByTestId('local-salvo')).toHaveCount(2)
 })
 
+test('N1: nome repetido (JA_EXISTE) mostra a mensagem e a folha fica aberta', async ({ page }) => {
+  await abrir(page, N1, LOCAIS, { renomear_local: { ok: false, codigo: 'JA_EXISTE' } })
+  await page.getByRole('button', { name: 'Renomear Estaleiro Navegantes' }).click()
+  const folha = page.getByRole('dialog', { name: 'Renomear local' })
+  await folha.getByLabel('Nome do local').fill('Porto de Itajaí · Portão 3')
+  await folha.getByRole('button', { name: 'Salvar nome' }).click()
+  await expect(folha.getByRole('alert')).toContainText('Já existe um local salvo com este nome.')
+  await expect(page.getByTestId('local-salvo').nth(0)).toContainText('Estaleiro Navegantes')
+})
+
 test('lista vazia: "Os lugares dos seus pedidos aparecem aqui."', async ({ page }) => {
   await abrir(page, N2, [])
   await expect(page.getByText('Os lugares dos seus pedidos aparecem aqui.')).toBeVisible()

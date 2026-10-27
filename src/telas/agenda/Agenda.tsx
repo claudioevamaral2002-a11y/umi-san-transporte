@@ -240,6 +240,11 @@ function ResumoDoDia({
   const ocupados = (blocos ?? []).length - proprios.length
   const comBloco = new Set(proprios.map((b) => b.atividade_id))
   const feitas = concluidas.filter((c) => !comBloco.has(c.id))
+  // Ativos e em andamento/concluídos numa lista só, pela hora de início.
+  const itens: Array<{ inicio: string; bloco?: Bloco; corrida?: ConcluidaAgenda }> = [
+    ...proprios.map((b) => ({ inicio: b.inicio, bloco: b })),
+    ...feitas.map((c) => ({ inicio: c.inicio, corrida: c })),
+  ].sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())
   return (
     <section data-testid="resumo-dia" aria-labelledby="titulo-resumo" className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
@@ -260,22 +265,25 @@ function ResumoDoDia({
         </p>
       ) : (
         <ul className="space-y-2">
-          {proprios.map((b) => (
-            <li key={`${b.inicio}-${b.atividade_id}`} className="space-y-2 rounded-cartao bg-superficie p-3.5 shadow-[var(--sombra)]">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold tabular-nums">
-                  Pedido {b.numero !== undefined ? numeroPedido(b.numero) : ''}, {faixaHorario(b.inicio, b.fim)}
-                </span>
-                {b.status && <StatusBadge status={b.status} />}
-              </div>
-              {b.origem && b.destino && <Rota origem={b.origem} destino={b.destino} compacta />}
-            </li>
-          ))}
-          {feitas.map((c) => (
-            <li key={`c-${c.id}`}>
-              <CartaoConcluida corrida={c} />
-            </li>
-          ))}
+          {itens.map(({ bloco: b, corrida }) =>
+            corrida ? (
+              <li key={`c-${corrida.id}`}>
+                <CartaoConcluida corrida={corrida} />
+              </li>
+            ) : (
+              b && (
+                <li key={`${b.inicio}-${b.atividade_id}`} className="space-y-2 rounded-cartao bg-superficie p-3.5 shadow-[var(--sombra)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold tabular-nums">
+                      Pedido {b.numero !== undefined ? numeroPedido(b.numero) : ''}, {faixaHorario(b.inicio, b.fim)}
+                    </span>
+                    {b.status && <StatusBadge status={b.status} />}
+                  </div>
+                  {b.origem && b.destino && <Rota origem={b.origem} destino={b.destino} compacta />}
+                </li>
+              )
+            ),
+          )}
         </ul>
       )}
     </section>

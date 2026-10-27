@@ -10,6 +10,7 @@ import { simularPedidos } from './apoio/pedidosFalsos.ts'
 import { comSessaoFalsa, json, URL_SUPABASE, type PerfilFalso } from './apoio/sessaoFalsa.ts'
 
 const N2: PerfilFalso = { papel: 'CLIENTE', nivel: 2, nome: 'Diego Rocha', empresa_nome: 'Umi San' }
+const N3: PerfilFalso = { papel: 'CLIENTE', nivel: 3, nome: 'Paulo Reis', empresa_nome: 'Umi San' }
 const MOTORISTA: PerfilFalso = { papel: 'MOTORISTA', nome: 'Ivo Barbosa', tem_2fa: true }
 const ADM: PerfilFalso = { papel: 'ADM', nome: 'Ana Souza', tem_2fa: true }
 const TELA = { width: 390, height: 844 }
@@ -77,7 +78,16 @@ test('sem contato cadastrado: "Contato ainda não cadastrado"', async ({ page })
   await abrir(page, MOTORISTA, '/ajuda', { contato: null })
   await expect(page.getByTestId('falar-com-ivo')).toContainText('Contato ainda não cadastrado')
   await expect(page.getByText('Como orçar um pedido?')).toBeVisible()
-  await expect(page.getByText('Como concluo a corrida?')).toBeVisible()
+  await page.getByText('Como concluo a corrida?').click()
+  await expect(page.getByText(/toque em Concluir serviço/)).toBeVisible()
+})
+
+test('N3 (visualizador): sem as respostas de pedir e aprovar, só que acompanha os pedidos', async ({ page }) => {
+  await abrir(page, N3, '/ajuda')
+  await expect(page.getByText('O que eu vejo no app?')).toBeVisible()
+  await expect(page.getByText('Como funciona o orçamento?')).toHaveCount(0)
+  await expect(page.getByText('Como aprovo o orçamento?')).toHaveCount(0)
+  await expect(page.getByText('Posso cancelar? Tem multa?')).toBeVisible()
 })
 
 test('Master: onde fica cada coisa', async ({ page }) => {

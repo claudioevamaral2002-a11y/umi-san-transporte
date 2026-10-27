@@ -56,24 +56,35 @@ function FalarComIvo() {
   )
 }
 
-function PerguntasCliente({ ajuda }: { ajuda: AjudaCliente | null }) {
+function PerguntasCliente({ ajuda, visualizador }: { ajuda: AjudaCliente | null; visualizador: boolean }) {
   const faixas = ajuda ? descreverFaixas(ajuda.faixas_cancelamento) : []
   return (
     <>
-      <Pergunta titulo="Como funciona o orçamento?">
-        <p>
-          Você faz o pedido no Início e a IVO manda o orçamento
-          {ajuda ? ` em até ${formatarHoras(ajuda.prazo_orcar_horas)}` : ''}. O horário fica pré-reservado enquanto o
-          orçamento não é decidido.
-        </p>
-        {ajuda && <p>O orçamento vale por {formatarHoras(ajuda.validade_orcamento_horas)}. Depois disso, ele expira.</p>}
-      </Pergunta>
-      <Pergunta titulo="Como aprovo o orçamento?">
-        <p>
-          O orçamento aparece em Minhas corridas. Abra a corrida, confira os valores e aprove. Se algo estiver errado,
-          peça revisão ou recuse.
-        </p>
-      </Pergunta>
+      {visualizador ? (
+        <Pergunta titulo="O que eu vejo no app?">
+          <p>
+            Seu perfil acompanha os pedidos da empresa: as corridas, a agenda e a carteira. Quem faz e aprova os pedidos é
+            o Solicitante ou o Administrador.
+          </p>
+        </Pergunta>
+      ) : (
+        <>
+          <Pergunta titulo="Como funciona o orçamento?">
+            <p>
+              Você faz o pedido no Início e a IVO manda o orçamento
+              {ajuda ? ` em até ${formatarHoras(ajuda.prazo_orcar_horas)}` : ''}. O horário fica pré-reservado enquanto o
+              orçamento não é decidido.
+            </p>
+            {ajuda && <p>O orçamento vale por {formatarHoras(ajuda.validade_orcamento_horas)}. Depois disso, ele expira.</p>}
+          </Pergunta>
+          <Pergunta titulo="Como aprovo o orçamento?">
+            <p>
+              O orçamento aparece em Minhas corridas. Abra a corrida, confira os valores e aprove. Se algo estiver errado,
+              peça revisão ou recuse.
+            </p>
+          </Pergunta>
+        </>
+      )}
       <Pergunta titulo="Posso cancelar? Tem multa?">
         {faixas.length > 0 ? (
           <>
@@ -108,10 +119,11 @@ function PerguntasCliente({ ajuda }: { ajuda: AjudaCliente | null }) {
 }
 
 function AjudaDoCliente() {
+  const { perfil } = useSessao()
   const { dados, erro } = useConsulta('ajuda-cliente', ajudaCliente, { cache: true })
   if (dados === undefined && !erro) return <Skeleton className="h-48" />
   // Sem contrato vigente ou falha na leitura: as respostas sem os números do contrato.
-  return <PerguntasCliente ajuda={dados ?? null} />
+  return <PerguntasCliente ajuda={dados ?? null} visualizador={perfil?.nivel === 3} />
 }
 
 function AjudaDoMotorista() {
@@ -130,7 +142,7 @@ function AjudaDoMotorista() {
         </p>
       </Pergunta>
       <Pergunta titulo="Como concluo a corrida?">
-        <p>Ao chegar ao destino, toque em Concluir. A corrida passa a contar em Corridas do mês.</p>
+        <p>Ao chegar ao destino, toque em Concluir serviço. A corrida passa a contar em Corridas do mês.</p>
       </Pergunta>
     </>
   )
