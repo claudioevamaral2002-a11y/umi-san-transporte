@@ -649,7 +649,7 @@ Roteiro de teste: [v2-2-o-que-testar.md](fases/v2-2-o-que-testar.md). Desenho: [
 - A lista de pedidos e a tela da corrida mostram o que foi **lançado no livro-razão**, e não o orçamento:
   - **"Sem cobrança"**: nada foi cobrado;
   - **"Multa R$ X"**: houve multa de cancelamento (pela faixa do contrato).
-- No topo da corrida encerrada aparece **"Cancelada sem cobrança"** (ou "Expirada · sem cobrança", "Recusada pelo Ivo · sem cobrança", "Reprovada · sem cobrança", ou "Multa R$ X"), mais **"· reserva de R$ X devolvida"** quando havia valor reservado no saldo. O orçamento fica embaixo, como **"Orçamento (não cobrado)"**.
+- No topo da corrida encerrada aparece **"Cancelada sem cobrança"** (ou "Expirada · sem cobrança", ou "Multa R$ X"; recusada e reprovada abertas pela lista continuam no detalhe da v1, com o selo "Sem cobrança"), mais **"· reserva de R$ X devolvida"** quando havia valor reservado no saldo. O orçamento fica embaixo, como **"Orçamento (não cobrado)"**.
 - Por trás, `api.pedido` devolve `cobranca = {debito_cent, multa_cent, liberado_cent}`, e `api.meus_pedidos` devolve `multa_cent` em cada item. As regras:
   - os valores são **líquidos de estornos**: uma multa estornada pelo Master volta a "Sem cobrança";
   - `liberado_cent` (a reserva devolvida) só aparece quando **não há débito líquido**. Numa corrida que saiu, a reserva vira o débito, e isso não é dinheiro devolvido;

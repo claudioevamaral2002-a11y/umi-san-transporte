@@ -79,7 +79,6 @@ test.describe('no computador (o campo de data aceita digitação)', () => {
     // Incompleta (sem o ano): o campo nativo dá "" e o validity.badInput acusa.
     await de.click()
     await de.pressSequentially('31/02')
-    console.log('DBG', await de.evaluate((e: HTMLInputElement) => [e.value, e.validity.badInput, e.validationMessage]))
     await filtrar.click()
     await expect(page.getByText('Data inválida')).toBeVisible()
     await expect(de).toHaveAttribute('aria-invalid', 'true')

@@ -157,7 +157,7 @@ O projeto Pages `ivo-novo` e a URL de retorno do Supabase são feitos pelo Deplo
   - `locais_empresa_todos`, `renomear_local` e `excluir_local` (só o N1);
   - `contato_ivo`, `ajuda_cliente` e `acoes_auditoria`;
   - `multa_cent` em `meus_pedidos` e `cobranca` em `pedido`, líquidas de estornos (`interno.cobranca_atividade`).
-- **Telas:** Ajuda e Locais salvos de verdade (sai o `EmBreve` das rotas); Início do Master com pendências; tela "Encerrada" para cancelada, expirada, recusada e reprovada; número e "Detalhes do pedido" na corrida; agendada abre `/corrida/{id}`.
+- **Telas:** Ajuda e Locais salvos de verdade (sai o `EmBreve` das rotas); Início do Master com pendências; tela "Encerrada" para cancelada e expirada (recusada e reprovada continuam abrindo o detalhe da v1, como antes); número e "Detalhes do pedido" na corrida; agendada abre `/corrida/{id}`.
 - **e2e real:** `tests/e2e/real/v2-2-auditoria.spec.ts` (limite de 4 → pedido com 4 → cancelado sem cobrança → concluída na agenda).
 - **Pendências do dono:** cancelar o pedido de teste #0018 e preencher o Contato da IVO (roteiro, itens 1 e 2); conferir o "Até quantas pessoas" de cada categoria.
 - **Fora desta versão:** limite de peso; o redesenho visual do relatório (navegação lateral, ícones por categoria, densidade), que fica para a **v2.3**, com protótipo para o dono escolher. A "3 dias" não teve defeito encontrado no código: entrou no roteiro em tela cheia.

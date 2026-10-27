@@ -12,3 +12,4 @@ playwright-report/
 
 # Segredos locais das Edge Functions (gerado no CI)
 supabase/functions/.env
+*.tsbuildinfo
