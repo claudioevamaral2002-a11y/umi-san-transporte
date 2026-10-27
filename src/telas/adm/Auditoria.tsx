@@ -1,15 +1,15 @@
-import { Fragment, useState, type FormEvent } from 'react'
+import { Fragment, useRef, useState, type FormEvent } from 'react'
 import { Botao } from '../../design/componentes/Botao.tsx'
 import { Campo, CampoSelecao } from '../../design/componentes/Campo.tsx'
 import { Cartao } from '../../design/componentes/Cartao.tsx'
 import { Icone } from '../../design/componentes/Icone.tsx'
 import { Skeleton } from '../../design/componentes/Skeleton.tsx'
 import { CabecalhoTela, EstadoVazio, ErroAoCarregar } from '../../design/componentes/Tela.tsx'
-import { ACOES, detalheComoTexto, nomeAcao } from '../../lib/administracao.ts'
+import { ACOES, detalheComoTexto, nomeAcao, opcoesDeAcao } from '../../lib/administracao.ts'
 import { api, type FiltroAuditoria, type RegistroAuditoria } from '../../lib/api.ts'
 import { useConsulta } from '../../lib/consulta.ts'
 import { useRotulos, type Rotulos } from '../../lib/rotulos.tsx'
-import { formatarDataHora, inicioDoDia } from '../../lib/valores.ts'
+import { formatarDataHora, inicioDoDia, validarPeriodo, type CampoData } from '../../lib/valores.ts'
 
 const RESULTADOS = {
   OK: { rotulo: 'OK', icone: '✓', cor: 'var(--status-concluida)' },
@@ -84,12 +84,44 @@ function paraFiltro(r: Rascunho): FiltroAuditoria {
   }
 }
 
+/** Se a lista do banco falhar: as ações conhecidas (`ACOES`), agrupadas do mesmo jeito. */
+const OPCOES_CONHECIDAS = opcoesDeAcao(Object.keys(ACOES).map((acao) => ({ acao, total: 0 })))
+
+const VAZIO: CampoData = { valor: '', invalido: false }
+
+/** Lê um `<input type="date">` do formulário: o valor e se o navegador o acusou incompleto (`validity.badInput`). */
+function campoData(form: HTMLFormElement | null, nome: string, valor: string): CampoData {
+  const input = form?.elements.namedItem(nome)
+  return { valor, invalido: input instanceof HTMLInputElement && input.validity.badInput }
+}
+
+type ErrosPeriodo = { de?: string; ate?: string }
+
+/**
+ * v2.2: o período com erro ligado ao campo. Data incompleta ou inexistente → "Data inválida" no campo ruim; "De"
+ * depois de "Até" → "A data inicial é depois da final" no "De". Sem erro, `null` (pode filtrar).
+ */
+function errosDoPeriodo(de: CampoData, ate: CampoData): ErrosPeriodo | null {
+  const geral = validarPeriodo(de, ate)
+  if (!geral) return null
+  if (geral === 'Data inválida') {
+    return {
+      ...(validarPeriodo(de, VAZIO) ? { de: geral } : {}),
+      ...(validarPeriodo(VAZIO, ate) ? { ate: geral } : {}),
+    }
+  }
+  return { de: geral }
+}
+
 export function Auditoria() {
   const [rascunho, setRascunho] = useState<Rascunho>(INICIAL)
   const [filtro, setFiltro] = useState<FiltroAuditoria>(() => paraFiltro(INICIAL))
   const [abertos, setAbertos] = useState<Set<number>>(new Set())
-  const [erroPeriodo, setErroPeriodo] = useState<string | undefined>()
+  const [errosPeriodo, setErrosPeriodo] = useState<ErrosPeriodo>({})
+  const formulario = useRef<HTMLFormElement>(null)
   const usuarios = useConsulta('auditoria-usuarios', api.usuarios)
+  // v2.2: as ações que já aparecem na auditoria, vindas do banco; se a leitura falhar, as conhecidas.
+  const acoes = useConsulta('auditoria-acoes', api.acoesAuditoria)
   const rotulos = useRotulos()
   const { dados, erro, carregando, recarregar } = useConsulta(`auditoria:${JSON.stringify(filtro)}`, () => api.auditoria(filtro))
 
@@ -104,18 +136,25 @@ export function Auditoria() {
 
   function aplicar(e: FormEvent) {
     e.preventDefault()
-    if (rascunho.de && rascunho.ate && rascunho.de > rascunho.ate) {
-      setErroPeriodo('A data final precisa ser igual ou depois da inicial.')
+    // Data incompleta no campo nativo chega como "" (igual a vazio): o `badInput` diz que não é vazio de verdade.
+    const erros = errosDoPeriodo(
+      campoData(formulario.current, 'de', rascunho.de),
+      campoData(formulario.current, 'ate', rascunho.ate),
+    )
+    if (erros) {
+      setErrosPeriodo(erros)
+      const campo = formulario.current?.elements.namedItem(erros.de ? 'de' : 'ate')
+      if (campo instanceof HTMLInputElement) campo.focus()
       return
     }
-    setErroPeriodo(undefined)
+    setErrosPeriodo({})
     setAbertos(new Set())
     const novo = paraFiltro(rascunho)
     if (JSON.stringify(novo) === JSON.stringify(filtro)) recarregar()
     else setFiltro(novo)
   }
 
-  const acoesConhecidas = Object.keys(ACOES).sort((a, b) => nomeAcao(a).localeCompare(nomeAcao(b), 'pt-BR'))
+  const gruposAcao = acoes.dados ? opcoesDeAcao(acoes.dados) : acoes.erro ? OPCOES_CONHECIDAS : []
 
   return (
     <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
@@ -126,9 +165,29 @@ export function Auditoria() {
       />
 
       <Cartao>
-        <form onSubmit={aplicar} noValidate className="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Filtros da auditoria">
-          <Campo rotulo="De" type="date" value={rascunho.de} onChange={(e) => mudar('de', e.target.value)} />
-          <Campo rotulo="Até" type="date" value={rascunho.ate} erro={erroPeriodo} onChange={(e) => mudar('ate', e.target.value)} />
+        <form
+          ref={formulario}
+          onSubmit={aplicar}
+          noValidate
+          className="grid grid-cols-2 gap-3 lg:grid-cols-3"
+          aria-label="Filtros da auditoria"
+        >
+          <Campo
+            rotulo="De"
+            type="date"
+            name="de"
+            value={rascunho.de}
+            erro={errosPeriodo.de}
+            onChange={(e) => mudar('de', e.target.value)}
+          />
+          <Campo
+            rotulo="Até"
+            type="date"
+            name="ate"
+            value={rascunho.ate}
+            erro={errosPeriodo.ate}
+            onChange={(e) => mudar('ate', e.target.value)}
+          />
           <CampoSelecao className="col-span-2 sm:col-span-1" rotulo="Usuário" value={rascunho.usuario} onChange={(e) => mudar('usuario', e.target.value)}>
             <option value="">Todos</option>
             {(usuarios.dados ?? []).map((u) => (
@@ -139,10 +198,14 @@ export function Auditoria() {
           </CampoSelecao>
           <CampoSelecao className="col-span-2 sm:col-span-1" rotulo="Ação" value={rascunho.acao} onChange={(e) => mudar('acao', e.target.value)}>
             <option value="">Todas</option>
-            {acoesConhecidas.map((a) => (
-              <option key={a} value={a}>
-                {nomeAcao(a)}
-              </option>
+            {gruposAcao.map((g) => (
+              <optgroup key={g.grupo} label={g.grupo}>
+                {g.opcoes.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.rotulo}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </CampoSelecao>
           <CampoSelecao rotulo="Resultado" value={rascunho.resultado} onChange={(e) => mudar('resultado', e.target.value)}>
@@ -162,8 +225,10 @@ export function Auditoria() {
             <Botao
               className="flex-1 lg:flex-none"
               onClick={() => {
+                // O reset limpa também a data incompleta, que o React vê como "" e não apagaria.
+                formulario.current?.reset()
                 setRascunho(INICIAL)
-                setErroPeriodo(undefined)
+                setErrosPeriodo({})
                 setFiltro(paraFiltro(INICIAL))
               }}
             >

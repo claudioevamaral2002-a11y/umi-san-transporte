@@ -192,7 +192,7 @@ function TetoMapas({ atual, onSalvo }: { atual: Configuracao; onSalvo: (texto: s
   )
 }
 
-/** Fase 4 (§6.9): o contato que o Painel da empresa mostra em "Para recarregar, fale com a IVO". */
+/** Fase 4 (§6.9): o contato da IVO. v2.2: aparece também na Ajuda e na Carteira do cliente. */
 function ContatoRecarga({ atual, onSalvo }: { atual: Configuracao; onSalvo: (texto: string) => void }) {
   const [editando, setEditando] = useState(false)
   const [contato, setContato] = useState(atual.contato_recarga ?? '')
@@ -229,9 +229,9 @@ function ContatoRecarga({ atual, onSalvo }: { atual: Configuracao; onSalvo: (tex
           <Icone nome="conversa" />
         </span>
         <div className="min-w-0 space-y-0.5">
-          <h2 className="ivo-h3">Contato para recarga</h2>
+          <h2 className="ivo-h3">Contato da IVO (aparece na Ajuda e na Carteira)</h2>
           <p className="ivo-legenda text-texto-suave">
-            Aparece no Painel da empresa, em &quot;Para recarregar, fale com a IVO&quot;. Telefone ou WhatsApp.
+            Também aparece no Painel da empresa, em &quot;Para recarregar, fale com a IVO&quot;. Telefone ou WhatsApp.
           </p>
         </div>
       </div>
@@ -269,6 +269,13 @@ function ContatoRecarga({ atual, onSalvo }: { atual: Configuracao; onSalvo: (tex
             <dt className="ivo-corpo text-texto-suave">Contato</dt>
             <dd className="font-bold">{atual.contato_recarga ?? 'Não informado'}</dd>
           </dl>
+          {/* v2.2: sem contato, o cliente fica sem canal na Ajuda e na Carteira. */}
+          {!atual.contato_recarga?.trim() && (
+            <p className="flex items-start gap-2 ivo-legenda font-semibold text-alerta-texto" data-testid="aviso-sem-contato">
+              <Icone nome="alerta" tamanho={18} className="mt-px shrink-0" />
+              <span>Sem contato, a Ajuda e a Carteira mostram &apos;Contato ainda não cadastrado&apos;.</span>
+            </p>
+          )}
           <Botao className="flex w-full items-center justify-center gap-2 md:w-auto" onClick={() => setEditando(true)}>
             <Icone nome="lapis" tamanho={18} />
             Alterar contato

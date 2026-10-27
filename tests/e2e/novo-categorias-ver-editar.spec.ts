@@ -41,7 +41,7 @@ const cat = (codigo: string, nome: string, ordem: number, extra: Record<string, 
 })
 
 const CATEGORIAS = [
-  cat('PASSAGEIROS', 'IVO Passageiros', 1, { tarifa: { ...PASSAGEIROS, inicial: false } }),
+  cat('PASSAGEIROS', 'IVO Passageiros', 1, { pessoas_max: 4, tarifa: { ...PASSAGEIROS, inicial: false } }),
   cat('CARGA_LEVE', 'IVO Carga Leve', 2, { carga: 'AMBOS', reboque: 'SIM', tarifa: { ...LEVE, inicial: false } }),
   cat('MOTORISTA', 'IVO Motorista', 3, { veiculo_cliente: true, tarifa: { ...MOTORISTA, inicial: false } }),
   cat('VAN', 'IVO Van', 4, { pode_excluir: true, tarifa: { ...ZERO, km_cent: 500, inicial: false } }),
@@ -313,6 +313,66 @@ test('390 px sem rolagem lateral, no modo de ver e de editar', async ({ page }) 
   await page.getByRole('button', { name: 'Inativas (1)' }).click()
   await editar(page, 'IVO Carga Pesada')
   expect(await semRolagem()).toBe(true)
+})
+
+// v2.2 (especificação §5.6): "Até quantas pessoas" no lápis, salvo com o nome e a descrição em salvar_categoria.
+test('v2.2: o cartão mostra "até N pessoas" só quando preenchido', async ({ page }) => {
+  await abrir(page)
+  await expect(cartao(page, 'IVO Passageiros').getByTestId('pessoas-max')).toHaveText('até 4 pessoas')
+  await expect(cartao(page, 'IVO Carga Leve').getByTestId('pessoas-max')).toHaveCount(0)
+})
+
+test('v2.2: "Até quantas pessoas" vai em salvar_categoria; vazio tira o limite; fora de 1–99 não salva', async ({ page }) => {
+  const com5 = CATEGORIAS.map((c) => (c.codigo === 'PASSAGEIROS' ? { ...c, pessoas_max: 5 } : c))
+  const chamadas = await abrir(page, { categorias: [CATEGORIAS, com5] })
+  await editar(page, 'IVO Passageiros')
+  const passageiros = cartao(page, 'IVO Passageiros')
+  const campo = passageiros.getByLabel('Até quantas pessoas', { exact: true })
+  await expect(campo).toHaveValue('4')
+  const salvar = passageiros.getByRole('button', { name: 'Salvar categoria' })
+  await expect(salvar).toBeDisabled()
+
+  await campo.fill('0')
+  await salvar.click()
+  await expect(campo).toHaveAttribute('aria-invalid', 'true')
+  await expect(campo).toBeFocused()
+  expect(chamadas.filter((c) => c.rpc === 'salvar_categoria')).toHaveLength(0)
+
+  await campo.fill('5')
+  await salvar.click()
+  await expect(page.getByText('IVO Passageiros salva.')).toBeVisible()
+  expect(chamadas.find((c) => c.rpc === 'salvar_categoria')!.corpo).toEqual({
+    p: {
+      codigo: 'PASSAGEIROS',
+      nome: 'IVO Passageiros',
+      descricao_curta: 'descrição de IVO Passageiros',
+      ordem: 1,
+      ativa: true,
+      pessoas_max: 5,
+    },
+  })
+  // Relida a lista, o campo mostra o valor salvo e continua editando.
+  await expect(passageiros.getByLabel('Até quantas pessoas', { exact: true })).toHaveValue('5')
+
+  await passageiros.getByLabel('Até quantas pessoas', { exact: true }).fill('')
+  await passageiros.getByRole('button', { name: 'Salvar categoria' }).click()
+  await expect.poll(() => chamadas.filter((c) => c.rpc === 'salvar_categoria').length).toBe(2)
+  expect((chamadas.filter((c) => c.rpc === 'salvar_categoria')[1]!.corpo.p as Record<string, unknown>).pessoas_max).toBeNull()
+})
+
+test('v2.2: o limite de pessoas não salvo é rascunho; Cancelar volta ao publicado', async ({ page }) => {
+  await abrir(page)
+  await editar(page, 'IVO Passageiros')
+  const passageiros = cartao(page, 'IVO Passageiros')
+  await passageiros.getByLabel('Até quantas pessoas', { exact: true }).fill('6')
+  await page.getByRole('link', { name: 'Início' }).click()
+  const folha = page.getByRole('dialog', { name: 'Sair sem publicar?' })
+  await expect(folha).toBeVisible()
+  await folha.getByRole('button', { name: 'Continuar editando' }).click()
+  await passageiros.getByRole('button', { name: 'Cancelar', exact: true }).click()
+  await expect(passageiros.getByTestId('pessoas-max')).toHaveText('até 4 pessoas')
+  await editar(page, 'IVO Passageiros')
+  await expect(passageiros.getByLabel('Até quantas pessoas', { exact: true })).toHaveValue('4')
 })
 
 for (const tema of ['light', 'dark'] as const) {
