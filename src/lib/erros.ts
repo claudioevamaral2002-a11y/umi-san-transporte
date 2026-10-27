@@ -98,6 +98,10 @@ export const MENSAGENS = {
   FATURA_CANCELADA: 'Esta fatura foi cancelada. Atualize a página.',
   // Conferido no aparelho antes de enviar a NF (enviarPdfNota).
   PDF_INVALIDO: 'Envie a NF em PDF de até 5 MB.',
+
+  // Correções da auditoria (v2.2). ACIMA_DA_CAPACIDADE: a resposta traz `pessoas_max` para trocar o {pessoas_max}.
+  ACIMA_DA_CAPACIDADE: 'Esta categoria leva até {pessoas_max} pessoas.',
+  JA_EXISTE: 'Já existe um local salvo com este nome.',
 } as const satisfies Record<string, string>
 
 export type Codigo = keyof typeof MENSAGENS
