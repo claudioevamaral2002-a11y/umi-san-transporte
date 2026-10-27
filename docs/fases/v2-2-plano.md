@@ -115,7 +115,7 @@ Branch `v2-2`, a partir de `origin/main` (v2.1 + PR #44). **Um PR só**, e o mer
 **Arquivos:**
 - modificar `src/lib/erros.ts`, `src/lib/administracao.ts` (`ACOES`), `src/lib/pedidos.ts` (tipos), `src/lib/categorias.ts`, `src/lib/categoriasAdm.ts` e `src/lib/api.ts`;
 - criar `src/lib/locais.ts`, `src/lib/ajuda.ts` e `src/lib/cobrancaPedido.ts`;
-- testes em `tests/unit/` (com `vi.mock` do `supabase.ts` quando importar módulo que lê env).
+- testes `src/lib/*.test.ts`, ao lado de cada módulo (com `vi.mock` do `supabase.ts` quando importar módulo que lê env).
 
 **Interfaces:**
 - **`erros.ts`:** `ACIMA_DA_CAPACIDADE` → "Esta categoria leva até {pessoas_max} pessoas." (use o detalhe). A guarda de erros do CI exige que todo código do banco tenha mensagem.
