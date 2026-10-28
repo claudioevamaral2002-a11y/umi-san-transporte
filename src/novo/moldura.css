@@ -1,0 +1,121 @@
+/* Exclusivo da entrada v2. Não muda os tokens ou as telas do aplicativo v1. */
+.ivo-app {
+  --ivo-lateral-largura: 248px;
+  --ivo-painel-largura: 408px;
+  min-height: 100dvh;
+}
+.ivo-conteudo { min-width: 0; }
+.ivo-lateral { display: none; }
+.ivo-pular-conteudo {
+  position: fixed; z-index: 1000; top: 8px; left: 8px;
+  padding: 12px 20px; border-radius: 12px;
+  color: var(--cor-texto); background: var(--cor-superficie);
+  transform: translateY(-160%);
+}
+.ivo-pular-conteudo:focus { transform: translateY(0); }
+.ivo-topo-mapa {
+  position: fixed; z-index: 10;
+  top: calc(env(safe-area-inset-top) + 12px); left: 80px;
+  display: flex; align-items: center; gap: 24px;
+  min-height: 48px; padding: 12px 16px; border-radius: 16px;
+  background: var(--cor-superficie); box-shadow: var(--sombra);
+}
+.ivo-topo-mapa > span { display: none; }
+.ivo-marca-escura { display: none; }
+.ivo-folha-mapa { scrollbar-width: thin; scrollbar-color: var(--cor-borda) transparent; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) .ivo-marca-clara { display: none; }
+  :root:not([data-tema="claro"]) .ivo-marca-escura { display: block; }
+}
+
+@media (min-width: 1024px) {
+  .ivo-menu-movel { display: none; }
+  .ivo-conteudo { margin-left: var(--ivo-lateral-largura); }
+  .ivo-lateral {
+    position: fixed; inset: 0 auto 0 0; z-index: 30;
+    width: var(--ivo-lateral-largura); height: 100dvh;
+    display: flex; flex-direction: column;
+    background: var(--cor-marinho); color: var(--cor-papel);
+    padding: 28px 16px 12px;
+    view-transition-name: lateral;
+  }
+  .ivo-lateral-marca { display: grid; gap: 12px; padding: 0 12px 28px; }
+  .ivo-lateral-marca > span { font-size: 11px; letter-spacing: .06em; color: #c0cede; }
+  .ivo-lateral-itens {
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: thin; scrollbar-color: #61768d transparent;
+    padding: 4px; margin: -4px;
+  }
+  .ivo-lateral-itens ul { display: grid; gap: 4px; }
+  .ivo-lateral-link {
+    position: relative; display: flex; align-items: center; gap: 12px;
+    min-height: 48px; border-radius: 12px; padding: 10px 12px;
+    color: #c0cede; font-size: 13px; line-height: 1.4; font-weight: 600;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  .ivo-lateral-link:hover { background: #183b5c; color: #fff; }
+  .ivo-lateral-link[aria-current="page"] { background: #244662; color: #fff; }
+  .ivo-lateral-link[aria-current="page"] svg { color: var(--cor-laranja); }
+  .ivo-lateral-link::before {
+    content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 3px; border-radius: 4px; background: var(--cor-laranja);
+    transform: scaleY(0); transition: transform 180ms ease;
+  }
+  .ivo-lateral-link[aria-current="page"]::before { transform: scaleY(1); }
+  .ivo-lateral-rodape { border-top: 1px solid #36506b; margin-top: 20px; padding: 16px 8px 0; }
+  .ivo-lateral-pessoa { display: flex; align-items: center; gap: 10px; }
+  .ivo-lateral-pessoa > div { min-width: 0; }
+  .ivo-avatar {
+    display: grid; place-items: center; flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 12px;
+    background: #244662; color: #fff; font-size: 12px; font-weight: 800;
+  }
+  .ivo-lateral-nome { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+  .ivo-lateral-perfil { margin-top: 3px; font-size: 11px; color: #c0cede; overflow-wrap: anywhere; }
+  .ivo-lateral-sair { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 6px; font-size: 12px; color: #c0cede; }
+  .ivo-lateral-sair:hover { color: #fff; }
+  .ivo-lateral-disponivel { margin-bottom: 16px; font-size: 12px; }
+  .ivo-topo-mapa {
+    top: 0; right: 0; left: var(--ivo-lateral-largura);
+    height: 76px; padding: 0 28px; border-radius: 0;
+    border-bottom: 1px solid var(--cor-borda); box-shadow: none;
+    view-transition-name: topo-mapa;
+  }
+  :root .ivo-app .ivo-topo-mapa img { display: none; }
+  .ivo-topo-mapa > span { display: block; font-size: 14px; font-weight: 700; }
+  /* Área útil do mapa separada do painel: fitBounds e centralização não escondem o carro sob o formulário. */
+  .ivo-area-mapa { top: 76px; left: calc(var(--ivo-lateral-largura) + var(--ivo-painel-largura) + 48px); }
+  .ivo-folha-mapa {
+    top: 100px; bottom: 24px; left: calc(var(--ivo-lateral-largura) + 24px); right: auto;
+    width: var(--ivo-painel-largura); max-height: none;
+    padding: 24px; border: 1px solid var(--cor-borda); border-radius: 20px;
+    box-shadow: 0 4px 24px rgb(10 37 64 / .04);
+  }
+  .ivo-folha-mapa > [data-testid="alca"] { display: none; }
+  .ivo-pagina { padding-top: 0; }
+  .ivo-cabecalho-pagina {
+    min-height: 76px; margin-bottom: 8px; padding-inline: 28px;
+    border-bottom: 1px solid var(--cor-borda); background: var(--cor-superficie);
+  }
+  .ivo-pagina > main { padding-top: 28px; }
+}
+
+@media (min-width: 1440px) {
+  .ivo-app { --ivo-painel-largura: 432px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ivo-lateral-link, .ivo-lateral-link::before { transition: none; }
+}
+::view-transition-group(lateral), ::view-transition-group(topo-mapa),
+::view-transition-old(lateral), ::view-transition-new(lateral),
+::view-transition-old(topo-mapa), ::view-transition-new(topo-mapa) { animation: none; }
+
+@media (forced-colors: active) {
+  .ivo-lateral-link[aria-current="page"] { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+@media print {
+  .ivo-conteudo { margin-left: 0; }
+  .ivo-cabecalho-pagina { display: none; }
+}

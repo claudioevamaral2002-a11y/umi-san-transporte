@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Icone, type NomeIcone } from '../../design/componentes/Icone.tsx'
 import { Interruptor } from '../../design/componentes/Interruptor.tsx'
@@ -6,7 +6,7 @@ import { gereEquipe } from '../../lib/administracao.ts'
 import type { Perfil } from '../../lib/estadoSessao.ts'
 import { rotuloCurto, useRotulos, type Rotulos } from '../../lib/rotulos.tsx'
 import { useSessao } from '../../lib/sessao.tsx'
-import { gravarDisponivel, lerDisponivel } from '../disponivel.ts'
+import { gravarDisponivel, useDisponivel } from '../disponivel.ts'
 import { itemAtual } from '../navegacao.ts'
 
 /** A v1 (o app anterior, em outra origem). Na v2, só o gestor de frota é mandado para lá (Ruling R13). */
@@ -71,7 +71,7 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
 }
 
 /** Iniciais do nome para o avatar ("Marina Souza" → "MS"). */
-function iniciais(nome: string): string {
+export function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean)
   if (partes.length === 0) return '?'
   const primeira = partes[0]![0] ?? ''
@@ -80,7 +80,7 @@ function iniciais(nome: string): string {
 }
 
 /** "Master", "Motorista" ou "Umi San · Administrador" (rótulos do app novo, Ruling R13). */
-function subtitulo(p: Perfil, rotulos: Rotulos): string {
+export function subtitulo(p: Perfil, rotulos: Rotulos): string {
   const rotulo = rotuloCurto(rotulos, p.papel, p.nivel)
   return p.papel === 'CLIENTE' && p.empresa_nome ? `${p.empresa_nome} · ${rotulo}` : rotulo
 }
@@ -102,7 +102,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
   const local = useLocation()
   const idTitulo = useId()
   const rotulos = useRotulos()
-  const [disponivel, setDisponivel] = useState(lerDisponivel)
+  const disponivel = useDisponivel()
   const itens = itensDoMenu(perfil)
   // A página atual fica destacada (especificação §6.4): troca de uma para outra direto pelo ☰.
   const atual = itemAtual(itens, local.pathname)
@@ -112,9 +112,16 @@ export function Menu({ perfil }: { perfil: Perfil }) {
     gaveta.current?.close()
   }, [local.pathname])
 
+  // Ao ampliar a janela, a navegação lateral assume sem deixar um diálogo invisível prendendo o foco.
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const aoMudar = () => { if (desktop.matches) gaveta.current?.close() }
+    desktop.addEventListener('change', aoMudar)
+    return () => desktop.removeEventListener('change', aoMudar)
+  }, [])
+
   const alternarDisponivel = () => {
     const novo = !disponivel
-    setDisponivel(novo)
     gravarDisponivel(novo)
   }
 
@@ -126,7 +133,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
         onClick={() => gaveta.current?.showModal()}
         aria-haspopup="dialog"
         aria-label="Abrir menu"
-        className="fixed top-[calc(env(safe-area-inset-top)+0.75rem)] left-4 z-20 flex size-12 items-center justify-center rounded-full bg-superficie text-texto shadow-[var(--sombra)]"
+        className="ivo-menu-movel fixed top-[calc(env(safe-area-inset-top)+0.75rem)] left-4 z-20 flex size-12 items-center justify-center rounded-full bg-superficie text-texto shadow-[var(--sombra)]"
       >
         <Icone nome="menu" />
       </button>
@@ -136,7 +143,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
         aria-label="Menu"
         aria-describedby={idTitulo}
         onClose={() => {
-          if (botao.current?.isConnected) botao.current.focus()
+          if (botao.current?.getClientRects().length) botao.current.focus()
         }}
         onClick={(e) => {
           if (e.target === e.currentTarget) e.currentTarget.close()
