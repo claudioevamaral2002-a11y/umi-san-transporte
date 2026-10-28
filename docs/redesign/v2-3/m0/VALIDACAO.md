@@ -21,7 +21,7 @@ Capturas reais do build, com as fixtures de teste existentes. Não representam v
 
 ## Preservação verificada neste módulo
 
-Esta tabela referencia os números de `REQUISITOS_PRESERVACAO.md`. Não substitui nem inventa linhas da matriz oficial: `MATRIZ_PRESERVACAO.md` e `v2-3-desenho.md` não foram fornecidos e não estavam na main consultada. A correspondência com esses documentos está pendente.
+Os três documentos oficiais foram localizados em `redesenho-v3/docs/redesenho` e incorporados em `docs/redesenho` nesta branch. Esta tabela ainda referencia números dos requisitos; o preenchimento da matriz por ID e a regressão completa continuam pendentes.
 
 | Requisito | Destino / verificação | Resultado |
 |---|---|---|
@@ -49,5 +49,13 @@ Ambiente local: o download do Chromium 156 exigido pelo Playwright não concluiu
 - O teste de login da v1 que depende do Turnstile externo não recebeu o token neste ambiente. Os outros 28 testes selecionados da v1 passaram. Autenticação não foi alterada. A validação integral do CI continua obrigatória.
 - Não houve testes com contas reais, GPS de um motorista em viagem ou movimento financeiro em produção.
 - O orçamento de 150 KB gzip deve ser verificado também na v2: a medição e comparação com a base ficam registradas ao final da validação.
-- A reforma específica da solicitação e a barra de atalhos na tela inicial pertencem ao M1; filtros/listas ao M2; calculadora e operação do motorista ao M3; telas de gestão ao M4. Não foram substituídas pelo protótipo.
-- Antes de liberar o módulo para merge, complementar a rastreabilidade com os dois documentos pendentes e conferir o CI verde. O merge é do dono.
+- A reforma específica da solicitação pertence ao M1; a barra inferior faz parte do M0 segundo o desenho oficial; filtros/listas ao M2; calculadora e operação do motorista ao M3; telas de gestão ao M4. Não foram substituídas pelo protótipo.
+- Antes de liberar o módulo para merge, completar o escopo M0 abaixo, preencher a matriz por ID e conferir o CI verde. O merge é do dono.
+
+## Conferência com o desenho oficial (28/10/2026)
+
+O M0 deste PR ainda é parcial. Faltam a paleta do protótipo aplicada somente à v2 com contraste validado, DM Sans local para o corpo, o indicador deslizante, a lateral compacta em 768 px e a barra inferior Solicitar/Corridas/Agenda/Mais. A organização por perfil e a posição do interruptor do motorista também devem ser alinhadas ao desenho. O sino e o contato precisam de ações reais disponíveis; não adicionar indicadores ou notificações fictícias. O agrupamento das telas Master é detalhado no M4.
+
+Há inconsistência de IDs no desenho: ele chama C-36 a C-75 de pedido em duas etapas, mas a matriz situa início/categorias principalmente em C-08 a C-35 e começa acompanhamento em C-38. A rastreabilidade será feita por ação e ID real da matriz, sem marcar intervalos inteiros como preservados.
+
+CI observado nesta conferência: execuções do commit 90bb8c3 ainda em andamento; resultados anteriores em 2a2aaca falharam e não representam o head corrigido. Não declarar CI verde até a conclusão do head correspondente.
