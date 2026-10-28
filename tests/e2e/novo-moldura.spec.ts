@@ -67,7 +67,7 @@ test('mapa de tela cheia, botão ☰ no canto e a folha com alça', async ({ pag
   await expect(folha).toContainText('Diego')
 })
 
-test('cliente N1: Minhas corridas, Agenda, Carteira da empresa, Locais salvos, Equipe, Painel da empresa, Perfil e segurança, Ajuda', async ({
+test('cliente N1: Minhas corridas, Agenda, Equipe, Painel da empresa, Perfil e segurança, Ajuda', async ({
   page,
 }) => {
   await abrir(page, N1)
@@ -77,8 +77,6 @@ test('cliente N1: Minhas corridas, Agenda, Carteira da empresa, Locais salvos, E
   expect(await itens(menu)).toEqual([
     'Minhas corridas',
     'Agenda',
-    'Carteira da empresa',
-    'Locais salvos',
     'Equipe',
     'Painel da empresa',
     'Perfil e segurança',
@@ -86,7 +84,6 @@ test('cliente N1: Minhas corridas, Agenda, Carteira da empresa, Locais salvos, E
   ])
   // As telas de hoje abrem dentro do app novo, na mesma origem (Ruling R12).
   await expect(menu.getByRole('link', { name: 'Equipe' })).toHaveAttribute('href', '/equipe')
-  await expect(menu.getByRole('link', { name: 'Carteira da empresa' })).toHaveAttribute('href', '/extrato')
   await expect(menu.getByRole('button', { name: 'Sair' })).toBeVisible()
 
   // Diálogo de verdade: Esc fecha e o foco volta ao botão ☰.
@@ -108,8 +105,6 @@ test('cliente N2 não vê Equipe nem Painel da empresa', async ({ page }) => {
   expect(await itens(menu)).toEqual([
     'Minhas corridas',
     'Agenda',
-    'Carteira da empresa',
-    'Locais salvos',
     'Perfil e segurança',
     'Ajuda',
   ])

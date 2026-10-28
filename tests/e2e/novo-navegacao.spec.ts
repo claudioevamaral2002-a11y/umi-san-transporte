@@ -62,7 +62,6 @@ test('cliente: "← Início" e o título em Minhas corridas; o Início é a tela
 
 const CASOS: Array<[PerfilFalso, string, string]> = [
   [N1, '/agenda', 'Agenda'],
-  [N1, '/extrato', 'Carteira da empresa'],
   [N1, '/equipe', 'Equipe'],
   [N1, '/perfil', 'Perfil e segurança'],
   [N1, '/ajuda', 'Ajuda'],
@@ -85,10 +84,9 @@ for (const [perfil, caminho, titulo] of CASOS) {
   })
 }
 
-test('um nome só: em Minhas corridas e na Carteira, o título à vista é o h1 com o nome do menu', async ({ page }) => {
+test('um nome só: em Minhas corridas, o título à vista é o h1 com o nome do menu', async ({ page }) => {
   for (const [caminho, nome, antigo] of [
     ['/pedidos', 'Minhas corridas', 'Pedidos'],
-    ['/extrato', 'Carteira da empresa', 'Extrato'],
   ] as const) {
     await abrir(page, N1, caminho)
     const h1 = page.getByRole('heading', { level: 1 })
@@ -123,10 +121,11 @@ test('o ☰ marca a página atual com aria-current', async ({ page }) => {
   await expect(menu.getByRole('link', { name: 'Agenda' })).not.toHaveAttribute('aria-current', /.*/)
 })
 
-test('cliente no celular: a barra Pedir · Corridas · Agenda · Carteira fica fixa e alterna sem recarregar', async ({ page }) => {
+test('cliente no celular: a barra Pedir · Corridas · Agenda fica fixa e alterna sem recarregar', async ({ page }) => {
   await abrir(page, N1, '/pedidos')
   const nav = barra(page)
-  await expect(nav.getByRole('link')).toHaveText(['Pedir', 'Corridas', 'Agenda', 'Carteira'])
+  // v2.2.1: sem a Carteira (o saldo e o extrato ficam no Painel da empresa).
+  await expect(nav.getByRole('link')).toHaveText(['Pedir', 'Corridas', 'Agenda'])
   await expect(nav.getByRole('link', { name: 'Corridas' })).toHaveAttribute('aria-current', 'page')
   await expect(nav).toHaveCSS('position', 'fixed')
   const vp = page.viewportSize()!
@@ -141,9 +140,6 @@ test('cliente no celular: a barra Pedir · Corridas · Agenda · Carteira fica f
   await nav.getByRole('link', { name: 'Agenda' }).click()
   await expect(page).toHaveURL(/\/agenda$/)
   await expect(nav.getByRole('link', { name: 'Agenda' })).toHaveAttribute('aria-current', 'page')
-  await nav.getByRole('link', { name: 'Carteira' }).click()
-  await expect(page).toHaveURL(/\/extrato$/)
-  await expect(page.getByRole('heading', { name: 'Carteira da empresa' })).toBeVisible()
   await nav.getByRole('link', { name: 'Corridas' }).click()
   await expect(page).toHaveURL(/\/pedidos$/)
   expect(await semRecarregar()).toBe(true)

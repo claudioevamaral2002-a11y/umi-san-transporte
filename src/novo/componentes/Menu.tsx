@@ -35,8 +35,6 @@ export function itensDoMenu(p: Perfil): ItemMenu[] {
       return [
         { rotulo: 'Minhas corridas', icone: 'lista', para: '/pedidos' },
         { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
-        { rotulo: 'Carteira da empresa', icone: 'dinheiro', para: '/extrato' },
-        { rotulo: 'Locais salvos', icone: 'local', para: '/locais' },
         ...(gereEquipe(p) ? [{ rotulo: 'Equipe', icone: 'usuarios', para: '/equipe' } satisfies ItemMenu, PAINEL_EMPRESA] : []),
         PERFIL_E_SEGURANCA,
         AJUDA,

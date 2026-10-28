@@ -41,11 +41,10 @@ export const ATALHOS_CLIENTE = [
   { rotulo: 'Pedir', icone: 'mais', para: '/' },
   { rotulo: 'Corridas', icone: 'lista', para: '/pedidos' },
   { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
-  { rotulo: 'Carteira', icone: 'dinheiro', para: '/extrato' },
 ] as const satisfies readonly ItemMenu[]
 
 /**
- * A barra só fica nas páginas dela (Corridas, Agenda e Carteira). No detalhe do pedido, a barra de ações é que fica
+ * A barra só fica nas páginas dela (Corridas e Agenda; a Carteira saiu na v2.2.1). No detalhe do pedido, a barra de ações é que fica
  * presa ao pé da tela.
  */
 export const temBarraCliente = (caminho: string) => {

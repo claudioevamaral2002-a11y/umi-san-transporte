@@ -1,7 +1,7 @@
 // v2.1 (Tarefa 8, especificação §5.3): a empresa no Faturado (NF). O painel troca o saldo por "A faturar", "Em aberto"
 // e "Vencidas"; a aba Carteira vira Faturas (o "A faturar" com as corridas e a lista de faturas com a NF e o CSV); o
-// Extrato do ☰ vira "Lançamentos". No Crédito, nada muda (os specs novo-painel-* continuam valendo). Roda no projeto
-// Playwright `novo` (dist-novo), contra o banco simulado.
+// endereço antigo /extrato leva o N1 às Faturas (v2.2.1: sem "Carteira da empresa" no ☰). No Crédito, nada muda (os
+// specs novo-painel-* continuam valendo). Roda no projeto Playwright `novo` (dist-novo), contra o banco simulado.
 import { readFile } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
@@ -422,26 +422,17 @@ test.describe('no computador', () => {
     await expect(abas(page).getByRole('link', { name: 'Painel' })).toHaveAttribute('href', `/empresa?empresa=${EMPRESA_PORTO.id}`)
   })
 
-  test('o Extrato do ☰ vira "Lançamentos" e o saldo negativo aparece como Total devido', async ({ page }) => {
+  // v2.2.1: sai a "Carteira da empresa" do ☰; o endereço antigo leva o N1 ao Painel da empresa.
+  test('no Faturado, o endereço antigo /extrato leva o N1 às Faturas', async ({ page }) => {
     await abrir(page, N1, '/extrato')
-    await expect(page.getByRole('heading', { level: 1, name: 'Lançamentos' })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-    const total = page.getByTestId('total-devido')
-    await expect(total).toContainText('Total devido')
-    await expect(total).toContainText('R$ 5.050,00')
-    await expect(total).toContainText('faturado e a faturar')
-    await expect(page.getByText('Em aberto')).toHaveCount(0)
-    // Nunca mostrou "Extrato" antes de saber a forma.
-    await expect(page.getByRole('heading', { name: 'Extrato', exact: true })).toHaveCount(0)
-    await expect(page.getByText('Disponível para novos pedidos')).toHaveCount(0)
-    await expect(page.getByTestId('extrato')).toBeVisible()
+    await expect(page).toHaveURL(/\/empresa\/faturas$/)
+    await expect(page.getByTestId('cartao-a-faturar')).toBeVisible()
   })
 
-  test('no Crédito, o Extrato do ☰ continua "Carteira da empresa" com o saldo', async ({ page }) => {
+  test('no Crédito, o endereço antigo /extrato leva o N1 à Carteira do painel, com o saldo', async ({ page }) => {
     await abrir(page, N1, '/extrato', 'CREDITO')
-    await expect(page.getByRole('heading', { level: 1, name: 'Carteira da empresa' })).toBeVisible()
+    await expect(page).toHaveURL(/\/empresa\/carteira$/)
     await expect(page.getByText('Disponível para novos pedidos')).toBeVisible()
-    await expect(page.getByText('Lançamentos', { exact: true })).toHaveCount(0)
   })
 })
 
@@ -468,7 +459,7 @@ for (const tema of ['light', 'dark'] as const) {
   test.describe(`tema ${tema === 'light' ? 'claro' : 'escuro'}`, () => {
     test.use({ colorScheme: tema })
 
-    test('Painel, Faturas e Lançamentos sem violações do axe nem de CSP', async ({ page }) => {
+    test('Painel e Faturas sem violações do axe nem de CSP', async ({ page }) => {
       const csp = await vigiarCsp(page)
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.setViewportSize({ width: 1440, height: 900 })
@@ -477,9 +468,6 @@ for (const tema of ['light', 'dark'] as const) {
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
       await abas(page).getByRole('link', { name: 'Faturas' }).click()
       await expect(listaFaturas(page)).toHaveCount(4)
-      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-      await page.goto('/extrato')
-      await expect(page.getByRole('heading', { level: 1, name: 'Lançamentos' })).toBeVisible()
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
       expect(csp).toEqual([])
     })

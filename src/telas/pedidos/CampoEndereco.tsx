@@ -13,8 +13,9 @@ const FECHAR_APOS_MS = 200
 
 /**
  * Fase 3A: campo de origem/destino com sugestões (padrão ARIA combobox + listbox). Locais da empresa primeiro (desde
- * 0 letras, ao focar), depois o Google (3 letras ou mais, 250 ms sem digitar), e no fim "Marcar no mapa". Escolher uma
- * sugestão do Google busca as coordenadas na mesma sessão de busca e a encerra; fechar sem escolher também encerra.
+ * 0 letras, ao focar; com o campo vazio, "Últimos lugares" desde a v2.2.1), depois o Google (3 letras ou mais, 250 ms
+ * sem digitar), e no fim "Marcar no mapa". Escolher uma sugestão do Google busca as coordenadas na mesma sessão de
+ * busca e a encerra; fechar sem escolher também encerra.
  * Se o Google não responder, o campo segue como texto livre, com aviso.
  */
 export function CampoEndereco({
@@ -153,6 +154,9 @@ export function CampoEndereco({
     </li>
   )
 
+  // v2.2.1: com o campo vazio, a lista mostra os últimos lugares usados pela empresa (o banco já os ordena assim).
+  const tituloDaEmpresa = valor.texto.trim() === '' ? 'Últimos lugares' : 'Locais da empresa'
+
   const lista = () => (
     <ul
       id={idLista}
@@ -164,9 +168,9 @@ export function CampoEndereco({
       {daEmpresa.length > 0 && (
         <li role="presentation">
           <p aria-hidden="true" className="px-3 pt-1 pb-1 ivo-legenda font-semibold text-texto-suave">
-            Locais da empresa
+            {tituloDaEmpresa}
           </p>
-          <ul role="group" aria-label="Locais da empresa" className="space-y-1">
+          <ul role="group" aria-label={tituloDaEmpresa} className="space-y-1">
             {daEmpresa.map((s, i) => item(s, i))}
           </ul>
         </li>

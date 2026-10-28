@@ -25,7 +25,7 @@ export function InicioProvisorio() {
   )
 }
 
-/** Tela de página ainda por fazer (Locais salvos, Painel da empresa, Ajuda), com o título do menu. */
+/** Tela de página ainda por fazer (Painel da empresa, Ajuda), com o título do menu. */
 export function EmBreve({ titulo }: { titulo: string }) {
   // O h1 daqui é o nome da página: o cabeçalho "← Início" do app novo não o repete.
   useTituloNaTela('visivel')

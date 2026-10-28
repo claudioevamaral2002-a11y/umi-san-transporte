@@ -109,8 +109,8 @@ function PerguntasCliente({ ajuda, visualizador }: { ajuda: AjudaCliente | null;
       ) : (
         <Pergunta titulo="Como recarregar o saldo?">
           <p>
-            A empresa usa saldo pré-pago. Para recarregar, fale com a IVO pelo contato acima. O saldo e o extrato ficam em
-            Carteira da empresa.
+            A empresa usa saldo pré-pago. Para recarregar, fale com a IVO pelo contato acima. Quem administra a empresa vê o
+            saldo e o extrato em Painel da empresa › Carteira.
           </p>
         </Pergunta>
       )}

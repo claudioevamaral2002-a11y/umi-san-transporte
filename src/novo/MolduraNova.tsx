@@ -70,8 +70,8 @@ export function GuardaPerfil({ permite }: { permite: (p: Perfil) => boolean }) {
 
 /**
  * Telas de página (fora do mapa): as novas (Veículos, Categorias, Perfil…) e as de hoje reusadas (Pedidos, Agenda,
- * Extrato, Equipe e as /adm/*, Ruling R12). Todas com o cabeçalho "← Início" + título ao lado do ☰ fixo (especificação
- * §6.4, mockup 4); o cliente ganha a barra Pedir · Corridas · Agenda · Carteira no celular. As rotas das telas de hoje
+ * Equipe e as /adm/*, Ruling R12). Todas com o cabeçalho "← Início" + título ao lado do ☰ fixo (especificação
+ * §6.4, mockup 4); o cliente ganha a barra Pedir · Corridas · Agenda no celular. As rotas das telas de hoje
  * aparecem como "De → (Parada) → Para".
  */
 export function TelaDePagina() {

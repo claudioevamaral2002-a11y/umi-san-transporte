@@ -21,7 +21,7 @@ import {
 //   3. O Faturado e o DEBITO vão para a última quinzena fechada (SQL de apoio: único atalho de datas).
 //   4. O Master gera a fatura da quinzena com o número da NF e o PDF (upload real no bucket notas-fiscais).
 //   5. O N1 vê a fatura (Aberta), baixa a NF (o mesmo PDF) e o CSV da fatura.
-//   6. O Master marca a fatura como paga; os Lançamentos do N1 mostram o "Pagamento de fatura".
+//   6. O Master marca a fatura como paga; o N1 vê a fatura Paga no Painel da empresa.
 // Só o Google é simulado (como em fase-4-1). O motorista atende os pedidos novos (o ativo mais antigo) só durante o
 // teste e é desativado no fim; a empresa e as pessoas são criadas aqui: os outros arquivos, que dividem o banco, não
 // veem nada deste. Atalhos no banco: o horário do pedido é puxado para daqui a 20 min (a saída só libera 60 min antes)
@@ -374,13 +374,10 @@ test.describe('faturamento por NF (v2.1)', () => {
       await expect(naLista.getByRole('button', { name: 'Marcar como paga' })).toHaveCount(0)
       expect((await lancamentosDaEmpresa(empresa)).filter((l) => l.startsWith('PAGAMENTO_FATURA:'))).toEqual([`PAGAMENTO_FATURA:${TOTAL}`])
 
-      // ===== 10. Os Lançamentos do N1 (☰ › Carteira da empresa no Faturado) mostram o pagamento; a fatura, Paga.
+      // ===== 10. O pagamento está no livro-razão (passo 9); a fatura do N1 fica Paga. v2.2.1: sem a "Carteira da
+      // empresa", o endereço antigo /extrato leva o N1 ao Painel da empresa, que no Faturado abre as Faturas.
       await pg.goto('/extrato')
-      await expect(pg.getByRole('heading', { level: 1, name: 'Lançamentos' })).toBeVisible({ timeout: 30_000 })
-      const pagamento = pg.getByTestId('lista-extrato').getByTestId('item-extrato').filter({ hasText: 'Pagamento de fatura' })
-      await expect(pagamento).toHaveCount(1, { timeout: 30_000 })
-      await expect(pagamento).toContainText(new RegExp(brl(TOTAL)))
-      await pg.goto('/empresa/faturas')
+      await expect(pg).toHaveURL(/\/empresa\/faturas$/, { timeout: 30_000 })
       await expect(fatura.getByTestId('etiqueta-fatura')).toHaveText('Paga', { timeout: 30_000 })
     } finally {
       await Promise.all([ctxAdm.close(), ctxMot.close(), ctxCli.close(), ctxGes.close()])

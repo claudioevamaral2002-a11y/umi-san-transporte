@@ -639,7 +639,7 @@ Roteiro de teste: [v2-2-o-que-testar.md](fases/v2-2-o-que-testar.md). Desenho: [
 - Aparece em três lugares: na **Ajuda** de todos os perfis ("Falar com a IVO", com link de ligação ou WhatsApp quando é número), na **Carteira** de empresa no Crédito ("Para recarregar, fale com a IVO: …") e no **Painel da empresa**.
 - Vazio: a Ajuda e a Carteira mostram **"Contato ainda não cadastrado"**, e Configurações mostra um aviso ao Master.
 
-### 22.3 Locais salvos
+### 22.3 Locais salvos (removido na v2.2.1, ver §23)
 - Os locais continuam sendo **guardados sozinhos** quando a empresa pede uma corrida. A tela ☰ › **Locais salvos** lista **todos** os da empresa, os mais usados primeiro (até 200).
 - **Pedir daqui** abre o Início com o **De** preenchido. Todos os níveis do cliente veem.
 - Só o **Administrador (N1)** da empresa vê o lápis para **renomear** (de 2 a 80 caracteres; nome repetido → "Já existe um local salvo com este nome.") e **excluir**. Excluir apaga só o local; os pedidos antigos não mudam.
@@ -674,3 +674,17 @@ Roteiro de teste: [v2-2-o-que-testar.md](fases/v2-2-o-que-testar.md). Desenho: [
 | A lista mostra "Multa R$ X" e o cliente diz que não pagou | Abra a Carteira da empresa: a multa está no extrato. Se ela foi estornada depois, a lista volta a "Sem cobrança" quando o app reler. |
 | A agenda do dia está vazia, mas o mês conta pedidos | O app está desatualizado (a agenda antiga só mostrava os ativos). Feche e abra o app e toque em **Atualizar**. |
 | A "3 dias" corta ou some em algum celular | Não foi reproduzido na v2.2. Peça o print e o modelo do celular e abra um defeito. |
+
+## 23. v2.2.1: Últimos lugares no De/Para; sai Locais salvos e Carteira da empresa
+
+Pedido do dono: os locais salvos aparecem ao tocar no **De** ou no **Para**, pelos últimos pedidos, e a página Carteira da empresa sai.
+
+- **Últimos lugares:** com o campo **De** ou **Para** vazio, a lista abre com o grupo **"Últimos lugares"**: os locais da empresa usados por último primeiro (até 5). Ao digitar, o grupo volta a ser **"Locais da empresa"**, com os mais usados primeiro, como antes. Vale também para o app v1 (o campo é o mesmo).
+  - Banco: a migration `20261028120000_locais_ultimos.sql` refaz `api.locais_da_empresa`. Com o texto vazio, ordena por `ultimo_uso desc`; com texto, a ordem não muda. A permissão, o limite e a resposta são os mesmos. `ultimo_uso` é atualizado a cada `criar_pedido`. pgTAP `0051`.
+- **Sai "Locais salvos"** do ☰ do cliente, com o **Pedir daqui**. As RPCs `locais_empresa_todos`, `renomear_local` e `excluir_local` ficam no banco, sem uso no app (apps antigos em cache ainda podem chamá-las).
+- **Sai "Carteira da empresa"** do ☰ e da barra de baixo do cliente, que fica **Pedir · Corridas · Agenda**.
+  - O saldo e o extrato ficam só para o **Administrador (N1)** e o Master, em **Painel da empresa › Carteira**. No Faturado, essa aba é a de **Faturas**; o extrato de lançamentos do Faturado não aparece mais para o cliente no app novo.
+  - O endereço antigo `/extrato` leva o N1 a `/empresa/carteira`, e os outros ao Início.
+  - O Solicitante (N2) e o Visualizador (N3) não veem mais o saldo. A Ajuda explica onde o Administrador encontra o saldo.
+  - O app v1 continua com o Extrato dele.
+- **Onde §22 fala em "Carteira da empresa"**, leia **Painel da empresa › Carteira** (pelo N1).
