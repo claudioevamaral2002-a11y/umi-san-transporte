@@ -73,13 +73,19 @@ for (const tema of ['light', 'dark'] as const) {
       await abrirAgenda(page)
       await visao(page).getByRole('radio', { name: 'Mês' }).tap()
       await expect(page.getByTestId('calendario')).toBeVisible()
-      await expect(page.getByTestId('legenda-calendario')).toBeVisible()
       // Hoje (não escolhido) fica em laranja-texto: #C2410C no claro, #FF8A4C no escuro.
-      await page.getByTestId('calendario').locator(`[data-dia="${DIA_PEDIDO}"]`).tap()
+      // Um dia diferente, ainda no mês de hoje: o pedido (hoje + 2) pode estar no próximo mês.
+      const outroDiaNoMes = diaSp(0).endsWith('-01') ? diaSp(1) : diaSp(-1)
+      await page.getByTestId('calendario').locator(`[data-dia="${outroDiaNoMes}"]`).tap()
       await expect(page.getByTestId('calendario').locator(`[data-dia="${diaSp(0)}"]`)).toHaveCSS(
         'color',
         tema === 'light' ? 'rgb(194, 65, 12)' : 'rgb(255, 138, 76)',
       )
+      // A legenda só existe quando há marcadores no mês exibido. Navegar até o mês do pedido.
+      if (DIA_PEDIDO.slice(0, 7) !== diaSp(0).slice(0, 7)) {
+        await page.getByTestId('calendario').getByRole('button', { name: 'Próximo mês' }).tap()
+      }
+      await expect(page.getByTestId('legenda-calendario')).toBeVisible()
       await page.getByTestId('calendario').locator(`[data-dia="${DIA_PEDIDO}"]`).tap()
       const resumo = page.getByTestId('resumo-dia')
       await expect(resumo).toContainText('Pedido #0042')

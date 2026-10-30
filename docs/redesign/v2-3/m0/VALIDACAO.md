@@ -47,3 +47,11 @@ O CI anterior de `ca60314` passou ([40761203877](https://github.com/claudioevama
 - X-14 (ErroGeral) não tem teste específico; não foi certificado por execução. Testes de autenticação externa, GPS de motorista e financeiro em produção não foram realizados.
 - V1: rodada anterior selecionada teve 28 testes aprovados e um bloqueio de token Turnstile externo; CI anterior depois passou. Não usar esse resultado para certificar automaticamente a revisão atual.
 - Aprovação final exige o CI da revisão atual. Merge a cargo do proprietário.
+
+### CI de 32a82bb e correção do teste de virada de mês
+
+As execuções [41134060859](https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions/runs/41134060859) e [41134054545](https://github.com/claudioevamaral2002-a11y/umi-san-transporte/actions/runs/41134054545) aprovaram lint, TypeScript, 738 unitários, pgTAP, 115 testes de integração, builds e varreduras de segredos. E2E: **520 aprovados, 22 ignorados e 4 falhas**. O teste das setas da agenda da v2 passou no Chromium oficial.
+
+As quatro falhas eram o mesmo teste mensal da v1, nos dois temas e aparelhos. O fixture coloca o pedido em hoje + 2 dias; em 30/10, ele cai em novembro. O teste procurava legenda em outubro, que não tinha marcadores. O produto corretamente omite legenda quando não há marcadores. Corrigido somente `toque-agenda.spec.ts`: conferir o destaque de hoje com outro dia do mesmo mês, navegar ao mês do pedido e manter todas as verificações de legenda, resumo, abertura do dia e retorno a Hoje. Nenhuma alteração no calendário, no backend ou nos fixtures compartilhados.
+
+Repetição local após essa correção: **16 testes de toque aprovados**, em Pixel/iPhone e temas claro/escuro; lint aprovado. A checagem final de migração não executou nos runs acima porque depende do E2E aprovado. O novo head exige nova execução completa do CI; consultar o PR #48 para o resultado atualizado.
