@@ -30,7 +30,7 @@ function LinhaEmpresa({ e }: { e: ResumoEmpresaFaturas }) {
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 truncate ivo-h3">{e.empresa_nome}</p>
         {e.quinzena_pronta && (
-          <span className="shrink-0 rounded-full bg-[var(--cor-laranja)] px-2.5 py-0.5 text-xs font-extrabold text-marinho">
+          <span className="shrink-0 rounded-full bg-[var(--cor-laranja)] px-2.5 py-0.5 text-xs font-extrabold text-acao-texto">
             Pronta para faturar
           </span>
         )}
