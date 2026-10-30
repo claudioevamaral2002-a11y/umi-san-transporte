@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Nivel, Perfil } from '../lib/estadoSessao.ts'
 import { itensDoMenu, type ItemMenu } from './componentes/Menu.tsx'
-import { ATALHOS_CLIENTE, itemAtual, temBarraCliente, tituloDaPagina, tituloExato } from './navegacao.ts'
+import { ATALHOS_CLIENTE, itemAtual, temBarraCliente, temBarraPerfil, tituloDaPagina, tituloExato } from './navegacao.ts'
 
 const cliente = (nivel: Nivel): Perfil => ({
   nome: 'Marina Souza',
@@ -47,13 +47,13 @@ describe('navegação do app novo', () => {
     expect(tituloDaPagina([], '/qualquer')).toBe('')
   })
 
-  it('a barra do cliente só fica em Corridas e Agenda', () => {
+  it('a barra do cliente fica em Solicitar, Corridas e Agenda', () => {
     expect(temBarraCliente('/pedidos')).toBe(true)
     expect(temBarraCliente('/agenda/')).toBe(true)
     expect(temBarraCliente('/extrato')).toBe(false)
     expect(temBarraCliente('/pedidos/42')).toBe(false)
     expect(temBarraCliente('/perfil')).toBe(false)
-    expect(temBarraCliente('/')).toBe(false)
+    expect(temBarraCliente('/')).toBe(true)
   })
 
   it('todo atalho da barra do cliente (fora o Pedir) também está no ☰ de todo nível de cliente', () => {
@@ -78,4 +78,14 @@ describe('navegação do app novo', () => {
     // O ☰ continua com o rótulo descritivo.
     expect(itensDoMenu(motorista).map((i) => i.rotulo)).toContain('Minhas corridas e Pendências')
   })
+})
+
+it('barras por perfil só nas rotas de topo, sem cobrir detalhes e execução', () => {
+  expect(temBarraPerfil('MOTORISTA', '/')).toBe(true)
+  expect(temBarraPerfil('MOTORISTA', '/pedidos')).toBe(true)
+  expect(temBarraPerfil('MOTORISTA', '/viagem/42')).toBe(false)
+  expect(temBarraPerfil('MOTORISTA', '/chamada/42/propor')).toBe(false)
+  expect(temBarraPerfil('ADM', '/adm/faturas')).toBe(true)
+  expect(temBarraPerfil('ADM', '/adm/faturas/empresa')).toBe(false)
+  expect(temBarraPerfil('GESTOR_FROTA', '/')).toBe(false)
 })

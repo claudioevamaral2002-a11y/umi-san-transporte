@@ -16,8 +16,8 @@ export function NavegacaoLateral({ perfil }: { perfil: Perfil }) {
   const rotulos = useRotulos()
   const disponivel = useDisponivel()
   const itens: ItemMenu[] = [
-    { rotulo: 'Início', icone: 'mapa', para: '/' },
-    ...itensDoMenu(perfil),
+    { rotulo: perfil.papel === 'CLIENTE' ? 'Solicitar' : 'Início', icone: 'mapa', para: '/' },
+    ...itensDoMenu(perfil).filter((item) => item.para !== '/perfil'),
   ]
   const atual = itemAtual(itens, pathname)
 
@@ -27,12 +27,20 @@ export function NavegacaoLateral({ perfil }: { perfil: Perfil }) {
         <LogoIvo cor="branco" altura={28} />
         <span>Transporte corporativo</span>
       </Link>
+      {perfil.papel === 'MOTORISTA' && (
+        <div className="ivo-lateral-disponivel">
+          <p>Disponível para chamadas</p>
+          <Interruptor ligado={disponivel} rotulo="Disponível para chamadas" onAlternar={() => gravarDisponivel(!disponivel)} />
+        </div>
+      )}
       <nav aria-label="Menu principal" className="ivo-lateral-itens">
-        <ul>
+        <ul data-ativo={atual ? itens.indexOf(atual) : -1}>
           {itens.map((item) => (
             <li key={item.para}>
               <Link
                 to={item.para}
+                aria-label={item.rotulo}
+                title={item.rotulo}
                 aria-current={item === atual ? 'page' : undefined}
                 className="ivo-lateral-link"
                 viewTransition
@@ -45,12 +53,12 @@ export function NavegacaoLateral({ perfil }: { perfil: Perfil }) {
         </ul>
       </nav>
       <div className="ivo-lateral-rodape">
-        {perfil.papel === 'MOTORISTA' && (
-          <div className="ivo-lateral-disponivel">
-            <p>Disponível para chamadas</p>
-            <Interruptor ligado={disponivel} rotulo="Disponível para chamadas" onAlternar={() => gravarDisponivel(!disponivel)} />
-          </div>
-        )}
+        <Link to="/ajuda" className="ivo-lateral-contato" aria-label="Fale com a IVO" title="Fale com a IVO" viewTransition>
+          <Icone nome="conversa" tamanho={18} /><span>Fale com a IVO</span>
+        </Link>
+        <Link to="/perfil" className="ivo-lateral-perfil-link" aria-label="Perfil e segurança" title="Perfil e segurança" aria-current={pathname === '/perfil' ? 'page' : undefined} viewTransition>
+          <Icone nome="escudo" tamanho={18} /><span>Perfil e segurança</span>
+        </Link>
         <div className="ivo-lateral-pessoa">
           <span className="ivo-avatar" aria-hidden="true">{iniciais(perfil.nome)}</span>
           <div>
@@ -58,8 +66,8 @@ export function NavegacaoLateral({ perfil }: { perfil: Perfil }) {
             <p className="ivo-lateral-perfil">{subtitulo(perfil, rotulos)}</p>
           </div>
         </div>
-        <button type="button" className="ivo-lateral-sair" onClick={() => void sair()}>
-          <Icone nome="sair" tamanho={18} /> Sair
+        <button type="button" className="ivo-lateral-sair" aria-label="Sair" title="Sair" onClick={() => void sair()}>
+          <Icone nome="sair" tamanho={18} /><span>Sair</span>
         </button>
       </div>
     </aside>

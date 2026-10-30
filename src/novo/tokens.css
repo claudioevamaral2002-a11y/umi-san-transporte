@@ -1,0 +1,174 @@
+/* Paleta v2.3. Importada somente pela entrada nova; o tema v1 permanece em src/design/tokens.css.
+   Texto laranja usa --cor-alerta-texto; a cor de marca não é usada para texto pequeno em fundo claro. */
+:root {
+  --cor-marinho: #102d3d;
+  --cor-marinho-2: #1e4b7a;
+  --cor-cinza-azulado: #74859c; /* era #96a6bb (2,3:1 sobre o papel): ocupado precisa de 3:1 */
+  --cor-papel: #f6f5f0;
+  --cor-laranja: #eb6028;
+
+  --cor-fundo: var(--cor-papel);
+  --cor-superficie: #ffffff;
+  --cor-texto: #183342;
+  --cor-texto-suave: #4b5b70;
+  --cor-borda: #e2e5df;
+  --cor-acao: var(--cor-laranja);
+  --cor-acao-texto: #092330; /* Variante mais escura: AA sobre o laranja #eb6028. */
+  --cor-perigo-texto: #ffffff;
+  --cor-alerta-texto: #c2410c; /* laranja legível como texto */
+  --cor-foco: #1e4b7a;
+  /* Item escolhido (dia, horário, opção). No escuro a superfície já é marinho: inverte para papel. */
+  --cor-selecao: #102d3d;
+  --cor-selecao-texto: #f6f5f0;
+  /* Marcadores do calendário (forma + cor): seu pedido, aguardando você, ocupado. */
+  --marcador-meu: #1e4b7a;
+  --marcador-aguardando: #c2410c;
+  --marcador-ocupado: var(--cor-ocupado);
+  --cor-ocupado: #74859c;
+  --cor-livre: #15803d;
+  --cor-livre-fundo: #ecf7ef;
+  /* Bloco do saldo (Início) e barra de comando (Novo pedido, Orçar). */
+  --cor-bloco: #102d3d;
+  --cor-bloco-texto: #f6f5f0;
+  --cor-bloco-suave: #a9b8cc;
+  --cor-bloco-alerta: #ff8a4c; /* aviso sobre o bloco marinho do saldo */
+  --cor-bloco-reservado: #7fb2e8; /* parte reservada da barra do saldo */
+  --cor-comando: #102d3d;
+  --cor-comando-texto: #f6f5f0;
+  /* Seleção suave (Maré clara): frase de confirmação, avatar, saldo do extrato. */
+  --cor-selecao-suave: #e7eeed;
+  --cor-barra: #ffffff;
+  --cor-link: #1e4b7a; /* links e textos em azul Maré */
+
+  --status-solicitada: #5b6b80;
+  --status-aguardando: #b45309;
+  --status-agendada: #1e4b7a;
+  --status-andamento: #c2410c;
+  --status-concluida: #15803d;
+  --status-cancelada: #b91c1c;
+
+  /* Painel da empresa (fase 4, §6.9): executivo e quase monocromático. Fundo cinza frio, barra marinho e etiquetas de
+     situação em tons pálidos com texto discreto (cinza, azul, verde, vermelho). */
+  --cor-painel-fundo: #f0f2ee;
+  --cor-painel-barra: #102d3d;
+  --cor-painel-trilho: #e2e5df;
+  --cor-tag-neutro-fundo: #eef1f5;
+  --cor-tag-neutro-texto: #4b5b70;
+  --cor-tag-azul-fundo: #e8f0f9;
+  --cor-tag-azul-texto: #1e4b7a;
+  --cor-tag-verde-fundo: #e8f5ec;
+  --cor-tag-verde-texto: #166534;
+  --cor-tag-vermelho-fundo: #fbecec;
+  --cor-tag-vermelho-texto: #9b1c1c;
+
+  /* Hierarquia de raios: folhas 24, cartões 16, botões 14, campos 12, pílulas 999. */
+  --raio-folha: 24px;
+  --raio-cartao: 16px;
+  --raio-botao: 14px;
+  --raio-campo: 12px;
+  --raio: var(--raio-cartao);
+  --raio-pequeno: 8px;
+  --sombra: 0 1px 2px rgb(10 37 64 / 0.06), 0 6px 20px rgb(10 37 64 / 0.07);
+  --duracao: 240ms;
+  --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --cor-fundo: #0b202c;
+    --cor-superficie: #143747; /* separa o cartão do fundo #0b202c */
+    --cor-texto: #f6f5f0;
+    --cor-texto-suave: #a9b8cc;
+    --cor-perigo-texto: #102d3d;
+    --cor-alerta-texto: #ff8a4c;
+    --cor-foco: #ff8a4c;
+    --cor-borda: #315366;
+    --cor-ocupado: #8094ad;
+    --cor-livre: #4ade80;
+    --cor-livre-fundo: #0d3326;
+    --cor-bloco: #204758;
+    --cor-bloco-texto: #f6f5f0;
+    --cor-bloco-suave: #b8c6d8;
+    --cor-bloco-alerta: #ffa16b; /* AA sobre o painel escuro #204758. */
+    --cor-bloco-reservado: #7fb2e8;
+    --cor-comando: #143747;
+    --cor-comando-texto: #f6f5f0;
+    --cor-selecao-suave: #244e60;
+    --cor-barra: #102d3d;
+    --cor-link: #7fb2e8;
+    --sombra: 0 0 0 1px #315366;
+    --cor-selecao: #f6f5f0;
+    --cor-selecao-texto: #102d3d;
+    --marcador-meu: #7fb2e8;
+    --marcador-aguardando: #ff8a4c;
+    --status-solicitada: #9fb0c4;
+    --status-aguardando: #fbbf24;
+    --status-agendada: #7fb2e8;
+    --status-andamento: #ff8a4c;
+    --status-concluida: #4ade80;
+    --status-cancelada: #f87171;
+    --cor-painel-fundo: #0b202c;
+    --cor-painel-barra: #f6f5f0;
+    --cor-painel-trilho: #315366;
+    --cor-tag-neutro-fundo: #143558;
+    --cor-tag-neutro-texto: #c3cfdd;
+    --cor-tag-azul-fundo: #133a63;
+    --cor-tag-azul-texto: #a9cdf2;
+    --cor-tag-verde-fundo: #12392f;
+    --cor-tag-verde-texto: #86efac;
+    --cor-tag-vermelho-fundo: #3a2033;
+    --cor-tag-vermelho-texto: #fca5a5;
+    color-scheme: dark;
+  }
+}
+
+/* Alto contraste para uso no sol (motorista). Vence o modo escuro. */
+:root[data-contraste="alto"] {
+  --cor-fundo: #ffffff;
+  --cor-superficie: #ffffff;
+  --cor-texto: #000000;
+  --cor-texto-suave: #1f2937;
+  --cor-borda: #000000;
+  --cor-acao-texto: #000000;
+  --cor-perigo-texto: #ffffff;
+  --cor-alerta-texto: #9a3412;
+  --cor-foco: #000000;
+  --status-solicitada: #374151;
+  --status-aguardando: #78350f;
+  --status-agendada: #1e3a8a;
+  --status-andamento: #9a3412;
+  --status-concluida: #14532d;
+  --status-cancelada: #7f1d1d;
+  /* O alto contraste também vence o escuro na seleção e nos marcadores (antes: off-white sobre branco). */
+  --cor-selecao: #000000;
+  --cor-selecao-texto: #ffffff;
+  --cor-selecao-suave: #e5e7eb;
+  --cor-ocupado: #374151;
+  --cor-livre: #14532d;
+  --cor-livre-fundo: #ffffff;
+  --cor-bloco: #000000;
+  --cor-bloco-texto: #ffffff;
+  --cor-bloco-suave: #ffffff;
+  --cor-bloco-alerta: #ffffff;
+  --cor-bloco-reservado: #9ca3af;
+  --cor-comando: #000000;
+  --cor-comando-texto: #ffffff;
+  --cor-barra: #ffffff;
+  --cor-link: #1e3a8a;
+  --marcador-meu: #1e3a8a;
+  --marcador-aguardando: #9a3412;
+  --sombra: 0 0 0 1.5px #000000;
+  --cor-painel-fundo: #ffffff;
+  --cor-painel-barra: #000000;
+  --cor-painel-trilho: #d1d5db;
+  --cor-tag-neutro-fundo: #ffffff;
+  --cor-tag-neutro-texto: #000000;
+  --cor-tag-azul-fundo: #ffffff;
+  --cor-tag-azul-texto: #1e3a8a;
+  --cor-tag-verde-fundo: #ffffff;
+  --cor-tag-verde-texto: #14532d;
+  --cor-tag-vermelho-fundo: #ffffff;
+  --cor-tag-vermelho-texto: #7f1d1d;
+  color-scheme: light;
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, Outlet, useLocation, useOutletContext } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
@@ -9,26 +9,30 @@ import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { MapaBase, type CarroNoMapa, type Ponto } from './componentes/MapaBase.tsx'
 import { BarraCliente } from './componentes/BarraCliente.tsx'
-import { APP_V1, itensDoMenu, Menu } from './componentes/Menu.tsx'
+import { APP_V1, itensDoMenu, Menu, type ControleMenu } from './componentes/Menu.tsx'
 import { NavegacaoLateral } from './componentes/NavegacaoLateral.tsx'
-import { temBarraCliente, tituloDaPagina, tituloExato } from './navegacao.ts'
+import { temBarraPerfil, tituloDaPagina, tituloExato } from './navegacao.ts'
 
 /**
- * Moldura v2.3: lateral persistente no desktop; menu modal no celular e tablet.
+ * Moldura v2.3: lateral persistente no desktop; menu modal no celular e lateral compacta no tablet.
  * Os dois usam os mesmos itens por perfil. As rotas e suas guardas continuam no roteador.
  */
 export function MolduraNova() {
   const { perfil } = useSessao()
+  const { pathname } = useLocation()
+  const menu = useRef<ControleMenu>(null)
+  const comBarra = temBarraPerfil(perfil?.papel, pathname)
   // O gestor de frota não tem telas no app novo (Ruling R13): qualquer endereço mostra o aviso.
   if (perfil?.papel === 'GESTOR_FROTA') return <SemAcessoAoApp />
   return (
-    <div className="ivo-app">
+    <div className={`ivo-app${comBarra ? ' ivo-com-barra' : ''}`}>
       <a href="#ivo-conteudo" className="ivo-pular-conteudo nao-imprimir">Ir para o conteúdo</a>
-      <header>{perfil && <Menu perfil={perfil} />}</header>
+      <header>{perfil && <Menu perfil={perfil} controle={menu} />}</header>
       {perfil && <NavegacaoLateral perfil={perfil} />}
       <div id="ivo-conteudo" tabIndex={-1} className="ivo-conteudo">
         <Outlet />
       </div>
+      {comBarra && <BarraCliente papel={perfil?.papel} aoMais={() => menu.current?.abrir()} />}
     </div>
   )
 }
@@ -90,7 +94,7 @@ export function TelaDePagina() {
   const { pathname } = useLocation()
   const itens = perfil ? itensDoMenu(perfil) : []
   const titulo = tituloDaPagina(itens, pathname)
-  const comBarra = perfil?.papel === 'CLIENTE' && temBarraCliente(pathname)
+  const comBarra = temBarraPerfil(perfil?.papel, pathname)
   // As telas abertas registram o h1 delas (CabecalhoTela e as telas novas): um nome só por página.
   const [registrados, setRegistrados] = useState<TituloNaTela[]>([])
   const registrar = useCallback((modo: TituloNaTela) => {
@@ -130,10 +134,13 @@ export function TelaDePagina() {
                 {titulo}
               </p>
             )}
+            <span className="ivo-marca-pagina">
+              <LogoIvo altura={20} className="ivo-marca-clara" />
+              <LogoIvo altura={20} cor="branco" className="ivo-marca-escura" />
+            </span>
           </nav>
           <Outlet />
         </div>
-        {comBarra && <BarraCliente />}
       </ContextoTituloPagina>
     </ContextoRotaDePara>
   )

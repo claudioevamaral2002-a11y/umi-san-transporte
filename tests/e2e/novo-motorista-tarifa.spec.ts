@@ -177,7 +177,7 @@ test.describe('IVO Motorista (veículo do cliente, cobrada por hora)', () => {
     await expect(folha).toContainText('IVO Motorista')
     // 4 h × R$ 90: as horas do pedido (o banco usa as horas estimadas quando a entrada não traz).
     await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 360,00')
-    await expect(page.getByLabel('Veículo')).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Veículo', exact: true })).toHaveCount(0)
     await expect(folha.getByText(/Nenhum veículo ativo/)).toHaveCount(0)
     await expect(folha.getByText('Orce este pedido no app atual')).toHaveCount(0)
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])

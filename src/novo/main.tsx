@@ -1,5 +1,6 @@
-import '@fontsource-variable/manrope'
 import '../design/estilos.css'
+import './tokens.css'
+import './fontes.css'
 import './moldura.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

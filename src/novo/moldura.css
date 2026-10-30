@@ -29,7 +29,7 @@
   :root:not([data-tema="claro"]) .ivo-marca-escura { display: block; }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .ivo-menu-movel { display: none; }
   .ivo-conteudo { margin-left: var(--ivo-lateral-largura); }
   .ivo-lateral {
@@ -47,22 +47,23 @@
     scrollbar-width: thin; scrollbar-color: #61768d transparent;
     padding: 4px; margin: -4px;
   }
-  .ivo-lateral-itens ul { display: grid; gap: 4px; }
+  .ivo-lateral-itens ul { position: relative; display: grid; gap: 4px; isolation: isolate; }
+  .ivo-lateral-itens ul::before {
+    content: ''; position: absolute; z-index: -1; inset: 0 0 auto; height: 48px;
+    border-radius: 12px; border-left: 3px solid var(--cor-laranja);
+    background: #244662; transform: translateY(calc(var(--ivo-item-ativo, 0) * 52px));
+    transition: transform 240ms var(--curva), opacity 180ms ease; pointer-events: none;
+  }
+  .ivo-lateral-itens ul[data-ativo="-1"]::before { opacity: 0; }
   .ivo-lateral-link {
     position: relative; display: flex; align-items: center; gap: 12px;
-    min-height: 48px; border-radius: 12px; padding: 10px 12px;
+    height: 48px; border-radius: 12px; padding: 6px 12px;
     color: #c0cede; font-size: 13px; line-height: 1.4; font-weight: 600;
-    transition: background-color 160ms ease, color 160ms ease;
+    transition: background-color 180ms ease, color 180ms ease;
   }
   .ivo-lateral-link:hover { background: #183b5c; color: #fff; }
-  .ivo-lateral-link[aria-current="page"] { background: #244662; color: #fff; }
+  .ivo-lateral-link[aria-current="page"] { color: #fff; }
   .ivo-lateral-link[aria-current="page"] svg { color: var(--cor-laranja); }
-  .ivo-lateral-link::before {
-    content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
-    width: 3px; border-radius: 4px; background: var(--cor-laranja);
-    transform: scaleY(0); transition: transform 180ms ease;
-  }
-  .ivo-lateral-link[aria-current="page"]::before { transform: scaleY(1); }
   .ivo-lateral-rodape { border-top: 1px solid #36506b; margin-top: 20px; padding: 16px 8px 0; }
   .ivo-lateral-pessoa { display: flex; align-items: center; gap: 10px; }
   .ivo-lateral-pessoa > div { min-width: 0; }
@@ -75,7 +76,7 @@
   .ivo-lateral-perfil { margin-top: 3px; font-size: 11px; color: #c0cede; overflow-wrap: anywhere; }
   .ivo-lateral-sair { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 6px; font-size: 12px; color: #c0cede; }
   .ivo-lateral-sair:hover { color: #fff; }
-  .ivo-lateral-disponivel { margin-bottom: 16px; font-size: 12px; }
+  .ivo-lateral-disponivel { margin: 0 8px 16px; font-size: 12px; }
   .ivo-topo-mapa {
     top: 0; right: 0; left: var(--ivo-lateral-largura);
     height: 76px; padding: 0 28px; border-radius: 0;
@@ -106,7 +107,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ivo-lateral-link, .ivo-lateral-link::before { transition: none; }
+  .ivo-lateral-link, .ivo-lateral-itens ul::before { transition: none; }
 }
 ::view-transition-group(lateral), ::view-transition-group(topo-mapa),
 ::view-transition-old(lateral), ::view-transition-new(lateral),
@@ -119,3 +120,57 @@
   .ivo-conteudo { margin-left: 0; }
   .ivo-cabecalho-pagina { display: none; }
 }
+
+/* O índice é representado por classes CSS externas, compatíveis com a CSP sem inline. */
+.ivo-lateral-itens ul[data-ativo="0"] { --ivo-item-ativo: 0; }
+.ivo-lateral-itens ul[data-ativo="1"] { --ivo-item-ativo: 1; }
+.ivo-lateral-itens ul[data-ativo="2"] { --ivo-item-ativo: 2; }
+.ivo-lateral-itens ul[data-ativo="3"] { --ivo-item-ativo: 3; }
+.ivo-lateral-itens ul[data-ativo="4"] { --ivo-item-ativo: 4; }
+.ivo-lateral-itens ul[data-ativo="5"] { --ivo-item-ativo: 5; }
+.ivo-lateral-itens ul[data-ativo="6"] { --ivo-item-ativo: 6; }
+.ivo-lateral-itens ul[data-ativo="7"] { --ivo-item-ativo: 7; }
+.ivo-lateral-itens ul[data-ativo="8"] { --ivo-item-ativo: 8; }
+.ivo-lateral-itens ul[data-ativo="9"] { --ivo-item-ativo: 9; }
+.ivo-lateral-itens ul[data-ativo="10"] { --ivo-item-ativo: 10; }
+.ivo-lateral-itens ul[data-ativo="11"] { --ivo-item-ativo: 11; }
+.ivo-lateral-itens ul[data-ativo="12"] { --ivo-item-ativo: 12; }
+.ivo-lateral-itens ul[data-ativo="13"] { --ivo-item-ativo: 13; }
+.ivo-lateral-itens ul[data-ativo="14"] { --ivo-item-ativo: 14; }
+
+.ivo-lateral-contato, .ivo-lateral-perfil-link {
+  display: flex; align-items: center; gap: 10px; min-height: 44px;
+  font-size: 12px; color: #c0cede;
+}
+.ivo-lateral-perfil-link { margin-bottom: 12px; }
+.ivo-lateral-perfil-link[aria-current="page"] { color: white; text-decoration: underline; text-underline-offset: 5px; }
+@media (max-width: 767px) {
+  .ivo-com-barra .ivo-folha-mapa {
+    bottom: calc(57px + env(safe-area-inset-bottom));
+    max-height: calc(75dvh - 57px - env(safe-area-inset-bottom));
+    padding-bottom: 20px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ivo-app { --ivo-lateral-largura: 80px; }
+  .ivo-lateral { padding: 20px 10px 10px; }
+  .ivo-lateral-marca { padding: 0 0 24px; }
+  .ivo-lateral-marca img { width: 60px; height: auto; }
+  .ivo-lateral-marca > span, .ivo-lateral-link > span,
+  .ivo-lateral-pessoa > div, .ivo-lateral-contato > span,
+  .ivo-lateral-perfil-link > span, .ivo-lateral-sair > span,
+  .ivo-lateral-disponivel > p, .ivo-lateral-disponivel button > span:last-child { display: none; }
+  .ivo-lateral-link, .ivo-lateral-contato, .ivo-lateral-perfil-link,
+  .ivo-lateral-sair, .ivo-lateral-pessoa { justify-content: center; }
+  .ivo-lateral-rodape { padding-inline: 0; margin-top: 12px; }
+  .ivo-lateral-perfil-link { margin-bottom: 8px; }
+  .ivo-lateral-sair { width: 100%; }
+  .ivo-lateral-disponivel { margin-inline: 0; }
+  .ivo-lateral-disponivel button { justify-content: center; width: 100%; padding-inline: 0; }
+  .ivo-area-mapa { left: var(--ivo-lateral-largura); }
+  .ivo-folha-mapa { top: auto; left: 96px; bottom: 16px; max-height: 75dvh; width: min(408px, calc(100vw - 112px)); }
+}
+
+.ivo-marca-pagina { margin-left: auto; flex-shrink: 0; }
+:root[data-contraste="alto"] .ivo-marca-clara { display: block; }
+:root[data-contraste="alto"] .ivo-marca-escura { display: none; }

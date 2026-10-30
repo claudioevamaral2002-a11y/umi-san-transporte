@@ -24,11 +24,11 @@ async function abrir(page: Page, perfil: PerfilFalso, largura = 1440) {
 }
 
 for (const [nome, perfil, links] of [
-  ['N1', N1, ['Início', 'Minhas corridas', 'Agenda', 'Equipe', 'Painel da empresa', 'Perfil e segurança', 'Ajuda']],
-  ['N2', N2, ['Início', 'Minhas corridas', 'Agenda', 'Perfil e segurança', 'Ajuda']],
-  ['N3', N3, ['Início', 'Minhas corridas', 'Agenda', 'Perfil e segurança', 'Ajuda']],
-  ['motorista', MOTORISTA, ['Início', 'Minhas corridas e Pendências', 'Agenda', 'Meus veículos', 'Corridas do mês', 'Perfil e segurança', 'Ajuda']],
-  ['Master', ADM, ['Início', 'Painel e Corridas em andamento', 'Contratos', 'Créditos', 'Faturas', 'Usuários', 'Empresas', 'Configurações', 'Auditoria', 'Categorias e preços', 'Veículos', 'Painel da empresa', 'Perfil e segurança', 'Ajuda']],
+  ['N1', N1, ['Solicitar', 'Minhas corridas', 'Agenda', 'Equipe', 'Painel da empresa', 'Ajuda']],
+  ['N2', N2, ['Solicitar', 'Minhas corridas', 'Agenda', 'Ajuda']],
+  ['N3', N3, ['Solicitar', 'Minhas corridas', 'Agenda', 'Ajuda']],
+  ['motorista', MOTORISTA, ['Início', 'Minhas corridas e Pendências', 'Agenda', 'Meus veículos', 'Corridas do mês', 'Ajuda']],
+  ['Master', ADM, ['Início', 'Painel e Corridas em andamento', 'Contratos', 'Créditos', 'Faturas', 'Usuários', 'Empresas', 'Configurações', 'Auditoria', 'Categorias e preços', 'Veículos', 'Painel da empresa', 'Ajuda']],
 ] as const) {
   test(`lateral de ${nome}: preserva a lista autorizada e o destino dos links`, async ({ page }) => {
     await abrir(page, perfil)
@@ -36,10 +36,10 @@ for (const [nome, perfil, links] of [
     await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeHidden()
     const menu = lateral(page).getByRole('navigation', { name: 'Menu principal' })
     await expect(menu.getByRole('link')).toHaveText([...links])
-    await expect(menu.locator('[aria-current="page"]')).toHaveText('Início')
-    await menu.getByRole('link', { name: 'Perfil e segurança' }).click()
+    await expect(menu.locator('[aria-current="page"]')).toHaveText(perfil.papel === 'CLIENTE' ? 'Solicitar' : 'Início')
+    await lateral(page).getByRole('link', { name: 'Perfil e segurança' }).click()
     await expect(page).toHaveURL(/\/perfil$/)
-    await expect(menu.locator('[aria-current="page"]')).toHaveText('Perfil e segurança')
+    await expect(lateral(page).getByRole('link', { name: 'Perfil e segurança' })).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Perfil e segurança')
   })
 }
@@ -56,6 +56,13 @@ for (const largura of [360, 390, 768, 1440]) {
       expect(folha.x + folha.width).toBeLessThanOrEqual(mapa.x)
       expect(mapa.width).toBeGreaterThan(300)
       await expect(page.getByTestId('alca')).toBeHidden()
+    } else if (largura >= 768) {
+      await expect(lateral(page)).toBeVisible()
+      const nav = (await lateral(page).boundingBox())!
+      expect(nav.width).toBe(80)
+      expect(nav.x + nav.width).toBeLessThanOrEqual(folha.x)
+      await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeHidden()
+      await expect(lateral(page).getByRole('link', { name: 'Agenda', exact: true })).toBeVisible()
     } else {
       await expect(lateral(page)).toBeHidden()
       await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible()
@@ -90,7 +97,7 @@ test('troca de página na lateral sem recarregar e sem reconstruir a moldura', a
   await menu.getByRole('link', { name: 'Agenda', exact: true }).click()
   await expect(page).toHaveURL(/\/agenda$/)
   await expect(menu.locator('[aria-current="page"]')).toHaveText('Agenda')
-  await menu.getByRole('link', { name: 'Início', exact: true }).click()
+  await menu.getByRole('link', { name: 'Solicitar', exact: true }).click()
   await expect(page.getByLabel('De', { exact: true })).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-m0-navegacao', 'presente')
 })
@@ -129,3 +136,29 @@ for (const tema of ['light', 'dark'] as const) {
     await expect(page.locator('#ivo-conteudo')).toBeFocused()
   })
 }
+
+for (const perfil of [N2, MOTORISTA, ADM]) {
+  test(`barra móvel ${perfil.papel}: Mais abre menu e devolve o foco`, async ({ page }) => {
+    await abrir(page, perfil, 390)
+    const barra = page.getByRole('navigation', { name: 'Atalhos' })
+    await expect(barra.getByRole('link')).toHaveText(perfil.papel === 'CLIENTE' ? ['Solicitar', 'Corridas', 'Agenda'] : perfil.papel === 'MOTORISTA' ? ['Início', 'Corridas', 'Agenda'] : ['Início', 'Painel', 'Faturas'])
+    const mais = barra.getByRole('button', { name: 'Mais', exact: true })
+    await mais.click()
+    await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(mais).toBeFocused()
+    const folha = (await page.getByTestId('folha-mapa').boundingBox())!
+    const caixaBarra = (await barra.boundingBox())!
+    expect(folha.y + folha.height).toBeLessThanOrEqual(caixaBarra.y)
+  })
+}
+
+test('indicador lateral desliza e a mesma moldura permanece ao navegar', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await abrir(page, N2)
+  const lista = lateral(page).getByRole('navigation').getByRole('list')
+  await expect(lista).toHaveAttribute('data-ativo', '0')
+  await lateral(page).getByRole('link', { name: 'Agenda', exact: true }).click()
+  await expect(lista).toHaveAttribute('data-ativo', '2')
+  await expect.poll(() => lista.evaluate(el => getComputedStyle(el, '::before').transform)).toBe('matrix(1, 0, 0, 1, 0, 104)')
+})

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useImperativeHandle, useRef, type Ref } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Icone, type NomeIcone } from '../../design/componentes/Icone.tsx'
 import { Interruptor } from '../../design/componentes/Interruptor.tsx'
@@ -95,10 +95,18 @@ const CLASSE_LINK_OUTRO = `${CLASSE_LINK} w-full border-borda`
  * Menu ☰ do canto superior esquerdo (mockups 12 e 13): botão redondo sobre o mapa e uma gaveta à esquerda.
  * A gaveta é um `<dialog>` modal: o resto fica inerte (foco preso), Esc e o fundo fecham, e o foco volta ao ☰.
  */
-export function Menu({ perfil }: { perfil: Perfil }) {
+export interface ControleMenu { abrir: () => void }
+
+export function Menu({ perfil, controle }: { perfil: Perfil; controle?: Ref<ControleMenu> }) {
   const { sair } = useSessao()
   const gaveta = useRef<HTMLDialogElement>(null)
   const botao = useRef<HTMLButtonElement>(null)
+  const acionador = useRef<HTMLElement | null>(null)
+  const abrir = () => {
+    acionador.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    gaveta.current?.showModal()
+  }
+  useImperativeHandle(controle, () => ({ abrir }), [])
   const local = useLocation()
   const idTitulo = useId()
   const rotulos = useRotulos()
@@ -114,7 +122,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
 
   // Ao ampliar a janela, a navegação lateral assume sem deixar um diálogo invisível prendendo o foco.
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 1024px)')
+    const desktop = window.matchMedia('(min-width: 768px)')
     const aoMudar = () => { if (desktop.matches) gaveta.current?.close() }
     desktop.addEventListener('change', aoMudar)
     return () => desktop.removeEventListener('change', aoMudar)
@@ -130,7 +138,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
       <button
         ref={botao}
         type="button"
-        onClick={() => gaveta.current?.showModal()}
+        onClick={abrir}
         aria-haspopup="dialog"
         aria-label="Abrir menu"
         className="ivo-menu-movel fixed top-[calc(env(safe-area-inset-top)+0.75rem)] left-4 z-20 flex size-12 items-center justify-center rounded-full bg-superficie text-texto shadow-[var(--sombra)]"
@@ -143,7 +151,9 @@ export function Menu({ perfil }: { perfil: Perfil }) {
         aria-label="Menu"
         aria-describedby={idTitulo}
         onClose={() => {
-          if (botao.current?.getClientRects().length) botao.current.focus()
+          const destino = acionador.current?.getClientRects().length ? acionador.current : botao.current
+          if (destino?.getClientRects().length) destino.focus()
+          else document.getElementById('ivo-conteudo')?.focus()
         }}
         onClick={(e) => {
           if (e.target === e.currentTarget) e.currentTarget.close()
@@ -154,7 +164,7 @@ export function Menu({ perfil }: { perfil: Perfil }) {
           <div className="flex items-start justify-between gap-3">
             <span
               aria-hidden="true"
-              className="mt-2 flex size-[52px] shrink-0 items-center justify-center rounded-full bg-laranja text-lg font-extrabold text-marinho"
+              className="mt-2 flex size-[52px] shrink-0 items-center justify-center rounded-full bg-laranja text-lg font-extrabold text-acao-texto"
             >
               {iniciais(perfil.nome)}
             </span>

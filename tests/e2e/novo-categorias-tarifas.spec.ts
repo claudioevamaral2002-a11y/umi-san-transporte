@@ -274,7 +274,7 @@ test('a vigência parte de "agora + 5 min" a cada abertura; no passado, o foco v
 
 test('publicar para uma empresa manda p_empresa e lê as categorias dela', async ({ page }) => {
   const chamadas = await abrir(page, ADM, '/adm/categorias', { contratos: [linhaContrato(EMPRESA_UMI, versaoFalsa(2))] })
-  await page.getByLabel('Contrato').selectOption({ label: 'Umi San' })
+  await page.getByRole('combobox', { name: 'Contrato', exact: true }).selectOption({ label: 'Umi San' })
   await expect
     .poll(() => chamadas.some((c) => c.rpc === 'categorias_adm' && c.corpo.p_empresa === EMPRESA_UMI.id))
     .toBe(true)
