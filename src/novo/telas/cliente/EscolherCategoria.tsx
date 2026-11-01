@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { Folha } from '../../../design/componentes/Folha.tsx'
 import { Botao } from '../../../design/componentes/Botao.tsx'
 import { AreaTexto, Campo } from '../../../design/componentes/Campo.tsx'
 import { Icone } from '../../../design/componentes/Icone.tsx'
@@ -188,6 +189,8 @@ export function EscolherCategoria({
     observacoes: '',
   })
   const [erros, setErros] = useState<ErrosPedido>({})
+  const [revisando, setRevisando] = useState(false)
+  const envioEmCurso = useRef(false)
   const [enviando, setEnviando] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   // v2.2: ao trocar para uma categoria que leva menos pessoas, o número desce até o limite com este aviso.
@@ -315,8 +318,8 @@ export function EscolherCategoria({
   /** Paradas no formato do pedido: do Google só o `place_id`; marcada no mapa, as coordenadas. */
   const paradasDoPedido = paradas.map((p) => paradaDoLocal(p.texto, p.local))
 
-  async function pedir() {
-    if (!preenchida || !inicio || enviando) return
+  function validarRevisao(): boolean {
+    if (!preenchida || !inicio || enviando || lista.carregando || lista.erro) return false
     // O banco não devolve qual campo falhou (CAMPOS_INVALIDOS): a tela confere antes de enviar.
     const problema =
       mensagemDeParadas(paradasDoPedido) ??
@@ -325,7 +328,7 @@ export function EscolherCategoria({
       (outrosCustos.trim().length > MAX_OUTROS_CUSTOS ? mensagemDoPedido('CAMPOS_INVALIDOS', ['outros_custos']) : null)
     if (problema) {
       setErroEnvio(problema)
-      return
+      return false
     }
     const f = corpoDoForm(inicio)
     const e = { ...validarPasso(2, f), ...validarPasso(3, f) }
@@ -333,61 +336,79 @@ export function EscolherCategoria({
       setErros(e)
       setDetalhesAbertos(true)
       requestAnimationFrame(() => detalhes.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
-      return
+      return false
     }
     setErros({})
     setErroEnvio(null)
-    setEnviando(true)
-    let ini = inicio
-    if (modo === 'agora') {
-      // O relógio andou desde a escolha: confere o primeiro horário de novo antes de enviar.
-      const novo = await inicioDoAgora(new Date())
-      if (novo !== inicio) {
-        setAgora({ inicio: novo })
-        setEnviando(false)
-        setErroEnvio(
-          novo
-            ? `O primeiro horário livre agora é ${quandoCurto(novo)}. Confira e toque em pedir de novo.`
-            : 'Não há horário livre a partir de 1 hora. Escolha "Agendar".',
-        )
-        return
-      }
-      ini = novo
-    }
-    const r = await pedidos.criar(
-      pedidoDaCategoria(preenchida, corpoDoForm(ini), {
-        agora: modo === 'agora',
-        paradas: paradasDoPedido,
-        horas,
-        centroCusto: centro,
-        // As diárias só na categoria que cobra diária (o contador some nas outras).
-        diarias: preenchida.cobra_diaria === true ? diarias : null,
-        outrosCustos,
-        voltaAOrigem: volta,
-      }),
-    )
-    if (r.ok && typeof r.id === 'string') {
-      gravarUltimaCategoria(preenchida.codigo)
-      gravarUltimoCentroCusto(centro)
-      navegar(`/corrida/${r.id}`)
+    return true
+  }
+
+  async function pedir() {
+    if (envioEmCurso.current || !revisando || !preenchida || !inicio) return
+    if (!validarRevisao()) {
+      setRevisando(false)
       return
     }
-    setEnviando(false)
-    setErroEnvio(mensagemDoPedido(r.codigo, undefined, { pessoas_max: r.pessoas_max }))
-    if (r.codigo === 'ACIMA_DA_CAPACIDADE') {
-      // O limite mudou desde a lista: o contador desce ao limite que o banco devolveu, e as categorias são relidas.
-      const limite = limitarPessoas(pessoas, typeof r.pessoas_max === 'number' ? r.pessoas_max : null)
-      if (limite.ajustou) {
-        setForm((a) => ({ ...a, pessoasQtd: limite.qtd }))
-        setAvisoPessoas(`${preenchida.nome} leva até ${limite.qtd} pessoas: ajustamos para ${limite.qtd}.`)
+    envioEmCurso.current = true
+    setEnviando(true)
+    try {
+      let ini = inicio
+      if (modo === 'agora') {
+        // O relógio andou desde a escolha: confere o primeiro horário de novo antes de enviar.
+        const novo = await inicioDoAgora(new Date())
+        if (novo !== inicio) {
+          setAgora({ inicio: novo })
+          setRevisando(false)
+          setErroEnvio(
+            novo
+              ? `O primeiro horário livre agora é ${quandoCurto(novo)}. Confira e toque em pedir de novo.`
+              : 'Não há horário livre a partir de 1 hora. Escolha "Agendar".',
+          )
+          return
+        }
+        ini = novo
       }
-    }
-    if (r.codigo === 'CATEGORIA_INDISPONIVEL' || r.codigo === 'ACIMA_DA_CAPACIDADE') lista.recarregar()
-    if (r.codigo === 'HORARIO_OCUPADO') {
-      if (modo === 'agora') setAgora(null)
-      else setAgendado((a) => (a ? { ...a, inicio: null } : a))
-      setQuandoAberto(true)
-      if (modo === 'agora') void inicioDoAgora(new Date()).then((i) => setAgora({ inicio: i }))
+      const r = await pedidos.criar(
+        pedidoDaCategoria(preenchida, corpoDoForm(ini), {
+          agora: modo === 'agora',
+          paradas: paradasDoPedido,
+          horas,
+          centroCusto: centro,
+          // As diárias só na categoria que cobra diária (o contador some nas outras).
+          diarias: preenchida.cobra_diaria === true ? diarias : null,
+          outrosCustos,
+          voltaAOrigem: volta,
+        }),
+      )
+      if (r.ok && typeof r.id === 'string') {
+        gravarUltimaCategoria(preenchida.codigo)
+        gravarUltimoCentroCusto(centro)
+        navegar(`/corrida/${r.id}`)
+        return
+      }
+      setRevisando(false)
+      setErroEnvio(mensagemDoPedido(r.codigo, undefined, { pessoas_max: r.pessoas_max }))
+      if (r.codigo === 'ACIMA_DA_CAPACIDADE') {
+        // O limite mudou desde a lista: o contador desce ao limite que o banco devolveu, e as categorias são relidas.
+        const limite = limitarPessoas(pessoas, typeof r.pessoas_max === 'number' ? r.pessoas_max : null)
+        if (limite.ajustou) {
+          setForm((a) => ({ ...a, pessoasQtd: limite.qtd }))
+          setAvisoPessoas(`${preenchida.nome} leva até ${limite.qtd} pessoas: ajustamos para ${limite.qtd}.`)
+        }
+      }
+      if (r.codigo === 'CATEGORIA_INDISPONIVEL' || r.codigo === 'ACIMA_DA_CAPACIDADE') lista.recarregar()
+      if (r.codigo === 'HORARIO_OCUPADO') {
+        if (modo === 'agora') setAgora(null)
+        else setAgendado((a) => (a ? { ...a, inicio: null } : a))
+        setQuandoAberto(true)
+        if (modo === 'agora') void inicioDoAgora(new Date()).then((i) => setAgora({ inicio: i }))
+      }
+    } catch {
+      setRevisando(false)
+      setErroEnvio('Não foi possível confirmar o envio. Confira suas corridas antes de tentar novamente.')
+    } finally {
+      envioEmCurso.current = false
+      setEnviando(false)
     }
   }
 
@@ -653,11 +674,11 @@ export function EscolherCategoria({
             <Botao
               variante="principal"
               className="w-full"
-              disabled={enviando}
-              aria-busy={enviando}
-              onClick={() => void pedir()}
+              disabled={enviando || lista.carregando}
+              aria-busy={enviando || lista.carregando}
+              onClick={() => { if (validarRevisao()) setRevisando(true) }}
             >
-              {`Pedir ${preenchida.nome} · ${quandoCurto(inicio)}`}
+              {`Revisar ${preenchida.nome} · ${quandoCurto(inicio)}`}
             </Botao>
           ) : preenchida ? (
             semData && (
@@ -671,6 +692,58 @@ export function EscolherCategoria({
           </p>
         </div>
       )}
+      <Folha
+        aberta={revisando}
+        titulo="Revisar solicitação"
+        sobretitulo="Confira antes de enviar ao Ivo"
+        onFechar={() => setRevisando(false)}
+      >
+        <RotaDePara origem={origem.texto} destino={destino.texto} paradas={paradas.map((p) => p.texto)} />
+        <dl className="divide-y divide-borda rounded-cartao border border-borda px-4">
+          {[
+            ['Categoria', preenchida?.nome],
+            ['Quando', inicio ? `${modo === 'agora' ? 'Agora · ' : ''}${quandoCompleto(inicio)}` : null],
+            ['Trajeto', kmTrajeto !== null ? `${formatarKm(kmTrajeto)}${paradasNaLegenda(nParadas)}${volta ? ' · volta à origem' : ''}` : null],
+            ['Pessoas', preenchida?.carga !== 'EQUIPAMENTO' ? String(pessoas) : null],
+            ['Carga', preenchida?.carga !== 'PESSOAS' ? form.equipamentoDesc : null],
+            ['Horas estimadas', atual?.cobra_hora && horas !== null ? formatarHoras(horas) : null],
+            ['Diárias (hospedagem)', cobraDiaria ? String(diarias) : null],
+            ['Outros custos', outrosCustos.trim() || null],
+            ['Contato no local', form.contatoNome.trim() || null],
+            ['Telefone', form.contatoTelefone.trim() || null],
+            ['Observação', form.observacoes.trim() || null],
+            ['Centro de custo', centro.trim() || null],
+          ].filter(([, valor]) => valor != null).map(([rotulo, valor]) => (
+            <div key={rotulo} className="py-3">
+              <dt className="ivo-legenda text-texto-suave">{rotulo}</dt>
+              <dd className="mt-1 whitespace-pre-wrap break-words font-semibold">{valor}</dd>
+            </div>
+          ))}
+        </dl>
+        {atual?.total_cent != null && (
+          <div className="rounded-cartao bg-fundo p-4">
+            <p className="ivo-legenda text-texto-suave">Estimativa do serviço</p>
+            <p className="ivo-h2">{reaisCurto(atual.total_cent)}</p>
+            <p className="mt-2 ivo-legenda text-texto-suave">
+              {outrosCustos.trim() ? 'Os custos adicionais serão informados no orçamento. ' : ''}
+              O Ivo confirma o orçamento. Enviar a solicitação não aprova a viagem.
+            </p>
+            {atual.linhas && atual.linhas.length > 0 && (
+              <details className="mt-3">
+                <summary className="min-h-12 cursor-pointer py-3 font-semibold text-link">Ver cálculo</summary>
+                <Memorial linhas={atual.linhas} total={atual.total_cent} />
+              </details>
+            )}
+          </div>
+        )}
+        <div className="sticky bottom-0 space-y-2 border-t border-borda bg-superficie pt-3">
+          <Botao variante="principal" className="w-full" disabled={enviando || lista.carregando || lista.erro} aria-busy={enviando} onClick={() => void pedir()}>
+            {enviando ? 'Enviando solicitação…' : 'Confirmar e enviar solicitação'}
+          </Botao>
+          <Botao className="w-full" disabled={enviando} onClick={() => setRevisando(false)}>Voltar e editar</Botao>
+          <p role="status" className="sr-only">{enviando ? 'Enviando o pedido ao Ivo…' : ''}</p>
+        </div>
+      </Folha>
     </FolhaMapa>
   )
 }

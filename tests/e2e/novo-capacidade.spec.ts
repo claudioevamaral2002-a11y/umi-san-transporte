@@ -94,7 +94,8 @@ test.describe('v2.2: limite de pessoas e Ver cálculo', () => {
     for (let i = 0; i < 3; i++) await mais(page).click()
     await expect(pessoas(page).locator('output')).toHaveText('4')
     await expect(mais(page)).toBeDisabled()
-    await page.getByRole('button', { name: /^Pedir IVO Passageiros · / }).click()
+    await page.getByRole('button', { name: /^Revisar IVO Passageiros · / }).click()
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
     expect(await pedidoEnviado(chamadas)).toMatchObject({ categoria: 'PASSAGEIROS', pessoas_qtd: 4 })
   })
 
@@ -110,7 +111,8 @@ test.describe('v2.2: limite de pessoas e Ver cálculo', () => {
     await expect(page.getByRole('status').filter({ hasText: 'ajustamos para 4' })).toContainText('até 4 pessoas')
     await expect(mais(page)).toBeDisabled()
     expect(await semRolagemLateral(page)).toBe(true)
-    await page.getByRole('button', { name: /^Pedir IVO Passageiros · / }).click()
+    await page.getByRole('button', { name: /^Revisar IVO Passageiros · / }).click()
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
     expect(await pedidoEnviado(chamadas)).toMatchObject({ categoria: 'PASSAGEIROS', pessoas_qtd: 4 })
   })
 
@@ -125,7 +127,8 @@ test.describe('v2.2: limite de pessoas e Ver cálculo', () => {
     await expect(pessoas(page).locator('output')).toHaveText('6')
     await page.getByRole('textbox', { name: 'Descrição da carga' }).fill('Ferramentas')
     const lidas = categorias.length
-    await page.getByRole('button', { name: /^Pedir IVO Carga Leve · / }).click()
+    await page.getByRole('button', { name: /^Revisar IVO Carga Leve · / }).click()
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
     const erro = page.getByRole('alert')
     await expect(erro).toContainText('leva até 4 pessoas')
     await expect(page).not.toHaveURL(/\/corrida\//)
