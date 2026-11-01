@@ -1,29 +1,39 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, Outlet, useLocation, useOutletContext } from 'react-router'
 import { Botao } from '../design/componentes/Botao.tsx'
 import { Cartao } from '../design/componentes/Cartao.tsx'
+import { LogoIvo } from '../design/componentes/LogoIvo.tsx'
 import { ContextoRotaDePara } from '../design/componentes/RotaDePara.tsx'
 import { ContextoTituloPagina, type TituloNaTela } from '../design/componentes/Tela.tsx'
 import type { Perfil } from '../lib/estadoSessao.ts'
 import { useSessao } from '../lib/sessao.tsx'
 import { MapaBase, type CarroNoMapa, type Ponto } from './componentes/MapaBase.tsx'
 import { BarraCliente } from './componentes/BarraCliente.tsx'
-import { APP_V1, itensDoMenu, Menu } from './componentes/Menu.tsx'
-import { temBarraCliente, tituloDaPagina, tituloExato } from './navegacao.ts'
+import { APP_V1, itensDoMenu, Menu, type ControleMenu } from './componentes/Menu.tsx'
+import { NavegacaoLateral } from './componentes/NavegacaoLateral.tsx'
+import { temBarraPerfil, tituloDaPagina, tituloExato } from './navegacao.ts'
 
 /**
- * Moldura do app novo (especificação §6): sem barra de abas, só o ☰ no canto superior esquerdo. As telas de mapa
- * ficam dentro de `TelaDeMapa`; as de página (Categorias, Veículos, Painel…) ficam direto aqui.
+ * Moldura v2.3: lateral persistente no desktop; menu modal no celular e lateral compacta no tablet.
+ * Os dois usam os mesmos itens por perfil. As rotas e suas guardas continuam no roteador.
  */
 export function MolduraNova() {
   const { perfil } = useSessao()
+  const { pathname } = useLocation()
+  const menu = useRef<ControleMenu>(null)
+  const comBarra = temBarraPerfil(perfil?.papel, pathname)
   // O gestor de frota não tem telas no app novo (Ruling R13): qualquer endereço mostra o aviso.
   if (perfil?.papel === 'GESTOR_FROTA') return <SemAcessoAoApp />
   return (
-    <>
-      <header>{perfil && <Menu perfil={perfil} />}</header>
-      <Outlet />
-    </>
+    <div className={`ivo-app${comBarra ? ' ivo-com-barra' : ''}`}>
+      <a href="#ivo-conteudo" className="ivo-pular-conteudo nao-imprimir">Ir para o conteúdo</a>
+      <header>{perfil && <Menu perfil={perfil} controle={menu} />}</header>
+      {perfil && <NavegacaoLateral perfil={perfil} />}
+      <div id="ivo-conteudo" tabIndex={-1} className="ivo-conteudo">
+        <Outlet />
+      </div>
+      {comBarra && <BarraCliente papel={perfil?.papel} aoMais={() => menu.current?.abrir()} />}
+    </div>
   )
 }
 
@@ -43,7 +53,12 @@ type DefinirCamadas = (c: CamadasDoMapa) => void
 export function TelaDeMapa() {
   const [camadas, setCamadas] = useState<CamadasDoMapa>({})
   return (
-    <main className="h-dvh overflow-hidden">
+    <main className="ivo-tela-mapa h-dvh overflow-hidden">
+      <div className="ivo-topo-mapa nao-imprimir">
+        <LogoIvo altura={24} className="ivo-marca-clara" />
+        <LogoIvo altura={24} cor="branco" className="ivo-marca-escura" />
+        <span>Viagens e operação</span>
+      </div>
       <MapaBase {...camadas} />
       <Outlet context={setCamadas satisfies DefinirCamadas} />
     </main>
@@ -79,7 +94,7 @@ export function TelaDePagina() {
   const { pathname } = useLocation()
   const itens = perfil ? itensDoMenu(perfil) : []
   const titulo = tituloDaPagina(itens, pathname)
-  const comBarra = perfil?.papel === 'CLIENTE' && temBarraCliente(pathname)
+  const comBarra = temBarraPerfil(perfil?.papel, pathname)
   // As telas abertas registram o h1 delas (CabecalhoTela e as telas novas): um nome só por página.
   const [registrados, setRegistrados] = useState<TituloNaTela[]>([])
   const registrar = useCallback((modo: TituloNaTela) => {
@@ -98,14 +113,14 @@ export function TelaDePagina() {
     <ContextoRotaDePara value>
       <ContextoTituloPagina value={pagina}>
         <div
-          className={`pt-[calc(env(safe-area-inset-top)+0.75rem)] ${
+          className={`ivo-pagina pt-[calc(env(safe-area-inset-top)+0.75rem)] ${
             comBarra
               ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
               : 'pb-[calc(1.5rem+env(safe-area-inset-bottom))]'
           }`}
         >
           {/* O ☰ fica fixo à esquerda (size-12 a partir de left-4): o cabeçalho começa depois dele. */}
-          <nav aria-label="Página" className="mb-1 flex min-h-12 items-center gap-3 pr-4 pl-20" data-testid="cabecalho-pagina">
+          <nav aria-label="Página" className="ivo-cabecalho-pagina mb-1 flex min-h-12 items-center gap-3 pr-4 pl-20" data-testid="cabecalho-pagina">
             <Link
               to="/"
               className="-ml-2 inline-flex min-h-12 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-texto hover:bg-borda/60"
@@ -119,10 +134,13 @@ export function TelaDePagina() {
                 {titulo}
               </p>
             )}
+            <span className="ivo-marca-pagina">
+              <LogoIvo altura={20} className="ivo-marca-clara" />
+              <LogoIvo altura={20} cor="branco" className="ivo-marca-escura" />
+            </span>
           </nav>
           <Outlet />
         </div>
-        {comBarra && <BarraCliente />}
       </ContextoTituloPagina>
     </ContextoRotaDePara>
   )

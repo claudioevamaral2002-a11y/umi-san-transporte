@@ -38,16 +38,35 @@ export function tituloExato(itens: readonly ItemMenu[], caminho: string): string
 
 /** Atalhos da barra de baixo do cliente no celular (especificação §6.4, mockup 4). */
 export const ATALHOS_CLIENTE = [
-  { rotulo: 'Pedir', icone: 'mais', para: '/' },
+  { rotulo: 'Solicitar', icone: 'mais', para: '/' },
   { rotulo: 'Corridas', icone: 'lista', para: '/pedidos' },
   { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
 ] as const satisfies readonly ItemMenu[]
 
 /**
- * A barra só fica nas páginas dela (Corridas e Agenda; a Carteira saiu na v2.2.1). No detalhe do pedido, a barra de ações é que fica
+ * A barra só fica nas páginas dela (Solicitar, Corridas e Agenda; a Carteira saiu na v2.2.1). No detalhe do pedido, a barra de ações é que fica
  * presa ao pé da tela.
  */
 export const temBarraCliente = (caminho: string) => {
   const limpo = caminho.length > 1 ? caminho.replace(/\/+$/, '') : caminho
-  return ATALHOS_CLIENTE.some((a) => a.para !== '/' && a.para === limpo)
+  return ATALHOS_CLIENTE.some((a) => a.para === limpo)
+}
+
+/** Atalhos somente para rotas de topo; nunca cobrem as ações de corrida/viagem ou calculadora. */
+export const ATALHOS_MOTORISTA = [
+  { rotulo: 'Início', icone: 'mapa', para: '/' },
+  { rotulo: 'Corridas', icone: 'lista', para: '/pedidos' },
+  { rotulo: 'Agenda', icone: 'calendario', para: '/agenda' },
+] as const satisfies readonly ItemMenu[]
+export const ATALHOS_MASTER = [
+  { rotulo: 'Início', icone: 'mapa', para: '/' },
+  { rotulo: 'Painel', icone: 'grafico', para: '/adm/painel' },
+  { rotulo: 'Faturas', icone: 'lista', para: '/adm/faturas' },
+] as const satisfies readonly ItemMenu[]
+
+export const atalhosDoPerfil = (papel: string) => papel === 'MOTORISTA' ? ATALHOS_MOTORISTA : papel === 'ADM' ? ATALHOS_MASTER : ATALHOS_CLIENTE
+export const temBarraPerfil = (papel: string | undefined, caminho: string) => {
+  if (!papel || papel === 'GESTOR_FROTA') return false
+  const limpo = caminho.length > 1 ? caminho.replace(/\/+$/, '') : caminho
+  return atalhosDoPerfil(papel).some((a) => a.para === limpo)
 }

@@ -204,7 +204,7 @@ test.describe('chamada', () => {
     await expect(page.getByTestId('prazo-chamada')).toBeVisible()
     await expect(folha).toContainText(/Responda até/)
     // Sugerido: o mais antigo ATIVO que atende a categoria (a Sprinter está em manutenção; o reboque, noutra categoria).
-    const escolha = page.getByLabel('Veículo')
+    const escolha = page.getByRole('combobox', { name: 'Veículo', exact: true })
     await expect(escolha).toHaveValue(V_HILUX)
     await expect(escolha.locator('option')).toHaveText(['Hilux branca · ABC1D23', 'Strada vermelha · STR1A22'])
     await expect(page.locator('path.rota-mapa')).toHaveCount(1)
@@ -225,7 +225,7 @@ test.describe('chamada', () => {
   test('trocar o veículo vale para o aceite; sem resposta do servidor a tela não muda (nada otimista)', async ({ page }) => {
     const { chamadas } = await abrir(page, { caminho: `/chamada/${ID_PEDIDO}` })
     await expect(page.getByTestId('valor-tabela')).toHaveText('R$ 180,00')
-    await page.getByLabel('Veículo').selectOption('00000000-0000-4000-8000-0000000000c4')
+    await page.getByRole('combobox', { name: 'Veículo', exact: true }).selectOption('00000000-0000-4000-8000-0000000000c4')
     let liberar: () => void = () => undefined
     await page.route(`${URL_SUPABASE}/rest/v1/rpc/enviar_orcamento`, async (route: Route) => {
       chamadas.push({ rpc: 'enviar_orcamento', corpo: route.request().postDataJSON() as Record<string, unknown> })

@@ -180,15 +180,14 @@ test.describe('no computador', () => {
     await expect(page.getByText('Carla Dias')).toHaveCount(0)
   })
 
-  test('o menu ☰ "Painel da empresa" leva ao painel e continua marcado nas abas', async ({ page }) => {
+  test('o menu lateral "Painel da empresa" leva ao painel e continua marcado nas abas', async ({ page }) => {
     await abrir(page, N1, '/')
-    await page.getByRole('button', { name: 'Abrir menu' }).click()
-    await page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Painel da empresa' }).click()
+    const menu = page.getByRole('navigation', { name: 'Menu principal' })
+    await menu.getByRole('link', { name: 'Painel da empresa' }).click()
     await expect(page).toHaveURL(/\/empresa$/)
     await expect(page.getByRole('heading', { name: 'Resumo de outubro' })).toBeVisible()
     await abas(page).getByRole('link', { name: 'Corridas' }).click()
-    await page.getByRole('button', { name: 'Abrir menu' }).click()
-    await expect(page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Painel da empresa' })).toHaveAttribute(
+    await expect(menu.getByRole('link', { name: 'Painel da empresa' })).toHaveAttribute(
       'aria-current',
       'page',
     )

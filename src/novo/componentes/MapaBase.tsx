@@ -239,7 +239,7 @@ export function MapaBase({
   })
 
   return (
-    <section aria-label="Mapa" aria-describedby={idDescricao} className="fixed inset-0 z-0 bg-fundo">
+    <section aria-label="Mapa" aria-describedby={idDescricao} className="ivo-area-mapa fixed inset-0 z-0 bg-fundo">
       <div
         ref={caixa}
         data-testid="mapa-base"

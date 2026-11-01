@@ -162,7 +162,7 @@ function Responder({
   return (
     <FolhaMapa rotulo="Nova chamada">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-laranja px-2.5 py-1 ivo-legenda font-bold text-marinho">Nova chamada</span>
+        <span className="rounded-full bg-laranja px-2.5 py-1 ivo-legenda font-bold text-acao-texto">Nova chamada</span>
         {p.categoria_nome && (
           <span className="rounded-full border border-borda px-2.5 py-1 ivo-legenda font-bold">{p.categoria_nome}</span>
         )}

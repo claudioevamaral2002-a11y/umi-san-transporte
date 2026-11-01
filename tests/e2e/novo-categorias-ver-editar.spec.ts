@@ -268,7 +268,7 @@ test('trocar de contrato com rascunho pergunta', async ({ page }) => {
   await abrir(page, { contratos: [linhaContrato(EMPRESA_UMI, versaoFalsa(2))] })
   await editar(page, 'IVO Passageiros')
   await cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true }).fill('3,80')
-  await page.getByLabel('Contrato').selectOption({ label: 'Umi San' })
+  await page.getByRole('combobox', { name: 'Contrato', exact: true }).selectOption({ label: 'Umi San' })
   const folha = page.getByRole('dialog', { name: 'Trocar de contrato sem publicar?' })
   await folha.getByRole('button', { name: 'Continuar editando' }).click()
   await expect(cartao(page, 'IVO Passageiros').getByLabel('Por km', { exact: true })).toHaveValue('3,80')

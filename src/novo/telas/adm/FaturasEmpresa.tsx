@@ -50,7 +50,7 @@ function quinzenasFechadas(agora: Date): Quinzena[] {
 
 const CLASSE_ETIQUETA: Record<SituacaoFatura, string> = {
   ABERTA: 'border-[var(--status-agendada)] text-texto',
-  VENCIDA: 'border-[var(--cor-laranja)] bg-[var(--cor-laranja)] text-marinho',
+  VENCIDA: 'border-[var(--cor-laranja)] bg-[var(--cor-laranja)] text-acao-texto',
   PAGA: 'border-[var(--status-concluida)] text-texto',
   CANCELADA: 'border-borda text-texto-suave',
 }

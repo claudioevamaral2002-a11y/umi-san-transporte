@@ -437,7 +437,7 @@ for (const tema of ['light', 'dark'] as const) {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await abrir(page, { agora: tercaPassada('08:02') })
       await escolherDestino(page)
-      const superficie = tema === 'light' ? 'rgb(255, 255, 255)' : 'rgb(12, 42, 73)'
+      const superficie = tema === 'light' ? 'rgb(255, 255, 255)' : 'rgb(20, 55, 71)'
       await expect(page.getByTestId('folha-mapa')).toHaveCSS('background-color', superficie)
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
 

@@ -104,7 +104,7 @@ test('motorista: "← Início" leva ao Início dele', async ({ page }) => {
   await cabecalho(page).getByRole('link', { name: 'Início', exact: true }).click()
   await noInicio(page)
   await expect(page.getByTestId('folha-mapa')).toBeVisible()
-  await expect(barra(page)).toHaveCount(0)
+  await expect(barra(page)).toBeVisible()
 })
 
 test('o ☰ marca a página atual com aria-current', async ({ page }) => {
@@ -121,11 +121,11 @@ test('o ☰ marca a página atual com aria-current', async ({ page }) => {
   await expect(menu.getByRole('link', { name: 'Agenda' })).not.toHaveAttribute('aria-current', /.*/)
 })
 
-test('cliente no celular: a barra Pedir · Corridas · Agenda fica fixa e alterna sem recarregar', async ({ page }) => {
+test('cliente no celular: a barra Solicitar · Corridas · Agenda · Mais fica fixa e alterna sem recarregar', async ({ page }) => {
   await abrir(page, N1, '/pedidos')
   const nav = barra(page)
   // v2.2.1: sem a Carteira (o saldo e o extrato ficam no Painel da empresa).
-  await expect(nav.getByRole('link')).toHaveText(['Pedir', 'Corridas', 'Agenda'])
+  await expect(nav.getByRole('link')).toHaveText(['Solicitar', 'Corridas', 'Agenda'])
   await expect(nav.getByRole('link', { name: 'Corridas' })).toHaveAttribute('aria-current', 'page')
   await expect(nav).toHaveCSS('position', 'fixed')
   const vp = page.viewportSize()!
@@ -156,13 +156,13 @@ test('cliente no celular: a barra Pedir · Corridas · Agenda fica fixa e altern
     })
     .toBeLessThanOrEqual(topoDaBarra + 1)
 
-  await nav.getByRole('link', { name: 'Pedir' }).click()
+  await nav.getByRole('link', { name: 'Solicitar' }).click()
   await noInicio(page)
   expect(await semRecarregar()).toBe(true)
-  await expect(barra(page)).toHaveCount(0)
+  await expect(barra(page)).toBeVisible()
 })
 
-test('a barra do cliente não aparece no computador nem para o motorista', async ({ browser }) => {
+test('a barra fica oculta no computador e oferece atalhos próprios ao motorista', async ({ browser }) => {
   const contexto = await browser.newContext({ ...test.info().project.use, viewport: { width: 1280, height: 800 }, isMobile: false })
   const page = await contexto.newPage()
   await abrir(page, N1, '/pedidos')
@@ -174,7 +174,7 @@ test('a barra do cliente não aparece no computador nem para o motorista', async
   const motorista = await outro.newPage()
   await abrir(motorista, MOTORISTA, '/pedidos')
   await expect(cabecalho(motorista)).toBeVisible()
-  await expect(barra(motorista)).toHaveCount(0)
+  await expect(barra(motorista)).toBeVisible()
   await outro.close()
 })
 
