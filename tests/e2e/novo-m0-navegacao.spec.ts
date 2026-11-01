@@ -162,3 +162,30 @@ test('indicador lateral desliza e a mesma moldura permanece ao navegar', async (
   await expect(lista).toHaveAttribute('data-ativo', '2')
   await expect.poll(() => lista.evaluate(el => getComputedStyle(el, '::before').transform)).toBe('matrix(1, 0, 0, 1, 0, 104)')
 })
+
+for (const [perfil, destinos] of [
+  [N1, ['/perfil', '/ajuda', '/equipe', '/empresa']],
+  [MOTORISTA, ['/perfil', '/ajuda', '/veiculos', '/corridas-do-mes']],
+  [ADM, ['/perfil', '/ajuda', '/adm/usuarios', '/adm/configuracoes']],
+] as const) {
+  test(`barra persistente ${perfil.papel}: acompanha áreas abertas por Mais e retorna ao início`, async ({ page }) => {
+    await abrir(page, perfil, 390)
+    const barra = page.getByRole('navigation', { name: 'Atalhos' })
+    await page.evaluate(() => document.documentElement.setAttribute('data-navegacao-persistente', 'sim'))
+    for (const destino of destinos) {
+      await barra.getByRole('button', { name: 'Mais', exact: true }).click()
+      await page.getByRole('dialog', { name: 'Menu', exact: true }).locator(`a[href="${destino}"]`).click()
+      await expect(page).toHaveURL(new RegExp(`${destino}(?:/corridas)?$`))
+      await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toBeHidden()
+      await expect(barra).toBeVisible()
+      await expect(barra.getByRole('button', { name: 'Mais', exact: true })).toHaveAttribute('aria-current', 'true')
+      await expect(page.locator('.ivo-pagina')).toHaveCSS('padding-bottom', '88px')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
+    }
+    await barra.getByRole('link').first().click()
+    await expect(page.getByTestId('folha-mapa')).toBeVisible()
+    await expect(barra.getByRole('link').first()).toHaveAttribute('aria-current', 'page')
+    await expect(barra.getByRole('button', { name: 'Mais', exact: true })).not.toHaveAttribute('aria-current', 'true')
+    await expect(page.locator('html')).toHaveAttribute('data-navegacao-persistente', 'sim')
+  })
+}

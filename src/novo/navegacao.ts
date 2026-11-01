@@ -44,12 +44,12 @@ export const ATALHOS_CLIENTE = [
 ] as const satisfies readonly ItemMenu[]
 
 /**
- * A barra só fica nas páginas dela (Solicitar, Corridas e Agenda; a Carteira saiu na v2.2.1). No detalhe do pedido, a barra de ações é que fica
+ * A barra acompanha as áreas principais e a conta. No detalhe do pedido, a barra de ações é que fica
  * presa ao pé da tela.
  */
 export const temBarraCliente = (caminho: string) => {
   const limpo = caminho.length > 1 ? caminho.replace(/\/+$/, '') : caminho
-  return ATALHOS_CLIENTE.some((a) => a.para === limpo)
+  return ATALHOS_CLIENTE.some((a) => a.para === limpo) || ['/perfil', '/ajuda'].includes(limpo)
 }
 
 /** Atalhos somente para rotas de topo; nunca cobrem as ações de corrida/viagem ou calculadora. */
@@ -65,8 +65,12 @@ export const ATALHOS_MASTER = [
 ] as const satisfies readonly ItemMenu[]
 
 export const atalhosDoPerfil = (papel: string) => papel === 'MOTORISTA' ? ATALHOS_MOTORISTA : papel === 'ADM' ? ATALHOS_MASTER : ATALHOS_CLIENTE
-export const temBarraPerfil = (papel: string | undefined, caminho: string) => {
+export const temBarraPerfil = (papel: string | undefined, caminho: string, itens: readonly Pick<ItemMenu, 'para'>[] = []) => {
   if (!papel || papel === 'GESTOR_FROTA') return false
   const limpo = caminho.length > 1 ? caminho.replace(/\/+$/, '') : caminho
+  // A visibilidade acompanha os destinos autorizados do menu, não apenas os atalhos da barra.
+  // Subpáginas com ações próprias (cadastro, cobrança, orçamento, execução) continuam sem a barra.
   return atalhosDoPerfil(papel).some((a) => a.para === limpo)
+    || ['/perfil', '/ajuda'].includes(limpo)
+    || itens.some((a) => a.para === limpo || (a.para === '/empresa' && dentroDe(limpo, '/empresa')))
 }

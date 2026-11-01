@@ -47,12 +47,13 @@ describe('navegação do app novo', () => {
     expect(tituloDaPagina([], '/qualquer')).toBe('')
   })
 
-  it('a barra do cliente fica em Solicitar, Corridas e Agenda', () => {
+  it('a barra do cliente acompanha Solicitar, Corridas, Agenda e a conta', () => {
     expect(temBarraCliente('/pedidos')).toBe(true)
     expect(temBarraCliente('/agenda/')).toBe(true)
     expect(temBarraCliente('/extrato')).toBe(false)
     expect(temBarraCliente('/pedidos/42')).toBe(false)
-    expect(temBarraCliente('/perfil')).toBe(false)
+    expect(temBarraCliente('/perfil')).toBe(true)
+    expect(temBarraCliente('/ajuda')).toBe(true)
     expect(temBarraCliente('/')).toBe(true)
   })
 
@@ -88,4 +89,16 @@ it('barras por perfil só nas rotas de topo, sem cobrir detalhes e execução', 
   expect(temBarraPerfil('ADM', '/adm/faturas')).toBe(true)
   expect(temBarraPerfil('ADM', '/adm/faturas/empresa')).toBe(false)
   expect(temBarraPerfil('GESTOR_FROTA', '/')).toBe(false)
+})
+
+it('a barra acompanha todos os destinos autorizados do menu e as abas do painel', () => {
+  for (const perfil of [cliente(1), cliente(2), cliente(3), { ...cliente(1), papel: 'MOTORISTA' as const }, { ...cliente(1), papel: 'ADM' as const }]) {
+    const itens = itensDoMenu(perfil)
+    for (const item of itens) expect(temBarraPerfil(perfil.papel, item.para, itens), item.para).toBe(true)
+    expect(temBarraPerfil(perfil.papel, '/pedidos/42', itens)).toBe(false)
+    expect(temBarraPerfil(perfil.papel, '/veiculos/novo', itens)).toBe(false)
+    expect(temBarraPerfil(perfil.papel, '/adm/creditos/empresa', itens)).toBe(false)
+  }
+  expect(temBarraPerfil('CLIENTE', '/empresa/carteira', itensDoMenu(cliente(1)))).toBe(true)
+  expect(temBarraPerfil('CLIENTE', '/empresa/carteira', itensDoMenu(cliente(2)))).toBe(false)
 })

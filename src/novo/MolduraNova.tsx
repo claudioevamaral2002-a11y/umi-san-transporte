@@ -21,7 +21,7 @@ export function MolduraNova() {
   const { perfil } = useSessao()
   const { pathname } = useLocation()
   const menu = useRef<ControleMenu>(null)
-  const comBarra = temBarraPerfil(perfil?.papel, pathname)
+  const comBarra = temBarraPerfil(perfil?.papel, pathname, perfil ? itensDoMenu(perfil) : [])
   // O gestor de frota não tem telas no app novo (Ruling R13): qualquer endereço mostra o aviso.
   if (perfil?.papel === 'GESTOR_FROTA') return <SemAcessoAoApp />
   return (
@@ -94,7 +94,7 @@ export function TelaDePagina() {
   const { pathname } = useLocation()
   const itens = perfil ? itensDoMenu(perfil) : []
   const titulo = tituloDaPagina(itens, pathname)
-  const comBarra = temBarraPerfil(perfil?.papel, pathname)
+  const comBarra = temBarraPerfil(perfil?.papel, pathname, perfil ? itensDoMenu(perfil) : [])
   // As telas abertas registram o h1 delas (CabecalhoTela e as telas novas): um nome só por página.
   const [registrados, setRegistrados] = useState<TituloNaTela[]>([])
   const registrar = useCallback((modo: TituloNaTela) => {
