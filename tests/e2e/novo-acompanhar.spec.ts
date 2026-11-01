@@ -305,10 +305,10 @@ test.describe('fim', () => {
     await expect(page.getByRole('radio', { name: /IVO Carga Leve/ })).toBeChecked()
     // Sem data: nenhum horário escolhido e nada de "Pedir" até a pessoa escolher.
     await expect(page.getByRole('button', { name: /^Agendar · escolha/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Pedir IVO/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^Revisar IVO/ })).toHaveCount(0)
     await page.getByRole('radio', { name: '08:30' }).click()
     // \S, não \w: "sáb" tem acento (o teste falhava quando amanhã era sábado).
-    await expect(page.getByRole('button', { name: /^Pedir IVO Carga Leve · \S{3} 08:30$/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Revisar IVO Carga Leve · \S{3} 08:30$/ })).toBeVisible()
   })
 })
 

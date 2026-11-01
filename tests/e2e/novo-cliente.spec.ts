@@ -154,7 +154,7 @@ test.describe('pedir', () => {
     await expect(pesada).toContainText('Indisponível no momento')
     await expect(pesada).not.toContainText('R$')
     await expect(pesada).toBeDisabled()
-    await expect(page.getByRole('button', { name: /^Pedir IVO Carga Pesada/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^Revisar IVO Carga Pesada/ })).toHaveCount(0)
   })
 
   test('"Agendar" é o padrão e o pedido é enviado; depois aparece "Enviado ao Ivo" com o prazo', async ({ page }) => {
@@ -180,8 +180,9 @@ test.describe('pedir', () => {
     const { chamadas } = await abrir(page, { agora, detalhes: [solicitada] })
     await escolherDestino(page)
     await expect(page.getByRole('button', { name: /^Agendar · qua \d\d\/\d\d, 08:30/ })).toBeVisible()
-    const pedir = page.getByRole('button', { name: 'Pedir IVO Passageiros · qua 08:30' })
+    const pedir = page.getByRole('button', { name: 'Revisar IVO Passageiros · qua 08:30' })
     await pedir.click()
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
     await expect(page).toHaveURL(new RegExp(`/corrida/${ID_PEDIDO}$`))
     await expect(page.getByRole('heading', { name: 'Enviado ao Ivo' })).toBeVisible()
     await expect(page.getByTestId('folha-mapa')).toContainText('Ele responde até hoje, 12:02')
@@ -212,9 +213,10 @@ test.describe('pedir', () => {
     await escolherDestino(page)
     await page.getByRole('button', { name: /^Agendar · / }).click()
     await page.getByRole('radio', { name: 'Agora' }).click()
-    const pedir = page.getByRole('button', { name: 'Pedir IVO Passageiros · ter 09:30' })
+    const pedir = page.getByRole('button', { name: 'Revisar IVO Passageiros · ter 09:30' })
     await expect(pedir).toBeVisible()
     await pedir.click()
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
     await expect(page).toHaveURL(/\/corrida\//)
     const criar = chamadas.find((c) => c.rpc === 'criar_pedido')!.corpo.p as Record<string, unknown>
     expect(criar.agora).toBe(true)
@@ -231,11 +233,26 @@ test.describe('pedir', () => {
     await escolherDestino(page)
     await page.getByRole('button', { name: /^Agendar · / }).click()
     await page.getByRole('radio', { name: 'Agora' }).click()
-    await page.getByRole('button', { name: 'Pedir IVO Passageiros · qua 08:30' }).click()
+    await page.getByRole('button', { name: 'Revisar IVO Passageiros · qua 08:30' }).click()
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
     await expect(page).toHaveURL(/\/corrida\//)
     const criar = chamadas.find((c) => c.rpc === 'criar_pedido')!.corpo.p as Record<string, unknown>
     expect(criar.agora).toBe(true)
     expect(criar.inicio).toBe(instanteSp(diaDe(new Date(agora.getTime() + 24 * 60 * MIN)), '08:30'))
+  })
+
+  test('revisão do Agora expirada: atualiza o horário e exige nova confirmação sem enviar', async ({ page }) => {
+    const agora = tercaPassada('08:02')
+    const { chamadas } = await abrir(page, { agora })
+    await escolherDestino(page)
+    await page.getByRole('button', { name: /^Agendar · / }).click()
+    await page.getByRole('radio', { name: 'Agora' }).click()
+    await page.getByRole('button', { name: 'Revisar IVO Passageiros · ter 09:30' }).click()
+    await page.clock.setSystemTime(new Date(agora.getTime() + 60 * MIN))
+    await page.getByRole('button', { name: 'Confirmar e enviar solicitação' }).click()
+    await expect(page.getByRole('dialog', { name: 'Revisar solicitação' })).not.toBeVisible()
+    await expect(page.getByRole('alert')).toContainText('O primeiro horário livre agora é')
+    expect(chamadas.filter(c => c.rpc === 'criar_pedido')).toHaveLength(0)
   })
 
   test('o N3 não vê o botão de pedir', async ({ page }) => {
